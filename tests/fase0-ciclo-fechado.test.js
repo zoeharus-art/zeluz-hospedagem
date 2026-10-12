@@ -3529,7 +3529,9 @@ provaAsync('a recusa da ponte diz o motivo (palavra-chave, PONTE_SENHA, página 
   run(`__bkOP={oc:ORC_LISTA_CACHE, sc:orcSheetsCfg, db:DB, za:zAlertao, fe:(typeof fetch!=='undefined'?fetch:undefined)};
     ORC_LISTA_CACHE={frida:{pets:[{nome:'Frida', raca:'', tutor:'Ana Carolina', diarias:3, subtotal_diarias_cent:45000}], entrada:'2026-10-01', saida:'2026-10-04', noites:3, total_cent:45000}};
     orcSheetsCfg={url:'https://script.google.com/macros/s/x/exec', token:'tk-SEGREDO-4471'};
-    __upOP=[]; DB={ref:function(p){ return {update:function(v){ __upOP.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); }}; }};
+    // 6.68, 2ª rodada (palco): o banco de mentira também LÊ — e o que ele tem é o que a tela tem (como em produção). A trava da Maya
+    // passou a esperar a lista inteira (LOW-4) e, sem a leitura, não libera nada.
+    __upOP=[]; DB={ref:function(p){ return {once:function(){ var ps=String(p||'').split('/'), v=(ps.length>2)?((ORC_LISTA_CACHE[ps[2]]===undefined)?null:ORC_LISTA_CACHE[ps[2]]):ORC_LISTA_CACHE; return Promise.resolve({val:function(){ return (v==null)?null:JSON.parse(JSON.stringify(v)); }}); }, update:function(v){ __upOP.push({p:p, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); }}; }};
     __alOP=[]; zAlertao=function(t,l,op){ __alOP.push({t:t, l:l, r:(op&&op.rodape)||''}); };
     __respOP=''; __corpoOP=[]; fetch=function(u, o){ __corpoOP.push(JSON.parse(o.body)); return Promise.resolve({text:function(){ return Promise.resolve(__respOP); }}); };`);
   try {
@@ -9791,7 +9793,7 @@ const monta630 = async (opts, corpo) => {
   ctx.__o630 = opts;
   run(`__bk630c={cad:pelCadCache, hz:zHojeISO, hj:hojeISO, P:PELUDINHOS, pa:pelAtual, sp:setPelExtra, hg:renovHistGravar, au:audit, zp:zPergunta,
       za:zAlertao, zf:zFalta, zl:zLimparFalta, rf:renderPelFicha, rp:renderPel, rd:renderDaycare, ce:canEditPel, pp:podePapel, rr:renovRascunho,
-      mm:mmBlocoHTML, db:DB, ip:irParaAbaPlano, pc:planosCfg};
+      mm:mmBlocoHTML, db:DB, ip:irParaAbaPlano, pc:planosCfg, ca:corrAbrir};
     __log630={grav:[], hist:[], rastro:[], perg:[], faltas:[], cartazes:[], resp:(__o630.resp||[]).slice(), irPlano:0, out:null};
     pelCadCache=Object.assign({}, pelCadCache);
     __t630={n:'Tâmara', tutor:'Viajante Teste', raca:'SRD', dias:['seg']};
@@ -9815,13 +9817,20 @@ const monta630 = async (opts, corpo) => {
     renderPelFicha=function(){}; renderPel=function(){}; renderDaycare=function(){}; canEditPel=function(){ return true; }; podePapel=function(){ return true; };
     mmBlocoHTML=function(){ return ''; }; irParaAbaPlano=function(){ __log630.irPlano++; };
     DB={ref:function(){ return {remove:function(){ return Promise.resolve(); }, push:function(){ return Promise.resolve(); }, update:function(){ return Promise.resolve(); }}; }};
-    renovRascunho=__o630.rasc?Object.assign({_k:pelKey(__t630)}, __o630.rasc):null;`);
+    renovRascunho=__o630.rasc?Object.assign({_k:pelKey(__t630)}, __o630.rasc):null;
+    // 6.71 (palco): o Desfazer agora é pelo cartaz da 6.57 (o motivo e a senha da Gestão) e relê a ficha no banco antes de gravar;
+    // aqui o cartaz é respondido como a Gestão, e a releitura devolve a ficha que este palco guarda.
+    corrAbrir=function(op){ var reg={acao:op.acao, tela:'', oque:String(op.oque||''), motivo:'palco 6.71: lançada por engano no FILHOt errado', por:'Gestora Teste', papel:'gestao', login:'Gestora Teste', loginPapel:'gestao', quando:'', ts:Date.now()}; __log630.perg.push({t:op.titulo, l:(op.info||op.volta||op.cascata||[]), op:{sim:op.botao}});
+      return Promise.resolve(op.gravar(reg)).then(function(r){ return (r&&r.ok)?{ok:true, reg:reg}:{ok:false, erro:(r&&r.erro)||'a gravação não confirmou', reg:reg}; }); };
+    __ref671p=DB.ref; DB={ref:function(p){ var r=__ref671p(p); r.once=function(){ var c=pelCadCache[String(p||'').split('/')[2]];
+      return Promise.resolve({val:function(){ return (c===undefined)?null:JSON.parse(JSON.stringify(c)); }}); }; return r; }};
+`);
   try { await run('(async function(){ ' + corpo + ' })()'); for (let i = 0; i < 30; i++) await Promise.resolve(); return J630('__log630'); }
   finally {
     run(`pelCadCache=__bk630c.cad; zHojeISO=__bk630c.hz; hojeISO=__bk630c.hj; PELUDINHOS=__bk630c.P; pelAtual=__bk630c.pa; setPelExtra=__bk630c.sp;
       renovHistGravar=__bk630c.hg; audit=__bk630c.au; zPergunta=__bk630c.zp; zAlertao=__bk630c.za; zFalta=__bk630c.zf; zLimparFalta=__bk630c.zl;
       renderPelFicha=__bk630c.rf; renderPel=__bk630c.rp; renderDaycare=__bk630c.rd; canEditPel=__bk630c.ce; podePapel=__bk630c.pp;
-      renovRascunho=__bk630c.rr; mmBlocoHTML=__bk630c.mm; DB=__bk630c.db; irParaAbaPlano=__bk630c.ip; planosCfg=__bk630c.pc;`);
+      renovRascunho=__bk630c.rr; mmBlocoHTML=__bk630c.mm; DB=__bk630c.db; irParaAbaPlano=__bk630c.ip; planosCfg=__bk630c.pc; corrAbrir=__bk630c.ca;`);
   }
 };
 const EX630 = (renov, extra) => Object.assign({ n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg'], sexo: 'Fêmea', renov: renov }, extra || {});
@@ -9944,7 +9953,7 @@ provaAsync('6.30 P20 — tocar num chip do alto no Mês 3 pergunta antes; "Mudar
   assert.ok(!/pelDiasPlanoAviso/.test(F.out), 'sem dias por mês, sem faixa');
 });
 provaAsync('6.30 P21 — virar avulso leva os dias por mês para o histórico, junto com a vigência', async () => {
-  const L = await monta630({ ex: EX630(Object.assign(RENOV630(), { dias_mes_anterior: [{ n: 3, de: '2026-07-05', ate: '2026-07-31', dias: ['ter'] }] })), hoje: '2026-11-10' }, "await setPelCategoria('avulso');");
+  const L = await monta630({ ex: EX630(Object.assign(RENOV630(), { dias_mes_anterior: [{ n: 3, de: '2026-07-05', ate: '2026-07-31', dias: ['ter'] }] })), hoje: '2026-11-10', resp: [true] }, "await setPelCategoria('avulso');");   // 6.71 (palco): a pergunta antes da troca
   const rv = L.grav[0].renov;
   igual([rv.plano, rv.fim, 'dias_mes' in rv, 'dias_mes_anterior' in rv], ['avulso', '', false, false]);
   igual(L.hist[0].a.dias_mes, [['seg'], ['seg'], ['seg', 'qua']], 'o plano com os dias foi para "Renovações anteriores"');
@@ -10066,7 +10075,7 @@ const amb630 = async (fichas, hoje, rasc, corpo, resp) => {
       za:zAlertao, zf:zFalta, zl:zLimparFalta, rf:renderPelFicha, rp:renderPel, ce:canEditPel, pp:podePapel, mm:mmBlocoHTML,
       ra:repAgendaDe, rx:relBaixarXLS, db:DB, rr:renovRascunho, pc:pelCategoria, ge:document.getElementById,
       osel:ORC_SEL, orep:ORC_REP, ocalc:ORC_CALC, oaul:ORC_AULUNO, ot:ORC_TEMP, oman:ORC_TEMP_MANUAL, oauto:ORC_TEMP_AUTO,
-      orr:orcRenderResultado, orm:orcRenderMsg, ors:orcRenderSel, onc:orcNovoComecou};
+      orr:orcRenderResultado, orm:orcRenderMsg, ors:orcRenderSel, onc:orcNovoComecou, ca:corrAbrir};
     __log630q={grav:[], perg:[], faltas:[], rastro:[], out:null, xls:null};
     pelCadCache={}; PELUDINHOS=__f630.map(function(f){ return {n:f.n, tutor:f.tutor, raca:'SRD', dias:(f.pdias||[])}; });
     __f630.forEach(function(f){ var e=JSON.parse(JSON.stringify(f)); delete e.pdias; pelCadCache[pelKey(f)]=e; });
@@ -10078,7 +10087,14 @@ const amb630 = async (fichas, hoje, rasc, corpo, resp) => {
     renderPelFicha=function(){}; renderPel=function(){}; canEditPel=function(){ return true; }; podePapel=function(){ return true; }; mmBlocoHTML=function(){ return ''; };
     repAgendaDe=function(){ return []; }; relBaixarXLS=function(html){ __log630q.xls=String(html); };
     DB={ref:function(){ return {remove:function(){ return Promise.resolve(); }, push:function(){ return Promise.resolve(); }}; }};
-    renovRascunho=__r630q?Object.assign({_k:pelKey(pelAtual)}, __r630q):null;`);
+    renovRascunho=__r630q?Object.assign({_k:pelKey(pelAtual)}, __r630q):null;
+    // 6.71 (palco): o Desfazer agora é pelo cartaz da 6.57 (o motivo e a senha da Gestão) e relê a ficha no banco antes de gravar;
+    // aqui o cartaz é respondido como a Gestão, e a releitura devolve a ficha que este palco guarda.
+    corrAbrir=function(op){ var reg={acao:op.acao, tela:'', oque:String(op.oque||''), motivo:'palco 6.71: lançada por engano no FILHOt errado', por:'Gestora Teste', papel:'gestao', login:'Gestora Teste', loginPapel:'gestao', quando:'', ts:Date.now()};
+      return Promise.resolve(op.gravar(reg)).then(function(r){ return (r&&r.ok)?{ok:true, reg:reg}:{ok:false, erro:(r&&r.erro)||'a gravação não confirmou', reg:reg}; }); };
+    __ref671p=DB.ref; DB={ref:function(p){ var r=__ref671p(p); r.once=function(){ var c=pelCadCache[String(p||'').split('/')[2]];
+      return Promise.resolve({val:function(){ return (c===undefined)?null:JSON.parse(JSON.stringify(c)); }}); }; return r; }};
+`);
   try { await run('(async function(){ ' + corpo + ' })()'); for (let i = 0; i < 40; i++) await Promise.resolve(); return J630('__log630q'); }
   finally {
     run(`pelCadCache=__bk630q.cad; PELUDINHOS=__bk630q.P; pelAtual=__bk630q.pa; zHojeISO=__bk630q.hz; hojeISO=__bk630q.hj; setPelExtra=__bk630q.sp;
@@ -10086,7 +10102,7 @@ const amb630 = async (fichas, hoje, rasc, corpo, resp) => {
       renderPelFicha=__bk630q.rf; renderPel=__bk630q.rp; canEditPel=__bk630q.ce; podePapel=__bk630q.pp; mmBlocoHTML=__bk630q.mm;
       repAgendaDe=__bk630q.ra; relBaixarXLS=__bk630q.rx; DB=__bk630q.db; renovRascunho=__bk630q.rr; pelCategoria=__bk630q.pc; document.getElementById=__bk630q.ge;
       ORC_SEL=__bk630q.osel; ORC_REP=__bk630q.orep; ORC_CALC=__bk630q.ocalc; ORC_AULUNO=__bk630q.oaul; ORC_TEMP=__bk630q.ot; ORC_TEMP_MANUAL=__bk630q.oman; ORC_TEMP_AUTO=__bk630q.oauto;
-      orcRenderResultado=__bk630q.orr; orcRenderMsg=__bk630q.orm; orcRenderSel=__bk630q.ors; orcNovoComecou=__bk630q.onc;`);
+      orcRenderResultado=__bk630q.orr; orcRenderMsg=__bk630q.orm; orcRenderSel=__bk630q.ors; orcNovoComecou=__bk630q.onc; corrAbrir=__bk630q.ca;`);
   }
 };
 const HOPI630 = () => ({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31', mesRenov: 'dezembro de 2026', quando: '2026-10-05', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] });
@@ -12612,7 +12628,7 @@ provaAsync('6.44 QA — Confirmar de novo o MESMO plano mantém o valor fechado 
   igual(K.grav[0].renov.plano_deduzido, true);
 });
 provaAsync('6.44 QA — virar avulso leva o valor fechado junto para o histórico (a ficha não fica com R$ 1.077,00 de um plano que não tem)', async () => {
-  const L = await monta630({ ex: EX630(Object.assign(GOLD1X630(), { valor_plano_cent: 107700, mensalidade_cent: 35900 })), hoje: '2026-10-06', rasc: null, resp: [] }, "await setPelCategoria('avulso');");
+  const L = await monta630({ ex: EX630(Object.assign(GOLD1X630(), { valor_plano_cent: 107700, mensalidade_cent: 35900 })), hoje: '2026-10-06', rasc: null, resp: [true] }, "await setPelCategoria('avulso');");   // 6.71 (palco): a pergunta antes da troca
   const r = L.grav[L.grav.length - 1].renov;
   igual([r.plano, 'valor_plano_cent' in r, 'mensalidade_cent' in r, L.hist[0].m, L.hist[0].a.valor_plano_cent], ['avulso', false, false, 'virou avulso', 107700]);
 });
@@ -26698,7 +26714,9 @@ const ORC648 = `__bkOP648={oc:ORC_LISTA_CACHE, sc:orcSheetsCfg, db:DB, za:zAlert
   ORC_LISTA_CACHE={frida:{pets:[{nome:'Frida', raca:'', tutor:'Ana Teste', diarias:3, subtotal_diarias_cent:45000}], entrada:'2026-10-01', saida:'2026-10-04', noites:3, total_cent:45000, status:'fechado'},
     duas:{pets:[{nome:'Nala', raca:'', tutor:'Bia', diarias:2, subtotal_diarias_cent:30000},{nome:'Irma', raca:'', tutor:'Bia', diarias:2, subtotal_diarias_cent:30000}], entrada:'2026-10-01', saida:'2026-10-03', noites:2, total_cent:60000, status:'fechado'}};
   orcSheetsCfg={url:'https://script.google.com/macros/s/x/exec', token:'${TK648}'};
-  __upOP648=[]; __upFalha648=null; DB={ref:function(p){ return {update:function(v){ __upOP648.push({p:p, v:JSON.parse(JSON.stringify(v))}); return __upFalha648?Promise.reject(__upFalha648):Promise.resolve(); }}; }};
+  // 6.68, 2ª rodada (palco): o banco de mentira também LÊ — o que ele tem é o que a tela tem (como em produção): o cancelamento relê o
+  // orçamento antes de gravar (REL-001) e a trava da Maya espera a lista inteira (LOW-4)
+  __upOP648=[]; __upFalha648=null; DB={ref:function(p){ return {once:function(){ var ps=String(p||'').split('/'), v=(ps.length>2)?((ORC_LISTA_CACHE[ps[2]]===undefined)?null:ORC_LISTA_CACHE[ps[2]]):ORC_LISTA_CACHE; return Promise.resolve({val:function(){ return (v==null)?null:JSON.parse(JSON.stringify(v)); }}); }, update:function(v){ __upOP648.push({p:p, v:JSON.parse(JSON.stringify(v))}); return __upFalha648?Promise.reject(__upFalha648):Promise.resolve(); }}; }};
   __alOP648=[]; zAlertao=function(t,l,op){ __alOP648.push({t:t, l:l, r:(op&&op.rodape)||''}); }; __al648=[]; alert=function(t){ __al648.push(String(t)); };
   __feErro648=new TypeError('Failed to fetch'); fetch=function(){ return Promise.reject(__feErro648); };
   orcNoitesDeOutraReserva=function(){ return []; }; orcCarregarLista=function(){}; ORC_LINHA_ABERTA={};`;
@@ -26937,6 +26955,15 @@ const DADO648 = { repExtratoRotulo: 2, repConferirHTML: 1, repExtratoDesmarcada:
   // arquivo da diária anulada (vagasAvulsoAnular, a mesma chave `motivo` da 6.56); e o motivo da falta avisada (cio, viagem…), pelo
   // rótulo de REP_MOTIVOS, em «Qual falta este dia repõe?» (dxFaltasHTML). O erro do banco vai para o cartaz da 6.57 (zErroMotivo).
   vagasDecisaoTexto: 1, vagasAvulsoAnular: 1, trocaCanceladasHTML: 1, trocaReabrirAbrir: 1, dxFaltasHTML: 1,
+  // 6.68 (Orçamento: a reserva e a planilha — funções novas, fora das três telas da 6.48): o .motivo de DADO — o motivo que a pessoa
+  // escreveu ao mudar as datas, mostrado em «Mudanças desta reserva» (orcMudancaLinhas). O erro do banco vai para gravacao-FALHOU e,
+  // na tela, pelo zErroMotivo (o cartaz da 6.57 e as frases da 6.48 do envio à planilha).
+  orcMudancaLinhas: 1,
+  // 6.76 (o Time, as senhas fixas, os celulares, a escala e os planos do dia: funções novas, fora das três telas da 6.48): o .motivo de
+  // DADO, lido num lugar só (z676Motivo) — o motivo que a pessoa escreveu no cartaz da 6.57 ou no campo «motivo do dia», mostrado no
+  // histórico do Time, nos desativados, nos celulares retirados, nas exceções da escala, nos planos excluídos e no dia sem plano. O erro
+  // do banco dessas funções vai para gravacao-FALHOU e, na tela, pelo zErroMotivo (ou zErroAviso).
+  z676Motivo: 1,
   // 6.66 (check-in, Hóspedes de hoje e avisos à Recepção: funções novas, fora das três telas da 6.48): o .motivo de DADO — o motivo que a
   // pessoa escreveu no cartaz da 6.57 (reg.motivo), levado ao aviso retirado e reaberto (a linha da trilha «Retirado: …», «Reaberto: …»
   // e o retirado guardado em retiradas_desfeitas), à linha «Corrigida por … : motivo» do aviso, ao histórico do remédio que parou na
@@ -27040,6 +27067,13 @@ const VARRE648_CORPO = (texto, EXCECAO) => {
   });
   return { a, onde };
 };
+// 6.71 (planos na ficha do FILHOt, fora das três telas da 6.48): o .motivo de DADO — o motivo que a pessoa escreveu no cartaz da
+// 6.57, guardado com o que voltou a valer (planoVoltaCampos) e mostrado em «Voltaram a valer» (renovVoltasHTML) e na linha do
+// pagamento anulado do Recebimentos e do Excel (recAnuladoTexto); o motivo da saída, levado de volta à ficha pelo «Desfazer a volta»
+// (saidaDeAntes); e o motivo do histórico gravado pelo app na troca de categoria («virou morador», planoVirouRotulo). O erro do banco
+// vai para gravacao-FALHOU e, na tela, pelo zErroMotivo (o cartaz da 6.57 e as frases desta story). Num acréscimo, fora do
+// objeto, para a junção com as outras stories não pisar no fim da lista.
+Object.assign(DADO648, { planoVoltaCampos: 1, renovVoltasHTML: 1, recAnuladoTexto: 1, saidaDeAntes: 1, planoVirouRotulo: 1 });
 // A frase do próprio app que passa por um campo de nome «msg» (não é cru): a linha inteira, com o porquê.
 const EXCECAO648 = [
   "else if(e.estado==='nao-entra'){ txt=e.msg; }",       // repPlanLinhaHTML: o msg do estado 'nao-entra' é do app ("morador não entra…")
@@ -27082,6 +27116,11 @@ const EXCECAO648 = [
   // 6.61, 2ª rodada (fora das três telas): a frase da régua das 24 horas da 6.38 (repRemarcarBarrado devolve um Error com repAviso e
   // a frase do app: «A reposição marcada para … já passou do prazo para desmarcar…»), levada à Márcia — nunca o cru
   "if(bar) return String(bar.message||'A régua do prazo não deixa mudar este dia.')+fim;",   // vagasMudarConferir: bar = repRemarcarBarrado
+  // 6.68 (fora das três telas): a régua do motivo de 4 palavras do Orçamento — a frase do motivoQuatroPalavras, nunca o cru
+  "function orcMotivoErro(t){ var r=motivoQuatroPalavras(t); return r.ok?'':r.erro; }",   // orcMotivoErro: no «Mudar as datas», no «Cancelar reserva», no «Não fechou» e de novo nas funções que gravam
+  // 6.76 (fora das três telas): a frase do corrAssinar quando recusa («Essa senha é de um posto…», «Quem assina: …») no cartaz das
+  // senhas fixas — a frase do próprio app, nunca o cru
+  "function z676AssinaturaRecusa(ass){ return (ass && ass.ok)?'':String((ass&&ass.erro)||'Essa senha não assina. Nada foi gravado.'); }",   // z676AssinaturaRecusa: ass = corrAssinar
   // 6.66 (fora das três telas): a régua do motivo de 4 palavras dos avisos à Recepção — a frase do motivoQuatroPalavras, nunca o cru
   "function avisoMotivoErro(t){ var r=motivoQuatroPalavras(t); return r.ok?'':r.erro; }",   // avisoMotivoErro: chamada no Encerrar, no Retirar e no Reabrir
 ];
@@ -27404,7 +27443,9 @@ provaAsync('6.48 R2 — Orçamentos: o PRAZO do Safari no fechar e no cancelar (
     try {
       await run("orcCancelar('frida')"); await espera648();
       igual(J630('__al648'), ['NÃO consegui cancelar: erro inesperado do app (x is not a function).\n\nConfira na lista de Orçamentos se a reserva foi cancelada antes de tentar de novo; avise a Gestão com um print desta tela.']);
-      run(`__al648=[]; audit=function(){ throw new Error('Upload failed'); };`);
+      // 6.68, 2ª rodada (palco): a Frida volta a «fechado» entre as duas tentativas — o cancelamento relê antes de gravar (REL-001) e
+      // recusaria cancelar de novo o que já está cancelado; o que esta prova mede é o texto de depois, com outro erro
+      run(`ORC_LISTA_CACHE.frida=Object.assign({}, ORC_LISTA_CACHE.frida, {status:'fechado'}); __al648=[]; audit=function(){ throw new Error('Upload failed'); };`);
       await run("orcCancelar('frida')"); await espera648();
       igual(J630('__al648'), ['NÃO consegui cancelar: Upload failed.\n\nConfira na lista de Orçamentos se a reserva foi cancelada antes de tentar de novo; avise a Gestão.'], 'o texto de depois: nunca «Nada foi alterado»');
     } finally { run('audit=__bkAU648;'); }
@@ -27427,7 +27468,8 @@ const ORCS648 = `__bkOS648={tp:ORC_TEMP, ca:ORC_CALC, ed:ORC_EDITANDO, ea:ORC_ED
   zAlertao=function(){}; alert=function(){}; zPergunta=function(){ return Promise.resolve(true); };
   __ztOS648=0; zTexto=function(){ __ztOS648++; return Promise.resolve(__ztOS648%2===1?'a tutora antecipou a viagem':'senha123'); };
   orcQuemPelaSenha=function(){ return {nome:'Márcia Teste', role:'gestao'}; };
-  __upFalhaOS648=null; DB={ref:function(p){ return {push:function(){ return Object.assign(Promise.resolve(), {key:'novoR2'}); },
+  // 6.68, 2ª rodada (palco): o banco de mentira também LÊ — o que ele tem é o que a tela tem: o «Salvar a alteração» relê antes (REL-001)
+  __upFalhaOS648=null; DB={ref:function(p){ return {once:function(){ var ps=String(p||'').split('/'), v=(ps.length>2)?((ORC_LISTA_CACHE[ps[2]]===undefined)?null:ORC_LISTA_CACHE[ps[2]]):ORC_LISTA_CACHE; return Promise.resolve({val:function(){ return (v==null)?null:JSON.parse(JSON.stringify(v)); }}); }, push:function(){ return Object.assign(Promise.resolve(), {key:'novoR2'}); },
     update:function(){ return __upFalhaOS648?Promise.reject(__upFalhaOS648):Promise.resolve(); }}; }};`;
 const ORCS648_VOLTA = `ORC_TEMP=__bkOS648.tp; ORC_CALC=__bkOS648.ca; ORC_EDITANDO=__bkOS648.ed; ORC_EDIT_ANTES=__bkOS648.ea; DB=__bkOS648.db; document.getElementById=__bkOS648.ge;
   orcDuplicados=__bkOS648.du; repOrcAcerto=__bkOS648.ac; repOrcResumo=__bkOS648.rr; audit=__bkOS648.au; orcCalcular=__bkOS648.oc; orcCarregarLista=__bkOS648.cl;
@@ -30267,7 +30309,7 @@ provaAsync('6.57 P19 (AC3.3) — «Desfazer a última renovação» com o banco 
     const ant = Object.assign({}, GOLD1X630(), { substituidoEm: T657(9, 9, 0), por: 'Gestora Teste', motivo: 'renovação', motivo_conferido: true });
     plano657(EX630(atual, { renov_hist: { h1: ant } }), '2026-12-22', null);
     run(`__recusa657='^daycare/cadastro/[^/]+$'; __zpq657=[true];`);
-    await run('desfazerRenovacao()'); await espera657();
+    { const prDz = run('desfazerRenovacao()'); await espera657(); run(`corrToque('confirmar', {motivo:'a renovação foi lançada no FILHOt errado', senha:'${SENHA657}'})`); await prDz; await espera657(); }   // 6.71 (palco): o cartaz no lugar da pergunta
     const f = db657('daycare/cadastro/' + KT657());
     igual([f.renov.inicio, Object.keys(f.renov_hist)], ['2026-12-21', ['h1']], 'nada mudou no banco');
     const tit = J630('__za657').map((z) => z[0]);
@@ -30277,7 +30319,7 @@ provaAsync('6.57 P19 (AC3.3) — «Desfazer a última renovação» com o banco 
     // aceitando: uma gravação só (o plano que volta, a linha nova e a saída da antiga)
     plano657(EX630(atual, { renov_hist: { h1: ant } }), '2026-12-22', null);
     run(`__recusa657=null; __zpq657=[true];`);
-    await run('desfazerRenovacao()'); await espera657();
+    { const prDz = run('desfazerRenovacao()'); await espera657(); run(`corrToque('confirmar', {motivo:'a renovação foi lançada no FILHOt errado', senha:'${SENHA657}'})`); await prDz; await espera657(); }   // 6.71 (palco): o cartaz no lugar da pergunta
     const w = escritas657().filter((e) => /^daycare\/cadastro/.test(e[1]));
     igual(w.length, 1, JSON.stringify(w));
     const f2 = db657('daycare/cadastro/' + KT657());
@@ -30364,7 +30406,8 @@ provaAsync('6.57 P23 (AC4) — «Fotos a conferir» (responder e desfazer): o En
 provaAsync('6.57 P24 (AC4) — Orçamento: senha de posto e de Encãotador recusadas no Cancelar e no Mudar as datas; orcCancelarGravar confere quem assinou; a Supervisão (o Excluir da 6.53) e quem recebeu a tela no Time cancelam', async () => {
   run(ARMA657);
   try {
-    const seed = () => run(`ORC_LISTA_CACHE={o1:{pets:[{nome:'Tonico'}], entrada:'2026-10-20', saida:'2026-10-22', status:'fechado'}}; __esc657=[]; __al657=[]; __au657=[];`);
+    // 6.68, 2ª rodada (palco): o orçamento também no banco (o cancelamento relê antes de gravar, REL-001)
+    const seed = () => run(`ORC_LISTA_CACHE={o1:{pets:[{nome:'Tonico'}], entrada:'2026-10-20', saida:'2026-10-22', status:'fechado'}}; __put657('auaulandia/orcamentos/o1', ORC_LISTA_CACHE.o1); __esc657=[]; __al657=[]; __au657=[];`);
     // Cancelar reserva (a conversa)
     for (const s of ['s-posto', 's-caio']) {
       seed(); run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', '${s}'];`);
@@ -30702,6 +30745,7 @@ provaAsync('6.57 R2-3 (M-2, AC2.1) — sem internet, o Caio muda, sai, a Bia ent
     plano657(EX630(atualD, { renov_hist: { h1: antD } }), '2026-12-22', null);
     run(`document.body.dataset.role='gestao'; __login657={nome:'Gestora Teste', role:'gestao'}; __pendura657='^daycare/cadastro'; __pend657=[]; __tm657=[]; __zpq657=[true];`);
     const prD = run('desfazerRenovacao()'); await espera657();
+    run(`corrToque('confirmar', {motivo:'a renovação foi lançada no FILHOt errado', senha:'${SENHA657}'})`); await espera657();   // 6.71 (palco): o cartaz no lugar da pergunta
     run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await ate657(prD); await espera657();
     run(`__login657={nome:'Bia Consultora Teste', role:'consultora'}; document.body.dataset.role='consultora'; Date.now=function(){ return ${T2}; };`);
     run('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await espera657();
@@ -30822,7 +30866,7 @@ provaAsync('6.57 R2-6 (M-4, L-1) — o plano e o cadastro novo depois do prazo d
     const ant = Object.assign({}, GOLD1X630(), { substituidoEm: T657(9, 9, 0), por: 'Gestora Teste', motivo: 'renovação', motivo_conferido: true });
     plano657(EX630(atual, { renov_hist: { h1: ant } }), '2026-12-22', null);
     run(`__pendura657=null; __zpq657=[true];`);
-    await run('desfazerRenovacao()'); await espera657();
+    { const prDz = run('desfazerRenovacao()'); await espera657(); run(`corrToque('confirmar', {motivo:'a renovação foi lançada no FILHOt errado', senha:'${SENHA657}'})`); await prDz; await espera657(); }   // 6.71 (palco): o cartaz no lugar da pergunta
     const hc = run(`JSON.stringify(Object.keys((pelCadCache[pelKey(__t657)]||{}).renov_hist||{}))`);
     igual([JSON.parse(hc).indexOf('h1'), JSON.parse(hc).length], [-1, 1], 'o cache: a linha h1 saiu, a nova entrou');
     // o cadastro novo: sem resposta em 20 s, a ficha não abre; com o ok, abre uma vez
@@ -30879,7 +30923,8 @@ provaAsync('6.57 R2-8 (L-4, AC4) — Orçamento com xarás: a mesma pessoa cance
   try {
     run(`MONITORES=[{id:'t1', nome:'Ana Teste', senha:'s-ana1', role:'monitor', paginas:[]}, {id:'t2', nome:'Ana Teste', senha:'s-ana2', role:'monitor', paginas:['orcamento']}];
       __sr657b=senhasRuntime; senhasRuntime=function(){ var m=__sr657b(); m['s-ana1']={role:'monitor', nome:'Ana Teste', paginas:[]}; m['s-ana2']={role:'monitor', nome:'Ana Teste', paginas:['orcamento']}; return m; };`);
-    const seed = () => run(`ORC_LISTA_CACHE={o1:{pets:[{nome:'Tonico'}], entrada:'2026-10-20', saida:'2026-10-22', status:'fechado'}}; __put657('auaulandia/orcamentos/o1', null); __esc657=[]; __al657=[]; __au657=[];`);
+    // 6.68, 2ª rodada (palco): o orçamento volta ao banco como está na tela, a cada passo (antes, o nó ia a null: o cancelamento relê antes de gravar, REL-001)
+    const seed = () => run(`ORC_LISTA_CACHE={o1:{pets:[{nome:'Tonico'}], entrada:'2026-10-20', saida:'2026-10-22', status:'fechado'}}; __put657('auaulandia/orcamentos/o1', ORC_LISTA_CACHE.o1); __esc657=[]; __al657=[]; __au657=[];`);
     // a Ana que recebeu a tela Orçamento, pela senha dela: cancela (antes, a gravação procurava pelo nome e achava a outra Ana)
     seed(); run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', 's-ana2'];`);
     await run(`orcCancelar('o1')`); await espera657();
@@ -31048,6 +31093,10 @@ const hoje658 = () => String(run("__el657['magHoje'].innerHTML") || '');
 const anular658 = async (doseId) => { run(`__p658=medDoseAnularAbrir(${JSON.stringify(doseId)});`); await espera658(); };
 
 // ---- AC1 — «Desfazer esta dose» -------------------------------------------------------------------------------------
+provaAsync('6.76 × publicadas · 6.58 — «Desfazer esta dose» (o cartaz da 6.57 com a régua da 6.76, na junção): a senha certa assina; a provisória ainda não trocada, a senha do código sem o banco e sem a cópia e a de quem foi desativado são recusadas, cada uma com a sua frase e sem gravar nada', async () => {
+  arma658();
+  try { semear658(); await anular658('zen_08-00'); igual(await x676Portas(run, espera658, MOTIVO658, SENHA657), x676Esperado()); } finally { solta658(); }
+});
 provaAsync('6.58 P1 (AC1.1) — «Desfazer esta dose» na linha da dose dada (a agendada e a avulsa), com 44 px; sem dose dada, sem botão; «Corrigir» só na avulsa', async () => {
   arma658();
   try {
@@ -34072,6 +34121,14 @@ provaAsync('6.59 P18 (AC3.3, AC3.6) — corrigir a consulta: versão nova (corri
     let r = await assina658('s-vera', 'a recomendação certa é outra');
     igual(r[0], 'conferir'); assert.ok(/Quem assina: a Gestão ou a Diretoria/.test(r[1]), r[1]);
     [p] = await assina658(SENHA657, 'a recomendação certa é outra'); igual(p, 'pronto');
+  } finally { solta659(); }
+});
+provaAsync('6.76 × publicadas · 6.59 — «Anular esta consulta» no Cuidado Vet (na junção): a senha certa assina; a provisória ainda não trocada, a senha do código sem o banco e sem a cópia e a de quem foi desativado são recusadas, cada uma com a sua frase e sem gravar nada', async () => {
+  arma659();
+  try {
+    semearVet659({ consultas: { c1: C1_659() }, recom: RECOM659('c1') });
+    run(`__p659=vetConsultaAnular('c1');`); await espera659();
+    igual(await x676Portas(run, espera659, motivo659, SENHA657), x676Esperado());
   } finally { solta659(); }
 });
 provaAsync('6.59 P19 (AC3.4, AC3.6) — anular a consulta: a Gestão; a consulta fica riscada; a instrução nascida dela fica ativo:false; a reavaliação dela vai junto; a antiga (sem consultaId) pergunta «Tirar junto» ou «Manter»', async () => {
@@ -39592,7 +39649,8 @@ provaAsync('6.65 P19 (AC3.9) — a ficha antiga com a 2ª gravada antes da 1ª (
   com665({ verm_doses: '2 doses', verm_t: '2026-09-01', verm_dose2_t: '2026-08-01', verm_p: '2026-11-29' }, HOJE665, () => {
     ficha665({ verm_nome: 'Drontal' });
     igual(ZA665(), []);
-    igual(G665(), [{ verm_nome: 'Drontal', verm_2a: '2026-09-22', verm_p: '2027-01-20' }]);
+    // 6.80 (AC4.1, AC4.3): a 2ª antiga (antes da 1ª) sai também no Salvar só do nome — o patch leva verm_dose2_t vazio
+    igual(G665(), [{ verm_nome: 'Drontal', verm_dose2_t: '', verm_2a: '2026-09-22', verm_p: '2027-01-20' }]);
   });
 });
 provaAsync('6.65 P20 (AC5, D7) — depois da 2ª real (1ª 10/10, 2ª 25/10), o bloco diz «2ª dose dada em 25/10/2026» e não «2ª dose prevista»; o campo «2ª dose dada em» e o onchange continuam; «Pela conta» diz o próximo depois da 2ª', async () => {
@@ -39642,6 +39700,9 @@ provaAsync('6.65 P22 (AC13, AC14, guarda) — a área protegida, as permissões,
   // 6.63, 2ª rodada (REL-004 do gate do QA): no ok com o soDepoisDoOk, o setPelExtra grava na cópia deste aparelho só o patch, por
   // cima da cópia de agora (não o retrato tirado na chamada) — muda de propósito; a guarda continua, contra o texto da 6.63.
   Object.assign(BASE, { setPelExtra: 'c37367acebfa2701' });
+  // 6.80 (AC2.1): vencItensDe não oferece a 2ª dose da série vencida quando o próximo também está na lista — muda de propósito;
+  // a guarda continua, contra o texto da 6.80 (as outras funções, contra a base).
+  Object.assign(BASE, { vencItensDe: 'c019895dacb7d9b8' });
   const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h(runN('String(' + n + ')')); });
   igual(agora, BASE, 'as funções que não mudam');
   const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
@@ -39831,7 +39892,8 @@ provaAsync('6.65 R2 P29 (TEST-001: Q22, Q24, Q25, Q27, Q28) — «Lance aqui mes
   com665(Object.assign({}, ROMEU665, { verm_t: '2026-10-10', verm_2a: '2026-10-31', verm_p: '2027-02-28' }), HOJE665, () => {
     const K = K665(), l2 = linha665(run(`prevEdicaoHTML({p:__bento, nome:'Bento'})`), 'verm_dose2_p');
     assert.ok(l2.indexOf('id="prevT_' + K + '_verm_dose2_p" value=""') >= 0 && !/dada em/.test(txt665(l2)) && l2.indexOf(run("seloValidade('2026-10-31')")) >= 0, txt665(l2));
-    assert.ok(/id="prevP_[^"]*_verm_dose2_p" value=""/.test(l2), 'o «Próximo vermífugo» vazio');
+    // 6.80 (AC6.2): sem a 2ª dada, o «Próximo vermífugo» mostra o próximo pela conta da 1ª da ficha ((10/10 + 21) + 120), e não mais vazio
+    assert.ok(/id="prevP_[^"]*_verm_dose2_p" value="2027-02-28"/.test(l2), 'o «Próximo vermífugo» pela conta');
   });
 });
 }
@@ -40061,7 +40123,8 @@ provaAsync('6.65 QA Q13 — a 2ª ANTES da 1ª já gravada (mudança prevista, p
     const h = run('blocoVerm(pbEx("verm"))');
     assert.ok(h.indexOf('<label>2ª dose prevista (21 dias depois)</label><div class="prev-calc">22/09/2026</div>') >= 0, 'prevista');
     fichaQ({ verm_nome: 'Milbemax' }); await espera657();
-    igual(pegaQ(dbQ(), VQ), ['2026-09-01', '2026-08-01', '2026-09-22', '2027-01-20', '∅']);
+    // 6.80 (AC4.1, AC4.3): o Salvar só do nome agora tira a 2ª antiga do banco (verm_dose2_t vazio); a lista e a 2ª prevista não mudam
+    igual(pegaQ(dbQ(), VQ), ['2026-09-01', '', '2026-09-22', '2027-01-20', '∅']);
   });
 });
 provaAsync('6.65 QA Q14 — virada do ano: 1ª em 20/12/2026 com 15 e com 21, pelas três portas; a lista diz a data inteira do outro ano', async () => {
@@ -40293,6 +40356,8 @@ provaAsync('6.65 QA Q24 — o que não pode mudar: dose pelo peso (6.59), exame 
   // (por cima da cópia de agora) — muda de propósito; a guarda continua, contra o texto da 6.63.
   const MUDOU663 = { fn: { prevVenceManualSet: 'e583a6c8523f2e36', prevCorrigeRegistrar: 'f1360a1fdbf2da9f', setPelExtra: 'c37367acebfa2701' }, cache3: { prevCorrigeExameFezes: 'd6b8e673ee37db29', prevCorrigeVenceEm: '8723e245ae6a9237', prevCorrigeDoseUnica: 'b5129f66aa4d2f76' } };
   const BASEF663 = Object.assign({}, BASE.fn, MUDOU663.fn);
+  // 6.80 (AC2.1): vencItensDe muda de propósito (a 2ª da série vencida fora da lista); a guarda continua, contra o texto da 6.80
+  Object.assign(BASEF663, { vencItensDe: 'c019895dacb7d9b8' });
   const dif = Object.keys(BASEF663).filter((n) => h(fonte(novo, n)) !== BASEF663[n]);
   igual(dif, [], 'funções que mudaram: ' + dif.join(', '));
   // as três que só ganham o passo do cache: sem as duas linhas, idênticas
@@ -40533,7 +40598,8 @@ provaAsync('6.65 QA2 Q13 — a 2ª ANTES da 1ª já gravada (mudança prevista, 
     const h = run('blocoVerm(pbEx("verm"))');
     assert.ok(h.indexOf('<label>2ª dose prevista (21 dias depois)</label><div class="prev-calc">22/09/2026</div>') >= 0, 'prevista');
     fichaQ({ verm_nome: 'Milbemax' }); await espera657();
-    igual(pegaQ(dbQ(), VQ), ['2026-09-01', '2026-08-01', '2026-09-22', '2027-01-20', '∅']);
+    // 6.80 (AC4.1, AC4.3): o Salvar só do nome agora tira a 2ª antiga do banco (verm_dose2_t vazio); a lista e a 2ª prevista não mudam
+    igual(pegaQ(dbQ(), VQ), ['2026-09-01', '', '2026-09-22', '2027-01-20', '∅']);
   });
 });
 provaAsync('6.65 QA2 Q14 — virada do ano: 1ª em 20/12/2026 com 15 e com 21, pelas três portas; a lista diz a data inteira do outro ano', async () => {
@@ -41344,6 +41410,17 @@ provaAsync('6.66 P24 (AC7.5, guarda) — a estadia finalizada (check-out feito):
     return { perg: J658('__zp657').map((z) => z[0]), e: db658(EP666) };
   });
   igual([r.perg, r.e.status, r.e.saida], [['Esta hospedagem está marcada como encerrada'], 'ativa', '2026-10-13'], JSON.stringify(r));
+});
+provaAsync('6.76 × publicadas · 6.66 — «Desfazer a baixa» da hospedagem (na junção): a senha certa assina; a provisória ainda não trocada, a senha do código sem o banco e sem a cópia e a de quem foi desativado são recusadas, cada uma com a sua frase e sem gravar nada', async () => {
+  let r = null;
+  await hosp666(EST666(), async () => {
+    run(`__el657['hospBxData']={value:'2026-10-09'};`);
+    await run(`hospConfirmarBaixa('${EID666}')`); await espera659(); sync666();
+    run(`__p666=hospBaixaDesfazerAbrir('${EID666}');`); await espera659();
+    await run(`corrToque('continuar', {valores:['12/10/2026']})`); await espera659();
+    r = await x676Portas(run, espera659, 'a tutora não veio buscar hoje', 's-bia');
+  });
+  igual(r, x676Esperado());
 });
 provaAsync('6.66 P25 (AC8) — Dar baixa guarda a saída combinada (a linha diz qual era); «Desfazer a baixa» (44 px) volta a «ativa» com ela, a baixa inteira vai para baixas_desfeitas e sai do topo; a baixa de ontem pede a Gestão. Base: sem saída combinada nem volta', async () => {
   const r = await hosp666(EST666(), async () => {
@@ -42540,6 +42617,17 @@ provaAsync('6.70 P6 (AC1.5 a AC1.7) — o pagamento guarda status_antes e uma en
 });
 
 // ---- AC2 — «Desfazer o pagamento» ---------------------------------------------------------------------------------------------------------
+provaAsync('6.76 × publicadas · 6.70 — «Desfazer o pagamento» do acerto das plantonistas (na junção): a senha certa assina; a provisória ainda não trocada, a senha do código sem o banco e sem a cópia e a de quem foi desativado são recusadas, cada uma com a sua frase e sem gravar nada', async () => {
+  let r = null;
+  await com670({ reg: { '2026-10-05': REG670() } }, async () => {
+    nome670('2026-10-05', 'Carol Teste');
+    await marca670('2026-10-05', 'pago', true);
+    limpa670();
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-10-05');`); await espera657();
+    r = await x676Portas(run, espera657, MOT670, SENHA657);
+  });
+  igual(r, x676Esperado());
+});
 provaAsync('6.70 P7 (AC2.1, AC2.3, AC2.4) — «Desfazer o pagamento» (44 px) em «Já pagas»: a senha da Supervisão é recusada, a da Gestão assina; volta a guardada com o nome e o valor da época (a lista e a tabela mudaram); o pagamento desfeito fica no histórico; pagar de novo cria outra entrada. Base: quem vazio e o valor refeito (SONDA670-C1)', async () => {
   await com670({ reg: { '2026-10-05': REG670() } }, async () => {
     nome670('2026-10-05', 'Carol Teste');
@@ -43091,6 +43179,25 @@ provaAsync('6.70 P30 (AC8.5) — duas plantonistas: o valor de cada uma (a faixa
     const p = totais670();
     igual([p['Carol Teste'].total, p['Júlia Teste'].total >= 11300], [11300, true]);
   });
+});
+provaAsync('6.76 × publicadas · QA676J-05 (6.70, portas fora da varredura) — «Não houve plantão nesta noite» (acertoSemPlantaoAbrir) e «Tirar» um nome ensinado (plantTirarAbrir): a Consultora e a Supervisão recusadas; a provisória, a do código sem banco e a desativada recusadas; a Gestão assina', async () => {
+  let a = null, b = null, rec = null;
+  await com670({}, async () => {
+    run(`__p670=acertoSemPlantaoAbrir('2026-10-01');`); await espera657();
+    await assina670('s-bia'); const p1 = passo670(); await assina670('s-amanda'); const p2 = passo670();
+    rec = [p1, p2, grav670().length];
+    a = await x676Portas(run, espera657, MOT670, SENHA657);
+    igual(!!db670('acerto-plantao/2026-10-01').sem_plantao, true);
+  });
+  igual(rec, ['conferir', 'conferir', 0]);
+  igual(a, x676Esperado(), 'Não houve plantão');
+  const semJulia = () => { const l = LIVRO670(); delete l.apelidos['julia teste']; return l; };
+  await com670(Object.assign(NOMES670(), { livro: semJulia() }), async () => {
+    run(`__p670=plantTirarAbrir('carpl');`); await espera657();
+    if (passo670() === 'campos') { continua670(['Não']); await espera657(); }
+    b = await x676Portas(run, espera657, MOT670, SENHA657);
+  });
+  igual(b, x676Esperado(), 'Tirar o nome ensinado');
 });
 provaAsync('6.70 P31 (AC8.6) — «Não houve plantão nesta noite» (cartaz «anular», a Gestão): sai do «A pagar por pessoa» e do Dashboard; riscada em «Noites sem plantão», com «Reabrir», que a devolve', async () => {
   await com670({}, async () => {
@@ -44244,6 +44351,23 @@ provaAsync('6.63 P04 (AC1.4) — a tirada cujo item já ganhou outra aberta no m
     igual([/Resolvidas e tiradas \(0\)/.test(h), h.indexOf('pendReabrirAbrir(') < 0], [true, true]);
   });
 });
+provaAsync('6.76 × publicadas · QA676J-07 (6.63, portas fora da varredura) — «Tirar» a pendência de remédio (pendTirarMedAbrir, Gestão) e «Corrigir» a de vermífugo (pendCorrigirAbrir, a própria senha com a tela «pendencias»): a provisória, a do código sem banco e a desativada recusadas; quem pode assina', async () => {
+  const r = [];
+  await comPend663(async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    pend663('medicacao', { valor: 'Tonico/SRD (Apoquel)' });
+    run(`__p663=pendTirarMedAbrir('${KP663}', 'medicacao', 'tutor', 'O tutor vai dar em casa');`); await espera657();
+    r.push(op663('nivel'));
+    r.push(await x676Portas(run, espera657, 'o tutor vai dar em casa', SENHA657));
+    await fecha663();
+    pend663('vermifugo', { valor: 'Tonico/SRD (Drontal)' });
+    run(`__p663=pendCorrigirAbrir('${KP663}', 'vermifugo');`); await espera657();
+    await continua663(['07/10/2026', '', 'Tonico/SRD (Drontal Plus)', '', 'Tonico/SRD', run("pendRotulo('vermifugo')")]);
+    r.push(op663('nivel'));
+    r.push(await x676Portas(run, espera657, 'o lançamento veio com o nome errado', 's-bia'));
+  });
+  igual(r, ['gestao', x676Esperado(), 'propria', x676Esperado()]);
+});
 provaAsync('6.63 P05 (AC1.5, AC2.4, AC3.2, AC4.3; S5-P1) — medicação: Reabrir, Corrigir, Tirar e Desfazer a resolução só com a Gestão (Consultora e Supervisão recusadas no cartaz); vermífugo com a própria senha', async () => {
   await comPend663(async () => {
     papel657('consultora', 'Bia Consultora Teste');
@@ -44573,6 +44697,17 @@ provaAsync('6.63 P18 (AC5.3) — «Atualizados hoje» nas três telas, lido do b
     // a tela que abre lê o dia (aoAbrirView)
     assert.ok(/if\(v==='vacinas'\|\|v==='vencimentos'\|\|v==='hoje'\)\{ try\{ if\(typeof prevCorrCarregar==='function'\) prevCorrCarregar\(true\);/.test(fs.readFileSync(APP, 'utf8')));
   });
+});
+provaAsync('6.76 × publicadas · 6.63 — «Desfazer» a correção da Prevenção (na junção): a senha certa assina; a provisória ainda não trocada, a senha do código sem o banco e sem a cópia e a de quem foi desativado são recusadas, cada uma com a sua frase e sem gravar nada', async () => {
+  let r = null;
+  await comPrev663({ vac_mult_nome: 'V10 Teste' }, async () => {
+    papel657('consultora', 'Bia Consultora Teste');
+    run('prevCorrigeFeitoHoje(__dcp, \'vac_mult_p\', \'hoje\');'); await espera657();
+    const L = corrHoje663()[0];
+    run(`__p663=prevCorrDesfazerAbrir(${JSON.stringify(L.id)}, 'hoje');`); await espera657();
+    r = await x676Portas(run, espera657, MOT663, 's-bia');
+  });
+  igual(r, x676Esperado());
 });
 provaAsync('6.63 P19 (AC5.4) — «Desfazer»: o antes volta (inclusive «sem data»), a linha riscada com desfeito; a conversa reabre pelo vencFecharAssuntosPelaFicha de sempre (chamado de dentro do setPelExtra)', async () => {
   await comPrev663({ vac_mult_nome: 'V10 Teste' }, async () => {
@@ -47872,6 +48007,8421 @@ provaAsync('6.63 QA micro · QU663-04 (REQ-004b) — o «Colar»: na pergunta re
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< 6.63, 3ª rodada (fim)
 }
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< 6.63 (fim)
+{
+// ================================================================== 6.71 — planos na ficha do FILHOt (S8, parte 1)
+console.log('\n6.71 — Planos na ficha do FILHOt: anular o pagamento lançado por engano, desfazer a renovação com motivo e sem perder o histórico, o meio do mês, a categoria com pergunta e volta, os dias e a saída e a volta do Day Care');
+// "O app está engessado, tudo preciso entrar no Claude para alterar." (Adriana, 09/out/2026). Tudo INVENTADO: tutores «Teste»
+// (Biscoito, Pipoca, Quindim, Tâmara, Nelson, Maria Eduarda, Beethoven). Relógio FIXO em sábado, 10/10/2026, 10:00. Um sandbox
+// PRÓPRIO, na ordem da página (o financeiro-logica.js antes do script grande: o efeito no Recebimentos usa a conta de verdade), com
+// o banco de mentira da 6.57 (ARMA657: conta gravações, sabe recusar e ficar sem responder) no dia 10/10.
+const ctx671 = vm.createContext(makeSandbox());
+vm.runInContext(FIN_SRC36, ctx671, { filename: 'financeiro-logica.js (6.71)' });
+vm.runInContext(extractMainScript(fs.readFileSync(APP, 'utf8')), ctx671, { filename: 'index.html#script (6.71)', timeout: 15000 });
+const r71 = (c) => vm.runInContext(c, ctx671);
+const J71 = (c) => { const s = r71('JSON.stringify(' + c + ')'); return s === undefined ? undefined : JSON.parse(s); };
+r71('var __RD657=Date; _repVeioTs=Date.now();');
+const T671 = new Date(2026, 9, 10, 10, 0, 0).getTime();
+const ARMA671 = ARMA657.split(String(T657(9, 10, 0))).join(String(T671)).split("'2026-10-09'").join("'2026-10-10'");
+const esp71 = async (n) => { for (let i = 0; i < (n || 400); i++) await Promise.resolve(); };
+const MOT71 = 'o plano foi lançado no FILHOt errado';
+const GOLD71 = () => ({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31', mesRenov: 'dezembro de 2026', quando: '2026-10-05', valor_plano_cent: 107700, mensalidade_cent: 35900 });
+const JUL71 = () => Object.assign(GOLD71(), { inicio: '2026-07-05', fim: '2026-09-30', mesRenov: 'setembro de 2026', quando: '2026-07-05' });
+const H71 = (o, t, motivo) => Object.assign({}, o, { substituidoEm: t, por: 'Consultora Teste', motivo: motivo || 'renovação', motivo_conferido: true });
+// a cena: as fichas no banco de mentira e no cadastro em memória, a lista do app, os irmãos, o papel e quem está no aparelho
+const cena71 = (fichas, op) => {
+  ctx671.__f71 = JSON.parse(JSON.stringify(fichas)); ctx671.__o71 = op || {};
+  r71(`PELUDINHOS=[]; pelCadCache={}; IRMAOS_CACHE=__o71.irmaos||{}; REC_FONTES={quando:1, orc:{}, irm:IRMAOS_CACHE}; CARTEIRA_CARREGADA=true; CORR_ATUAL=null;
+    REC_AVULSO={mes:'', quando:0, lendo:false, ok:false, total_cent:0, n:0, semValor:0, futuros:0}; REC_MES='';
+    __f71.forEach(function(f){ var p=Object.assign({n:f.n, tutor:f.tutor, raca:'SRD'}, f.fabrica||{}); PELUDINHOS.push(p);
+      __put657('daycare/cadastro/'+pelKey(p), Object.assign({n:f.n, tutor:f.tutor}, f.ex)); pelCadCache[pelKey(p)]=__get657('daycare/cadastro/'+pelKey(p)); });
+    pelAtual=PELUDINHOS[0]; pelAtualIdx=0;
+    document.body.dataset.role=(__o71.login||{}).role||'consultora'; __login657=__o71.login||{nome:'Bia Consultora Teste', role:'consultora'};
+    __esc657=[]; __au657=[]; __za657=[]; __zp657=[]; __zt657=[]; __al657=[]; __zpq657=[]; __ztq657=[]; __recusa657=null; __pendura657=null; __pend657=[]; __tm657=[]; __ls657={};`);
+};
+const arma71 = () => r71(ARMA671 + '; CORR_ATUAL=null;');
+const solta71 = () => r71(SOLTA657 + '; CORR_ATUAL=null;');
+const K71 = (i) => r71(`pelKey(PELUDINHOS[${i || 0}])`);
+const ficha71 = (i) => J71(`__get657('daycare/cadastro/'+pelKey(PELUDINHOS[${i || 0}]))`);
+const escCad71 = () => J71('__esc657').filter((e) => /^daycare\/cadastro/.test(e[1]));
+const aud71 = (acao) => J71(`__au657.filter(function(a){ return a[0]===${JSON.stringify(acao)}; })`);
+const titulos71 = () => J71('__za657').map((z) => z[0]);
+const za71 = (t) => (J71('__za657').filter((z) => z[0] === t)[0] || [t, []])[1];
+const txt71 = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
+const cartaz71 = () => txt71(r71('CORR_ATUAL?corrCartazHTML(CORR_ATUAL):""'));
+const passo71 = () => r71('CORR_ATUAL?CORR_ATUAL.passo:""');
+const aviso71 = () => r71('CORR_ATUAL?CORR_ATUAL.aviso:""');
+const toca71 = async (senha, motivo) => { r71(`__t71r=corrToque('confirmar', {motivo:${JSON.stringify(motivo || MOT71)}, senha:${JSON.stringify(senha)}})`); await esp71(); return J71('null'); };
+// o número do quadro «Recebimentos do mês» (o mesmo da tela: recResumoDoMes + recQuebra), em centavos
+const quadro71 = (mes) => r71(`recQuebra(recResumoDoMes('${mes}')).total`);
+// abre a ação (devolve quando o cartaz já está na tela); a promessa fica em __a71
+const abre71 = async (chamada) => { r71('__a71=' + chamada + ';'); await esp71(); };
+const fim71 = async () => { await esp71(); return J71('__a71Res'); };
+const BISCOITO = () => ({ n: 'Biscoito', tutor: 'Clara Teste', ex: { dias: ['seg'], renov: GOLD71() } });
+const PIPOCA = (extra) => ({ n: 'Pipoca', tutor: 'Rui Teste', ex: Object.assign({ dias: ['seg'], sexo: 'Fêmea', renov: GOLD71(), renov_hist: { hj1: H71(JUL71(), 300) } }, extra || {}) });
+const GESTORA = { nome: 'Gestora Teste', role: 'gestao' };
+
+// ---- AC1 — «Anular este pagamento» no plano atual ---------------------------------------------------------------
+provaAsync('6.76 × publicadas · 6.71 — «Anular este pagamento» e «Desfazer a última renovação» na ficha (na junção): a senha certa assina; a provisória ainda não trocada, a senha do código sem o banco e sem a cópia e a de quem foi desativado são recusadas, cada uma com a sua frase e sem gravar nada', async () => {
+  arma71();
+  try {
+    cena71([BISCOITO()]); await abre71('planoAnularAtualAbrir()');
+    const a = await x676Portas(r71, esp71, MOT71, SENHA657);
+    cena71([PIPOCA()]); await abre71('desfazerRenovacao()');
+    const b = await x676Portas(r71, esp71, MOT71, SENHA657);
+    igual([a, b], [x676Esperado(), x676Esperado(true)]);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P1 (AC1.1) — «Anular este pagamento (lançado por engano)» no plano atual do Biscoito, sem plano anterior, com 44 px; quem não mexe no plano não vê', async () => {
+  arma71();
+  try {
+    cena71([BISCOITO()]);
+    const h = r71('blocoPlano(pelExtra(pelAtual), pelAtual)');
+    assert.ok(/id="planoAnularAtualBtn"[^>]*min-height:44px[^>]*onclick="planoAnularAtualAbrir\(\)">Anular este pagamento \(lançado por engano\)</.test(h), 'o botão na aba Plano');
+    assert.ok(/Plano gravado: Gold · trimestral · 1x · 05\/10\/2026 → 31\/12\/2026 · pago em 05\/10\/2026 · R\$ 1\.077,00/.test(txt71(h)), txt71(h).slice(0, 300));
+    igual(r71("renovHistDe(pelExtra(pelAtual)).length"), 0, 'sem plano anterior');
+    r71(`document.body.dataset.role='monitor';`);
+    igual(r71('planoAnularAtualHTML(pelExtra(pelAtual), pelAtual)'), '', 'o Encãotador não vê o botão');
+    // sem data de pagamento, não há o que anular
+    cena71([{ n: 'Biscoito', tutor: 'Clara Teste', ex: { dias: ['seg'], renov: { plano: 'Gold', aulas: 1, ordemPet: 1 } } }]);
+    igual(r71('planoAnularAtualHTML(pelExtra(pelAtual), pelAtual)'), '');
+  } finally { solta71(); }
+});
+provaAsync('6.71 P2 (AC1.2, AC1.3) — anular o Gold do Biscoito: o cartaz diz «outubro de 2026: R$ 1.077,00 → R$ 0,00» e o que sai junto; só a Gestão assina; uma gravação só; outubro R$ 0,00 no quadro, «auluno sem plano lançado» fora do total e «sem plano ativo»; o meio do mês da irmã continua', async () => {
+  arma71();
+  try {
+    cena71([BISCOITO()]);
+    igual(quadro71('2026-10'), 107700, 'antes: R$ 1.077,00');
+    await abre71('planoAnularAtualAbrir()');
+    const c = cartaz71();
+    assert.ok(c.indexOf('O pagamento de 05/10/2026 (Gold · trimestral · 1x, R$ 1.077,00) sai da conta — Total dos planos do Day Care em outubro de 2026: R$ 1.077,00 → R$ 0,00.') >= 0, c);
+    assert.ok(c.indexOf('Biscoito fica sem plano lançado: aparece em «sem plano» na Renovação de planos e em «fora do total» no Recebimentos.') >= 0, c);
+    assert.ok(c.indexOf('O plano fica no histórico, riscado, com quem anulou e por quê.') >= 0 && (c.match(/Nada é apagado/g) || []).length === 1 && /Senha da Gestão/.test(c), c);
+    assert.ok(c.indexOf('use «Desfazer a última renovação»') < 0, 'sem plano anterior, sem a frase do Desfazer');
+    igual(J71('CORR_ATUAL.op.acao'), 'anular');
+    await toca71('s-bia');
+    assert.ok(/Essa senha é de Bia Consultora Teste, que não pode assinar esta anulação/.test(aviso71()), aviso71());
+    await toca71('s-amanda');
+    assert.ok(/Essa senha é de Amanda Supervisora Teste, que não pode assinar/.test(aviso71()), aviso71());
+    igual(escCad71().length, 0, 'a Consultora e a Supervisão não gravam nada');
+    await toca71(SENHA657);
+    igual(passo71(), 'pronto');
+    const w = escCad71();
+    igual(w.length, 1, 'uma gravação só: ' + JSON.stringify(w));
+    const f = ficha71();
+    igual(f.renov, { plano: '', inicio: '', fim: '', mesRenov: '', aulas: '', ordemPet: 1 }, 'o renov sem plano e sem datas (o nº na família fica)');
+    const ids = Object.keys(f.renov_hist || {});
+    igual(ids.length, 1);
+    const L = f.renov_hist[ids[0]];
+    igual([L.motivo, L.motivo_conferido, L.plano, L.inicio, L.valor_plano_cent, L.mensalidade_cent], ['anulado', true, 'Gold', '2026-10-05', 107700, 35900]);
+    const an = Object.values(L.anulacoes || {});
+    igual([an.length, an[0].acao, an[0].motivo, an[0].por, an[0].papel], [1, 'anular', MOT71, 'Gestora Teste', 'gestao']);
+    igual(quadro71('2026-10'), 0, 'depois: R$ 0,00 no quadro — o mesmo número do cartaz');
+    igual(J71("recForaDoMes(recResumoDoMes('2026-10'))"), [{ nome: 'Biscoito', motivo: 'auluno sem plano lançado (Silver/Gold/Black)' }]);
+    igual(r71('statusRenov(pelExtra(pelAtual)).label'), 'sem plano ativo');
+    igual([aud71('pagamento-anulado').length, aud71('registro-anulado').length], [1, 1]);
+    assert.ok(/assinado por Gestora Teste: o plano foi lançado no FILHOt errado/.test(aud71('pagamento-anulado')[0][1]), aud71('pagamento-anulado')[0][1]);
+    // com o meio do mês feito junto com a irmã (Maria Eduarda): o dele sai junto, o dela continua — e o cartaz diz onde desfazer
+    const mm = { opcao: 2, inicio: '2026-10-07', diarias: 3, total_cent: 77700, quem: 'Consultora Teste', ts: 1 };
+    cena71([{ n: 'Biscoito', tutor: 'Clara Teste', ex: { dias: ['seg'], renov: Object.assign(GOLD71(), { meio_mes: mm }) } },
+      { n: 'Maria Eduarda', tutor: 'Clara Teste', ex: { dias: ['seg'], sexo: 'Fêmea', renov: Object.assign(GOLD71(), { meio_mes: mm }) } }],
+    { irmaos: { x: { a: 'biscoito__clara teste', b: 'maria eduarda__clara teste' } } });
+    await abre71('planoAnularAtualAbrir()');
+    assert.ok(cartaz71().indexOf('O registro do meio do mês de Biscoito sai junto. O de Maria Eduarda continua: se ele também foi engano, desfaça na ficha dela.') >= 0, cartaz71());
+    await toca71(SENHA657);
+    igual(ficha71(1).renov.meio_mes, mm, 'o registro da irmã fica intacto');
+    igual('meio_mes' in ficha71(0).renov, false);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P3 (AC1.4) — o plano anulado fica riscado em «Renovações anteriores», com «Reabrir»; «Reabrir» (a Gestão) devolve o plano igual (com o valor gravado), outubro volta a R$ 1.077,00 e os dois registros ficam', async () => {
+  arma71();
+  try {
+    cena71([BISCOITO()]);
+    await abre71('planoAnularAtualAbrir()'); await toca71(SENHA657); r71('corrFechar()');
+    const id = Object.keys(ficha71().renov_hist)[0];
+    const h = r71('renovHistHTML(pelExtra(pelAtual))');
+    assert.ok(/class="corr-riscado"/.test(h) && /Anulado \(lançado por engano\) por Gestora Teste \(Gestão\), em 10\/10\/2026 às 10:00/.test(txt71(h)), txt71(h));
+    assert.ok(h.indexOf('onclick="planoReabrirLinhaAbrir(&#39;' + id + '&#39;)"') >= 0 || h.indexOf("onclick=\"planoReabrirLinhaAbrir('" + id + "')\"") >= 0, h);
+    assert.ok(/min-height:44px[^"]*"[^>]*>Reabrir</.test(h), 'o «Reabrir» com 44 px');
+    igual((h.match(/renov-hist-anular/g) || []).length, 0, 'a linha anulada não tem «Anular»');
+    await abre71(`planoReabrirLinhaAbrir('${id}')`);
+    const c = cartaz71();
+    assert.ok(c.indexOf('O plano volta a ser o atual: Gold · trimestral · 1x · 05/10/2026 → 31/12/2026 · pago em 05/10/2026 · R$ 1.077,00.') >= 0 && c.indexOf('Total dos planos do Day Care em outubro de 2026: R$ 0,00 → R$ 1.077,00') >= 0 && /Senha da Gestão/.test(c), c);
+    await toca71('s-bia');
+    igual(passo71(), 'conferir', 'a Consultora não reabre');
+    await toca71(SENHA657);
+    igual(passo71(), 'pronto');
+    const f = ficha71();
+    igual(r71('planoCanon(' + JSON.stringify(f.renov) + ')'), r71('planoCanon(' + JSON.stringify(GOLD71()) + ')'), 'o plano igual ao que era');
+    igual(Object.keys(f.renov_hist || {}), [], 'a linha sai de «Renovações anteriores» (é o plano atual de novo)');
+    const v = Object.values(f.renov_voltas || {});
+    igual([v.length, v[0].como, v[0].linha._id, Object.values(v[0].linha.anulacoes).map((a) => a.acao).sort()], [1, 'reabrir', id, ['anular', 'reabrir']]);
+    igual(quadro71('2026-10'), 107700);
+    igual(aud71('pagamento-reaberto').length, 1);
+    assert.ok(/Voltaram a valer \(1\)/.test(r71('renovHistHTML(pelExtra(pelAtual))')));
+  } finally { solta71(); }
+});
+provaAsync('6.71 P4 (AC1.5) — recusas, nada gravado: o plano mudou em outro aparelho; o banco recusa («NÃO FOI ANULADO», o motivo em português, «O plano continua como estava.»); sem resposta em 20 s («O BANCO AINDA NÃO CONFIRMOU»), e o rastro só quando o banco confirmar', async () => {
+  arma71();
+  try {
+    // o outro aparelho confirmou outra data depois que o cartaz abriu
+    cena71([BISCOITO()]);
+    await abre71('planoAnularAtualAbrir()');
+    r71(`__put657('daycare/cadastro/'+pelKey(pelAtual)+'/renov/inicio', '2026-10-06');`);
+    await toca71(SENHA657);
+    igual([escCad71().length, aud71('pagamento-anulado').length, aud71('registro-anulado').length], [0, 0, 0]);
+    igual(za71('NÃO FOI ANULADO'), ['O plano mudou em outro aparelho. Nada foi anulado: confira e tente de novo.', 'O plano continua como estava.']);
+    igual(r71('CORR_ATUAL'), null, 'o cartaz genérico saiu: a tela diz a frase dela');
+    // o banco recusa
+    cena71([BISCOITO()]);
+    r71(`__recusa657='^daycare/cadastro/[^/]+$';`);
+    await abre71('planoAnularAtualAbrir()'); await toca71(SENHA657);
+    const z = za71('NÃO FOI ANULADO');
+    assert.ok(z.length === 2 && z[1] === 'O plano continua como estava.' && !/PERMISSION_DENIED/.test(z[0]) && z[0].length > 10, JSON.stringify(z));
+    igual([ficha71().renov.plano, Object.keys(ficha71().renov_hist || {}).length, aud71('pagamento-anulado').length, aud71('registro-anulado').length], ['Gold', 0, 0, 0]);
+    assert.ok(titulos71().indexOf('Pagamento anulado') < 0);
+    // sem resposta em 20 s
+    cena71([BISCOITO()]);
+    r71(`__pendura657='^daycare/cadastro';`);
+    await abre71('planoAnularAtualAbrir()'); await toca71(SENHA657);
+    r71('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await esp71();
+    igual(passo71(), 'semResposta');
+    assert.ok(/O BANCO AINDA NÃO CONFIRMOU/.test(cartaz71()), cartaz71());
+    igual(aud71('pagamento-anulado').length, 0, 'antes do ok: sem rastro');
+    r71('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await esp71();
+    igual([aud71('pagamento-anulado').length, ficha71().renov.plano], [1, ''], 'o banco confirmou depois: o rastro entra');
+  } finally { solta71(); }
+});
+provaAsync('6.71 P5 (AC1.6) — «Reabrir» com outro plano já gravado: recusa com a frase, na abertura e na releitura (outro aparelho confirmou depois que o cartaz abriu)', async () => {
+  arma71();
+  try {
+    cena71([BISCOITO()]);
+    await abre71('planoAnularAtualAbrir()'); await toca71(SENHA657); r71('corrFechar()');
+    const id = Object.keys(ficha71().renov_hist)[0];
+    const silver = { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-07', fim: '2026-10-31', mesRenov: 'outubro de 2026', quando: '2026-10-07' };
+    ctx671.__s71 = silver;
+    r71(`__put657('daycare/cadastro/'+pelKey(pelAtual)+'/renov', __s71); pelCadCache[pelKey(pelAtual)]=__get657('daycare/cadastro/'+pelKey(pelAtual)); __esc657=[];`);
+    await abre71(`planoReabrirLinhaAbrir('${id}')`);
+    igual(r71('CORR_ATUAL'), null);
+    igual(za71('NÃO DÁ PARA REABRIR ESTE PLANO'), ['Já há outro plano gravado (Silver, pago em 07/10). Para voltar este, desfaça ou anule o atual primeiro.', 'Nada foi gravado.']);
+    // na releitura
+    r71(`pelCadCache[pelKey(pelAtual)].renov={plano:'', inicio:'', fim:'', mesRenov:'', aulas:'', ordemPet:1}; __put657('daycare/cadastro/'+pelKey(pelAtual)+'/renov', pelCadCache[pelKey(pelAtual)].renov); __za657=[];`);
+    await abre71(`planoReabrirLinhaAbrir('${id}')`);
+    r71(`__put657('daycare/cadastro/'+pelKey(pelAtual)+'/renov', __s71);`);
+    await toca71(SENHA657);
+    igual(za71('NÃO FOI REABERTO'), ['Já há outro plano gravado (Silver, pago em 07/10). Para voltar este, desfaça ou anule o atual primeiro.', 'O plano continua anulado, como estava.']);
+    igual([escCad71().length, ficha71().renov.plano, aud71('pagamento-reaberto').length], [0, 'Silver', 0]);
+  } finally { solta71(); }
+});
+
+// ---- AC2 — «Anular este pagamento» na linha da renovação anterior -----------------------------------------------
+const PIPOCA4 = () => PIPOCA({ renov_hist: {
+  hj1: H71(JUL71(), 300),
+  hc: H71(Object.assign(JUL71(), { inicio: '2026-07-01', quando: '2026-07-01' }), 200, 'correção'),
+  hd: H71({ plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-06-20', fim: '2026-06-30', quando: '2026-06-20' }, 100, 'desfeita'),
+  hv: H71(Object.assign(GOLD71(), { inicio: '2026-04-05', fim: '2026-06-30', quando: '2026-04-05' }), 50, 'virou morador') } });
+provaAsync('6.71 P6 (AC2.1) — «Anular este pagamento» só nas linhas que contam (a renovação de julho e a «virou morador»), com 44 px; a correção e a desfeita sem botão, cada uma dizendo por quê', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA4()]);
+    const h = r71('renovHistHTML(pelExtra(pelAtual))');
+    const bts = (h.match(/onclick="planoAnularLinhaAbrir\('([^']+)'\)"/g) || []).map((x) => x.replace(/.*\('([^']+)'\).*/, '$1')).sort();
+    igual(bts, ['hj1', 'hv'], h);
+    igual((h.match(/class="btn renov-hist-anular" style="margin-top:6px;min-height:44px/g) || []).length, 2, 'os botões com 44 px');
+    const t = txt71(h);
+    assert.ok(t.indexOf('Não conta no Recebimentos: foi correção do plano seguinte.') >= 0 && t.indexOf('Não conta no Recebimentos: foi desfeita.') >= 0, t);
+    igual((t.match(/Não conta no Recebimentos/g) || []).length, 2);
+    assert.ok(/id="renovDesfazer"/.test(h), 'o Desfazer continua (Auluno)');
+    // quem não mexe no plano não vê os botões
+    r71(`document.body.dataset.role='monitor';`);
+    igual((r71('renovHistHTML(pelExtra(pelAtual))').match(/planoAnularLinhaAbrir/g) || []).length, 0);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P7 (AC2.2, AC2.3) — anular a linha de julho da Pipoca (a Gestão): «julho de 2026: R$ 1.077,00 → R$ 0,00»; a gravação é só renov_hist/hj1/anulacoes/{id}; julho R$ 0,00 no quadro; o plano atual intacto; inativa, a frase diz que o pagamento já não entra (e o quadro não muda); a «virou morador» diz que o tutor pagou', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA()]);
+    igual([quadro71('2026-07'), quadro71('2026-10')], [107700, 107700]);
+    await abre71("planoAnularLinhaAbrir('hj1')");
+    const c = cartaz71();
+    assert.ok(c.indexOf('O pagamento de 05/07/2026 (R$ 1.077,00) sai da conta — Total dos planos do Day Care em julho de 2026: R$ 1.077,00 → R$ 0,00.') >= 0, c);
+    assert.ok(c.indexOf('O plano atual não muda.') >= 0 && c.indexOf('A linha fica riscada, com «Reabrir».') >= 0 && (c.match(/Nada é apagado/g) || []).length === 1 && /Senha da Gestão/.test(c), c);
+    await toca71('s-bia'); igual(escCad71().length, 0);
+    await toca71(SENHA657);
+    const w = escCad71();
+    igual(w.length, 1);
+    igual(w[0][2].length, 1, JSON.stringify(w[0][2]));
+    assert.ok(/^renov_hist\/hj1\/anulacoes\/[\w-]+$/.test(w[0][2][0]), w[0][2][0]);
+    const f = ficha71();
+    igual(r71('planoCanon(' + JSON.stringify(f.renov) + ')'), r71('planoCanon(' + JSON.stringify(GOLD71()) + ')'), 'o plano atual intacto');
+    const hj = Object.assign({}, f.renov_hist.hj1); delete hj.anulacoes;
+    igual(hj, H71(JUL71(), 300), 'nada da linha é reescrito');
+    igual([quadro71('2026-07'), quadro71('2026-10')], [0, 107700]);
+    igual(aud71('pagamento-anulado').length, 1);
+    // inativa: o cartaz não promete queda; o quadro já não a contava
+    cena71([PIPOCA({ inativo: 'Sim', dataSaida: '08/10/2026', motivoSaida: 'viagem da família em outubro', tipoSaida: 'pausa' })]);
+    igual(quadro71('2026-07'), 0);
+    await abre71("planoAnularLinhaAbrir('hj1')");
+    const ci = cartaz71();
+    assert.ok(ci.indexOf('Pipoca está inativa: pela regra de hoje, este pagamento já não entra no Recebimentos. A anulação fica registrada para quando a regra mudar.') >= 0 && ci.indexOf('sai do Recebimentos') < 0, ci);
+    await toca71(SENHA657);
+    igual(quadro71('2026-07'), 0);
+    // a «virou morador»
+    cena71([{ n: 'Tâmara', tutor: 'Viajante Teste', ex: { dias: ['seg'], sexo: 'Fêmea', categoria: 'morador', renov: { plano: 'morador', inicio: '', fim: '', mesRenov: '', aulas: '', ordemPet: 1 }, renov_hist: { v1: H71(GOLD71(), 400, 'virou morador') } } }]);
+    await abre71("planoAnularLinhaAbrir('v1')");
+    assert.ok(cartaz71().indexOf('sai da conta — Total dos planos do Day Care em outubro de 2026: R$ 1.077,00 → R$ 0,00. É o plano que saiu quando a ficha virou morador: o tutor pagou por ele. Anule só se o pagamento não existiu.') >= 0, cartaz71());
+  } finally { solta71(); }
+});
+provaAsync('6.76 × publicadas · QA676J-06 (6.71, porta fora da varredura) — «Reabrir» o pagamento atual anulado (planoReabrirAtual, pela linha anulada): a Consultora e a Supervisão recusadas; a provisória, a do código sem banco e a desativada recusadas; a Gestão assina', async () => {
+  arma71();
+  try {
+    cena71([BISCOITO()]); await abre71('planoAnularAtualAbrir()'); await toca71(SENHA657); r71('corrFechar()');
+    const id = Object.keys(ficha71().renov_hist).filter((k) => ficha71().renov_hist[k].motivo === 'anulado')[0];
+    await abre71(`planoReabrirLinhaAbrir('${id}')`);
+    igual([J71('CORR_ATUAL.op.acao'), J71('CORR_ATUAL.op.nivel')], ['reabrir', 'gestao']);
+    const c0 = escCad71().length;
+    await toca71('s-bia'); const a1 = aviso71(); await toca71('s-amanda'); const a2 = aviso71();
+    igual([/não pode assinar/.test(a1), /não pode assinar/.test(a2), escCad71().length - c0], [true, true, 0], JSON.stringify([a1, a2]));
+    igual(await x676Portas(r71, esp71, MOT71, SENHA657), x676Esperado(), 'Reabrir o atual');
+  } finally { solta71(); }
+});
+provaAsync('6.71 P8 (AC2.4) — «Reabrir» e anular de novo: a linha volta a contar e sai de novo; os três registros ficam (nenhum apagado nem sobrescrito); a linha anulada é a do registro MAIS NOVO', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA()]);
+    await abre71("planoAnularLinhaAbrir('hj1')"); await toca71(SENHA657); r71('corrFechar()');
+    igual(quadro71('2026-07'), 0);
+    await abre71("planoReabrirLinhaAbrir('hj1')");
+    assert.ok(cartaz71().indexOf('volta a contar — Total dos planos do Day Care em julho de 2026: R$ 0,00 → R$ 1.077,00.') >= 0, cartaz71());
+    await toca71(SENHA657); r71('corrFechar()');
+    igual(quadro71('2026-07'), 107700);
+    await abre71("planoAnularLinhaAbrir('hj1')"); await toca71(SENHA657); r71('corrFechar()');
+    igual(quadro71('2026-07'), 0);
+    const an = ficha71().renov_hist.hj1.anulacoes;
+    const ks = Object.keys(an).sort();
+    igual([ks.length, ks.map((k) => an[k].acao)], [3, ['anular', 'reabrir', 'anular']]);
+    igual([aud71('pagamento-anulado').length, aud71('pagamento-reaberto').length], [2, 1]);
+    // a função pura (a mesma da conta e da tela)
+    igual([r71("finLinhaAnulada({anulacoes:{a:{acao:'anular', ts:1}, b:{acao:'reabrir', ts:2}}})"), r71("finLinhaAnulada({anulacoes:{a:{acao:'reabrir', ts:5}, b:{acao:'anular', ts:2}}})"),
+      r71("finLinhaAnulada({anulacoes:{a:{acao:'reabrir', ts:3}, b:{acao:'anular', ts:3}}})"), r71('finLinhaAnulada({})'), r71("finLinhaAnulada({anulacoes:{z:{acao:'anular'}}})")],
+    [false, false, true, false, true]);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P9 (AC2.5) — a lista «FILHOt por FILHOt» e o Excel do mês mostram o pagamento anulado fora do total, com quem, quando e o motivo; o «Total da lista» igual ao quadro; o formato do finResumoMes igual ao da base', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA(), BISCOITO()]);
+    await abre71("planoAnularLinhaAbrir('hj1')"); await toca71(SENHA657, 'o pagamento de julho não existiu'); r71('corrFechar()');
+    const h = r71("recListaHTML(recResumoDoMes('2026-07'), '2026-07', false)");
+    const t = txt71(h);
+    assert.ok(t.indexOf('Pipoca — pagamento de 05/07/2026 anulado (lançado por engano) por Gestora Teste, em 10/10/2026 às 10:00: o pagamento de julho não existiu') >= 0 && /class="pm-li rec-li-anulado"/.test(h), t);
+    assert.ok(/Total da lista igual ao total do quadro R\$ 0,00/.test(t), t);
+    igual(quadro71('2026-07'), 0);
+    // o plano atual anulado (AC1) também aparece no mês dele
+    r71('pelAtual=PELUDINHOS[1]; pelAtualIdx=1;');
+    await abre71('planoAnularAtualAbrir()'); await toca71(SENHA657, 'o plano foi lançado no FILHOt errado'); r71('corrFechar()');
+    const ho = txt71(r71("recListaHTML(recResumoDoMes('2026-10'), '2026-10', false)"));
+    assert.ok(ho.indexOf('Biscoito — pagamento de 05/10/2026 anulado (lançado por engano) por Gestora Teste, em 10/10/2026 às 10:00: o plano foi lançado no FILHOt errado') >= 0, ho);
+    assert.ok(/Total da lista igual ao total do quadro R\$ 1\.077,00/.test(ho) && quadro71('2026-10') === 107700, ho);
+    // o Excel: a linha fora do total e o TOTAL igual ao quadro
+    r71(`__xls71=null; relEntregar=function(nome, html){ __xls71=String(html); return true; }; REC_MES='2026-10';`);
+    r71('recBaixarExcel(null)');
+    const x = txt71(r71('__xls71'));
+    assert.ok(x.indexOf('Biscoito ANULADO — FORA DO TOTAL 05/10/2026 Biscoito — pagamento de 05/10/2026 anulado (lançado por engano) por Gestora Teste') >= 0, x.slice(0, 900));
+    assert.ok(/TOTAL R\$ 1\.077,00 igual ao total do quadro/.test(x), x.slice(0, 900));
+    // o formato do que o finResumoMes devolve é o da base (o anulado mora fora dele)
+    // (as chaves do resumo, dos serviços e de cada linha; a lista em si muda: o anulado sai dela)
+    const uniq = (L) => Array.from(new Set(L.map((o) => Object.keys(o).sort().join(',')))).sort();
+    const formato = (R) => JSON.stringify([Object.keys(R).sort(), Object.keys(R.porServico).sort(), Object.keys(R.porServico.daycare).sort(), uniq(R.porFILHOt.filter((o) => !o.origem)), uniq(R.semComoCalcular)]);
+    const ctxB = vm.createContext(makeSandbox()); vm.runInContext(FIN_BASE671, ctxB);
+    const D = J71("{cadastro:pelCadCache, peludinhos:[], irmaos:{}, orcamentos:{}, pagamentos:null, planos:planos(), descontoIrmao:DESC_PET_PLANO}");
+    ['2026-07', '2026-10'].forEach((m) => igual(formato(JSON.parse(JSON.stringify(ctx671.finResumoMes(D, m, { hoje: '2026-10-10' })))), formato(JSON.parse(JSON.stringify(ctxB.finResumoMes(D, m, { hoje: '2026-10-10' })))), m));
+  } finally { solta71(); }
+});
+// A conta da BASE (910b143), letra por letra: o arquivo de hoje sem os dois acréscimos da 6.71 (a função pura e a linha da leitura);
+// na própria base (sem os acréscimos), o arquivo como está. O sha-256 confere que é a base e nada mais.
+const FIN_BASE671 = (() => {
+  const i = FIN_SRC36.indexOf('/* A LINHA DO HISTÓRICO ESTÁ ANULADA?'), j = FIN_SRC36.indexOf('/* AS RENOVAÇÕES ANTERIORES QUE FORAM PAGAMENTO (6.44).');
+  const L = '    /* 6.71 (AC3.1): o pagamento anulado (lançado por engano) é lido como se a linha nunca tivesse existido. */\n    if (finLinhaAnulada(o)) continue;\n';
+  if (i < 0 && FIN_SRC36.indexOf(L) < 0) return FIN_SRC36;
+  return (i > 0 && j > i && FIN_SRC36.split(L).length === 2) ? (FIN_SRC36.slice(0, i) + FIN_SRC36.slice(j)).replace(L, '') : '';
+})();
+const sha71 = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
+prova('6.71 P10 (AC3.2, guarda) — sem marca nova, nada muda: finRenovHistContados e finResumoMes dão o JSON idêntico ao da base (910b143, num sandbox novo) em todas as fichas das provas 6.36 e 6.44 e nas desta story', () => {
+  igual(sha71(FIN_BASE671), '92070f0fed71379d', 'a conta da base, letra por letra');
+  const ctxB = vm.createContext(makeSandbox()); vm.runInContext(FIN_BASE671, ctxB);
+  const fichas = [
+    { renov: renov36() }, { renov: renov36({ ordemPet: 2 }) }, { renov: OUT644(), renov_hist: { a: hist644(Object.assign(JUL644(), { valor_plano_cent: 107700 }), 100) } },
+    { renov: OUT644(), renov_hist: { a: hist644(JUL644(), 100), b: hist644(Object.assign(JUL644(), { inicio: '2026-04-05', fim: '2026-06-30' }), 50) } },
+    { renov: G644c('2026-09-02', '2026-11-30'), renov_hist: { v: hist644c(G644c('2026-09-01', '2026-11-30'), 100, 'virou morador') } },
+    { renov: { plano: '', aulas: '', inicio: '', fim: '', mesRenov: '', ordemPet: 1 }, renov_hist: { v: hist644c(G644c('2026-09-01', '2026-11-30'), 100, 'virou morador') } },
+    { renov: G644c('2026-10-06', '2026-12-31'), renov_hist: { a: hist644c(G644c('2026-10-05', '2026-12-31'), 100, 'correção') } },
+    { renov: G644c('2026-10-06', '2026-12-31'), renov_hist: { a: hist644c(G644c('2026-10-05', '2026-12-31'), 100, 'desfeita', { motivo_do_que_voltou: 'renovação', conferido_do_que_voltou: true }) } },
+    { renov: G644c('2026-10-05', '2026-12-31'), renov_hist: { a: hist644(G644c('2026-07-05', '2026-09-30'), 200, 'desfeita'), b: hist644(G644c('2026-08-05', '2026-10-31'), 100) } },
+    PIPOCA4().ex, PIPOCA().ex, BISCOITO().ex, { renov: GOLD71(), inativo: 'Sim' }, { renov: HOPI630() }, { renov: { plano: 'morador' }, categoria: 'morador', renov_hist: { v: H71(GOLD71(), 100, 'virou morador') } }];
+  fichas.forEach((f, i) => {
+    igual(JSON.stringify(ctx671.finRenovHistContados(f)), JSON.stringify(ctxB.finRenovHistContados(f)), 'finRenovHistContados, ficha ' + i);
+    const cad = {}; cad['tâmara__viajante teste'] = Object.assign({ n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg'] }, f);
+    ['2026-04', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12'].forEach((m) => {
+      igual(JSON.stringify(ctx671.finResumoMes(dados36(cad), m, { hoje: '2026-10-10' })), JSON.stringify(ctxB.finResumoMes(dados36(cad), m, { hoje: '2026-10-10' })), 'finResumoMes, ficha ' + i + ', ' + m);
+    });
+  });
+});
+prova('6.71 P11 (AC3.1) — os casos de borda da conta: a linha anulada com a data do plano atual; a «virou morador» anulada (o mês cai R$ 1.077,00); a correção vizinha de uma linha anulada (nenhuma conta); o anulado reaberto volta exatamente ao número de antes', () => {
+  const R = (f, m) => JSON.parse(JSON.stringify(ctx671.finResumoMes(dados36({ 'tâmara__viajante teste': Object.assign({ n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg'] }, f) }), m, { hoje: '2026-10-10' })));
+  const tot = (r) => r.porFILHOt.reduce((t, o) => t + o.valor, 0);
+  const AN = { a1: { acao: 'anular', ts: 10, motivo: MOT71 } }, RE = { a1: { acao: 'anular', ts: 10 }, a2: { acao: 'reabrir', ts: 20 } };
+  // (a) a linha anulada com a mesma data do plano atual: o atual conta uma vez, com ou sem ela
+  const mesma = (an) => ({ renov: GOLD71(), renov_hist: { x: Object.assign(H71(GOLD71(), 100), an ? { anulacoes: an } : {}) } });
+  igual([tot(R(mesma(null), '2026-10')), tot(R(mesma(AN), '2026-10'))], [107700, 107700]);
+  igual(ctx671.finRenovHistContados(mesma(AN)).length, 0);
+  // (b) a «virou morador» anulada: outubro cai de R$ 1.077,00 para R$ 0,00
+  const virou = (an) => ({ categoria: 'morador', renov: { plano: 'morador', inicio: '', fim: '', aulas: '', mesRenov: '', ordemPet: 1 }, renov_hist: { v: Object.assign(H71(GOLD71(), 100, 'virou morador'), an ? { anulacoes: an } : {}) } });
+  igual([tot(R(virou(null), '2026-10')), tot(R(virou(AN), '2026-10'))], [107700, 0]);
+  // (c) a correção vizinha: A (01/07, correção) e B (05/07, renovação) — B anulada: nenhuma das duas conta
+  const viz = (an) => ({ renov: GOLD71(), renov_hist: { A: H71(Object.assign(JUL71(), { inicio: '2026-07-01', quando: '2026-07-01' }), 100, 'correção'), B: Object.assign(H71(JUL71(), 200), an ? { anulacoes: an } : {}) } });
+  igual([tot(R(viz(null), '2026-07')), tot(R(viz(AN), '2026-07'))], [107700, 0]);
+  // (d) o anulado reaberto volta exatamente ao número de antes (o JSON inteiro)
+  ['2026-07', '2026-10'].forEach((m) => igual(JSON.stringify(R(viz(RE), m)), JSON.stringify(R(viz(null), m)), m));
+  igual(JSON.stringify(R(virou(RE), '2026-10')), JSON.stringify(R(virou(null), '2026-10')));
+});
+
+// ---- AC4 — «Desfazer a última renovação» com motivo e sem perder o histórico ------------------------------------
+provaAsync('6.71 P12 (AC4.1) — o Desfazer pelo cartaz «reabrir» com a Gestão (a Consultora recusada): «SAI», «VOLTA», «outubro de 2026: R$ 1.077,00 → R$ 0,00» (julho não muda) e o motivo; depois, o quadro dá os mesmos números', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA()]);
+    await abre71('desfazerRenovacao()');
+    igual(J71('[CORR_ATUAL.op.acao, CORR_ATUAL.op.nivel]'), ['reabrir', 'gestao']);
+    const c = cartaz71();
+    ['SAI: Gold · 1x · 05/10/2026 → 31/12/2026', 'VOLTA: Gold · 1x · 05/07/2026 → 30/09/2026',
+      'Total dos planos do Day Care em outubro de 2026: R$ 1.077,00 → R$ 0,00. O mês do plano que volta não muda: ele já contava como renovação anterior e passa a contar como o plano atual.',
+      'Use quando a renovação foi lançada por engano: no FILHOt errado, ou com o plano, os dias ou a data errados.', 'Motivo (pelo menos 4 palavras)', 'Senha da Gestão']
+      .forEach((l) => assert.ok(c.indexOf(l) >= 0, l + ' — ' + c));
+    igual(J71('__zp657').length, 0, 'nenhuma pergunta: o cartaz no lugar dela');
+    await toca71('s-bia');
+    assert.ok(/Essa senha é de Bia Consultora Teste, que não pode assinar esta reabertura/.test(aviso71()), aviso71());
+    await toca71(SENHA657, 'curto');
+    assert.ok(/pelo menos 4 palavras/.test(aviso71()), 'sem o motivo de 4 palavras, nada');
+    igual(escCad71().length, 0);
+    await toca71(SENHA657);
+    igual([quadro71('2026-10'), quadro71('2026-07')], [0, 107700], 'os números do cartaz');
+    assert.ok(titulos71().indexOf('RENOVAÇÃO DESFEITA') >= 0);
+    const a = aud71('renovacao-desfeita');
+    igual(a.length, 1);
+    assert.ok(/assinado por Gestora Teste: o plano foi lançado no FILHOt errado$/.test(a[0][1]), a[0][1]);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P13 (AC4.3) — a linha que volta sai de renov_hist e a cópia inteira (com o _id) vai para renov_voltas, na MESMA gravação; «Voltaram a valer (1)» com quem, quando e o motivo', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA()]);
+    await abre71('desfazerRenovacao()'); await toca71(SENHA657);
+    const w = escCad71();
+    igual(w.length, 1, 'uma gravação só');
+    assert.ok(w[0][2].indexOf('renov_hist/hj1') >= 0 && w[0][2].some((k) => /^renov_voltas\/[\w-]+\/linha$/.test(k)) && w[0][2].indexOf('renov') >= 0, JSON.stringify(w[0][2]));
+    const f = ficha71();
+    igual(Object.keys(f.renov_hist).indexOf('hj1'), -1, 'a linha que volta saiu de renov_hist (a asserção da 6.57 P19)');
+    const v = Object.values(f.renov_voltas || {});
+    igual(v.length, 1);
+    igual(v[0].linha, Object.assign({ _id: 'hj1' }, H71(JUL71(), 300)), 'a cópia inteira, com o _id original');
+    igual([v[0].como, v[0].motivo, v[0].registro.por, v[0].registro.acao, v[0].voltou_em], ['desfazer', MOT71, 'Gestora Teste', 'reabrir', T671]);
+    const h = txt71(r71('renovHistHTML(pelExtra(pelAtual))'));
+    assert.ok(/Voltaram a valer \(1\)/.test(h) && h.indexOf('Gold · trimestral · 1x · 05/07/2026 → 30/09/2026 · pago em 05/07/2026 · R$ 1.077,00 voltou a valer em 10/10/2026 às 10:00, pelo «Desfazer a última renovação» · por Gestora Teste: o plano foi lançado no FILHOt errado') >= 0, h);
+    assert.ok(/<details id="renovVoltas"/.test(r71('renovHistHTML(pelExtra(pelAtual))')), 'fechado');
+  } finally { solta71(); }
+});
+provaAsync('6.71 P14 (AC4.2, guarda) — o Desfazer duas vezes pelo cartaz: o plano pago volta com motivo_do_que_voltou e conferido_do_que_voltou (a regra da 6.44); outubro e julho voltam aos números de antes; cada volta guardada em renov_voltas', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA()]);
+    await abre71('desfazerRenovacao()'); await toca71(SENHA657); r71('corrFechar()');
+    let f = ficha71();
+    const d = Object.values(f.renov_hist).filter((o) => o.motivo === 'desfeita')[0];
+    igual([d.inicio, d.motivo_do_que_voltou, d.conferido_do_que_voltou, d.motivo_conferido], ['2026-10-05', 'renovação', true, true]);
+    await abre71('desfazerRenovacao()'); await toca71(SENHA657); r71('corrFechar()');
+    f = ficha71();
+    igual([f.renov.inicio, f.renov.valor_plano_cent], ['2026-10-05', 107700], 'o plano de outubro voltou');
+    const back = Object.values(f.renov_hist);
+    igual(back.map((o) => [o.inicio, o.motivo, o.motivo_conferido]), [['2026-07-05', 'renovação', true]], 'julho volta como renovação, conferida');
+    igual([quadro71('2026-07'), quadro71('2026-10')], [107700, 107700]);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P15 (AC4.4) — categoria morador: o Desfazer (pelo console ou por uma tela velha) recusa com a frase e nada grava; a aba Plano não mostra o Desfazer', async () => {
+  arma71();
+  try {
+    cena71([{ n: 'Tâmara', tutor: 'Viajante Teste', ex: { dias: ['seg'], sexo: 'Fêmea', categoria: 'morador', renov: { plano: 'morador', inicio: '', fim: '', mesRenov: '', aulas: '', ordemPet: 1 }, renov_hist: { v1: H71(GOLD71(), 400, 'virou morador') } } }]);
+    await abre71('desfazerRenovacao()');
+    igual(r71('CORR_ATUAL'), null);
+    igual(za71('O PLANO NÃO VOLTA POR AQUI'), ['Tâmara é Morador(a) Zêluz: para voltar o plano, toque em «Auluno» na Categoria.', 'Nada foi gravado.']);
+    igual([escCad71().length, ficha71().categoria, ficha71().renov.plano], [0, 'morador', 'morador']);
+    igual(/id="renovDesfazer"/.test(r71('renovHistHTML(pelExtra(pelAtual))')), false);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P16 (AC4.5) — o histórico mudou em outro aparelho depois que o cartaz abriu: recusa («O histórico mudou em outro aparelho. Nada foi desfeito…»), nada gravado; o banco recusando: «A RENOVAÇÃO NÃO FOI DESFEITA»', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA()]);
+    await abre71('desfazerRenovacao()');
+    r71(`__put657('daycare/cadastro/'+pelKey(pelAtual)+'/renov_hist/hj1/por', 'Outra Consultora Teste');`);
+    await toca71(SENHA657);
+    igual(za71('A RENOVAÇÃO NÃO FOI DESFEITA'), ['O histórico mudou em outro aparelho. Nada foi desfeito: confira e tente de novo.', 'O plano e as «Renovações anteriores» continuam como estavam. Nada mudou.']);
+    igual([escCad71().length, aud71('renovacao-desfeita').length, aud71('registro-reaberto').length], [0, 0, 0]);
+    // outro plano confirmado em outro aparelho
+    cena71([PIPOCA()]);
+    await abre71('desfazerRenovacao()');
+    r71(`__put657('daycare/cadastro/'+pelKey(pelAtual)+'/renov/inicio', '2026-10-06');`);
+    await toca71(SENHA657);
+    igual(escCad71().length, 0);
+    assert.ok(titulos71().indexOf('RENOVAÇÃO DESFEITA') < 0 && titulos71().indexOf('A RENOVAÇÃO NÃO FOI DESFEITA') >= 0);
+  } finally { solta71(); }
+});
+
+// ---- AC5 — «Começou no meio do mês»: desfazer com motivo, só dizer feito com o banco -----------------------------
+const MM71 = () => ({ opcao: 2, inicio: '2026-10-07', diarias: 3, total_cent: 77700, mensalidade_cent: 35900, quem: 'Consultora Teste', ts: 1 });
+const QUINDIM = () => ({ n: 'Quindim', tutor: 'Lia Teste', ex: { dias: ['seg'], renov: Object.assign(GOLD71(), { inicio: '2026-10-07', quando: '2026-10-07', fim: '2027-01-31', fim_anterior: '2026-12-31', mes_cobranca_1: '2026-11', meio_mes: MM71() }) } });
+provaAsync('6.71 P17 (AC5.1, AC5.2) — o desfazer do meio do mês pelo cartaz, com a senha da própria pessoa (o Encãotador barrado) e o motivo; o registro que saiu fica em meio_mes_hist; o fim do plano volta como hoje', async () => {
+  arma71();
+  try {
+    cena71([QUINDIM()]);
+    await abre71('mmDesfazer()');
+    igual(J71('[CORR_ATUAL.op.acao, CORR_ATUAL.op.nivel, CORR_ATUAL.op.capacidade]'), ['reabrir', 'propria', 'ver-plano']);
+    const c = cartaz71();
+    ['SAI: opção 2 · começo em 07/10/2026 · R$ 777,00', 'De: Quindim', 'O plano volta a valer até 31/12/2026 (Quindim).', 'Sua senha']
+      .forEach((l) => assert.ok(c.indexOf(l) >= 0, l + ' — ' + c));
+    igual(J71('__zp657').length, 0, 'o cartaz no lugar da pergunta');
+    await toca71('s-caio', 'o tutor desistiu da opção dois');
+    assert.ok(/Essa senha é de Caio Encãotador Teste, que não pode assinar/.test(aviso71()), aviso71());
+    await toca71('s-bia', 'errei');
+    assert.ok(/pelo menos 4 palavras/.test(aviso71()));
+    igual(escCad71().length, 0);
+    await toca71('s-bia', 'o tutor desistiu da opção dois');
+    igual(r71('CORR_ATUAL'), null, 'o cartaz fechou: a tela diz o resultado');
+    const f = ficha71();
+    igual(['meio_mes' in f.renov, f.renov.fim, f.renov.mesRenov, f.renov.mes_cobranca_1, 'fim_anterior' in f.renov], [false, '2026-12-31', 'dezembro de 2026', '', false]);
+    const mh = Object.values(f.meio_mes_hist || {});
+    igual([mh.length, mh[0].registro, mh[0].desfeito.motivo, mh[0].desfeito.por, mh[0].desfeito.acao], [1, MM71(), 'o tutor desistiu da opção dois', 'Bia Consultora Teste', 'reabrir']);
+    assert.ok(titulos71().indexOf('REGISTRO DESFEITO') >= 0);
+    igual([aud71('plano-meio-mes-desfeito').length, aud71('plano-fim-meio-mes').length], [1, 1]);
+    // o Encãotador chamando a função: barrado, nada gravado
+    cena71([QUINDIM()], { login: { nome: 'Caio Encãotador Teste', role: 'monitor' } });
+    await abre71('mmDesfazer()');
+    igual([r71('CORR_ATUAL'), escCad71().length, J71('__au657').some((a) => a[0] === 'sem-permissao')], [null, 0, true]);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P18 (AC5.3) — com o banco recusando, nem «REGISTRO DESFEITO» nem «ESCOLHA REGISTRADA», nem os rastros; com dois FILHOts e um recusado, a tela diz qual ficou como estava', async () => {
+  arma71();
+  try {
+    cena71([QUINDIM()]);
+    r71(`__recusa657='^daycare/cadastro/[^/]+$';`);
+    await abre71('mmDesfazer()'); await toca71('s-bia', 'o tutor desistiu da opção dois');
+    assert.ok(titulos71().indexOf('REGISTRO DESFEITO') < 0, JSON.stringify(titulos71()));
+    const z = za71('O REGISTRO NÃO FOI DESFEITO');
+    assert.ok(/^Quindim: NÃO FOI DESFEITO \(/.test(z[0]) && z[z.length - 1] === 'O registro continua na ficha, como estava.', JSON.stringify(z));
+    igual([aud71('plano-meio-mes-desfeito').length, aud71('plano-fim-meio-mes').length, aud71('registro-reaberto').length], [0, 0, 0]);
+    igual(ficha71().renov.meio_mes, MM71());
+    // «Tutor escolheu a opção 2» com o banco recusando
+    cena71([{ n: 'Quindim', tutor: 'Lia Teste', ex: { dias: ['seg'], renov: Object.assign(GOLD71(), { inicio: '2026-10-07', quando: '2026-10-07' }) } }]);
+    r71(`__recusa657='^daycare/cadastro/'; renovRascunho=null; mmRascunho=null;`);
+    await abre71('mmConfirmar(2)'); await esp71();
+    assert.ok(titulos71().indexOf('ESCOLHA REGISTRADA') < 0 && titulos71().indexOf('A ESCOLHA NÃO FOI REGISTRADA') >= 0, JSON.stringify(titulos71()));
+    assert.ok(/^Quindim: NÃO FOI REGISTRADA \(/.test(za71('A ESCOLHA NÃO FOI REGISTRADA')[0]));
+    igual([aud71('plano-meio-mes').length, aud71('plano-fim-meio-mes').length], [0, 0]);
+    // dois FILHOts, um recusado
+    const dois = [{ n: 'Maria Eduarda', tutor: 'Tabatta Teste', ex: { dias: ['seg'], sexo: 'Fêmea', renov: Object.assign(GOLD71(), { meio_mes: MM71() }) } },
+      { n: 'Beethoven', tutor: 'Tabatta Teste', ex: { dias: ['seg'], renov: Object.assign(GOLD71(), { meio_mes: MM71() }) } }];
+    cena71(dois, { irmaos: { x: { a: 'maria eduarda__tabatta teste', b: 'beethoven__tabatta teste' } } });
+    r71(`__recusa657='^daycare/cadastro/beethoven';`);
+    await abre71('mmDesfazer()'); await toca71('s-bia', 'o tutor desistiu da opção dois');
+    const zz = za71('O REGISTRO FOI DESFEITO SÓ EM PARTE');
+    assert.ok(zz[0] === 'Maria Eduarda: o registro foi desfeito.' && /^Beethoven: NÃO FOI DESFEITO \(.+\); confira e tente de novo para ele\.$/.test(zz[1]), JSON.stringify(zz));
+    igual(aud71('plano-meio-mes-desfeito').map((a) => a[1].split(' — ')[0]), ['Maria Eduarda'], 'o rastro só da que gravou');
+    igual(['meio_mes' in ficha71(0).renov, ficha71(1).renov.meio_mes], [false, MM71()]);
+  } finally { solta71(); }
+});
+
+// ---- AC6 — trocar a categoria ---------------------------------------------------------------------------------------
+const TAMARA = (extra) => ({ n: 'Tâmara', tutor: 'Viajante Teste', ex: Object.assign({ dias: ['seg'], sexo: 'Fêmea', renov: GOLD71() }, extra || {}) });
+provaAsync('6.71 P19 (AC6.1) — «Morador(a) Zêluz» pergunta antes: a vigência que sai, «O pagamento de 05/10/2026 (R$ 1.077,00) continua contando no Recebimentos de outubro de 2026», o efeito («não muda») e a volta; «Voltar» não grava nada; sem plano gravado, troca sem pergunta', async () => {
+  arma71();
+  try {
+    cena71([TAMARA()]);
+    r71('__zpq657=[false];');
+    await abre71("setPelCategoria('morador')"); await esp71();
+    const p = J71('__zp657');
+    igual(p.length, 1);
+    igual(p[0][0], 'TROCAR Tâmara PARA MORADOR(A) ZÊLUZ?');
+    igual(p[0][1], ['A vigência (Gold · trimestral · 1x · 05/10/2026 → 31/12/2026) sai do plano e vai para «Renovações anteriores».',
+      'O pagamento de 05/10/2026 (R$ 1.077,00) continua contando no Recebimentos de outubro de 2026: o tutor pagou. Se o plano foi lançado por engano, anule o pagamento na aba Plano antes de trocar a categoria.',
+      'No Recebimentos: não muda.', 'Para voltar, toque em «Auluno» de novo: o app oferece voltar este plano.']);
+    igual([escCad71().length, ficha71().categoria || '', aud71('categoria-peludinho').length], [0, '', 0]);
+    // sem plano gravado: troca sem pergunta, como hoje
+    cena71([TAMARA({ renov: { plano: '', inicio: '', fim: '', mesRenov: '', aulas: '' } })]);
+    await abre71("setPelCategoria('morador')"); await esp71();
+    igual([J71('__zp657').length, ficha71().categoria], [0, 'morador']);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P20 (AC6.2) — uma gravação só (a linha «virou morador», a categoria e o plano), «Salvo» e o rastro só com o ok; com o banco recusando, nada no histórico e «A CATEGORIA NÃO FOI TROCADA»; o plano mudado em outro aparelho depois que a pergunta abriu: recusa, nada gravado', async () => {
+  arma71();
+  try {
+    cena71([TAMARA()]);
+    await abre71("setPelCategoria('morador')"); await esp71();
+    const w = escCad71();
+    igual(w.length, 1, JSON.stringify(w));
+    assert.ok(w[0][2].indexOf('categoria') >= 0 && w[0][2].indexOf('renov') >= 0 && w[0][2].some((k) => /^renov_hist\//.test(k)), JSON.stringify(w[0][2]));
+    const f = ficha71(), L = Object.values(f.renov_hist)[0];
+    igual([f.categoria, f.renov.plano, f.renov.inicio, f.renov.fim, L.motivo, L.motivo_conferido, L.inicio, L.valor_plano_cent], ['morador', 'morador', '', '', 'virou morador', true, '2026-10-05', 107700]);
+    const a = aud71('categoria-peludinho');
+    assert.ok(a.length === 1 && /^auluno → morador — apagou a vigência 05\/10\/2026 → 31\/12\/2026 \(1x\), guardada no histórico$/.test(a[0][1]), JSON.stringify(a));
+    // o banco recusa
+    cena71([TAMARA()]);
+    r71(`__recusa657='^daycare/cadastro/[^/]+$';`);
+    await abre71("setPelCategoria('morador')"); await esp71();
+    const z = za71('A CATEGORIA NÃO FOI TROCADA');
+    assert.ok(z.length === 2 && z[1] === 'Nem a categoria nem o plano mudaram.' && /^Tâmara: /.test(z[0]), JSON.stringify(z));
+    igual([Object.keys(ficha71().renov_hist || {}).length, ficha71().categoria || '', aud71('categoria-peludinho').length], [0, '', 0]);
+    // outro aparelho mudou o plano enquanto a pergunta estava aberta
+    cena71([TAMARA()]);
+    r71(`zPergunta=function(t, l, op){ __zp657.push([t, l]); __put657('daycare/cadastro/'+pelKey(pelAtual)+'/renov/fim', '2027-01-31'); return Promise.resolve(true); };`);
+    await abre71("setPelCategoria('morador')"); await esp71();
+    igual(za71('A CATEGORIA NÃO FOI TROCADA'), ['O plano mudou em outro aparelho. A categoria não foi trocada: confira e tente de novo.']);
+    igual([escCad71().length, Object.keys(ficha71().renov_hist || {}).length], [0, 0]);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P21 (AC6.3, AC6.4) — morador: «Renovações anteriores» à vista, com «Anular este pagamento» e sem Desfazer; tocar «Auluno»: «Voltar o plano que saiu» devolve a categoria e o plano (com o valor gravado) numa gravação, a linha «virou morador» vai para renov_voltas, outubro R$ 1.077,00 antes e depois; «Auluno sem plano» faz como hoje', async () => {
+  arma71();
+  try {
+    cena71([TAMARA()]);
+    await abre71("setPelCategoria('morador')"); await esp71();
+    const h = r71('blocoPlano(pelExtra(pelAtual), pelAtual)');
+    assert.ok(/Renovações anteriores \(1\)/.test(h) && /planoAnularLinhaAbrir\(/.test(h) && !/id="renovDesfazer"/.test(h), txt71(h).slice(-700));
+    igual(quadro71('2026-10'), 107700, 'antes: o «virou morador» conta');
+    const vid = Object.keys(ficha71().renov_hist)[0];
+    r71('__esc657=[]; __zpq657=[true];');
+    await abre71("setPelCategoria('auluno')"); await esp71();
+    const p = J71('__zp657').slice(-1)[0];
+    igual(p[0], 'VOLTAR O PLANO QUE SAIU?');
+    igual(p[1][0], 'Voltar o plano que saiu (Gold · trimestral · 1x · 05/10/2026 → 31/12/2026, R$ 1.077,00)?');
+    const w = escCad71();
+    igual(w.length, 1);
+    const f = ficha71();
+    igual([f.categoria, Object.keys(f.renov_hist || {}).length], ['auluno', 0]);
+    igual(r71('planoCanon(' + JSON.stringify(f.renov) + ')'), r71('planoCanon(' + JSON.stringify(GOLD71()) + ')'), 'o plano igual ao que era (com o valor gravado)');
+    const v = Object.values(f.renov_voltas);
+    igual([v.length, v[0].como, v[0].linha._id, v[0].linha.motivo], [1, 'categoria', vid, 'virou morador']);
+    igual(quadro71('2026-10'), 107700, 'depois: o mesmo pagamento, uma vez');
+    assert.ok(/voltou o plano que saiu/.test(aud71('categoria-peludinho').slice(-1)[0][1]));
+    assert.ok(aud71('registro-reaberto').some((x) => /o plano que saiu quando a ficha virou morador/.test(x[1])), JSON.stringify(aud71('registro-reaberto')));   // AC10.1
+    // «Auluno sem plano (vou confirmar um plano novo)»: como hoje (a vigência não volta)
+    cena71([TAMARA()]);
+    await abre71("setPelCategoria('morador')"); await esp71();
+    r71('__zpq657=[false];');
+    await abre71("setPelCategoria('auluno')"); await esp71();
+    const g = ficha71();
+    igual([g.categoria, g.renov.plano, g.renov.inicio, Object.keys(g.renov_hist).length, 'renov_voltas' in g], ['auluno', '', '', 1, false]);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P22 (AC6.5) — o Encãotador chamando setPelCategoria pelo console: «BARROU», nada gravado, nenhuma pergunta', async () => {
+  arma71();
+  try {
+    cena71([TAMARA()], { login: { nome: 'Caio Encãotador Teste', role: 'monitor' } });
+    await abre71("setPelCategoria('morador')"); await esp71();
+    const b = J71('__au657').filter((a) => a[0] === 'sem-permissao');
+    assert.ok(b.length === 1 && /^BARROU trocar a categoria do FILHOt \(Encãotador sem permissão\)$/.test(b[0][1]), JSON.stringify(b));
+    igual([escCad71().length, J71('__zp657').length, titulos71().indexOf('ESTA AÇÃO NÃO É SUA') >= 0], [0, 0, true]);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P23 (AC6.6) — irmãos sem ordemPet (a Pipoca, 2ª, com plano sem valor gravado): o Biscoito vira morador e a pergunta mostra «Total dos planos do Day Care em setembro de 2026: R$ 1.001,61 → R$ 1.077,00 (Pipoca: R$ 1.001,61 → R$ 1.077,00)»; depois, o quadro dá o mesmo número', async () => {
+  arma71();
+  try {
+    const bis = Object.assign(GOLD71()); delete bis.ordemPet;
+    const pip = { plano: 'Gold', aulas: 1, inicio: '2026-09-05', fim: '2026-11-30', mesRenov: 'novembro de 2026', quando: '2026-09-05' };
+    cena71([{ n: 'Biscoito', tutor: 'Rui Teste', ex: { dias: ['seg'], renov: bis } }, { n: 'Pipoca', tutor: 'Rui Teste', ex: { dias: ['seg'], sexo: 'Fêmea', renov: pip } }],
+      { irmaos: { f1: { a: 'biscoito__rui teste', b: 'pipoca__rui teste' } } });
+    igual(quadro71('2026-09'), 100161, 'antes: a Pipoca com o desconto do 2º peludinho');
+    await abre71("setPelCategoria('morador')"); await esp71();
+    const l = J71('__zp657')[0][1];
+    assert.ok(l.indexOf('Total dos planos do Day Care em setembro de 2026: R$ 1.001,61 → R$ 1.077,00 (Pipoca: R$ 1.001,61 → R$ 1.077,00).') >= 0, JSON.stringify(l));
+    igual(quadro71('2026-09'), 107700, 'depois: o número da pergunta');
+    igual(quadro71('2026-10'), 107700, 'o pagamento do Biscoito continua contando');
+  } finally { solta71(); }
+});
+
+// ---- AC7 — os dias coerentes com o plano --------------------------------------------------------------------------
+const NELSON = (dias) => ({ n: 'Nelson', tutor: 'Bia Teste', fabrica: { dias: ['ter', 'qui'] }, ex: { dias: dias || ['seg'], renov: GOLD71() } });
+provaAsync('6.71 P24 (AC7.1) — tirar o último dia do Nelson grava a marca «nenhum dia»; o outro aparelho (sem «dias» no banco) lê []; marcar a segunda de novo tira a marca', async () => {
+  arma71();
+  try {
+    cena71([NELSON()]);
+    r71("toggleDiaPel('seg')"); await esp71();
+    const f = ficha71();
+    igual([f.dias, f.dias_nenhum, f.freq], [[], true, '']);
+    // 2ª rodada (DOC-001): no rastro da ficha, a marca tem nome («Nenhum dia marcado»), nunca a chave técnica
+    const rc = aud71('ficha-campo').filter((a) => a[2].campo === 'dias_nenhum');
+    assert.ok(rc.length === 1 && rc[0][2].rotulo === 'Nenhum dia marcado' && /Nelson — Nenhum dia marcado: /.test(rc[0][1]) && !/dias_nenhum/.test(rc[0][1]), JSON.stringify(aud71('ficha-campo')));
+    // o outro aparelho: o banco não guarda lista vazia
+    r71(`(function(){ var k=pelKey(pelAtual), c=__get657('daycare/cadastro/'+k); delete c.dias; pelCadCache[k]=c; __ls657={}; })()`);
+    igual([J71("pelDias(pelAtual,'rotina')"), J71('pelDias(pelAtual)'), r71('nAulasDe(pelAtual)')], [[], [], 1]);
+    igual(r71('pelFreq(pelAtual)'), '—', 'sem dia, sem frequência inventada');
+    // o aparelho que abriu sem internet (ainda sem o cadastro do banco): a cópia local dele, com a marca e sem a lista, também fica sem dia
+    r71(`(function(){ var k=pelKey(pelAtual), c=__get657('daycare/cadastro/'+k); delete c.dias; __ls657['zeluz_pel_'+k]=JSON.stringify(c); delete pelCadCache[k]; })()`);
+    igual(J71("pelDias(pelAtual,'rotina')"), [], 'sem o banco: a marca da cópia local vale');
+    r71(`pelCadCache[pelKey(pelAtual)]=__get657('daycare/cadastro/'+pelKey(pelAtual)); __ls657={};`);
+    r71("toggleDiaPel('seg')"); await esp71();
+    const g = ficha71();
+    igual([g.dias, 'dias_nenhum' in g, g.freq], [['seg'], false, '1x']);
+    igual(J71("pelDias(pelAtual,'rotina')"), ['seg']);
+    // marcar e desmarcar um dia com outros marcados não mexe na marca (o patch de sempre)
+    cena71([NELSON(['seg', 'qua'])]);
+    r71("toggleDiaPel('qua')"); await esp71();
+    const e = J71('__esc657').filter((x) => /^daycare\/cadastro/.test(x[1]))[0];
+    igual(e[2], ['dias', 'freq']);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P25 (AC7.2) — o aviso junto dos dias do alto quando os dias não batem com o plano, com «Ir para a aba Plano» (44 px); sem aviso quando batem, e nenhuma pergunta antes de tocar um dia', async () => {
+  arma71();
+  try {
+    cena71([NELSON([])]);
+    const h = r71('diasEditInner(pelAtual)');
+    assert.ok(txt71(h).indexOf('Os dias marcados (nenhum dia) não batem com o plano gravado (1x, R$ 1.077,00). Confira na aba Plano e toque em Confirmar para acertar.') >= 0, txt71(h));
+    assert.ok(/id="pelDiasAvisoPlano"/.test(h) && /min-height:44px[^"]*" onclick="irParaAbaPlano\(\)">Ir para a aba Plano</.test(h), h);
+    cena71([NELSON(['seg', 'qua'])]);
+    assert.ok(txt71(r71('diasEditInner(pelAtual)')).indexOf('Os dias marcados (2x: Seg, Qua) não batem com o plano gravado (1x, R$ 1.077,00).') >= 0);
+    cena71([NELSON(['seg'])]);
+    igual(/pelDiasAvisoPlano/.test(r71('diasEditInner(pelAtual)')), false, 'batem: sem aviso');
+    r71("toggleDiaPel('qua')"); await esp71();
+    igual(J71('__zp657').length, 0, 'nenhuma pergunta antes do chip');
+    // morador: sem aviso (não há plano mensal)
+    cena71([{ n: 'Nelson', tutor: 'Bia Teste', ex: { dias: [], categoria: 'morador', renov: { plano: 'morador', aulas: 1 } } }]);
+    igual(/pelDiasAvisoPlano/.test(r71('diasEditInner(pelAtual)')), false);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P26 (AC7.3, guarda) — o Recebimentos igual antes e depois de tirar o dia; ficha sem a marca: pelDias igual à fórmula de sempre; as provas antigas dos chips passaram sem palco', async () => {
+  arma71();
+  try {
+    cena71([NELSON()]);
+    const antes = quadro71('2026-10');
+    r71("toggleDiaPel('seg')"); await esp71();
+    igual([antes, quadro71('2026-10')], [107700, 107700]);
+    const casos = [[{ dias: ['qua'] }, ['ter']], [{}, ['ter', 'qui']], [{ dias: [] }, ['ter']], [{ dias_nenhum: false }, ['sex']], [{ dias: ['seg'], dias_nenhum: true }, ['ter']]];
+    casos.forEach(([ex, fab], i) => {
+      ctx671.__c71 = { ex, fab };
+      const got = J71(`(function(){ var p={n:'Caso'+${i}, tutor:'Teste', dias:__c71.fab}; pelCadCache[pelKey(p)]=__c71.ex; return pelDias(p,'rotina'); })()`);
+      const formula = Array.isArray(ex.dias) ? ex.dias : (ex.dias_nenhum === true ? [] : fab);
+      igual(got, formula, JSON.stringify(ex));
+    });
+    igual(falhas.filter((f) => /^6\.(30|37) /.test(f)), [], 'as provas antigas dos dias e dos chips');
+  } finally { solta71(); }
+});
+
+// ---- AC8 — a saída e a volta do Day Care --------------------------------------------------------------------------
+const SAIDA71 = { inativo: 'Sim', dataSaida: '08/10/2026', motivoSaida: 'viagem da família em outubro', tipoSaida: 'pausa' };
+provaAsync('6.71 P27 (AC8.1) — «Saiu do Day Care? Sim» abre o caminho do botão (pausa ou saída definitiva, o motivo, a data e o tipo) e «Não» abre o reativar; nenhum dos dois grava direto; as mensagens na tela, nunca em janela nativa', async () => {
+  arma71();
+  try {
+    cena71([TAMARA()]);
+    const h = r71('camposSaidaFicha()');
+    assert.ok(/onclick="saidaInativar\('seletor'\)">Sim</.test(h) && /onclick="saidaReativar\(pelAtualIdx, 'seletor'\)">Não</.test(h), h.slice(0, 800));
+    igual(/setPelExtra\(pelAtual,\{inativo:/.test(h), false, 'o seletor não grava direto');
+    r71(`__zpq657=[true]; __ztq657=['viagem da família em outubro'];`);
+    await abre71("saidaInativar('seletor')"); await esp71();
+    igual(J71('__zp657')[0][0], 'Tâmara — este é um caso de PAUSA?');
+    igual(J71('__zt657')[0][0], 'Inativar Tâmara — por que ela vai PAUSAR?');
+    const f = ficha71();
+    igual([f.inativo, f.motivoSaida, f.dataSaida, f.tipoSaida], ['Sim', 'viagem da família em outubro', '10/10/2026', 'pausa']);
+    igual(za71('INATIVADA').slice(0, 3), ['Tâmara foi inativada.', 'Motivo: viagem da família em outubro', 'Data: 10/10/2026']);
+    igual(J71('__al657'), [], 'nenhuma janela nativa');
+    assert.ok(/pausa em 10\/10\/2026: viagem da família em outubro/.test(aud71('peludinho-inativado')[0][1]));
+    // «Não» com o FILHOt ativo: nada grava
+    cena71([TAMARA()]);
+    await abre71("saidaReativar(pelAtualIdx, 'seletor')"); await esp71();
+    igual([escCad71().length, titulos71()], [0, ['JÁ ESTÁ NO DAY CARE']]);
+    // sem o motivo: nada grava, e a tela diz
+    cena71([TAMARA()]);
+    r71('__zpq657=[false]; __ztq657=[null];');
+    await abre71("saidaInativar('seletor')"); await esp71();
+    igual([escCad71().length, titulos71(), J71('__al657')], [0, ['NADA FOI INATIVADO'], []]);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P28 (AC8.2) — a pergunta de inativar diz «Pela regra de hoje, quem sai não entra na conta do mês: Total dos planos do Day Care em outubro de 2026: R$ 1.077,00 → R$ 0,00 (pagamento de 05/10/2026).»; depois de inativar, o quadro dá R$ 0,00; sem pagamento, sem a linha', async () => {
+  arma71();
+  try {
+    cena71([TAMARA()]);
+    r71(`__zpq657=[false]; __ztq657=['mudou de cidade com a família'];`);
+    await abre71("saidaInativar('botao')"); await esp71();
+    const l = J71('__zp657')[0][1];
+    igual(l[l.length - 1], 'Pela regra de hoje, quem sai não entra na conta do mês: Total dos planos do Day Care em outubro de 2026: R$ 1.077,00 → R$ 0,00 (pagamento de 05/10/2026).');
+    igual([quadro71('2026-10'), ficha71().tipoSaida], [0, 'definitiva']);
+    // com a renovação de julho também: os dois meses
+    cena71([PIPOCA()]);
+    r71(`__zpq657=[true]; __ztq657=['viagem da família em outubro'];`);
+    await abre71("saidaInativar('botao')"); await esp71();
+    const l2 = J71('__zp657')[0][1];
+    igual(l2[l2.length - 1], 'Pela regra de hoje, quem sai não entra na conta do mês: Total dos planos do Day Care em julho de 2026: R$ 1.077,00 → R$ 0,00 (pagamento de 05/07/2026); Total dos planos do Day Care em outubro de 2026: R$ 1.077,00 → R$ 0,00 (pagamento de 05/10/2026).');
+    // sem pagamento no período olhado: sem a linha
+    cena71([TAMARA({ renov: { plano: '', inicio: '', fim: '', aulas: '' } })]);
+    r71(`__zpq657=[true]; __ztq657=['viagem da família em outubro'];`);
+    await abre71("saidaInativar('botao')"); await esp71();
+    igual(J71('__zp657')[0][1].length, 3);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P29 (AC8.1, AC8.3) — inativar e reativar com o banco recusando: «NÃO FOI INATIVADO» e «A VOLTA NÃO FOI GRAVADA» na tela, sem janela nativa e sem rastro; reativar pelos três caminhos é a mesma função: o motivo da volta, a saída limpa e guardada em saidas; «saíram no mês» deixa de contar', async () => {
+  arma71();
+  try {
+    cena71([TAMARA()]);
+    r71(`__recusa657='^daycare/cadastro/[^/]+$'; __zpq657=[true]; __ztq657=['viagem da família em outubro'];`);
+    await abre71("saidaInativar('botao')"); await esp71();
+    const z = za71('NÃO FOI INATIVADO');
+    assert.ok(z.length === 2 && z[1] === 'A ficha continua como estava.' && /^Tâmara: /.test(z[0]), JSON.stringify(z));
+    igual([titulos71().indexOf('INATIVADA'), aud71('peludinho-inativado').length, J71('__al657'), ficha71().inativo || ''], [-1, 0, [], '']);
+    cena71([TAMARA(SAIDA71)]);
+    r71(`__recusa657='^daycare/cadastro/[^/]+$'; __zpq657=[true]; __ztq657=['voltou da viagem com a família'];`);
+    await abre71('inativarPeludinhoRapido()'); await esp71();
+    assert.ok(za71('A VOLTA NÃO FOI GRAVADA')[1] === 'A ficha continua como estava.');
+    igual([aud71('peludinho-reativado').length, ficha71().inativo, J71('__al657')], [0, 'Sim', []]);
+    // os três caminhos: o botão da ficha, o «Não» do seletor, o «Voltou» de Relatórios › Inativos
+    for (const chamada of ['inativarPeludinhoRapido()', "saidaReativar(pelAtualIdx, 'seletor')", 'reativarPeludinho(0)']) {
+      cena71([TAMARA(SAIDA71)], { login: GESTORA });
+      igual(J71('movimentoDoMes().sai.map(function(o){ return pelNome(o.p); })'), ['Tâmara'], 'antes: saiu no mês');
+      r71(`__zpq657=[true]; __ztq657=['voltou da viagem com a família'];`);
+      await abre71(chamada); await esp71();
+      igual(J71('__zp657')[0][0], 'Tâmara voltou para o Day Care?', chamada);
+      igual(J71('__zt657')[0][0], 'Por que Tâmara voltou?', chamada);
+      const f = ficha71();
+      igual([f.inativo, f.dataSaida, f.motivoSaida, f.tipoSaida], ['Nao', '', '', ''], chamada);
+      const s = f.saidas[f.saidas.length - 1];
+      igual([s.quando, s.motivo, s.tipo, s.retornoMotivo, s.retornoPor, s.retornoTs], ['08/10/2026', 'viagem da família em outubro', 'pausa', 'voltou da viagem com a família', 'Gestora Teste', T671], chamada);
+      igual(J71('movimentoDoMes().sai.map(function(o){ return pelNome(o.p); })'), [], chamada + ': deixa de contar em «saíram no mês»');
+      igual([aud71('peludinho-reativado').length, za71('VOLTOU')[1], J71('__al657')], [1, 'Motivo da volta: voltou da viagem com a família', []], chamada);
+    }
+    // sem o motivo da volta: nada grava
+    cena71([TAMARA(SAIDA71)]);
+    r71('__zpq657=[true]; __ztq657=[null];');
+    await abre71('reativarPeludinho(0)'); await esp71();
+    igual([escCad71().length, titulos71()], [0, ['NADA FOI GRAVADO']]);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P30 (AC8.4) — «Desfazer a volta» no mesmo dia (recarregando, o botão continua): volta a inativo com a saída de antes; a entrada de saidas ganha desfeita (nada apagado); no dia seguinte, o botão não aparece', async () => {
+  arma71();
+  try {
+    cena71([TAMARA(SAIDA71)], { login: GESTORA });
+    r71(`__zpq657=[true]; __ztq657=['voltou da viagem com a família'];`);
+    await abre71('inativarPeludinhoRapido()'); await esp71();
+    // recarregar: o cadastro vem do banco, a cópia do aparelho some
+    r71(`pelCadCache[pelKey(pelAtual)]=__get657('daycare/cadastro/'+pelKey(pelAtual)); __ls657={};`);
+    const h = r71('saidaVoltaHTML(pelAtual)');
+    assert.ok(txt71(h).indexOf('Voltou em 10/10 às 10:00, por Gestora Teste: voltou da viagem com a família') >= 0, txt71(h));
+    assert.ok(/min-height:44px[^"]*" onclick="saidaDesfazerVolta\(\)">Desfazer a volta</.test(h), h);
+    r71(`__ztq657=['a volta foi lançada por engano hoje'];`);
+    await abre71('saidaDesfazerVolta()'); await esp71();
+    const f = ficha71();
+    igual([f.inativo, f.dataSaida, f.motivoSaida, f.tipoSaida, f.saidas.length], ['Sim', '08/10/2026', 'viagem da família em outubro', 'pausa', 1]);
+    const s = f.saidas[0];
+    igual([s.retornoMotivo, s.desfeita.motivo, s.desfeita.por, s.desfeita.acao], ['voltou da viagem com a família', 'a volta foi lançada por engano hoje', 'Gestora Teste', 'reabrir']);
+    igual(aud71('peludinho-volta-desfeita').length, 1);
+    // e a entrada da 6.57 («Reabriu …»), com o motivo, só com o ok (AC10.1)
+    assert.ok(aud71('registro-reaberto').length === 1 && /a volta foi lançada por engano hoje/.test(aud71('registro-reaberto')[0][1]), JSON.stringify(aud71('registro-reaberto')));
+    igual(r71('saidaVoltaHTML(pelAtual)'), '', 'desfeita: sem o botão');
+    // o motivo de 4 palavras é conferido também na função
+    cena71([TAMARA(SAIDA71)], { login: GESTORA });
+    r71(`__zpq657=[true]; __ztq657=['voltou da viagem com a família', 'erro'];`);
+    await abre71('inativarPeludinhoRapido()'); await esp71();
+    await abre71('saidaDesfazerVolta()'); await esp71();
+    igual([ficha71().inativo, titulos71().slice(-1)[0]], ['Nao', 'FALTA O MOTIVO']);
+    // no dia seguinte, não
+    r71("zHojeISO=function(){ return '2026-10-11'; }; hojeISO=zHojeISO;");
+    igual(r71('saidaVoltaHTML(pelAtual)'), '');
+    r71('__za657=[];');
+    await abre71('saidaDesfazerVolta()'); await esp71();
+    igual([titulos71(), ficha71().inativo], [['NÃO HÁ VOLTA PARA DESFAZER'], 'Nao']);
+    // 2ª rodada (defeito q27 do QA): a volta já desfeita não é oferecida de novo, mesmo com a ficha ativa de novo por outro caminho
+    r71("zHojeISO=function(){ return '2026-10-10'; }; hojeISO=zHojeISO;");
+    assert.ok(/saidaDesfazerVolta\(\)/.test(r71('saidaVoltaHTML(pelAtual)')), 'hoje, a volta sem desfeita tem o botão');
+    r71(`(function(){ var k=pelKey(pelAtual), f=__get657('daycare/cadastro/'+k), L=f.saidas, i=L.length-1;
+      L[i]=Object.assign({}, L[i], {desfeita:{acao:'reabrir', motivo:'a volta foi lançada por engano hoje', por:'Gestora Teste', ts:${T671}}}); f.inativo='Nao';
+      __put657('daycare/cadastro/'+k, f); pelCadCache[k]=__get657('daycare/cadastro/'+k); __za657=[]; __esc657=[]; })()`);
+    igual(r71('saidaVoltaHTML(pelAtual)'), '', 'a volta desfeita não volta a ter o botão');
+    await abre71('saidaDesfazerVolta()'); await esp71();
+    igual([titulos71(), escCad71().length], [['NÃO HÁ VOLTA PARA DESFAZER'], 0]);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P31 (AC8.5) — óbito, em todos os caminhos: o «Não» do seletor, o botão e o «Voltou» recusam o FILHOt com tipoSaida obito ou com o motivo de falecimento, com a frase de hoje; nada grava', async () => {
+  arma71();
+  try {
+    const OBITO = { inativo: 'Sim', tipoSaida: 'obito', dataObito: '05/10/2026', dataSaida: '05/10/2026', motivoSaida: 'Faleceu em 05/10/2026' };
+    for (const chamada of ["saidaReativar(pelAtualIdx, 'seletor')", 'inativarPeludinhoRapido()', 'reativarPeludinho(0)']) {
+      cena71([TAMARA(OBITO)]);
+      await abre71(chamada); await esp71();
+      igual(escCad71().length, 0, chamada);
+      const t = J71('__za657')[0] || [];
+      assert.ok(/registrado como falecido em 05\/10\/2026/.test(t[1][0]) && /chame a Diretoria/.test(t[1][1]), chamada + ' ' + JSON.stringify(t));
+      igual(J71('__zp657').length, 0);
+    }
+    // o motivo de falecimento com outro tipo (campo livre): o «Voltou» e o seletor também recusam
+    for (const chamada of ["saidaReativar(pelAtualIdx, 'seletor')", 'reativarPeludinho(0)']) {
+      cena71([TAMARA({ inativo: 'Sim', tipoSaida: 'definitiva', dataSaida: '05/10/2026', motivoSaida: 'faleceu em casa, a família avisou' })]);
+      await abre71(chamada); await esp71();
+      igual([escCad71().length, za71('NÃO DÁ PARA REATIVAR')[0]], [0, 'Tâmara consta como tendo partido (faleceu em casa, a família avisou).'], chamada);
+    }
+  } finally { solta71(); }
+});
+
+// ---- AC9, AC10 — quem assina, rastro e Linha do tempo -----------------------------------------------------------
+provaAsync('6.71 P32 (AC9, AC10) — a matriz de quem assina (o posto não assina; o nome digitado não vale; a Supervisão não anula; a Consultora desfaz o meio do mês com a própria senha); a Linha do tempo traduz as seis ações de hoje e as novas; todo R$ no formato completo; a senha em nenhum registro', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA()]);
+    await abre71("planoAnularLinhaAbrir('hj1')");
+    await toca71('s-posto'); assert.ok(/senha de posto não assina/.test(aviso71()), aviso71());
+    await toca71('Gestora Teste'); assert.ok(/não é de ninguém cadastrado/.test(aviso71()), aviso71());
+    await toca71('s-recep'); assert.ok(/senha de posto não assina/.test(aviso71()), 'a Recepção é posto');
+    await toca71('s-amanda'); assert.ok(/não pode assinar esta anulação/.test(aviso71()));
+    await toca71('s-vera'); assert.ok(/não pode assinar esta anulação/.test(aviso71()), 'a Veterinária não anula');
+    igual(escCad71().length, 0);
+    await toca71(SENHA657); igual(passo71(), 'pronto');
+    const txtCartazes = [cartaz71()];
+    r71('corrFechar()');
+    // a Diretoria também assina pela Gestão
+    r71(`senhasRuntime=(function(o){ return function(){ var m=o(); m['s-dir']={role:'diretoria', nome:'Diretora Teste'}; return m; }; })(senhasRuntime);`);
+    await abre71("planoReabrirLinhaAbrir('hj1')"); txtCartazes.push(cartaz71());
+    await toca71('s-dir'); igual(passo71(), 'pronto');
+    // o meio do mês: a própria pessoa que mexe no plano (a Consultora), sem a Gestão
+    cena71([QUINDIM()]);
+    await abre71('mmDesfazer()'); txtCartazes.push(cartaz71());
+    await toca71('s-bia', 'o tutor desistiu da opção dois'); igual(ficha71().renov.meio_mes === undefined, true);
+    // a Linha do tempo: as seis de hoje e as novas, em português
+    ['categoria-peludinho', 'peludinho-inativado', 'peludinho-reativado', 'plano-meio-mes', 'plano-fim-meio-mes', 'dias-da-semana', 'pagamento-anulado', 'pagamento-reaberto', 'peludinho-volta-desfeita', 'renovacao-desfeita', 'plano-meio-mes-desfeito']
+      .forEach((a) => { const t = r71(`acaoRotulo({acao:'${a}', detalhe:'x'})`); assert.ok(t.indexOf(a) < 0 && / — x$/.test(t) && /^[A-ZÁÉÍÓÚÂÊÔÃÕ]/.test(t), a + ' → ' + t); });
+    igual(r71("acaoNome('pagamento-anulado')"), 'Anulou o pagamento de um plano (lançado por engano)');
+    // todo R$ no formato completo, nos cartazes e no rastro
+    cena71([PIPOCA()]);
+    await abre71('desfazerRenovacao()'); txtCartazes.push(cartaz71());
+    txtCartazes.forEach((c) => assert.ok(soFormato36(c) || !/R\$/.test(c), c));
+    // o plano atual também: o registro da anulação vai para o banco, e a senha não vai junto
+    const aud32 = [J71('__au657'), J71('__za657')];
+    cena71([BISCOITO()]);
+    await abre71('planoAnularAtualAbrir()'); await toca71(SENHA657); igual(passo71(), 'pronto'); r71('corrFechar()');
+    igual(Object.values(Object.values(ficha71().renov_hist)[0].anulacoes)[0].por, 'Gestora Teste');
+    // a senha não aparece em nenhum registro, rastro ou banco
+    const tudo = JSON.stringify([J71('__db657'), J71('__au657'), J71('__za657'), aud32]);
+    igual([tudo.indexOf(SENHA657), tudo.indexOf('s-dir'), tudo.indexOf('s-bia')], [-1, -1, -1]);
+  } finally { solta71(); }
+});
+provaAsync('6.71 P33 (AC4.2) — com a linha mais nova do histórico anulada, o Desfazer volta a anterior NÃO anulada (o pagamento anulado nunca volta a valer); a pergunta «virou» do Confirmar ignora a linha anulada', async () => {
+  arma71();
+  try {
+    const ago = H71(Object.assign(JUL71(), { inicio: '2026-08-05', quando: '2026-08-05', fim: '2026-10-31' }), 400);
+    ago.anulacoes = { a1: { acao: 'anular', ts: 1, por: 'Gestora Teste', motivo: MOT71 } };
+    cena71([PIPOCA({ renov_hist: { hj1: H71(JUL71(), 300), hj2: ago } })]);
+    await abre71('desfazerRenovacao()');
+    assert.ok(cartaz71().indexOf('VOLTA: Gold · 1x · 05/07/2026 → 30/09/2026') >= 0, cartaz71());
+    await toca71(SENHA657);
+    const f = ficha71();
+    igual([f.renov.inicio, 'hj2' in f.renov_hist, 'hj1' in f.renov_hist, Object.values(f.renov_voltas)[0].linha._id], ['2026-07-05', true, false, 'hj1']);
+    igual(quadro71('2026-08'), 0, 'o pagamento anulado de agosto continua fora');
+    // a pergunta «virou» do Confirmar: a linha «virou morador» anulada não pergunta nada
+    const V = Object.assign(G644c('2026-09-01', '2026-11-30'), { substituidoEm: 100, por: 'Teste', motivo: 'virou morador', motivo_conferido: true, anulacoes: { a1: { acao: 'anular', ts: 1 } } });
+    cena71([TAMARA({ renov: { plano: '', aulas: '', inicio: '', fim: '', mesRenov: '', ordemPet: 1 }, renov_hist: { v: V } })]);
+    r71("renovRascunho={_k:pelKey(pelAtual), plano:'Gold', aulas:1, inicio:'2026-09-02'}; __zpq657=[true, true, true];");
+    await abre71('confirmarRenovacao()'); await esp71();
+    const tit = J71('__zp657').map((p) => p[0] + ' | ' + (p[1] || []).join(' '));
+    assert.ok(!tit.some((t) => /quando a ficha virou morador/.test(t)), JSON.stringify(tit));
+    igual(ficha71().renov.inicio, '2026-09-02');
+  } finally { solta71(); }
+});
+prova('6.71 P34 (AC12, AC13, guarda) — a área protegida e o #v-daycare idênticos; a PERM e as funções que ficam (AC12) com o texto da base; nenhuma função nova ck*/pt*; os textos travados do financeiro-logica.js e o ES5', () => {
+  const ctxN = vm.createContext(makeSandbox());
+  vm.runInContext(FIN_SRC36, ctxN);
+  vm.runInContext(extractMainScript(fs.readFileSync(APP, 'utf8')), ctxN, { filename: 'index.html#script (6.71 P34)', timeout: 15000 });
+  const runN = (c) => vm.runInContext(c, ctxN);
+  // 6.76 (junção com as publicadas, 12/out/2026): duas funções do cartaz da 6.57 mudam de propósito, pela 6.76 (a 6.71 não as tocou;
+  // no 788fb9e elas são as da base). O resto da lista continua com o texto da base.
+  //   corrAbrir   antes '0aaa74dd74e83d14', depois '208265cf2a0de416': o campo `mud` começa com `op.mudancas` quando a ação é «corrigir»
+  //               (o Time mostra o antes → depois já no cartaz, 6.76 AC2); sem `op.mudancas`, `mud:[]` como antes.
+  //   corrAssinar antes '821cc2e824d9233a', depois 'd9821a379af1ac0d': recusa a senha provisória (SENHA_PROVISORIA_FRASE, 6.76 SEC-004)
+  //               e a senha de código sem o banco (SENHA_SEM_BANCO_FRASE, 6.76 SEC-008), e quem assina vem de `senhaQuem`, a régua única
+  //               (a pessoa desativada não assina); `orcQuemPelaSenha` fica só de reserva. As provas «6.76 × publicadas · …» conferem as
+  //               portas da 6.58, 6.59, 6.63, 6.66, 6.68, 6.70 e 6.71 com a senha certa, a provisória, a de código sem banco e a desativada.
+  const BASE = { finResumoMes: '7508ce9e42d74859', finResumoHistorico: '2d09b03627901b31', finEhCorrecaoDe: 'c5fdd64539ab5eaf', finMesmoComecoDoPeriodo: 'aad211eefc49a6de',
+    finPerguntariaNovoOuCorrecao: '30963eada241cae0', finValorGravado: 'b4297c37b31d7b3e', finOrdensFamilia: 'df1e655f8e729995', renovEhCorrecao: 'f8355bf3dcc7392b',
+    renovPerguntaNovoOuCorrecao: 'd1cbbcd8964df9b0', renovHistGravar: '39d93df948e3b0e0', renovHistNovoId: 'e491f743adfec442', renovPodeDesfazer: '383071a0ebfba231',
+    renovValorDoHist: '848403c290c7ff65', renovHistDe: 'f46e53112a3cf962', statusRenov: 'a0fb2526b567fc44', segBtnsPel: '8c73788b80a03aec', movimentoDoMes: '251ee9976b484e15',
+    urgenciasGestao: 'c192dbd0f0779796', saidaPorObito: '223da4c29536d709', ehObito: '2f7ae9db962ae0df', mmFimNovoDe: '551fd4e9eec3fe6c', mmFimDesfeitoDe: 'e7791c9d069bce8d',
+    mmBlocoHTML: '49b070abb758e810', pelCategoria: 'b157eb7398dddd6a', categoriaEditInner: '0ce0555856fa167f', recLinhasDoMes: '298160096d149dc5', recForaDoMes: '42708b5bd7efe2f8',
+    recResumoDoMes: '10ddb8cf3b010782', recQuebra: '3029846b45eb8f19', corrAbrir: '208265cf2a0de416', corrConfirmar: 'a4a11ee0e87ee8b1', corrCartazHTML: 'ea386e50e8f29f5b',
+    corrRegistro: '968f5e08727ea4e0', corrRastro: 'a3731be57d28c0c3', corrRiscadoHTML: '666f47261fa79fea', corrAssinar: 'd9821a379af1ac0d', corrBarrar: 'ccc7a375fd2f556d',
+    motivoQuatroPalavras: '668d0e513bd2cb53', acaoNome: '6b107e97fadabe6f', acaoRotulo: 'b9e9d4d877637170' };
+  const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = sha71(runN('String(' + n + ')')); });
+  igual(agora, BASE, 'as funções que ficam');
+  const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  igual([prot.length, sha71(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), sha71(runN('JSON.stringify(PERM)'))], [155, '5bac486c669007ec', 'f79140b1c2844dd5'], 'a área protegida e a PERM');
+  const src = fs.readFileSync(APP, 'utf8'), i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
+  igual([sha71(src.slice(i, j)), sha71(src.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
+  // o finRenovHistContados de hoje = o da base + a linha da leitura (AC3.1), e nada mais
+  const ctxB = vm.createContext(makeSandbox()); vm.runInContext(FIN_BASE671, ctxB);
+  igual(sha71(String(ctxB.finRenovHistContados)), '2f56d73d50faa01b', 'o finRenovHistContados da base');
+  const fin = FIN_SRC36;
+  ["    if (c.inativo === 'Sim') continue;                 /* saiu: não cobra */\n", '    valorMes = entra ? mensal * (meses || 1) : 0;\n', '        R.porServico.daycare.declarado += mensal * (meses || 1);\n',
+    '    var entra = (finMesDe(r.inicio) === mes);\n'].forEach((t) => assert.ok(fin.indexOf(t) > 0, t));
+  assert.ok(!/\b(const|let)\s|=>/.test(fin.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), 'ES5');
+  // nenhuma função nova começa com ck ou pt (as 155 de sempre) e nenhuma declarada duas vezes
+  const nomes = {}; for (const m of extractMainScript(src).matchAll(/(?:^|[\s;{}])(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)) nomes[m[1]] = (nomes[m[1]] || 0) + 1;
+  igual(Object.keys(nomes).filter((k) => nomes[k] > 1), []);
+});
+// O número da pergunta é o número do quadro (risco 10, tolerância zero): nas quatro portas que mostram o efeito.
+provaAsync('6.71 P35 (AC1.2, AC4.1, AC6.6, AC8.2, risco 10) — o efeito mostrado antes de confirmar bate no centavo com o quadro depois de gravar, mês a mês, com outros FILHOts pagando no mesmo mês', async () => {
+  arma71();
+  try {
+    const outro = { n: 'Luna', tutor: 'Outra Teste', ex: { dias: ['qua'], renov: Object.assign(GOLD71(), { inicio: '2026-10-02', quando: '2026-10-02', valor_plano_cent: 99900 }) } };
+    cena71([PIPOCA(), outro]);
+    igual([quadro71('2026-07'), quadro71('2026-10')], [107700, 207600]);
+    await abre71('desfazerRenovacao()');
+    const m = /outubro de 2026: (R\$ \d{1,3}(?:\.\d{3})*,\d{2}) → (R\$ \d{1,3}(?:\.\d{3})*,\d{2})/.exec(cartaz71());
+    igual([m[1], m[2]], ['R$ 2.076,00', 'R$ 999,00']);
+    await toca71(SENHA657); r71('corrFechar()');
+    igual(r71('finBRL(' + quadro71('2026-10') + ')'), m[2]);
+    r71('__zpq657=[true]; __ztq657=["viagem da família em outubro"]; __zp657=[];');
+    await abre71("saidaInativar('botao')"); await esp71();
+    const l = J71('__zp657')[0][1].slice(-1)[0];
+    const n = /julho de 2026: (R\$ \d{1,3}(?:\.\d{3})*,\d{2}) → (R\$ \d{1,3}(?:\.\d{3})*,\d{2})/.exec(l);
+    igual(r71('finBRL(' + quadro71('2026-07') + ')'), n[2], l);
+  } finally { solta71(); }
+});
+// As travas por dentro que os defeitos plantados mostraram sem prova (o @dev, na implementação): cada uma é promessa de um AC já
+// escrito — a recusa da Consultora no «Reabrir», a do plano que volta numa ficha que não é Auluno, a frase do FILHOt inativo, a releitura
+// da linha e do «Voltar o plano que saiu», a lista dos anulados sem a reaberta, a linha anulada à parte e o papel em cada função.
+provaAsync('6.71 P36 (AC1.4, AC1.2, AC2.2, AC2.4, AC2.5, AC6.4, AC9) — as travas por dentro: «Reabrir» só com a Gestão; o plano anulado não volta numa ficha que não é Auluno; o cartaz do FILHOt inativo não promete queda; a linha que mudou em outro aparelho não é anulada; a reaberta sai da lista dos anulados; a anulada não se junta com a que vale; «Voltar o plano que saiu» só para a linha «virou» e relendo a ficha; o Encãotador barrado em toda função que mexe no plano', async () => {
+  arma71();
+  try {
+    // «Reabrir» a linha: a Consultora e a Supervisão não assinam (AC2.4, AC9); depois da Gestão, a linha sai da lista dos anulados (AC2.5)
+    cena71([PIPOCA()]);
+    await abre71("planoAnularLinhaAbrir('hj1')"); await toca71(SENHA657); igual(passo71(), 'pronto'); r71('corrFechar()');
+    assert.ok(/rec-li-anulado/.test(r71("recListaHTML(recResumoDoMes('2026-07'), '2026-07', false)")));
+    r71('__esc657=[];');
+    await abre71("planoReabrirLinhaAbrir('hj1')");
+    await toca71('s-bia'); assert.ok(/não pode assinar/.test(aviso71()), aviso71());
+    await toca71('s-amanda'); assert.ok(/não pode assinar/.test(aviso71()), aviso71());
+    igual([escCad71().length, aud71('pagamento-reaberto').length], [0, 0]);
+    await toca71(SENHA657); igual(passo71(), 'pronto'); r71('corrFechar()');
+    igual([quadro71('2026-07'), /rec-li-anulado/.test(r71("recListaHTML(recResumoDoMes('2026-07'), '2026-07', false)"))], [107700, false]);
+    // a linha que mudou em outro aparelho depois que o cartaz abriu não é anulada (AC2.2, como o AC1.5 no plano atual)
+    cena71([PIPOCA()]);
+    await abre71("planoAnularLinhaAbrir('hj1')");
+    r71(`__put657('daycare/cadastro/'+pelKey(pelAtual)+'/renov_hist/hj1/fim', '2026-10-31');`);
+    await toca71(SENHA657);
+    igual(za71('NÃO FOI ANULADO'), ['Esta renovação mudou em outro aparelho. Nada foi anulado: confira e tente de novo.', 'A renovação continua como estava.']);
+    igual([escCad71().length, aud71('pagamento-anulado').length], [0, 0]);
+    // a linha anulada não se junta com a que vale, mesmo dizendo a mesma coisa: cada uma com o seu botão
+    const anul = { a1: { acao: 'anular', ts: 5, por: 'Gestora Teste', papel: 'gestao', motivo: 'lançado no FILHOt errado', quando: '09/10/2026 09:00' } };
+    cena71([PIPOCA({ renov_hist: { hj1: H71(JUL71(), 300), hj2: Object.assign(H71(JUL71(), 250), { anulacoes: anul }) } })]);
+    const hh = txt71(r71('renovHistHTML(pelExtra(pelAtual))'));
+    assert.ok(hh.indexOf('vezes iguais') < 0 && hh.indexOf('Anular este pagamento') >= 0 && hh.indexOf('Reabrir') >= 0, hh);
+    // o plano anulado não volta numa ficha que não é Auluno (AC1.4): «Reabrir» recusa com a frase, sem cartaz, e nada grava
+    cena71([BISCOITO()]);
+    await abre71('planoAnularAtualAbrir()'); await toca71(SENHA657); r71('corrFechar()');
+    const idB = Object.keys(ficha71().renov_hist)[0];
+    r71(`__put657('daycare/cadastro/'+pelKey(pelAtual)+'/categoria', 'morador'); pelCadCache[pelKey(pelAtual)]=__get657('daycare/cadastro/'+pelKey(pelAtual)); __esc657=[]; __za657=[];`);
+    await abre71(`planoReabrirLinhaAbrir('${idB}')`);
+    igual([r71('CORR_ATUAL'), escCad71().length], [null, 0]);
+    igual(za71('NÃO DÁ PARA REABRIR ESTE PLANO'), ['Biscoito não é Auluno agora: toque em «Auluno» na Categoria antes de reabrir o plano.', 'Nada foi gravado.']);
+    // o FILHOt inativo: o cartaz do plano atual não promete queda no Recebimentos (AC1.2, a mesma regra do AC2.2)
+    cena71([{ n: 'Biscoito', tutor: 'Clara Teste', ex: Object.assign({ dias: ['seg'], renov: GOLD71() }, SAIDA71) }]);
+    await abre71('planoAnularAtualAbrir()');
+    const ci = cartaz71();
+    assert.ok(ci.indexOf('Biscoito está inativo: pela regra de hoje, este pagamento já não entra no Recebimentos. A anulação fica registrada para quando a regra mudar.') >= 0 && !/sai do Recebimentos/.test(ci), ci);
+    r71('corrFechar()');
+    // «Voltar o plano que saiu» só quando a linha mais nova é a «virou» da categoria de agora (AC6.4): aqui é uma renovação
+    cena71([TAMARA({ categoria: 'morador', renov: { plano: 'morador', inicio: '', fim: '', mesRenov: '', aulas: '', ordemPet: 1 }, renov_hist: { h1: H71(JUL71(), 300) } })]);
+    r71('__zpq657=[true];');
+    await abre71("setPelCategoria('auluno')"); await esp71();
+    igual(J71('__zp657').map((z) => z[0]).indexOf('VOLTAR O PLANO QUE SAIU?'), -1);
+    igual([ficha71().categoria, ficha71().renov.plano || '', Object.keys(ficha71().renov_hist)], ['auluno', '', ['h1']]);
+    // e relendo a ficha: o plano mudou em outro aparelho (a memória deste ainda é a de antes) — recusa, nada gravado
+    cena71([TAMARA()]);
+    r71('__zpq657=[true];');
+    await abre71("setPelCategoria('morador')"); await esp71();
+    igual(ficha71().categoria, 'morador');
+    ctx671.__s71 = { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-07', fim: '2026-10-31', mesRenov: 'outubro de 2026', quando: '2026-10-07' };
+    r71(`pelCadCache[pelKey(pelAtual)]=__get657('daycare/cadastro/'+pelKey(pelAtual)); __put657('daycare/cadastro/'+pelKey(pelAtual)+'/renov', __s71);
+      __esc657=[]; __zp657=[]; __zpq657=[true]; __za657=[]; __au657=[];`);
+    await abre71("setPelCategoria('auluno')"); await esp71();
+    igual(J71('__zp657').map((z) => z[0]), ['VOLTAR O PLANO QUE SAIU?']);
+    igual(za71('A CATEGORIA NÃO FOI TROCADA'), ['O plano mudou em outro aparelho. A categoria não foi trocada: confira e tente de novo.']);
+    igual([escCad71().length, ficha71().categoria, ficha71().renov.plano, aud71('categoria-peludinho').length], [0, 'morador', 'Silver', 0]);
+    // o Encãotador, pelo console, em cada função que mexe no plano: «BARROU», nenhum cartaz, nada gravado (AC9)
+    cena71([PIPOCA()], { login: { nome: 'Caio Encãotador Teste', role: 'monitor' } });
+    for (const ch of ['desfazerRenovacao()', 'planoAnularAtualAbrir()', "planoAnularLinhaAbrir('hj1')", "planoReabrirLinhaAbrir('hj1')"]) {
+      r71('__au657=[]; CORR_ATUAL=null;');
+      await abre71(ch); await esp71();
+      const b = J71('__au657').filter((a) => a[0] === 'sem-permissao');
+      assert.ok(b.length === 1 && /^BARROU .+ \(Encãotador sem permissão\)$/.test(b[0][1]), ch + ' ' + JSON.stringify(J71('__au657')));
+      igual([r71('CORR_ATUAL'), escCad71().length], [null, 0], ch);
+    }
+  } finally { solta71(); }
+});
+
+// 2ª rodada (REQ-001, decisão do @po): o número do efeito sempre com nome — o «Total de {mês}» do quadro quando as fontes dele
+// (os orçamentos, os irmãos e as diárias avulsas DAQUELE mês) já estão neste aparelho; senão o «Total dos planos do Day Care»;
+// sem a carteira inteira, nenhum total, só o valor do FILHOt.
+provaAsync('6.71 P37 (AC1.2, AC8.2, REQ-001) — o total do efeito tem nome: «Total de outubro de 2026 no Recebimentos» igual ao «Total de outubro de 2026» do quadro (com a hospedagem e as diárias avulsas), antes e depois; com as diárias avulsas lidas de outro mês, «Total dos planos do Day Care»; sem a carteira inteira, só «Biscoito em outubro de 2026»', async () => {
+  arma71();
+  try {
+    const ORC = `{o1:{status:'fechado', status_em:${new Date(2026, 9, 2, 10).getTime()}, criado_em:${new Date(2026, 9, 1, 10).getTime()}, entrada:'2026-10-20', saida:'2026-10-25', parcela1_cent:45050, parcela2_cent:45050, total_cent:90100, pets:[{nome:'Hóspede Teste'}], tutor:'Hóspede Teste'}}`;
+    const totQ = () => { const m = /<b>Total de outubro de 2026<\/b>[\s\S]*?rec-val rec-val-total">(R\$ [\d.]+,\d{2})</.exec(r71('recCardHTML()')); return m && m[1]; };
+    // as fontes do quadro de outubro na memória: o total é o do quadro, com nome
+    cena71([BISCOITO()]);
+    r71(`REC_FONTES={quando:Date.now(), irm:{}, orc:${ORC}}; REC_AVULSO={mes:'2026-10', quando:Date.now(), lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0};`);
+    const a = totQ();
+    await abre71('planoAnularAtualAbrir()');
+    const c = cartaz71();
+    await toca71(SENHA657); r71('corrFechar()');
+    const d = totQ();
+    assert.ok(c.indexOf('sai da conta — Total de outubro de 2026 no Recebimentos: ' + a + ' → ' + d + '.') >= 0 && !/Recebimentos: Total de/.test(c), JSON.stringify([a, d, c]));   // 4ª passada (OBS-R3-02): sem «Recebimentos» repetido
+    igual([a, d], ['R$ 2.113,00', 'R$ 1.036,00']);
+    // as diárias avulsas lidas são de setembro: o total de outubro do quadro ainda não se sabe — o dos planos, com o nome dele
+    cena71([BISCOITO()]);
+    r71(`REC_FONTES={quando:Date.now(), irm:{}, orc:${ORC}}; REC_AVULSO={mes:'2026-09', quando:Date.now(), lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0};`);
+    await abre71('planoAnularAtualAbrir()');
+    assert.ok(cartaz71().indexOf('sai da conta — Total dos planos do Day Care em outubro de 2026: R$ 1.077,00 → R$ 0,00.') >= 0, cartaz71());
+    r71('corrFechar()');
+    // sem a carteira inteira no aparelho: nenhum total (seria um número pela metade), só o valor do FILHOt, com o nome dele
+    cena71([BISCOITO()]);
+    r71('CARTEIRA_CARREGADA=false;');
+    await abre71('planoAnularAtualAbrir()');
+    const c2 = cartaz71();
+    assert.ok(c2.indexOf('sai da conta — Biscoito em outubro de 2026: R$ 1.077,00 → R$ 0,00.') >= 0 && !/Total d/.test(c2), c2);
+    r71('corrFechar()');
+    r71('__zpq657=[true]; __ztq657=["viagem da família em outubro"]; __zp657=[];');
+    await abre71("saidaInativar('botao')"); await esp71();
+    igual(J71('__zp657')[0][1].slice(-1)[0], 'Pela regra de hoje, quem sai não entra na conta do mês: Biscoito em outubro de 2026: R$ 1.077,00 → R$ 0,00 (pagamento de 05/10/2026).');
+    r71('CARTEIRA_CARREGADA=true;');
+  } finally { solta71(); }
+});
+
+// 3ª rodada (REQ-003 e OBS-001): o nome «no Recebimentos» só com as fontes do quadro dentro da janela em que ele não relê — a mesma régua
+// de recFontesLer e recAvulsoLer; e os irmãos do efeito: os do quadro quando o nome é o dele, os do ouvinte do app quando não é.
+provaAsync('6.71 P38 (REQ-003, OBS-001) — a janela do quadro, lida do texto de recFontesLer e recAvulsoLer (60 s): fontes de 59.999 ms → «Total de outubro de 2026 no Recebimentos»; de 60.000 ms (o quadro relê) ou de 3 horas → «Total dos planos do Day Care»; com o nome do quadro, os irmãos do quadro (REC_FONTES.irm), não os do ouvinte; com as fontes velhas, os do ouvinte (IRMAOS_CACHE)', async () => {
+  arma71();
+  try {
+    igual(r71('planoJanelaQuadro()'), 60000, 'a régua das duas funções do quadro');
+    const lidas = (mF, mA) => r71(`REC_FONTES={quando:${T671}-${mF}, irm:IRMAOS_CACHE, orc:{}}; REC_AVULSO={mes:'2026-10', quando:${T671}-${mA}, lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0};`);
+    const nome = async () => { await abre71('planoAnularAtualAbrir()'); const c = cartaz71(); r71('corrFechar()');
+      return /sai da conta — Total de outubro de 2026 no Recebimentos: /.test(c) ? 'quadro' : (/sai da conta — Total dos planos do Day Care em outubro de 2026: /.test(c) ? 'planos' : c); };
+    const casos = [];
+    for (const [mF, mA] of [[0, 0], [59999, 59999], [60000, 59999], [59999, 60000], [3 * 3600000, 0]]) { cena71([BISCOITO()]); lidas(mF, mA); casos.push(await nome()); }
+    igual(casos, ['quadro', 'quadro', 'planos', 'planos', 'planos'], 'o nome do quadro só dentro da janela, nas duas fontes');
+    // com o nome do quadro, os irmãos do quadro: o ouvinte do app já tem um vínculo (Bia–Cacau) que o quadro ainda não leu
+    const sem = (o) => { const r = Object.assign({}, o); delete r.ordemPet; delete r.valor_plano_cent; delete r.mensalidade_cent; return r; };
+    const fam = () => ['Ana', 'Bia', 'Cacau'].map((n) => ({ n, tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(GOLD71()) } }));
+    const AB = { x: { a: 'ana__família teste', b: 'bia__família teste' } }, ABC = { x: AB.x, y: { a: 'bia__família teste', b: 'cacau__família teste' } };
+    cena71(fam(), { irmaos: ABC });
+    ctx671.__ab71 = AB;
+    r71(`REC_FONTES={quando:${T671}, irm:__ab71, orc:{}}; REC_AVULSO={mes:'2026-10', quando:${T671}, lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0};`);
+    const totQ = () => { const m = /<b>Total de outubro de 2026<\/b>[\s\S]*?rec-val rec-val-total">(R\$ [\d.]+,\d{2})</.exec(r71('recCardHTML()')); return m && m[1]; };
+    const a = totQ();
+    r71('__zpq657=[true];');
+    await abre71("setPelCategoria('morador')"); await esp71();
+    const t = J71('__zp657')[0][1].join(' ');
+    const d = totQ();
+    igual([a, d], ['R$ 3.290,61', 'R$ 3.366,00'], 'o quadro, com os irmãos dele (só Ana–Bia)');
+    assert.ok(t.indexOf('Total de outubro de 2026 no Recebimentos: ' + a + ' → ' + d + ' (Bia: R$ 1.001,61 → R$ 1.077,00).') >= 0 && !/Recebimentos: Total de/.test(t), JSON.stringify([a, d, t]));   // 4ª passada (OBS-R3-02): sem «Recebimentos» repetido
+    // com as fontes lidas de manhã (sem o vínculo Ana–Bia): os irmãos do ouvinte do app — o número que o quadro vai mostrar ao reler
+    cena71(fam().slice(0, 2), { irmaos: AB });
+    r71(`REC_FONTES={quando:${T671 - 3 * 3600000}, irm:{}, orc:{}}; __zpq657=[true]; __zp657=[];`);
+    await abre71("setPelCategoria('morador')"); await esp71();
+    const t2 = J71('__zp657')[0][1].join(' ');
+    assert.ok(t2.indexOf('Total dos planos do Day Care em outubro de 2026: R$ 2.078,61 → R$ 2.154,00 (Bia: R$ 1.001,61 → R$ 1.077,00).') >= 0, t2);
+  } finally { solta71(); }
+});
+
+{
+// ================================================================== 6.71 QA — as provas do QA independente (Quinn), na Fase 0
+// 2ª rodada da 6.71 (TEST-001): as 23 provas de ataque do QA (QA671-01 a 23, `scratchpad/qa671/ataque671.js`) e as 8 dos achados
+// (QA671-A1 a A8, `scratchpad/qa671/achados671.js`), que já afirmavam o comportamento certo, trazidas para dentro do bloco da
+// 6.71 com o prefixo «6.71». O corpo de cada prova é o do QA. A única adaptação está nos ajudantes de cima, pela decisão do @po
+// na 2ª rodada (REQ-001): o efeito mostrado antes de confirmar diz o NOME do total — «Total dos planos do Day Care em {mês}» ou
+// «Total de {mês} no Recebimentos» (o mesmo do quadro, com a hospedagem e as diárias avulsas) — e cada número é conferido com o
+// total que o nome diz: o dos planos do Day Care (as linhas do quadro sem a hospedagem) ou o «Total de {mês}» do quadro.
+// 3ª rodada (REQ-003): nas QA671-02 e QA671-A8, que querem as fontes do quadro LIDAS, o carimbo delas passa de 1 (1970, agora «lido
+// há muito tempo») para Date.now() (dentro da janela de 60 s em que o quadro não relê).
+const QAMESES71 = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12', '2027-01'];
+// os dois totais de cada mês, como o quadro os mostra: p, os planos do Day Care; q, o «Total de {mês}» (com a hospedagem e as
+// diárias avulsas lidas do mês)
+const QAPLANOS71 = (m) => r71(`(function(){ var R=recResumoDoMes('${m}'), t=0; ((R||{}).porFILHOt||[]).forEach(function(o){ if(o.servico!=='auaulandia') t+=(o.valor||0); }); return t; })()`);
+const QATOTAL71 = (m) => r71(`recQuebra(recResumoDoMes('${m}')).total+((REC_AVULSO.ok===true && REC_AVULSO.mes==='${m}')?REC_AVULSO.total_cent:0)`);
+const QAQUADROS71 = () => QAMESES71.map((m) => ({ p: QAPLANOS71(m), q: QATOTAL71(m) }));
+const QAMES71 = { janeiro: '01', fevereiro: '02', 'março': '03', abril: '04', maio: '05', junho: '06', julho: '07', agosto: '08', setembro: '09', outubro: '10', novembro: '11', dezembro: '12' };
+const QACENT71 = (s) => Number(String(s).replace(/\./g, '').replace(',', ''));
+// As frases do efeito na tela: «Total dos planos do Day Care em outubro de 2026: R$ a → R$ b» ou «Total de outubro de 2026 no
+// Recebimentos: R$ a → R$ b» (com os FILHOts do desconto entre parênteses). Devolve {mês: [a, b]}, com o nome em `rotulo`.
+const QAEFEITO71 = (txt) => {
+  const out = {}; const N = '(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro) de (\\d{4})';
+  const re = new RegExp('(?:Total dos planos do Day Care em ' + N + '|Total de ' + N + ' no Recebimentos): R\\$ ([\\d.]+,\\d{2}) → R\\$ ([\\d.]+,\\d{2})', 'g');
+  let m; while ((m = re.exec(String(txt || '')))) {
+    const k = (m[2] || m[4]) + '-' + QAMES71[m[1] || m[3]];
+    out[k] = [QACENT71(m[5]), QACENT71(m[6])];
+    Object.defineProperty(out[k], 'rotulo', { value: m[3] ? 'quadro' : 'planos', enumerable: false });
+  }
+  return out;
+};
+// O que a tela disse × o que o quadro deu antes e depois: todo mês que mudou está na frase, com os dois números no centavo (do
+// total que o nome diz); e nenhum mês da frase está errado.
+const QACONFERE71 = (txt, antes, depois, rot) => {
+  const ef = QAEFEITO71(txt);
+  QAMESES71.forEach((m, i) => {
+    if (antes[i].p !== depois[i].p || antes[i].q !== depois[i].q) assert.ok(ef[m], rot + ': ' + m + ' mudou (' + JSON.stringify([antes[i], depois[i]]) + ') e a frase não diz — ' + txt);
+    if (ef[m]) { const c = ef[m].rotulo === 'quadro' ? 'q' : 'p'; igual([ef[m][0], ef[m][1]], [antes[i][c], depois[i][c]], rot + ': ' + m + ' (' + ef[m].rotulo + ') — ' + txt); }
+  });
+  Object.keys(ef).forEach((m) => assert.ok(QAMESES71.indexOf(m) >= 0, rot + ': mês fora da faixa ' + m));
+  return ef;
+};
+
+provaAsync('6.71 QA671-01 (AC1.2, AC2.2, AC4.1, AC6.1, AC6.6, AC8.2, risco 10) — 240 cenas sorteadas (irmãos, inativos, correção, desfeita, «virou», anuladas e valores com centavos): o efeito que a tela mostra ANTES de confirmar bate no centavo com o quadro DEPOIS, mês a mês, nas seis ações (anular o atual, anular a linha, reabrir, desfazer, virar morador, inativar)', async () => {
+  arma71();
+  let s = 6719; const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  const um = (L) => L[Math.floor(rnd() * L.length)];
+  const p2 = (n) => String(n).padStart(2, '0');
+  const plano = () => {
+    const pl = um(['Silver', 'Gold', 'Gold', 'Black']), mi = 4 + Math.floor(rnd() * 7), ini = '2026-' + p2(mi) + '-' + p2(1 + Math.floor(rnd() * 27));
+    const nm = pl === 'Silver' ? 1 : (pl === 'Gold' ? 3 : 6), d = new Date(Date.UTC(2026, mi - 1 + nm, 0));
+    const r = { plano: pl, aulas: um([1, 1, 2, 3]), inicio: ini, fim: d.toISOString().slice(0, 10), mesRenov: 'x', quando: ini };
+    if (rnd() < 0.5) r.ordemPet = um([1, 2]);
+    if (rnd() < 0.55) r.valor_plano_cent = um([107700, 100161, 35900, 33387, 215400, 71800]);
+    return r;
+  };
+  const conta = { anularAtual: 0, anularLinha: 0, reabrir: 0, desfazer: 0, categoria: 0, inativar: 0 };
+  try {
+    for (let c = 0; c < 240; c++) {
+      const n = 1 + Math.floor(rnd() * 3), fichas = [];
+      for (let i = 0; i < n; i++) {
+        const ex = { dias: ['seg'], sexo: rnd() < 0.5 ? 'Fêmea' : 'Macho', renov: plano() };
+        if (rnd() < 0.12) ex.inativo = 'Sim';
+        const nh = Math.floor(rnd() * 4);
+        if (nh) {
+          ex.renov_hist = {};
+          for (let h = 0; h < nh; h++) {
+            const o = Object.assign(plano(), { substituidoEm: 100 + h, por: 'Consultora Teste', motivo: um(['renovação', 'renovação', 'correção', 'desfeita', 'virou morador']), motivo_conferido: true });
+            if (rnd() < 0.2) o.anulacoes = { a1: { acao: 'anular', ts: 50, por: 'Gestora Teste', motivo: 'lançado por engano no FILHOt errado', quando: '01/10/2026 às 10:00' } };
+            ex.renov_hist['h' + h] = o;
+          }
+        }
+        fichas.push({ n: 'Cena' + c + 'F' + i, tutor: (i < 2 ? 'Família ' + c : 'Outra ' + c + i) + ' Teste', ex });
+      }
+      const irm = (n > 1 && rnd() < 0.6) ? { x: { a: ('cena' + c + 'f0__família ' + c + ' teste'), b: ('cena' + c + 'f1__família ' + c + ' teste') } } : {};
+      cena71(fichas, { irmaos: irm });
+      const ex0 = J71('pelExtra(pelAtual)');
+      const contaIds = Object.keys(J71('renovHistContaIds(pelExtra(pelAtual))') || {});
+      const anuladas = Object.keys(ex0.renov_hist || {}).filter((id) => r71(`renovLinhaAnulada(pelExtra(pelAtual).renov_hist[${JSON.stringify(id)}])`) && String(ex0.renov_hist[id].motivo) !== 'anulado');
+      const acoes = ['anularAtual', 'desfazer', 'categoria', 'inativar'];
+      if (contaIds.length) acoes.push('anularLinha', 'anularLinha');
+      if (anuladas.length) acoes.push('reabrir', 'reabrir');
+      const acao = um(acoes);
+      const antes = QAQUADROS71();
+      let txt = '';
+      if (acao === 'anularAtual' || acao === 'anularLinha' || acao === 'reabrir' || acao === 'desfazer') {
+        const chamada = acao === 'anularAtual' ? 'planoAnularAtualAbrir()' : acao === 'desfazer' ? 'desfazerRenovacao()'
+          : acao === 'anularLinha' ? `planoAnularLinhaAbrir(${JSON.stringify(um(contaIds))})` : `planoReabrirLinhaAbrir(${JSON.stringify(um(anuladas))})`;
+        await abre71(chamada);
+        if (passo71() !== 'conferir') { r71('CORR_ATUAL=null;'); continue; }   // recusa na abertura (sem plano, sem linha que volte): nada a conferir
+        txt = cartaz71();
+        await toca71(SENHA657);
+        if (passo71() !== 'pronto' && titulos71().indexOf('RENOVAÇÃO DESFEITA') < 0) { assert.fail(acao + ' não gravou: ' + passo71() + ' ' + JSON.stringify(J71('__za657'))); }
+      } else if (acao === 'categoria') {
+        r71('__zpq657=[true];');
+        await abre71("setPelCategoria('morador')"); await esp71();
+        const p = J71('__zp657'); if (!p.length) continue;   // sem vigência: troca sem pergunta (nada a conferir)
+        txt = p[0][1].join(' ');
+      } else {
+        r71('__zpq657=[true]; __ztq657=["viagem da família em outubro"];');
+        await abre71("saidaInativar('botao')"); await esp71();
+        const p = J71('__zp657'); if (!p.length) continue;   // já inativo: recusa
+        txt = p[0][1].join(' ');
+      }
+      conta[acao]++;
+      const depois = QAQUADROS71();
+      QACONFERE71(txt, antes, depois, 'cena ' + c + ' (' + acao + ')');
+      if (/R\$/.test(txt)) assert.ok(soFormato36(txt), 'cena ' + c + ': todo R$ no formato completo — ' + txt);
+    }
+    console.log('QA|QA671-01|' + JSON.stringify(conta));
+    Object.keys(conta).forEach((a) => assert.ok(conta[a] >= 8, 'cenas de ' + a + ': ' + conta[a]));
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-02 (AC1.3, risco 10) — o quadro com hospedagem e diárias avulsas no mês: a QUEDA mostrada no cartaz é a queda do «Total de outubro» do quadro, no centavo (o número do cartaz é o total dos planos do Day Care)', async () => {
+  arma71();
+  try {
+    cena71([BISCOITO()]);
+    r71(`REC_FONTES={quando:Date.now(), irm:{}, orc:{o1:{status:'fechado', status_em:${new Date(2026, 9, 2, 10).getTime()}, criado_em:${new Date(2026, 9, 1, 10).getTime()}, entrada:'2026-10-20', saida:'2026-10-25', parcela1_cent:45050, parcela2_cent:45050, total_cent:90100, pets:[{nome:'Hóspede Teste'}], tutor:'Hóspede Teste'}}};
+      REC_AVULSO={mes:'2026-10', quando:Date.now(), lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0}; REC_MES='';`);
+    const tot = () => { const h = r71('recCardHTML()'); const m = /rec-val rec-val-total">(R\$ [\d.]+,\d{2})</.exec(h); return QACENT71(m[1].slice(3)); };
+    const antesQ = tot();
+    await abre71('planoAnularAtualAbrir()');
+    const ef = QAEFEITO71(cartaz71())['2026-10'];
+    await toca71(SENHA657); r71('corrFechar()');
+    const depoisQ = tot();
+    igual(ef[0] - ef[1], antesQ - depoisQ, 'a queda do cartaz = a queda do Total do quadro');
+    console.log('QA|QA671-02|' + JSON.stringify({ cartaz: ef.map((x) => r71('finBRL(' + x + ')')), quadroTotal: [antesQ, depoisQ].map((x) => r71('finBRL(' + x + ')')) }));
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-03 (AC1.5, AC2.3, dois aparelhos) — anular a linha que o outro aparelho acabou de DESFAZER (ela foi para renov_voltas): recusa «Esta renovação mudou em outro aparelho», nada gravado, nenhum rastro; e a linha que o outro aparelho já anulou não ganha uma 2ª anulação', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA()]);
+    await abre71("planoAnularLinhaAbrir('hj1')");
+    // o outro aparelho desfaz a renovação: hj1 vira o plano atual e sai de renov_hist
+    r71(`(function(){ var k=pelKey(pelAtual), f=__get657('daycare/cadastro/'+k); f.renov=Object.assign({}, f.renov_hist.hj1); delete f.renov.substituidoEm; delete f.renov.por; delete f.renov.motivo; delete f.renov.motivo_conferido;
+      f.renov_voltas={v1:{linha:Object.assign({_id:'hj1'}, f.renov_hist.hj1), voltou_em:1, como:'desfazer'}}; delete f.renov_hist.hj1; __put657('daycare/cadastro/'+k, f); })()`);
+    await toca71(SENHA657);
+    igual(za71('NÃO FOI ANULADO'), ['Esta renovação mudou em outro aparelho. Nada foi anulado: confira e tente de novo.', 'A renovação continua como estava.']);
+    igual([escCad71().length, aud71('pagamento-anulado').length, aud71('registro-anulado').length], [0, 0, 0]);
+    // os dois aparelhos com o cartaz aberto na mesma linha: o 2º recusa (a linha já tem a anulação do 1º)
+    cena71([PIPOCA()]);
+    await abre71("planoAnularLinhaAbrir('hj1')");
+    r71(`__put657('daycare/cadastro/'+pelKey(pelAtual)+'/renov_hist/hj1/anulacoes/outro', {acao:'anular', ts:${T671 - 1000}, por:'Gestora Teste', papel:'gestao', motivo:'lançado no FILHOt errado pelo outro aparelho', quando:'10/10/2026 às 09:59'});`);
+    await toca71(SENHA657);
+    igual(Object.keys(ficha71().renov_hist.hj1.anulacoes), ['outro'], 'uma anulação só');
+    igual(escCad71().length, 0);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-04 (AC1.5, AC10.1, sem internet) — anular sem resposta do banco: «O BANCO AINDA NÃO CONFIRMOU», nenhum rastro nem «Pagamento anulado»; o banco confirma depois: um rastro de cada (pagamento-anulado e registro-anulado); o banco recusa depois: nenhum, e o plano fica', async () => {
+  arma71();
+  try {
+    for (const final of ['ok', 'nao']) {
+      cena71([BISCOITO()]);
+      r71(`__pendura657='^daycare/cadastro/[^/]+$';`);
+      await abre71('planoAnularAtualAbrir()');
+      r71(`__t71r=corrToque('confirmar', {motivo:${JSON.stringify(MOT71)}, senha:${JSON.stringify(SENHA657)}})`); await esp71();
+      r71('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await esp71();
+      igual(passo71(), 'semResposta');
+      igual([aud71('pagamento-anulado').length, aud71('registro-anulado').length, titulos71().indexOf('Pagamento anulado')], [0, 0, -1]);
+      igual(ficha71().renov.plano, 'Gold', 'nada no banco ainda');
+      r71(`__pend657.forEach(function(x){ x.${final}(); }); __pend657=[];`); await esp71();
+      if (final === 'ok') {
+        igual([aud71('pagamento-anulado').length, aud71('registro-anulado').length, ficha71().renov.plano, quadro71('2026-10')], [1, 1, '', 0]);
+      } else {
+        igual([aud71('pagamento-anulado').length, aud71('registro-anulado').length, ficha71().renov.plano, quadro71('2026-10')], [0, 0, 'Gold', 107700]);
+      }
+    }
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-05 (AC4.2, AC1.4) — anulado e Desfazer juntos: anular o plano atual da Pipoca e depois desfazer volta o plano de julho; a linha anulada continua anulada e fora da conta (outubro R$ 0,00, julho R$ 1.077,00, nada contado duas vezes); com TODAS as linhas anuladas, o Desfazer some da aba e, pelo console, recusa sem gravar', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA()]);
+    await abre71('planoAnularAtualAbrir()'); await toca71(SENHA657); r71('corrFechar()');
+    igual([quadro71('2026-07'), quadro71('2026-10')], [107700, 0]);
+    assert.ok(/id="renovDesfazer"/.test(r71('renovHistHTML(pelExtra(pelAtual))')), 'há linha que pode voltar (julho)');
+    await abre71('desfazerRenovacao()'); await toca71(SENHA657);
+    const f = ficha71();
+    igual([f.renov.inicio, Object.values(f.renov_hist).filter((o) => o.motivo === 'anulado').length], ['2026-07-05', 1]);
+    igual([quadro71('2026-07'), quadro71('2026-10')], [107700, 0], 'julho conta uma vez (agora como o atual), outubro continua fora');
+    // todas as linhas anuladas
+    cena71([PIPOCA({ renov_hist: { hj1: Object.assign(H71(JUL71(), 300), { anulacoes: { a1: { acao: 'anular', ts: 5, por: 'Gestora Teste', motivo: 'lançado por engano no FILHOt errado' } } }) } })]);
+    igual(/id="renovDesfazer"/.test(r71('renovHistHTML(pelExtra(pelAtual))')), false, 'sem linha que possa voltar, sem o Desfazer');
+    await abre71('desfazerRenovacao()');
+    igual(r71('CORR_ATUAL'), null);
+    assert.ok(za71('NÃO HÁ RENOVAÇÃO ANTERIOR GUARDADA')[0].indexOf('estão anuladas') >= 0, JSON.stringify(za71('NÃO HÁ RENOVAÇÃO ANTERIOR GUARDADA')));
+    igual(escCad71().length, 0);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-06 (AC6.4, AC4.2) — «Voltar o plano que saiu» nunca oferece a linha «virou» anulada: com ela anulada e uma renovação mais antiga valendo, tocar «Auluno» troca sem a pergunta de voltar; e o «Voltar» pelo banco recusando não muda nada, sem rastro', async () => {
+  arma71();
+  try {
+    const V = Object.assign(H71(GOLD71(), 400, 'virou morador'), { anulacoes: { a1: { acao: 'anular', ts: 5, por: 'Gestora Teste', motivo: 'lançado por engano no FILHOt errado' } } });
+    cena71([TAMARA({ categoria: 'morador', renov: { plano: 'morador', inicio: '', fim: '', mesRenov: '', aulas: '' }, renov_hist: { v1: V, h1: H71(JUL71(), 300) } })]);
+    await abre71("setPelCategoria('auluno')"); await esp71();
+    igual(J71('__zp657').filter((p) => /VOLTAR O PLANO/.test(p[0])).length, 0, 'sem a oferta de voltar a linha anulada');
+    igual(ficha71().categoria, 'auluno');
+    igual(Object.keys(ficha71().renov_hist).sort(), ['h1', 'v1'], 'nada sai do histórico');
+    // a volta de verdade, com o banco recusando
+    cena71([TAMARA({ categoria: 'morador', renov: { plano: 'morador', inicio: '', fim: '', mesRenov: '', aulas: '' }, renov_hist: { v1: H71(GOLD71(), 400, 'virou morador') } })]);
+    r71(`__recusa657='^daycare/cadastro/[^/]+$'; __zpq657=[true];`);
+    await abre71("setPelCategoria('auluno')"); await esp71();
+    assert.ok(za71('A CATEGORIA NÃO FOI TROCADA').length === 2, JSON.stringify(J71('__za657')));
+    const f = ficha71();
+    igual([f.categoria, f.renov.plano, Object.keys(f.renov_hist), 'renov_voltas' in f, aud71('categoria-peludinho').length, aud71('registro-reaberto').length], ['morador', 'morador', ['v1'], false, 0, 0]);
+    igual(quadro71('2026-10'), 107700, 'o pagamento continua contando');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-07 (AC6.2, AC10.1, sem internet) — trocar a categoria sem resposta do banco: «O BANCO AINDA NÃO CONFIRMOU» e nenhum rastro; o banco confirma depois: um rastro só; o «Voltar o plano que saiu» idem (o rastro da 6.57 e o da categoria só com o ok)', async () => {
+  arma71();
+  try {
+    cena71([TAMARA()]);
+    r71(`__pendura657='^daycare/cadastro/[^/]+$'; __zpq657=[true];`);
+    await abre71("setPelCategoria('morador')"); await esp71();
+    r71('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await esp71();
+    assert.ok(titulos71().indexOf('O BANCO AINDA NÃO CONFIRMOU') >= 0, JSON.stringify(titulos71()));
+    igual(aud71('categoria-peludinho').length, 0);
+    r71('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await esp71();
+    igual([aud71('categoria-peludinho').length, ficha71().categoria], [1, 'morador']);
+    // a volta
+    cena71([TAMARA({ categoria: 'morador', renov: { plano: 'morador', inicio: '', fim: '', mesRenov: '', aulas: '' }, renov_hist: { v1: H71(GOLD71(), 400, 'virou morador') } })]);
+    r71(`__pendura657='^daycare/cadastro/[^/]+$'; __zpq657=[true];`);
+    await abre71("setPelCategoria('auluno')"); await esp71();
+    r71('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await esp71();
+    igual([aud71('categoria-peludinho').length, aud71('registro-reaberto').length], [0, 0]);
+    r71('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await esp71();
+    igual([aud71('categoria-peludinho').length, aud71('registro-reaberto').length, ficha71().categoria, ficha71().renov.inicio], [1, 1, 'auluno', '2026-10-05']);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-08 (AC2.5, AC10.3, DoD) — o texto da pessoa passa escapado em toda tela nova: o motivo com HTML no riscado, em «Voltaram a valer», na lista «FILHOt por FILHOt» e no Excel; e a senha não aparece em lugar nenhum (banco, auditoria)', async () => {
+  arma71();
+  try {
+    const MAU = 'lançado no FILHOt errado <img src=x onerror=alert(1)> "aspas" e \'apóstrofo\'';
+    cena71([PIPOCA()]);
+    await abre71("planoAnularLinhaAbrir('hj1')"); await toca71(SENHA657, MAU); r71('corrFechar()');
+    const h = r71('renovHistHTML(pelExtra(pelAtual))');
+    igual(/<img src=x/.test(h), false, 'o riscado escapa o motivo');
+    {
+      r71("REC_MES='2026-07';");
+      const lista = r71("recListaHTML(recResumoDoMes('2026-07'), '2026-07', false)");
+      igual(/<img src=x/.test(lista), false, 'a lista escapa');
+      r71("__xls671=''; relEntregar=function(n, x){ __xls671=String(x); return true; };");
+      r71('recBaixarExcel(null)');
+      const x = r71('__xls671');
+      assert.ok(x.length > 100 && /ANULADO — FORA DO TOTAL/.test(x), 'o Excel tem a linha');
+      igual(/<img src=x/.test(x), false, 'o Excel escapa');
+      r71("REC_MES='';");
+    }
+    await abre71('desfazerRenovacao()');
+    // a linha de julho está anulada: o Desfazer recusa (nada volta); reabre e desfaz com o motivo ruim
+    r71('CORR_ATUAL=null;');
+    await abre71("planoReabrirLinhaAbrir('hj1')"); await toca71(SENHA657, MAU); r71('corrFechar()');
+    await abre71('desfazerRenovacao()'); await toca71(SENHA657, MAU); r71('corrFechar()');
+    const v = r71('renovVoltasHTML(pelExtra(pelAtual))');
+    assert.ok(/Voltaram a valer \(1\)/.test(v), v);
+    igual(/<img src=x/.test(v), false, '«Voltaram a valer» escapa');
+    const tudo = JSON.stringify(J71('__db657')) + JSON.stringify(J71('__au657'));
+    igual(tudo.indexOf(SENHA657), -1, 'a senha em lugar nenhum');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-09 (AC7.1, dois aparelhos) — a marca «nenhum dia» com a cópia local de outro aparelho: o aparelho B que guardou a marca (tirou o último dia antes) vê os dias que o aparelho A marcou depois (o banco manda: a marca velha da cópia local não esconde os dias)', async () => {
+  arma71();
+  try {
+    cena71([NELSON()]);
+    // B tirou o último dia antes (a cópia local de B guarda a marca), e A marcou a quarta depois (o banco tem os dias, sem a marca)
+    r71(`(function(){ var k=pelKey(pelAtual); __ls657['zeluz_pel_'+k]=JSON.stringify({n:'Nelson', tutor:'Bia Teste', dias:[], freq:'', dias_nenhum:true, renov:pelCadCache[k].renov});
+      var c=__get657('daycare/cadastro/'+k); c.dias=['qua']; c.freq='1x'; delete c.dias_nenhum; __put657('daycare/cadastro/'+k, c); pelCadCache[k]=c; })()`);
+    igual(J71("pelDias(pelAtual,'rotina')"), ['qua']);
+    igual(r71('nAulasDe(pelAtual)'), 1);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-10 (AC8.3, AC8.4) — a saída, a volta e o desfazer da volta na conta do mês e no «saíram»: voltou sai do «saíram no mês»; desfeita a volta, entra de novo com a data de antes; o 2º «Desfazer a volta» recusa e nada é apagado de saidas', async () => {
+  arma71();
+  try {
+    cena71([TAMARA({ inativo: 'Sim', dataSaida: '08/10/2026', motivoSaida: 'viagem da família em outubro', tipoSaida: 'pausa' })]);
+    const sai = () => J71('movimentoDoMes().sai.map(function(o){ return pelNome(o.p)+"|"+o.dia; })');
+    igual(sai(), ['Tâmara|8']);
+    r71('__zpq657=[true]; __ztq657=["voltou da viagem com a família"];');
+    await abre71("saidaReativar(0, 'botao')"); await esp71();
+    const f = ficha71();
+    igual([f.inativo, f.dataSaida, f.motivoSaida, f.tipoSaida, f.saidas.length, f.saidas[0].tipo, f.saidas[0].retornoMotivo], ['Nao', '', '', '', 1, 'pausa', 'voltou da viagem com a família']);
+    igual(sai(), [], 'quem voltou não conta em «saíram no mês»');
+    igual(quadro71('2026-10'), 107700, 'ativa de novo: o pagamento volta a contar');
+    r71('__ztq657=["a volta foi lançada por engano hoje"];');
+    await abre71('saidaDesfazerVolta()'); await esp71();
+    const g = ficha71();
+    igual([g.inativo, g.dataSaida, g.motivoSaida, g.tipoSaida, g.saidas.length, !!g.saidas[0].desfeita], ['Sim', '08/10/2026', 'viagem da família em outubro', 'pausa', 1, true]);
+    igual(sai(), ['Tâmara|8']);
+    igual(quadro71('2026-10'), 0, 'inativa de novo: pela regra de hoje, fora da conta');
+    r71('__za657=[];');
+    await abre71('saidaDesfazerVolta()'); await esp71();
+    assert.ok(titulos71().indexOf('NÃO HÁ VOLTA PARA DESFAZER') >= 0, JSON.stringify(titulos71()));
+    igual(ficha71().saidas.length, 1);
+    igual([aud71('peludinho-volta-desfeita').length, aud71('registro-reaberto').length], [1, 1]);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-11 (AC8.1, AC8.3, sem internet) — inativar e reativar sem resposta do banco: «O BANCO AINDA NÃO CONFIRMOU», nem «INATIVADO» nem «VOLTOU», nenhum rastro; o banco confirma depois: um rastro só de cada', async () => {
+  arma71();
+  try {
+    cena71([TAMARA()]);
+    r71(`__pendura657='^daycare/cadastro/[^/]+$'; __zpq657=[true]; __ztq657=['viagem da família em outubro'];`);
+    await abre71("saidaInativar('botao')"); await esp71();
+    r71('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await esp71();
+    igual([titulos71().indexOf('O BANCO AINDA NÃO CONFIRMOU') >= 0, titulos71().indexOf('INATIVADA'), aud71('peludinho-inativado').length], [true, -1, 0]);
+    r71('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await esp71();
+    igual([aud71('peludinho-inativado').length, ficha71().inativo], [1, 'Sim']);
+    r71(`__za657=[]; __zpq657=[true]; __ztq657=['voltou da viagem com a família'];`);
+    await abre71("saidaReativar(0, 'botao')"); await esp71();
+    r71('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await esp71();
+    igual([titulos71().indexOf('VOLTOU'), aud71('peludinho-reativado').length], [-1, 0]);
+    r71('__pend657.forEach(function(x){ x.nao(); }); __pend657=[];'); await esp71();
+    igual([aud71('peludinho-reativado').length, ficha71().inativo, ficha71().dataSaida], [0, 'Sim', '10/10/2026'], 'recusado depois: a ficha continua inativa');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-12 (AC5.3, sem internet) — o desfazer do meio do mês sem resposta: nem «REGISTRO DESFEITO» nem rastro; o banco confirma depois: o rastro de cada ficha uma vez; o registro fica em meio_mes_hist', async () => {
+  arma71();
+  try {
+    cena71([QUINDIM()]);
+    r71(`__pendura657='^daycare/cadastro/[^/]+$';`);
+    await abre71('mmDesfazer()');
+    r71(`__t71r=corrToque('confirmar', {motivo:'o tutor desistiu da opção dois', senha:'s-bia'})`); await esp71();
+    r71('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await esp71();
+    igual([passo71(), titulos71().indexOf('REGISTRO DESFEITO'), aud71('plano-meio-mes-desfeito').length], ['semResposta', -1, 0]);
+    r71('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await esp71();
+    const f = ficha71();
+    igual([aud71('plano-meio-mes-desfeito').length, 'meio_mes' in f.renov, Object.values(f.meio_mes_hist || {}).length, Object.values(f.meio_mes_hist)[0].registro.opcao], [1, false, 1, 2]);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-13 (AC2.4, AC3.1) — anular, reabrir e anular de novo a MESMA linha no mesmo milissegundo (dois toques rápidos, o mesmo Date.now): vale a ordem das chaves (a anulação mais nova manda) e a conta acompanha a tela', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA()]);
+    for (const [fn, esperado] of [['planoAnularLinhaAbrir', 0], ['planoReabrirLinhaAbrir', 107700], ['planoAnularLinhaAbrir', 0]]) {
+      await abre71(`${fn}('hj1')`); await toca71(SENHA657); r71('corrFechar()');
+      igual(quadro71('2026-07'), esperado, fn);
+      igual(r71("renovLinhaAnulada(pelExtra(pelAtual).renov_hist.hj1)"), esperado === 0, fn + ' (a tela)');
+    }
+    igual(Object.values(ficha71().renov_hist.hj1.anulacoes).map((a) => a.acao), ['anular', 'reabrir', 'anular']);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-14 (AC4.4, AC6.3) — hóspede e avulso: o Desfazer recusa pelo console, a aba Plano mostra «Renovações anteriores» com «Anular» na linha que conta e sem Desfazer; a volta a Auluno oferece o plano que saiu também para hóspede', async () => {
+  arma71();
+  try {
+    for (const cat of ['hospede', 'avulso']) {
+      const pl = cat === 'hospede' ? 'auaulandia' : 'avulso';
+      cena71([TAMARA({ categoria: cat, renov: { plano: pl, inicio: '', fim: '', mesRenov: '', aulas: '' }, renov_hist: { v1: H71(GOLD71(), 400, 'virou ' + cat) } })]);
+      await abre71('desfazerRenovacao()');
+      igual([r71('CORR_ATUAL'), escCad71().length], [null, 0], cat);
+      assert.ok((za71('O PLANO NÃO VOLTA POR AQUI')[0] || '').indexOf('toque em «Auluno» na Categoria') >= 0, cat);
+      const h = r71('blocoPlano(pelExtra(pelAtual), pelAtual)');
+      assert.ok(/Renovações anteriores \(1\)/.test(h) && /renov-hist-anular/.test(h) && !/id="renovDesfazer"/.test(h), cat + ': ' + txt71(h).slice(0, 300));
+      r71('__zpq657=[true];');
+      await abre71("setPelCategoria('auluno')"); await esp71();
+      assert.ok(J71('__zp657').some((p) => p[0] === 'VOLTAR O PLANO QUE SAIU?'), cat);
+      igual([ficha71().categoria, ficha71().renov.inicio, quadro71('2026-10')], ['auluno', '2026-10-05', 107700], cat);
+    }
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-15 (AC1.3, AC1.4) — o plano com os dias por mês (6.30) anulado e reaberto: o renov sai inteiro (sem dias_mes, sem valor), a linha guarda tudo, e o «Reabrir» devolve os dias de cada mês e o valor gravado, igual ao que era', async () => {
+  arma71();
+  try {
+    const R = Object.assign(GOLD71(), { dias_mes: [['seg'], ['seg'], ['seg', 'qua']], vig_inicio: '2026-10-01' });
+    cena71([{ n: 'Biscoito', tutor: 'Clara Teste', ex: { dias: ['seg'], renov: R } }]);
+    await abre71('planoAnularAtualAbrir()'); await toca71(SENHA657); r71('corrFechar()');
+    const f = ficha71(), L = Object.values(f.renov_hist)[0];
+    igual([Object.keys(f.renov).sort(), L.dias_mes, L.vig_inicio, L.valor_plano_cent], [['aulas', 'fim', 'inicio', 'mesRenov', 'ordemPet', 'plano'], R.dias_mes, '2026-10-01', 107700]);
+    const id = Object.keys(f.renov_hist)[0];
+    await abre71(`planoReabrirLinhaAbrir('${id}')`); await toca71(SENHA657);
+    igual(r71('planoCanon(' + JSON.stringify(ficha71().renov) + ')'), r71('planoCanon(' + JSON.stringify(R) + ')'));
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-16 (AC1.1, AC9) — dois toques no «Anular»: o 2º cartaz não abre enquanto o 1º grava («ESPERE A OUTRA GRAVAÇÃO»), e depois de anulado não há o que anular («NÃO HÁ PAGAMENTO DE PLANO PARA ANULAR»); uma gravação só', async () => {
+  arma71();
+  try {
+    cena71([BISCOITO()]);
+    r71(`__pendura657='^daycare/cadastro/[^/]+$';`);
+    await abre71('planoAnularAtualAbrir()');
+    r71(`__t71r=corrToque('confirmar', {motivo:${JSON.stringify(MOT71)}, senha:${JSON.stringify(SENHA657)}})`); await esp71();
+    igual(passo71(), 'gravando');
+    r71('__a71b=planoAnularAtualAbrir();'); await esp71();
+    assert.ok(titulos71().indexOf('ESPERE A OUTRA GRAVAÇÃO') >= 0, JSON.stringify(titulos71()));
+    igual(titulos71().indexOf('NÃO FOI ANULADO'), -1, 'o cartaz ocupado não vira «NÃO FOI ANULADO» enquanto o 1º grava');
+    r71('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await esp71(); r71('corrFechar()');
+    await abre71('planoAnularAtualAbrir()');
+    assert.ok(titulos71().indexOf('NÃO HÁ PAGAMENTO DE PLANO PARA ANULAR') >= 0, JSON.stringify(titulos71()));
+    igual(escCad71().length, 1);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-17 (AC3.2, guarda) — os nós novos sem anulação não mexem no dinheiro: renov_voltas, meio_mes_hist, saidas com retornoTs e dias_nenhum numa ficha dão o finResumoMes idêntico (JSON) ao da mesma ficha sem eles, em todos os meses', async () => {
+  arma71();
+  try {
+    const base = PIPOCA();
+    const extra = PIPOCA({ renov_voltas: { v1: { linha: Object.assign({ _id: 'hz' }, H71(JUL71(), 200)), voltou_em: 1, como: 'desfazer', motivo: 'x', registro: null } },
+      meio_mes_hist: { m1: { registro: MM71(), desfeito: { acao: 'reabrir' } } }, saidas: [{ quando: '01/09/2026', motivo: 'viagem', tipo: 'pausa', retornoTs: 1, retornoMotivo: 'voltou' }], dias_nenhum: true });
+    const R = (f) => { cena71([f]); return QAMESES71.map((m) => r71(`JSON.stringify(finResumoMes({cadastro:pelCadCache, peludinhos:PELUDINHOS, irmaos:{}, orcamentos:{}, pagamentos:null, planos:planos(), descontoIrmao:DESC_PET_PLANO}, '${m}', {hoje:'2026-10-10'}))`)); };
+    igual(R(extra), R(base));
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-18 (AC1.5, dois aparelhos) — o outro aparelho trocou só o TIPO do plano (Gold → Black, a mesma data) enquanto o cartaz do anular estava aberto: recusa, nada gravado', async () => {
+  arma71();
+  try {
+    cena71([BISCOITO()]);
+    await abre71('planoAnularAtualAbrir()');
+    r71(`__put657('daycare/cadastro/'+pelKey(pelAtual)+'/renov/plano', 'Black');`);
+    await toca71(SENHA657);
+    igual(za71('NÃO FOI ANULADO'), ['O plano mudou em outro aparelho. Nada foi anulado: confira e tente de novo.', 'O plano continua como estava.']);
+    igual([escCad71().length, ficha71().renov.plano], [0, 'Black']);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-19 (AC5.2, nada se perde) — o meio do mês desfeito duas vezes (registrado de novo entre uma e outra): meio_mes_hist guarda os DOIS registros, nenhum sobrescrito', async () => {
+  arma71();
+  try {
+    cena71([QUINDIM()]);
+    await abre71('mmDesfazer()'); await toca71('s-bia', 'o tutor desistiu da opção dois'); r71('corrFechar()');
+    // registrado de novo (outra opção), e desfeito de novo
+    r71(`(function(){ var k=pelKey(pelAtual), f=__get657('daycare/cadastro/'+k); f.renov.meio_mes=Object.assign({}, f.renov.meio_mes||{}, ${JSON.stringify(Object.assign({}, { opcao: 1, inicio: '2026-10-07', diarias: 3, total_cent: 33300, quem: 'Consultora Teste', ts: 2 }))}); f.renov.fim_anterior='2026-12-31'; __put657('daycare/cadastro/'+k, f); pelCadCache[k]=__get657('daycare/cadastro/'+k); })()`);
+    await abre71('mmDesfazer()'); await toca71('s-bia', 'o tutor desistiu da opção um também'); r71('corrFechar()');
+    const hs = Object.values(ficha71().meio_mes_hist || {});
+    igual(hs.map((h) => h.registro.opcao).sort(), [1, 2]);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-20 (AC2.5) — dois pagamentos anulados do MESMO FILHOt no mesmo mês (05/07 e 20/07, linhas diferentes): a lista «FILHOt por FILHOt» mostra os dois, fora do total', async () => {
+  arma71();
+  try {
+    const an = { a1: { acao: 'anular', ts: 5, por: 'Gestora Teste', motivo: 'lançado por engano no FILHOt errado', quando: '01/10/2026 às 10:00' } };
+    cena71([PIPOCA({ renov_hist: { hj1: Object.assign(H71(JUL71(), 300), { anulacoes: an }), hj2: Object.assign(H71(Object.assign(JUL71(), { inicio: '2026-07-20', quando: '2026-07-20' }), 310), { anulacoes: an }) } })]);
+    const L = J71("recAnuladosDoMes('2026-07')");
+    igual(L.map((x) => x.data), ['2026-07-05', '2026-07-20']);
+    const h = r71("recListaHTML(recResumoDoMes('2026-07'), '2026-07', false)");
+    igual((h.match(/rec-li-anulado/g) || []).length, 2);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-21 (AC2.4, decisão do @dev) — as tentativas iguais juntadas numa linha só: «Anular» anula as duas (o mês cai uma vez, nada fica contando pela outra) e «Reabrir» reabre as duas', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA({ renov_hist: { hj1: H71(JUL71(), 300), hj2: H71(JUL71(), 301) } })]);
+    const h = r71('renovHistHTML(pelExtra(pelAtual))');
+    const m = /planoAnularLinhaAbrir\(&#39;([^&]+)&#39;\)|planoAnularLinhaAbrir\('([^']+)'\)/.exec(h);
+    const ids = m[1] || m[2];
+    igual(ids.split(',').sort(), ['hj1', 'hj2'], 'uma linha na tela, as duas tentativas');
+    igual(quadro71('2026-07'), 107700);
+    await abre71(`planoAnularLinhaAbrir('${ids}')`); await toca71(SENHA657); r71('corrFechar()');
+    igual(quadro71('2026-07'), 0);
+    igual(['hj1', 'hj2'].map((i) => r71(`renovLinhaAnulada(pelExtra(pelAtual).renov_hist.${i})`)), [true, true]);
+    await abre71(`planoReabrirLinhaAbrir('${ids}')`); await toca71(SENHA657); r71('corrFechar()');
+    igual(quadro71('2026-07'), 107700);
+    igual(['hj1', 'hj2'].map((i) => r71(`renovLinhaAnulada(pelExtra(pelAtual).renov_hist.${i})`)), [false, false]);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-22 (AC2.3, AC2.4, AC10.1) — anular e reabrir a LINHA com o banco recusando (na hora e depois de ficar sem resposta): nenhum rastro «pagamento-anulado» nem «pagamento-reaberto», nenhuma entrada da 6.57, a linha como estava', async () => {
+  arma71();
+  try {
+    // anular, o banco recusa na hora
+    cena71([PIPOCA()]);
+    r71(`__recusa657='^daycare/cadastro/[^/]+$';`);
+    await abre71("planoAnularLinhaAbrir('hj1')"); await toca71(SENHA657);
+    igual([aud71('pagamento-anulado').length, aud71('registro-anulado').length, 'anulacoes' in ficha71().renov_hist.hj1, quadro71('2026-07')], [0, 0, false, 107700]);
+    // anular, sem resposta e depois recusado
+    cena71([PIPOCA()]);
+    r71(`__pendura657='^daycare/cadastro/[^/]+$';`);
+    await abre71("planoAnularLinhaAbrir('hj1')");
+    r71(`__t71r=corrToque('confirmar', {motivo:${JSON.stringify(MOT71)}, senha:${JSON.stringify(SENHA657)}})`); await esp71();
+    igual(aud71('pagamento-anulado').length, 0, 'nada antes da resposta');
+    r71('__pend657.forEach(function(x){ x.nao(); }); __pend657=[];'); await esp71();
+    igual([aud71('pagamento-anulado').length, aud71('registro-anulado').length], [0, 0], 'recusado depois: nenhum rastro');
+    // reabrir, o banco recusa
+    const an = { a1: { acao: 'anular', ts: 5, por: 'Gestora Teste', motivo: 'lançado por engano no FILHOt errado' } };
+    cena71([PIPOCA({ renov_hist: { hj1: Object.assign(H71(JUL71(), 300), { anulacoes: an }) } })]);
+    r71(`__recusa657='^daycare/cadastro/[^/]+$';`);
+    await abre71("planoReabrirLinhaAbrir('hj1')"); await toca71(SENHA657);
+    igual([aud71('pagamento-reaberto').length, aud71('registro-reaberto').length, Object.keys(ficha71().renov_hist.hj1.anulacoes), quadro71('2026-07')], [0, 0, ['a1'], 0]);
+    assert.ok(za71('NÃO FOI REABERTO').length === 2, JSON.stringify(titulos71()));
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-23 (AC4.3, AC1.4, nada se perde) — o que volta a valer nunca sobrescreve o que voltou antes: dois Desfazer seguidos (o 2º traz de volta a renovação desfeita, regra da 6.44) e o «Reabrir» de um plano anulado deixam TRÊS entradas em renov_voltas, cada uma com a sua linha', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA({ renov_hist: { hj1: H71(JUL71(), 300), hj0: H71(Object.assign(JUL71(), { inicio: '2026-04-05', quando: '2026-04-05', fim: '2026-06-30' }), 200) } })]);
+    await abre71('desfazerRenovacao()'); await toca71(SENHA657); r71('corrFechar()');
+    await abre71('desfazerRenovacao()'); await toca71(SENHA657); r71('corrFechar()');
+    await abre71('planoAnularAtualAbrir()'); await toca71(SENHA657); r71('corrFechar()');
+    const id = Object.keys(ficha71().renov_hist).filter((k) => ficha71().renov_hist[k].motivo === 'anulado')[0];
+    await abre71(`planoReabrirLinhaAbrir('${id}')`); await toca71(SENHA657); r71('corrFechar()');
+    const v = Object.values(ficha71().renov_voltas || {});
+    igual(v.map((x) => x.como + '|' + x.linha.inicio).sort(), ['desfazer|2026-07-05', 'desfazer|2026-10-05', 'reabrir|2026-10-05']);   // o 2º Desfazer traz de volta a renovação desfeita (6.44)
+    assert.ok(/Voltaram a valer \(3\)/.test(r71('renovVoltasHTML(pelExtra(pelAtual))')));
+  } finally { solta71(); }
+});
+
+// ---- os achados da 1ª rodada (QA671-A1 a A8), agora corrigidos
+provaAsync('6.71 QA671-A1 (G05, AC7.1, dois aparelhos) — o aparelho B que já mexeu nesta ficha antes (a cópia local dele guarda dias:[seg]) vê «nenhum dia» depois que o aparelho A tirou o último dia: pelDias = []', async () => {
+  arma71();
+  try {
+    cena71([NELSON()]);
+    // B mexeu na ficha antes: a cópia local de B (zeluz_pel_{k}) tem a ficha inteira, com dias:['seg']
+    r71(`(function(){ var k=pelKey(pelAtual); __ls657['zeluz_pel_'+k]=JSON.stringify(Object.assign({}, pelCadCache[k], {dias:['seg'], freq:'1x'})); })()`);
+    // A tirou o último dia: o banco guarda a marca e não guarda a lista vazia (o ouvinte de B traz a ficha sem «dias»)
+    r71(`(function(){ var k=pelKey(pelAtual), c=__get657('daycare/cadastro/'+k); delete c.dias; c.freq=''; c.dias_nenhum=true; __put657('daycare/cadastro/'+k, c); pelCadCache[k]=c; })()`);
+    const d = J71("pelDias(pelAtual,'rotina')");
+    console.log('QA|QA671-A1|' + JSON.stringify({ pelDiasNoAparelhoB: d, nAulas: r71('nAulasDe(pelAtual)') }));
+    igual(d, [], 'o aparelho B ainda vê os dias velhos da cópia local');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-A2 (AC4.1, frase) — o Desfazer de uma CORREÇÃO (a linha que volta não contava): o cartaz não pode dizer «O mês do plano que volta não muda» quando ele muda', async () => {
+  arma71();
+  try {
+    const corr = Object.assign(GOLD71(), { inicio: '2026-09-28', quando: '2026-09-28', fim: '2026-12-31' });
+    cena71([PIPOCA({ renov: Object.assign(GOLD71(), { inicio: '2026-10-01', quando: '2026-10-01' }), renov_hist: { hc: H71(corr, 300, 'correção') } })]);
+    igual([quadro71('2026-09'), quadro71('2026-10')], [0, 107700]);
+    await abre71('desfazerRenovacao()');
+    const c = cartaz71();
+    console.log('QA|QA671-A2|' + JSON.stringify(c.slice(c.indexOf('No Recebimentos'), c.indexOf('Use quando'))));
+    const ef = QAEFEITO71(c);
+    assert.ok(ef['2026-09'], 'setembro muda e está no cartaz');
+    igual(/O mês do plano que volta não muda/.test(c), false, 'a frase fixa contradiz o número da mesma linha');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-A3 (AC2.4, dois aparelhos com relógio diferente) — o «Reabrir» feito DEPOIS da anulação, num aparelho com o relógio atrasado: a linha volta a contar (a tela disse «Pagamento reaberto»)', async () => {
+  arma71();
+  try {
+    // o aparelho A (relógio 10 minutos adiantado) anulou às 10:00 reais, carimbando 10:10
+    const anul = { acao: 'anular', ts: T671 + 600000, por: 'Gestora Teste', papel: 'gestao', motivo: 'lançado no FILHOt errado pelo aparelho A', quando: '10/10/2026 às 10:10' };
+    cena71([PIPOCA({ renov_hist: { hj1: Object.assign(H71(JUL71(), 300), { anulacoes: { r001: anul } }) } })]);
+    igual(quadro71('2026-07'), 0);
+    // o aparelho B (relógio certo) reabre às 10:05 reais — depois da anulação
+    r71(`Date.now=function(){ return ${T671 + 300000}; };`);
+    await abre71("planoReabrirLinhaAbrir('hj1')"); await toca71(SENHA657);
+    const pronto = passo71(); r71('corrFechar()');
+    const linha = J71('pelExtra(pelAtual).renov_hist.hj1');
+    console.log('QA|QA671-A3|' + JSON.stringify({ cartaz: pronto, anulada: r71('renovLinhaAnulada(pelExtra(pelAtual).renov_hist.hj1)'), julho: quadro71('2026-07'), registros: Object.values(linha.anulacoes).map((a) => a.acao + '@' + a.ts) }));
+    igual(pronto, 'pronto');
+    igual(quadro71('2026-07'), 107700, 'depois de «Pagamento reaberto», julho continua R$ 0,00');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-A4 (AC2.1) — «Renovações anteriores» com 8 renovações mensais pagas: cada linha que conta tem «Anular este pagamento» (hoje a lista mostra só 6 grupos e as 2 mais antigas ficam sem botão e sem aparecer)', async () => {
+  arma71();
+  try {
+    const h = {};
+    for (let i = 0; i < 8; i++) {
+      const mes = String(2 + i).padStart(2, '0');
+      h['hm' + i] = H71({ plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-' + mes + '-05', fim: '2026-' + mes + '-28', mesRenov: 'x', quando: '2026-' + mes + '-05', valor_plano_cent: 35900 }, 100 + i);
+    }
+    cena71([PIPOCA({ renov_hist: h })]);
+    const conta = Object.keys(J71('renovHistContaIds(pelExtra(pelAtual))') || {}).length;
+    const html = r71('renovHistHTML(pelExtra(pelAtual))');
+    const botoes = (html.match(/renov-hist-anular/g) || []).length;
+    console.log('QA|QA671-A4|' + JSON.stringify({ linhasQueContam: conta, botoesAnular: botoes }));
+    igual(botoes, conta);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-A5 (AC4.2, «lê do mesmo jeito») — a vigência do plano relançado com a mesma data não sai de uma linha «virou» ANULADA (renovBaseDoRelancamento ainda lê renovHistDe(ex)[0])', async () => {
+  arma71();
+  try {
+    const V = Object.assign(H71(Object.assign(GOLD71(), { fim: '2027-01-31', vig_inicio: '2026-11-01' }), 400, 'virou morador'),
+      { anulacoes: { a1: { acao: 'anular', ts: 5, por: 'Gestora Teste', motivo: 'o pagamento não existiu, foi engano' } } });
+    cena71([TAMARA({ renov: { plano: '', inicio: '', fim: '', mesRenov: '', aulas: '' }, renov_hist: { v1: V } })]);
+    const r = J71("renovBaseDoRelancamento(pelExtra(pelAtual), {plano:'Gold', aulas:1, inicio:'2026-10-05', fim:'2026-12-31'})");
+    console.log('QA|QA671-A5|' + JSON.stringify(r));
+    igual([r.fim, r.vig_inicio || null], ['2026-12-31', null], 'o período veio da linha anulada');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-A6 (AC5.3, AC10.1) — o desfazer do meio do mês com dois FILHOts e um recusado: a ficha que gravou ganha a entrada da 6.57 (registro-reaberto), como manda o AC10.1', async () => {
+  arma71();
+  try {
+    const mm = MM71();
+    cena71([{ n: 'Maria Eduarda', tutor: 'Clara Teste', ex: { dias: ['seg'], sexo: 'Fêmea', renov: Object.assign(GOLD71(), { inicio: '2026-10-07', fim: '2027-01-31', fim_anterior: '2026-12-31', meio_mes: mm }) } },
+      { n: 'Beethoven', tutor: 'Clara Teste', ex: { dias: ['seg'], renov: Object.assign(GOLD71(), { inicio: '2026-10-07', fim: '2027-01-31', fim_anterior: '2026-12-31', meio_mes: mm }) } }],
+    { irmaos: { x: { a: 'maria eduarda__clara teste', b: 'beethoven__clara teste' } } });
+    r71(`__recusa657='^daycare/cadastro/beethoven';`);
+    await abre71('mmDesfazer()');
+    r71(`__t71r=corrToque('confirmar', {motivo:'o tutor desistiu da opção dois', senha:'s-bia'})`); await esp71();
+    const ok = aud71('plano-meio-mes-desfeito').length, r657 = aud71('registro-reaberto').length;
+    console.log('QA|QA671-A6|' + JSON.stringify({ desfeitoNaFicha: ok, entrada657: r657, titulos: titulos71() }));
+    igual(ok, 1, 'a ficha da Maria Eduarda gravou');
+    igual(r657, 1, 'sem a entrada da 6.57 para a ficha que gravou');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-A7 (AC6.6, risco 10) — três irmãos em cadeia (Ana–Bia, Bia–Cacau, sem ordemPet): a Ana vira moradora e o desconto da Cacau muda no mês em que a Cacau pagou; a pergunta mostra todo mês que muda no quadro', async () => {
+  arma71();
+  try {
+    const sem = (o) => { const r = Object.assign({}, o); delete r.ordemPet; delete r.valor_plano_cent; delete r.mensalidade_cent; return r; };
+    cena71([{ n: 'Ana', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(GOLD71()) } },
+      { n: 'Bia', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(GOLD71()) } },
+      { n: 'Cacau', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(Object.assign(GOLD71(), { inicio: '2026-09-10', quando: '2026-09-10', fim: '2026-11-30' })) } }],
+    { irmaos: { x: { a: 'ana__família teste', b: 'bia__família teste' }, y: { a: 'bia__família teste', b: 'cacau__família teste' } } });
+    const antes = QAQUADROS71();
+    r71('__zpq657=[true];');
+    await abre71("setPelCategoria('morador')"); await esp71();
+    const txt = J71('__zp657')[0][1].join(' ');
+    const depois = QAQUADROS71();
+    console.log('QA|QA671-A7|' + JSON.stringify({ pergunta: txt.slice(txt.indexOf('No Recebimentos')), setembro: [antes[8], depois[8]], outubro: [antes[9], depois[9]] }));
+    QACONFERE71(txt, antes, depois, 'cadeia de irmãos');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA671-A8 (AC1.2, risco 10) — com hospedagem e diárias avulsas no mês, o número do cartaz é o «Total de outubro» que o quadro mostra (antes e depois)', async () => {
+  arma71();
+  try {
+    cena71([BISCOITO()]);
+    r71(`REC_FONTES={quando:Date.now(), irm:{}, orc:{o1:{status:'fechado', status_em:${new Date(2026, 9, 2, 10).getTime()}, criado_em:${new Date(2026, 9, 1, 10).getTime()}, entrada:'2026-10-20', saida:'2026-10-25', parcela1_cent:45050, parcela2_cent:45050, total_cent:90100, pets:[{nome:'Hóspede Teste'}], tutor:'Hóspede Teste'}}};
+      REC_AVULSO={mes:'2026-10', quando:Date.now(), lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0}; REC_MES='';`);
+    const tot = () => { const m = /rec-val rec-val-total">(R\$ [\d.]+,\d{2})</.exec(r71('recCardHTML()')); return QACENT71(m[1].slice(3)); };
+    const a = tot();
+    await abre71('planoAnularAtualAbrir()');
+    const ef = QAEFEITO71(cartaz71())['2026-10'];
+    await toca71(SENHA657); r71('corrFechar()');
+    const d = tot();
+    console.log('QA|QA671-A8|' + JSON.stringify({ cartaz: ef.map((x) => r71('finBRL(' + x + ')')), quadro: [a, d].map((x) => r71('finBRL(' + x + ')')) }));
+    igual(ef, [a, d]);
+  } finally { solta71(); }
+});
+}
+
+{
+// ================================================================== 6.71 QA re-gate — as provas do re-gate do QA (Quinn), na Fase 0
+// 3ª rodada da 6.71 (OBS-001): as provas de ataque do re-gate (QA671R-01 a 07 e 09, `scratchpad/qa671r2/ataque671r2.js`) e as dos
+// achados (QA671R-A1 a A3, `achados671r2.js`, que já afirmavam o comportamento certo), com o prefixo «6.71 QA re-gate ·». O corpo é o
+// do QA. Uma adaptação só, pela decisão do @po na 3ª rodada (REQ-003): nas cenas em que o QA quer as fontes do quadro LIDAS (QA671R-01
+// e o caso 1 da QA671R-02), o carimbo delas passa de 1 (1970, que agora é «lido há muito tempo») para Date.now() (acabou de ler, dentro
+// da janela de 60 s em que o quadro não relê). A QA671R-A3 (as fontes lidas há 3 horas) fica como o QA escreveu.
+const QRMESES = ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12', '2027-01'];
+const QRMES = { janeiro: '01', fevereiro: '02', 'março': '03', abril: '04', maio: '05', junho: '06', julho: '07', agosto: '08', setembro: '09', outubro: '10', novembro: '11', dezembro: '12' };
+const QRCENT = (s) => Number(String(s).replace(/R\$\s?/, '').replace(/\./g, '').replace(',', ''));
+// O quadro desenhado do mês m: o «Total de {mês}» e a soma das linhas dos planos (Mensalidade, Trimestral, Semestral, sem compromisso).
+const QRCARD = (m) => {
+  const h = r71(`(function(){ var b=REC_MES; REC_MES='${m}'; var h=recCardHTML(); REC_MES=b; return h; })()`);
+  const tot = /rec-val rec-val-total">(R\$ [\d.]+,\d{2})</.exec(h);
+  let planos = 0;
+  const re = /<div class="pm-li"><div class="pm-li-txt"><b>(Mensalidade|Trimestral|Semestral|Plano sem compromisso definido)<\/b>[\s\S]*?<span class="pm-li-fim rec-val">(R\$ [\d.]+,\d{2})<\/span>/g;
+  let x; while ((x = re.exec(h))) planos += QRCENT(x[2]);
+  return { total: tot ? QRCENT(tot[1]) : null, planos, sabe: !!tot };
+};
+const QRCARDS = () => QRMESES.map(QRCARD);
+// As frases com nome: «Total de {mês} no Recebimentos: a → b», «Total dos planos do Day Care em {mês}: a → b», «{FILHOt} em {mês}: a → b».
+const QRPARSE = (txt) => {
+  const N = '(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro) de (\\d{4})', V = 'R\\$ ([\\d.]+,\\d{2}) → R\\$ ([\\d.]+,\\d{2})';
+  const out = { quadro: {}, planos: {}, filhot: [], semNome: [] };
+  let m;
+  const rq = new RegExp('Total de ' + N + ' no Recebimentos: ' + V, 'g'); while ((m = rq.exec(txt))) out.quadro[m[2] + '-' + QRMES[m[1]]] = [QRCENT(m[3]), QRCENT(m[4])];
+  const rp = new RegExp('Total dos planos do Day Care em ' + N + ': ' + V, 'g'); while ((m = rp.exec(txt))) out.planos[m[2] + '-' + QRMES[m[1]]] = [QRCENT(m[3]), QRCENT(m[4])];
+  const rf = new RegExp('([A-ZÀ-Ú][\\wÀ-ú]+) em ' + N + ': ' + V, 'g'); while ((m = rf.exec(txt))) if (m[1] !== 'Care') out.filhot.push({ nome: m[1], mes: m[3] + '-' + QRMES[m[2]], de: QRCENT(m[4]), para: QRCENT(m[5]) });
+  // um «{mês}: R$ a → R$ b» sem nenhum nome antes (o formato da 1ª rodada) não pode mais aparecer
+  const rs = new RegExp('(?:^|[.;:] )' + N + ': R\\$', 'g'); while ((m = rs.exec(txt))) out.semNome.push(m[0]);
+  return out;
+};
+// Confere a frase contra o quadro desenhado antes e depois: cada «Total de {mês} no Recebimentos» é o «Total de {mês}» do quadro
+// (e só aparece quando as diárias avulsas daquele mês foram lidas); cada «Total dos planos do Day Care» é a soma das linhas dos
+// planos; todo mês em que o quadro mudou está na frase; nunca um número sem nome.
+const QRCONFERE = (txt, antes, depois, rot, avMes) => {
+  const ef = QRPARSE(txt);
+  assert.ok(!ef.semNome.length, rot + ': número sem nome — ' + JSON.stringify(ef.semNome) + ' — ' + txt);
+  QRMESES.forEach((m, i) => {
+    const q = ef.quadro[m], p = ef.planos[m];
+    assert.ok(!(q && p), rot + ': dois nomes no mesmo mês ' + m);
+    if (q) { igual(q, [antes[i].total, depois[i].total], rot + ': ' + m + ' (Total do quadro) — ' + txt); assert.ok(m === avMes, rot + ': «no Recebimentos» em ' + m + ' sem as diárias avulsas desse mês lidas'); }
+    if (p) { igual(p, [antes[i].planos, depois[i].planos], rot + ': ' + m + ' (planos do Day Care) — ' + txt); assert.ok(m !== avMes, rot + ': ' + m + ' tem tudo lido e saiu como «planos»'); }
+    if (antes[i].total !== depois[i].total || antes[i].planos !== depois[i].planos) assert.ok(q || p, rot + ': ' + m + ' mudou no quadro (' + JSON.stringify([antes[i], depois[i]]) + ') e a frase não diz — ' + txt);
+  });
+  return ef;
+};
+
+provaAsync('6.71 QA re-gate · QA671R-01 (REQ-001, REL-002, AC1.2, AC4.1, AC6.1, AC8.2, risco 10) — 200 cenas sorteadas com orçamentos da AuAulândia em vários meses, diárias avulsas lidas de um mês (ou de nenhum), irmãos em cadeia de até 4 e centavos: cada total da frase tem o nome certo e é, no centavo, o número do QUADRO DESENHADO antes e depois (o «Total de {mês}» ou a soma das linhas dos planos); todo mês em que o quadro muda está na frase', async () => {
+  arma71();
+  let s = 7101; const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  const um = (L) => L[Math.floor(rnd() * L.length)];
+  const p2 = (n) => String(n).padStart(2, '0');
+  const plano = () => {
+    const pl = um(['Silver', 'Gold', 'Gold', 'Black']), mi = 5 + Math.floor(rnd() * 6), ini = '2026-' + p2(mi) + '-' + p2(1 + Math.floor(rnd() * 27));
+    const nm = pl === 'Silver' ? 1 : (pl === 'Gold' ? 3 : 6), d = new Date(Date.UTC(2026, mi - 1 + nm, 0));
+    const r = { plano: pl, aulas: um([1, 1, 2, 3]), inicio: ini, fim: d.toISOString().slice(0, 10), mesRenov: 'x', quando: ini };
+    if (rnd() < 0.4) r.ordemPet = um([1, 2]);
+    if (rnd() < 0.5) r.valor_plano_cent = um([107700, 100161, 35900, 33387, 215400, 71800]);
+    return r;
+  };
+  const conta = { anularAtual: 0, anularLinha: 0, reabrir: 0, desfazer: 0, categoria: 0, inativar: 0, quadro: 0, planos: 0 };
+  try {
+    for (let c = 0; c < 200; c++) {
+      const n = 1 + Math.floor(rnd() * 4), fichas = [];
+      for (let i = 0; i < n; i++) {
+        const ex = { dias: ['seg'], sexo: rnd() < 0.5 ? 'Fêmea' : 'Macho', renov: plano() };
+        if (rnd() < 0.1) ex.inativo = 'Sim';
+        const nh = Math.floor(rnd() * 3);
+        if (nh) {
+          ex.renov_hist = {};
+          for (let h = 0; h < nh; h++) {
+            const o = Object.assign(plano(), { substituidoEm: 100 + h, por: 'Consultora Teste', motivo: um(['renovação', 'renovação', 'correção', 'desfeita', 'virou morador']), motivo_conferido: true });
+            if (rnd() < 0.2) o.anulacoes = { a1: { acao: 'anular', ts: 50, por: 'Gestora Teste', motivo: 'lançado por engano no FILHOt errado', quando: '01/10/2026 às 10:00' } };
+            ex.renov_hist['h' + h] = o;
+          }
+        }
+        fichas.push({ n: 'Cena' + c + 'F' + i, tutor: 'Família ' + c + ' Teste', ex });
+      }
+      const ks = fichas.map((f) => (f.n + '__' + f.tutor).toLowerCase());
+      const irm = {};
+      for (let i = 1; i < ks.length; i++) if (rnd() < 0.75) irm['x' + i] = { a: ks[i - 1], b: ks[i] };   // em cadeia
+      cena71(fichas, { irmaos: irm });
+      // os orçamentos (2 a 3 reservas em meses sorteados) e as diárias avulsas lidas de um mês (ou de nenhum)
+      const orc = {};
+      for (let o = 0; o < 1 + Math.floor(rnd() * 3); o++) { const mo = 5 + Math.floor(rnd() * 6), me = mo + Math.floor(rnd() * 2);
+        orc['o' + o] = { status: 'fechado', status_em: new Date(2026, mo - 1, 3, 10).getTime(), criado_em: new Date(2026, mo - 1, 2, 10).getTime(), entrada: '2026-' + p2(me) + '-15', saida: '2026-' + p2(me) + '-18',
+          parcela1_cent: um([45050, 30000, 12345]), parcela2_cent: um([45050, 30000, 6789]), total_cent: 90100, pets: [{ nome: 'Hóspede ' + o + ' Teste' }], tutor: 'Hóspede Teste' }; }
+      const avMes = um(['2026-10', '2026-09', '2026-07', '']);
+      ctx671.__orcR = orc;
+      r71(`REC_FONTES={quando:Date.now(), irm:IRMAOS_CACHE, orc:__orcR}; REC_AVULSO=${avMes ? `{mes:'${avMes}', quando:Date.now(), lendo:false, ok:true, total_cent:${um([13500, 9700, 26700])}, n:1, semValor:0, futuros:0}` : '{mes:"", quando:0, lendo:false, ok:false, total_cent:0, n:0, semValor:0, futuros:0}'};`);
+      const contaIds = Object.keys(J71('renovHistContaIds(pelExtra(pelAtual))') || {});
+      const ex0 = J71('pelExtra(pelAtual)');
+      const anuladas = Object.keys(ex0.renov_hist || {}).filter((id) => r71(`renovLinhaAnulada(pelExtra(pelAtual).renov_hist[${JSON.stringify(id)}])`) && String(ex0.renov_hist[id].motivo) !== 'anulado');
+      const acoes = ['anularAtual', 'desfazer', 'categoria', 'inativar'];
+      if (contaIds.length) acoes.push('anularLinha');
+      if (anuladas.length) acoes.push('reabrir');
+      const acao = um(acoes);
+      const antes = QRCARDS();
+      let txt = '';
+      if (['anularAtual', 'anularLinha', 'reabrir', 'desfazer'].indexOf(acao) >= 0) {
+        const chamada = acao === 'anularAtual' ? 'planoAnularAtualAbrir()' : acao === 'desfazer' ? 'desfazerRenovacao()'
+          : acao === 'anularLinha' ? `planoAnularLinhaAbrir(${JSON.stringify(um(contaIds))})` : `planoReabrirLinhaAbrir(${JSON.stringify(um(anuladas))})`;
+        await abre71(chamada);
+        if (passo71() !== 'conferir') { r71('CORR_ATUAL=null;'); continue; }
+        txt = cartaz71();
+        await toca71(SENHA657);
+        if (passo71() !== 'pronto' && titulos71().indexOf('RENOVAÇÃO DESFEITA') < 0) assert.fail(acao + ' não gravou: ' + passo71() + ' ' + JSON.stringify(J71('__za657')));
+        r71('corrFechar()');
+      } else if (acao === 'categoria') {
+        r71('__zpq657=[true];');
+        await abre71("setPelCategoria('morador')"); await esp71();
+        const p = J71('__zp657'); if (!p.length) continue;
+        txt = p[0][1].join(' ');
+      } else {
+        r71('__zpq657=[true]; __ztq657=["viagem da família em outubro"];');
+        await abre71("saidaInativar('botao')"); await esp71();
+        const p = J71('__zp657'); if (!p.length) continue;
+        txt = p[0][1].join(' ');
+      }
+      conta[acao]++;
+      const depois = QRCARDS();
+      const ef = QRCONFERE(txt, antes, depois, 'cena ' + c + ' (' + acao + ', avulsas de ' + (avMes || 'nenhum mês') + ')', avMes);
+      conta.quadro += Object.keys(ef.quadro).length; conta.planos += Object.keys(ef.planos).length;
+      assert.ok(!ef.filhot.length, 'cena ' + c + ': com a carteira inteira, nunca só o FILHOt — ' + txt);
+    }
+    console.log('QA|QA671R-01|' + JSON.stringify(conta));
+    ['anularAtual', 'anularLinha', 'desfazer', 'categoria', 'inativar'].forEach((a) => assert.ok(conta[a] >= 8, 'cenas de ' + a + ': ' + conta[a]));
+    assert.ok(conta.quadro >= 10 && conta.planos >= 20, JSON.stringify(conta));
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate · QA671R-02 (REQ-001) — o nome em cada caso: tudo lido → «Total de outubro de 2026 no Recebimentos» = o «Total de outubro de 2026» do quadro (planos + hospedagem + diárias avulsas), e o TOTAL do Excel depois é o mesmo número; as fontes do quadro ainda não lidas → «Total dos planos do Day Care», com os irmãos do ouvinte do app; sem a carteira → só o FILHOt, conferido pela conta', async () => {
+  arma71();
+  try {
+    const ORC = `{o1:{status:'fechado', status_em:${new Date(2026, 9, 2, 10).getTime()}, criado_em:${new Date(2026, 9, 1, 10).getTime()}, entrada:'2026-10-20', saida:'2026-10-25', parcela1_cent:45050, parcela2_cent:45050, total_cent:90100, pets:[{nome:'Hóspede Teste'}], tutor:'Hóspede Teste'}}`;
+    const sem = (o) => { const r = Object.assign({}, o); delete r.ordemPet; delete r.valor_plano_cent; delete r.mensalidade_cent; return r; };
+    const fam = () => [{ n: 'Ana', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(GOLD71()) } }, { n: 'Bia', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(GOLD71()) } }];
+    const IRM = { x: { a: 'ana__família teste', b: 'bia__família teste' } };
+    // 1) tudo lido
+    cena71(fam(), { irmaos: IRM });
+    r71(`REC_FONTES={quando:Date.now(), irm:IRMAOS_CACHE, orc:${ORC}}; REC_AVULSO={mes:'2026-10', quando:Date.now(), lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0};`);
+    const a1 = QRCARD('2026-10');
+    await abre71('planoAnularAtualAbrir()');
+    const c1 = cartaz71(); await toca71(SENHA657); r71('corrFechar()');
+    const d1 = QRCARD('2026-10');
+    const e1 = QRPARSE(c1);
+    igual(e1.quadro['2026-10'], [a1.total, d1.total], c1);
+    igual([a1.total, d1.total], [107700 + 100161 + 90100 + 13500, 100161 + 90100 + 13500], 'o Total do quadro: Ana 1ª, Bia 2ª (desconto); depois, só a Bia, que continua com o desconto (sem plano, a Ana continua Auluno e na família)');
+    r71("__xlsR=''; relEntregar=function(n, x){ __xlsR=String(x); return true; }; REC_MES='2026-10'; recBaixarExcel(null); REC_MES='';");
+    const tx = /<tr><td>TOTAL<\/td><td><\/td><td><\/td><td><\/td><td>(R\$[^<]+)<\/td>/.exec(r71('__xlsR'));
+    igual(QRCENT(tx[1]), d1.total, 'o TOTAL do Excel = o depois do cartaz');
+    // 2) as fontes do quadro ainda não lidas (o Dashboard nunca abriu neste aparelho): planos, com os irmãos do ouvinte do app
+    cena71(fam(), { irmaos: IRM });
+    r71(`REC_FONTES={quando:0, orc:null, irm:null}; REC_AVULSO={mes:'2026-10', quando:Date.now(), lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0};`);
+    r71('__zpq657=[false];');
+    await abre71("setPelCategoria('morador')"); await esp71();
+    const t2 = J71('__zp657')[0][1].join(' ');
+    const e2 = QRPARSE(t2);
+    igual([Object.keys(e2.quadro).length, e2.planos['2026-10']], [0, [107700 + 100161, 107700 + 107700]], t2);
+    assert.ok(/\(Bia: R\$ 1\.001,61 → R\$ 1\.077,00/.test(t2), 'o irmão entre parênteses — ' + t2);
+    // 3) sem a carteira: só o FILHOt, o número da conta
+    cena71(fam(), { irmaos: IRM });
+    r71('CARTEIRA_CARREGADA=false;');
+    await abre71('planoAnularAtualAbrir()');
+    const c3 = cartaz71(); r71('corrFechar(); CARTEIRA_CARREGADA=true;');
+    const e3 = QRPARSE(c3);
+    igual([Object.keys(e3.quadro).length, Object.keys(e3.planos).length, e3.filhot.map((x) => [x.nome, x.mes, x.de, x.para])], [0, 0, [['Ana', '2026-10', 107700, 0]]], c3);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate · QA671R-03 (REL-002) — família em cadeia de QUATRO (Ana–Bia, Bia–Duda, Duda–Zeca; a Bia com ordemPet 4 gravado, os outros sem): a Ana vira moradora; a Duda (2 vínculos) passa de 2ª a 1ª em setembro e o Zeca (3 vínculos) de 3º a 2º em agosto; a pergunta mostra os dois meses, cada um igual ao quadro, e outubro (o da Ana) fica igual', async () => {
+  arma71();
+  try {
+    const sem = (o) => { const r = Object.assign({}, o); delete r.ordemPet; delete r.valor_plano_cent; delete r.mensalidade_cent; return r; };
+    cena71([{ n: 'Ana', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(GOLD71()) } },
+      { n: 'Bia', tutor: 'Família Teste', ex: { dias: ['seg'], renov: Object.assign(sem(Object.assign(GOLD71(), { inicio: '2026-07-10', quando: '2026-07-10', fim: '2026-09-30' })), { ordemPet: 4 }) } },
+      { n: 'Duda', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(Object.assign(GOLD71(), { inicio: '2026-09-10', quando: '2026-09-10', fim: '2026-11-30' })) } },
+      { n: 'Zeca', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(Object.assign(GOLD71(), { inicio: '2026-08-10', quando: '2026-08-10', fim: '2026-10-31' })) } }],
+    { irmaos: { x: { a: 'ana__família teste', b: 'bia__família teste' }, y: { a: 'bia__família teste', b: 'duda__família teste' }, z: { a: 'duda__família teste', b: 'zeca__família teste' } } });
+    const antes = QRCARDS();
+    r71('__zpq657=[true];');
+    await abre71("setPelCategoria('morador')"); await esp71();
+    const txt = J71('__zp657')[0][1].join(' ');
+    const depois = QRCARDS();
+    const ef = QRCONFERE(txt, antes, depois, 'cadeia de 4', '');
+    igual(Object.keys(ef.planos).sort(), ['2026-08', '2026-09'], txt);
+    igual([antes[3].planos, depois[3].planos, antes[4].planos, depois[4].planos], [94776, 100161, 100161, 107700], 'agosto (Zeca 3º → 2º) e setembro (Duda 2ª → 1ª)');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate · QA671R-04 (REL-001, AC7.1) — a marca do banco em TRÊS aparelhos com cópias locais diferentes (B com [seg], C com [qua, sex], D com a marca velha): todos veem «nenhum dia» enquanto o banco diz isso; o banco com a marca E com dias (gravado por outro caminho) mostra os dias; o aparelho que abriu sem o banco segue a cópia dele; e o aparelho com a cópia antiga marca um dia: o banco fica com o dia e sem a marca', async () => {
+  arma71();
+  try {
+    cena71([NELSON()]);
+    const k = K71();
+    const banco = (c) => r71(`(function(){ var c=${JSON.stringify(c)}; c.renov=__get657('daycare/cadastro/'+pelKey(pelAtual)).renov; __put657('daycare/cadastro/'+pelKey(pelAtual), c); pelCadCache[pelKey(pelAtual)]=JSON.parse(JSON.stringify(c)); })()`);
+    const copia = (c) => r71(`__ls657['zeluz_pel_'+pelKey(pelAtual)]=${JSON.stringify(JSON.stringify(c))};`);
+    banco({ n: 'Nelson', tutor: 'Bia Teste', freq: '', dias_nenhum: true });
+    const vistos = [];
+    for (const c of [{ dias: ['seg'], freq: '1x' }, { dias: ['qua', 'sex'], freq: '2x' }, { dias: [], freq: '', dias_nenhum: true }, null]) {
+      if (c) copia(Object.assign({ n: 'Nelson', tutor: 'Bia Teste' }, c)); else r71(`delete __ls657['zeluz_pel_'+pelKey(pelAtual)];`);
+      vistos.push([J71("pelDias(pelAtual,'rotina')"), r71(`(diasEditInner(pelAtual).match(/class="dia on/g)||[]).length`)]);
+    }
+    igual(vistos, [[[], 0], [[], 0], [[], 0], [[], 0]], 'B, C, D e o aparelho sem cópia');
+    // o banco com a marca E com dias (outro caminho gravou os dias sem tirar a marca): os dias do banco
+    banco({ n: 'Nelson', tutor: 'Bia Teste', freq: '1x', dias_nenhum: true, dias: ['ter'] });
+    copia({ n: 'Nelson', tutor: 'Bia Teste', dias: ['seg'] });
+    igual(J71("pelDias(pelAtual,'rotina')"), ['ter']);
+    // o aparelho que abriu sem o banco (pelCadCache sem a ficha): a cópia dele é tudo o que ele tem
+    r71(`delete pelCadCache['${k}'];`);
+    copia({ n: 'Nelson', tutor: 'Bia Teste', dias: [], freq: '', dias_nenhum: true });
+    igual(J71("pelDias(pelAtual,'rotina')"), [], 'abriu sem o banco, com a própria marca');
+    // o aparelho com a cópia antiga (marca velha) marca a quarta: o banco fica com a quarta e sem a marca
+    banco({ n: 'Nelson', tutor: 'Bia Teste', freq: '', dias_nenhum: true });
+    copia({ n: 'Nelson', tutor: 'Bia Teste', dias: [], freq: '', dias_nenhum: true });
+    r71("toggleDiaPel('qua')"); await esp71();
+    const f = ficha71();
+    igual([f.dias, 'dias_nenhum' in f, f.freq], [['qua'], false, '1x']);
+    // e outro aparelho com a cópia que ainda tem a marca vê a quarta (o banco manda)
+    copia({ n: 'Nelson', tutor: 'Bia Teste', dias: [], freq: '', dias_nenhum: true });
+    r71(`pelCadCache['${k}']=__get657('daycare/cadastro/${k}');`);
+    igual(J71("pelDias(pelAtual,'rotina')"), ['qua']);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate · QA671R-05 (REL-003, AC2.4) — relógios fora de passo nos dois sentidos, quatro trocas seguidas: A (10 min adiantado) anula, B (certo) reabre, A anula de novo, B reabre de novo; a cada passo a tela, a conta e o quadro dizem a mesma coisa, os carimbos crescem e o do aparelho fica em ts_aparelho quando foi corrigido', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA()]);
+    const A = T671 + 600000, B = T671 + 60000;
+    const passos = [['planoAnularLinhaAbrir', A, 0], ['planoReabrirLinhaAbrir', B + 1000, 107700], ['planoAnularLinhaAbrir', A - 300000, 0], ['planoReabrirLinhaAbrir', B + 2000, 107700]];
+    for (const [fn, agora, julho] of passos) {
+      r71(`Date.now=function(){ return ${agora}; };`);
+      await abre71(`${fn}('hj1')`); await toca71(SENHA657);
+      igual(passo71(), 'pronto', fn + ' @' + agora); r71('corrFechar()');
+      igual([quadro71('2026-07'), r71("renovLinhaAnulada(pelExtra(pelAtual).renov_hist.hj1)"), r71("finLinhaAnulada(pelExtra(pelAtual).renov_hist.hj1)")], [julho, julho === 0, julho === 0], fn + ' @' + agora);
+    }
+    const an = ficha71().renov_hist.hj1.anulacoes, ks = Object.keys(an).sort();
+    const ts = ks.map((x) => an[x].ts);
+    igual(ks.map((x) => an[x].acao), ['anular', 'reabrir', 'anular', 'reabrir']);
+    assert.ok(ts.every((t, i) => i === 0 || t > ts[i - 1]), 'os carimbos crescem: ' + JSON.stringify(ts));
+    igual(ks.map((x) => 'ts_aparelho' in an[x]), [false, true, true, true], JSON.stringify(an));
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate · QA671R-06 (REQ-002) — «Ver as outras N» com 9 renovações pagas e duas tentativas iguais lá dentro: o grupo das antigas mostra cada linha com «Anular» (as juntadas num botão só), o resumo com 44 px; anular uma linha de dentro tira o mês dela do quadro e ela aparece riscada com «Reabrir» lá dentro', async () => {
+  arma71();
+  try {
+    const h = {};
+    for (let i = 0; i < 9; i++) { const mes = String(1 + i).padStart(2, '0');
+      h['hm' + i] = H71({ plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-' + mes + '-05', fim: '2026-' + mes + '-28', mesRenov: 'x', quando: '2026-' + mes + '-05', valor_plano_cent: 35900 }, 100 + i); }
+    h.hm0b = Object.assign({}, h.hm0, { substituidoEm: 99 });   // a tentativa igual de janeiro (a mais antiga)
+    cena71([PIPOCA({ renov_hist: h })]);
+    const html = r71('renovHistHTML(pelExtra(pelAtual))');
+    const mais = /<details class="renov-hist-mais"[\s\S]*?<\/details>/.exec(html);
+    assert.ok(mais && /min-height:44px[^"]*"[^>]*>Ver as outras 3</.test(mais[0]), txt71(html).slice(-400));
+    const ids = (mais[0].match(/planoAnularLinhaAbrir\((?:&#39;|')([^&']+)(?:&#39;|')\)/g) || []).map((x) => /\((?:&#39;|')([^&']+)/.exec(x)[1]);
+    igual(ids.map((x) => x.split(',').sort().join(',')).sort(), ['hm0,hm0b', 'hm1', 'hm2']);
+    igual(quadro71('2026-01'), 35900);
+    await abre71("planoAnularLinhaAbrir('hm0,hm0b')"); await toca71(SENHA657); r71('corrFechar()');
+    igual(quadro71('2026-01'), 0);
+    const mais2 = /<details class="renov-hist-mais"[\s\S]*?<\/details>/.exec(r71('renovHistHTML(pelExtra(pelAtual))'))[0];
+    assert.ok(/class="corr-riscado"/.test(mais2) && /planoReabrirLinhaAbrir/.test(mais2), 'riscado com «Reabrir» dentro do grupo');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate · QA671R-07 (REL-006, AC10.1) — o desfazer do meio do mês: todas gravam → UMA entrada da 6.57; uma recusada → uma entrada para a que gravou', async () => {
+  arma71();
+  try {
+    const mm = MM71();
+    const dois = () => [{ n: 'Maria Eduarda', tutor: 'Clara Teste', ex: { dias: ['seg'], sexo: 'Fêmea', renov: Object.assign(GOLD71(), { inicio: '2026-10-07', fim: '2027-01-31', fim_anterior: '2026-12-31', meio_mes: mm }) } },
+      { n: 'Beethoven', tutor: 'Clara Teste', ex: { dias: ['seg'], renov: Object.assign(GOLD71(), { inicio: '2026-10-07', fim: '2027-01-31', fim_anterior: '2026-12-31', meio_mes: mm }) } }];
+    const IRM = { irmaos: { x: { a: 'maria eduarda__clara teste', b: 'beethoven__clara teste' } } };
+    const vai = async () => { await abre71('mmDesfazer()'); r71(`__t71r=corrToque('confirmar', {motivo:'o tutor desistiu da opção dois', senha:'s-bia'})`); await esp71(); };
+    cena71(dois(), IRM); await vai();
+    igual([aud71('plano-meio-mes-desfeito').length, aud71('registro-reaberto').length], [2, 1], 'todas gravam: uma entrada só');
+    cena71(dois(), IRM); r71(`__recusa657='^daycare/cadastro/beethoven';`); await vai();
+    igual([aud71('plano-meio-mes-desfeito').length, aud71('registro-reaberto').length], [1, 1], 'uma recusada');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate · QA671R-09 (REL-004, REL-005, DOC-001) — o Desfazer normal mantém «O mês do plano que volta não muda»; o da correção não; o plano relançado com a mesma data de uma «virou» anulada calcula o período dele; o rastro dos dias diz «Nenhum dia marcado»', async () => {
+  arma71();
+  try {
+    cena71([PIPOCA()]);
+    await abre71('desfazerRenovacao()');
+    assert.ok(/O mês do plano que volta não muda/.test(cartaz71()), cartaz71()); r71('corrFechar()');
+    const corr = Object.assign(GOLD71(), { inicio: '2026-09-28', quando: '2026-09-28', fim: '2026-12-31' });
+    cena71([PIPOCA({ renov: Object.assign(GOLD71(), { inicio: '2026-10-01', quando: '2026-10-01' }), renov_hist: { hc: H71(corr, 300, 'correção') } })]);
+    await abre71('desfazerRenovacao()');
+    assert.ok(!/O mês do plano que volta não muda/.test(cartaz71()) && /setembro de 2026: R\$ 0,00 → R\$ 1\.077,00/.test(cartaz71()), cartaz71()); r71('corrFechar()');
+    const V = Object.assign(H71(Object.assign(GOLD71(), { fim: '2027-01-31', vig_inicio: '2026-11-01' }), 400, 'virou morador'), { anulacoes: { a1: { acao: 'anular', ts: 5, por: 'Gestora Teste', motivo: 'o pagamento não existiu, foi engano' } } });
+    cena71([TAMARA({ renov: { plano: '', inicio: '', fim: '', mesRenov: '', aulas: '' }, renov_hist: { v1: V } })]);
+    const r = J71("renovBaseDoRelancamento(pelExtra(pelAtual), {plano:'Gold', aulas:1, inicio:'2026-10-05', fim:'2026-12-31'})");
+    igual([r.fim, r.vig_inicio || null], ['2026-12-31', null]);
+    cena71([NELSON()]);
+    r71("toggleDiaPel('seg')"); await esp71();
+    igual(r71("PEL_RASTRO_ROTULO.dias_nenhum"), 'Nenhum dia marcado');
+    assert.ok(aud71('ficha-campo').some((a) => /Nelson — Nenhum dia marcado: \(vazio\) → «sim»/.test(a[1])), JSON.stringify(aud71('ficha-campo')));
+  } finally { solta71(); }
+});
+
+// ---- os achados do re-gate (QA671R-A1 a A3), agora corrigidos
+provaAsync('6.71 QA re-gate · QA671R-A1 (REL-006 resíduo, AC10.1) — o desfazer do meio do mês com uma ficha recusada e a outra SEM RESPOSTA que grava depois do prazo: a que gravou ganha a entrada da 6.57 (registro-reaberto), como a que grava dentro do prazo', async () => {
+  arma71();
+  try {
+    const mm = MM71();
+    cena71([{ n: 'Maria Eduarda', tutor: 'Clara Teste', ex: { dias: ['seg'], sexo: 'Fêmea', renov: Object.assign(GOLD71(), { inicio: '2026-10-07', fim: '2027-01-31', fim_anterior: '2026-12-31', meio_mes: mm }) } },
+      { n: 'Beethoven', tutor: 'Clara Teste', ex: { dias: ['seg'], renov: Object.assign(GOLD71(), { inicio: '2026-10-07', fim: '2027-01-31', fim_anterior: '2026-12-31', meio_mes: mm }) } }],
+    { irmaos: { x: { a: 'maria eduarda__clara teste', b: 'beethoven__clara teste' } } });
+    r71(`__recusa657='^daycare/cadastro/beethoven'; __pendura657='^daycare/cadastro/maria';`);
+    await abre71('mmDesfazer()'); r71(`__t71r=corrToque('confirmar', {motivo:'o tutor desistiu da opção dois', senha:'s-bia'})`); await esp71();
+    r71('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await esp71();
+    r71('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await esp71();
+    const r = [aud71('plano-meio-mes-desfeito').length, aud71('registro-reaberto').length];
+    console.log('QA|QA671R-A1|' + JSON.stringify({ desfeitoNaFicha: r[0], entrada657: r[1], cartaz: passo71(), titulos: titulos71() }));
+    igual(r, [1, 1], 'a que gravou depois do prazo fica sem a entrada da 6.57 (e ninguém diz que uma ficha foi recusada)');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate · QA671R-A2 (AC6.4, escopo 9: cascata visível em G04) — «Voltar o plano que saiu» com um irmão: a Ana (moradora) volta a Auluno com o plano dela e a Bia volta a ter o desconto de 2ª; a pergunta mostra esse efeito no Recebimentos, igual ao quadro', async () => {
+  arma71();
+  try {
+    const sem = (o) => { const r = Object.assign({}, o); delete r.ordemPet; delete r.valor_plano_cent; delete r.mensalidade_cent; return r; };
+    cena71([{ n: 'Ana', tutor: 'Família Teste', ex: { dias: ['seg'], categoria: 'morador', renov: { plano: 'morador', inicio: '', fim: '', mesRenov: '', aulas: '' }, renov_hist: { v1: H71(sem(GOLD71()), 400, 'virou morador') } } },
+      { n: 'Bia', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(GOLD71()) } }],
+    { irmaos: { x: { a: 'ana__família teste', b: 'bia__família teste' } } });
+    const antes = QRCARDS();
+    r71('__zpq657=[true];');
+    await abre71("setPelCategoria('auluno')"); await esp71();
+    const depois = QRCARDS();
+    const p = J71('__zp657').filter((x) => x[0] === 'VOLTAR O PLANO QUE SAIU?')[0];
+    const txt = p ? p[1].join(' ') : '';
+    console.log('QA|QA671R-08|' + JSON.stringify({ outubro: [antes[5].planos, depois[5].planos], pergunta: txt }));
+    assert.ok(antes[5].planos !== depois[5].planos, 'o quadro muda (a Bia volta a ser a 2ª)');
+    QRCONFERE(txt, antes, depois, 'voltar o plano que saiu', '');
+  } finally { solta71(); }
+});
+
+
+provaAsync('6.71 QA re-gate · QA671R-A3 (REQ-001, risco 10) — as fontes do quadro lidas HÁ 3 HORAS (o Dashboard aberto de manhã, o app aberto o dia todo): o cartaz diz «Total de outubro de 2026 no Recebimentos», e esse número tem de ser o que o quadro mostra quando a Gestão o abre logo depois (o quadro relê o que passou de 60 s)', async () => {
+  arma71();
+  try {
+    cena71([BISCOITO()]);
+    const tres = T671 - 3 * 3600 * 1000;
+    // de manhã: nenhuma reserva fechada em outubro e 1 diária avulsa (R$ 135,00)
+    r71(`REC_FONTES={quando:${tres}, irm:{}, orc:{}}; REC_AVULSO={mes:'2026-10', quando:${tres}, lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0};`);
+    // de lá para cá, no banco: uma reserva fechada em outubro (R$ 901,00) e mais uma diária avulsa (R$ 135,00)
+    r71(`__put657('auaulandia/orcamentos/o1', {status:'fechado', status_em:${new Date(2026, 9, 10, 9).getTime()}, criado_em:${new Date(2026, 9, 10, 8).getTime()}, entrada:'2026-10-20', saida:'2026-10-25', parcela1_cent:45050, parcela2_cent:45050, total_cent:90100, pets:[{nome:'Hóspede Teste'}], tutor:'Hóspede Teste'});
+      __put657('daycare/dashboard/2026-10-09/avulso/a1', {det:{valor_cent:13500}}); __put657('daycare/dashboard/2026-10-10/avulso/a2', {det:{valor_cent:13500}});`);
+    await abre71('planoAnularAtualAbrir()');
+    const c = cartaz71();
+    await toca71(SENHA657); r71('corrFechar()');
+    // a Gestão abre o quadro: ele relê as fontes e as diárias avulsas (passaram mais de 60 s)
+    r71('__fl71=recFontesLer(); __al71=recAvulsoLer("2026-10");'); await esp71(2000);
+    const q = QRCARD('2026-10');
+    const ef = QRPARSE(c).quadro['2026-10'];
+    console.log('QA|QA671R-A3|' + JSON.stringify({ cartaz: ef && ef.map((x) => r71('finBRL(' + x + ')')), quadroAoAbrir: r71('finBRL(' + q.total + ')') }));
+    assert.ok(!ef || ef[1] === q.total, 'o cartaz disse «Total de outubro de 2026 no Recebimentos» ' + JSON.stringify(ef) + ' e o quadro, aberto logo depois, mostra ' + q.total);
+  } finally { solta71(); }
+});
+}
+
+{
+// ================================================================== 6.71 QA re-gate 3 — as provas do re-gate 3 do QA (Quinn), na Fase 0
+// 4ª passada da 6.71 (TEST-002, «importação das provas do QA e A1»): as provas de ataque do re-gate 3 (QA671S-01 a 08,
+// `scratchpad/qa671r3/ataque671r3.js`) e a do achado QA671S-A1 (`achados671r3.js`, que já afirmava o comportamento certo), com o
+// prefixo «6.71 QA re-gate 3 ·». O corpo é o do QA, sem nenhuma adaptação.
+const QSMESES = ['2026-07', '2026-08', '2026-09', '2026-10', '2026-11'];
+const QSMES = { janeiro: '01', fevereiro: '02', 'março': '03', abril: '04', maio: '05', junho: '06', julho: '07', agosto: '08', setembro: '09', outubro: '10', novembro: '11', dezembro: '12' };
+const QSCENT = (s) => Number(String(s).replace(/R\$\s?/, '').replace(/\./g, '').replace(',', ''));
+const QSCARD = (m) => {
+  const h = r71(`(function(){ var b=REC_MES; REC_MES='${m}'; var h=recCardHTML(); REC_MES=b; return h; })()`);
+  const tot = /rec-val rec-val-total">(R\$ [\d.]+,\d{2})</.exec(h);
+  let planos = 0;
+  const re = /<div class="pm-li"><div class="pm-li-txt"><b>(Mensalidade|Trimestral|Semestral|Plano sem compromisso definido)<\/b>[\s\S]*?<span class="pm-li-fim rec-val">(R\$ [\d.]+,\d{2})<\/span>/g;
+  let x; while ((x = re.exec(h))) planos += QSCENT(x[2]);
+  return { total: tot ? QSCENT(tot[1]) : null, planos };
+};
+const QSCARDS = () => QSMESES.map(QSCARD);
+const QSPARSE = (txt) => {
+  const N = '(janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro) de (\\d{4})', V = 'R\\$ ([\\d.]+,\\d{2}) → R\\$ ([\\d.]+,\\d{2})';
+  const out = { quadro: {}, planos: {} }; let m;
+  const rq = new RegExp('Total de ' + N + ' no Recebimentos: ' + V, 'g'); while ((m = rq.exec(txt))) out.quadro[m[2] + '-' + QSMES[m[1]]] = [QSCENT(m[3]), QSCENT(m[4])];
+  const rp = new RegExp('Total dos planos do Day Care em ' + N + ': ' + V, 'g'); while ((m = rp.exec(txt))) out.planos[m[2] + '-' + QSMES[m[1]]] = [QSCENT(m[3]), QSCENT(m[4])];
+  return out;
+};
+// a frase × o quadro desenhado antes e depois (cada nome com o seu total; todo mês que mudou está na frase)
+const QSCONFERE = (txt, antes, depois, rot) => {
+  const ef = QSPARSE(txt);
+  QSMESES.forEach((m, i) => {
+    const q = ef.quadro[m], p = ef.planos[m];
+    if (q) igual(q, [antes[i].total, depois[i].total], rot + ': ' + m + ' (no Recebimentos) — ' + txt);
+    if (p) igual(p, [antes[i].planos, depois[i].planos], rot + ': ' + m + ' (planos) — ' + txt);
+    if (antes[i].total !== depois[i].total || antes[i].planos !== depois[i].planos) assert.ok(q || p, rot + ': ' + m + ' mudou e a frase não diz — ' + txt);
+  });
+  return ef;
+};
+// o relógio do sandbox num instante qualquer (Date, Date.now e o «hoje» do app), devolvido pelo solta71
+const QSRELOGIO = (ms) => { const d = new Date(ms), iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  r71(`Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RD657(${ms}); return new (Function.prototype.bind.apply(__RD657,[null].concat(a)))(); };
+    Date.now=function(){ return ${ms}; }; Date.prototype=__RD657.prototype; Date.UTC=__RD657.UTC; Date.parse=__RD657.parse; zHojeISO=function(){ return '${iso}'; }; hojeISO=zHojeISO;`); };
+const QSLE = async () => { r71('__qsF=recFontesLer(); __qsA=recAvulsoLer(recMesAtual());'); await esp71(2000); };   // o quadro abrindo: relê o que passou da janela
+const QSORC = (o) => `{status:'fechado', status_em:${o.em}, criado_em:${o.em - 3600000}, entrada:'${o.entrada}', saida:'${o.saida}', parcela1_cent:${o.p1}, parcela2_cent:${o.p2}, total_cent:${o.p1 + o.p2}, pets:[{nome:'${o.nome}'}], tutor:'${o.nome}'}`;
+
+provaAsync('6.71 QA re-gate 3 · QA671S-01 (REQ-003) — «no Recebimentos» só com as DUAS fontes dentro da janela, em toda pergunta (anular, desfazer, categoria, inativar e voltar o plano): só uma fresca → «Total dos planos do Day Care», o número das linhas dos planos do quadro; as duas frescas → o «Total de outubro» do quadro desenhado', async () => {
+  arma71();
+  try {
+    const casos = [];
+    const acoes = [
+      ['anular', () => [BISCOITO()], async () => { await abre71('planoAnularAtualAbrir()'); const c = cartaz71(); await toca71(SENHA657); r71('corrFechar()'); return c; }],
+      ['desfazer', () => [PIPOCA()], async () => { await abre71('desfazerRenovacao()'); const c = cartaz71(); await toca71(SENHA657); r71('corrFechar()'); return c; }],
+      ['categoria', () => { const sem = (o) => { const r = Object.assign({}, o); delete r.ordemPet; delete r.valor_plano_cent; delete r.mensalidade_cent; return r; };
+        return [{ n: 'Ana', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(GOLD71()) } }, { n: 'Bia', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(GOLD71()) } }]; }, async () => { r71('__zpq657=[true]; __zp657=[];'); await abre71("setPelCategoria('morador')"); await esp71(); return J71('__zp657')[0][1].join(' '); }],
+      ['inativar', () => [BISCOITO()], async () => { r71('__zpq657=[true]; __ztq657=["viagem da família em outubro"]; __zp657=[];'); await abre71("saidaInativar('botao')"); await esp71(); return J71('__zp657')[0][1].join(' '); }],
+      ['voltar', () => {
+        const sem = (o) => { const r = Object.assign({}, o); delete r.ordemPet; delete r.valor_plano_cent; delete r.mensalidade_cent; return r; };
+        return [{ n: 'Ana', tutor: 'Família Teste', ex: { dias: ['seg'], categoria: 'morador', renov: { plano: 'morador', inicio: '', fim: '', mesRenov: '', aulas: '' }, renov_hist: { v1: H71(sem(GOLD71()), 400, 'virou morador') } } },
+          { n: 'Bia', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(GOLD71()) } }]; },
+      async () => { r71('__zpq657=[true]; __zp657=[];'); await abre71("setPelCategoria('auluno')"); await esp71(); const p = J71('__zp657').filter((x) => x[0] === 'VOLTAR O PLANO QUE SAIU?')[0]; return p ? p[1].join(' ') : ''; }]];
+    for (const [nome, fichas, faz] of acoes) {
+      for (const [mF, mA] of [[30000, 70000], [70000, 30000], [30000, 30000]]) {
+        cena71(fichas(), { irmaos: { x: { a: 'ana__família teste', b: 'bia__família teste' } } });
+        r71(`REC_FONTES={quando:${T671}-${mF}, irm:IRMAOS_CACHE, orc:{o1:${QSORC({ em: new Date(2026, 9, 2, 10).getTime(), entrada: '2026-10-20', saida: '2026-10-25', p1: 45050, p2: 45050, nome: 'Hóspede Teste' })}}};
+          REC_AVULSO={mes:'2026-10', quando:${T671}-${mA}, lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0};`);
+        const antes = QSCARDS();
+        const txt = await faz();
+        const depois = QSCARDS();
+        const ef = QSCONFERE(txt, antes, depois, nome + ' ' + mF + '/' + mA);
+        const esperado = (mF < 60000 && mA < 60000) ? 'quadro' : 'planos';
+        assert.ok(Object.keys(ef[esperado]).indexOf('2026-10') >= 0 && Object.keys(ef[esperado === 'quadro' ? 'planos' : 'quadro']).indexOf('2026-10') < 0, nome + ' ' + mF + '/' + mA + ': o nome de outubro devia ser ' + esperado + ' — ' + txt);
+        casos.push(nome + ':' + esperado);
+      }
+    }
+    igual(casos.length, 15);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate 3 · QA671S-02 (REQ-003, q88 nos dois sentidos) — a fonte do quadro velha: o efeito usa os irmãos do ouvinte do app e o número é o que o quadro mostra DEPOIS DE RELER (recFontesLer e recAvulsoLer de verdade, do banco), antes e depois; a fonte fresca: os irmãos do quadro e o número do quadro sem reler', async () => {
+  arma71();
+  try {
+    const sem = (o) => { const r = Object.assign({}, o); delete r.ordemPet; delete r.valor_plano_cent; delete r.mensalidade_cent; return r; };
+    const fam = () => [{ n: 'Ana', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(GOLD71()) } }, { n: 'Bia', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(GOLD71()) } }];
+    const AB = { x: { a: 'ana__família teste', b: 'bia__família teste' } };
+    const VELHA = `REC_FONTES={quando:${T671 - 2 * 3600000}, irm:{}, orc:{}}; REC_AVULSO={mes:'2026-10', quando:${T671 - 2 * 3600000}, lendo:false, ok:true, total_cent:0, n:0, semValor:0, futuros:0};`;
+    // velha: o quadro leu de manhã SEM o vínculo; o ouvinte do app e o banco já têm o vínculo
+    cena71(fam(), { irmaos: AB });
+    r71(`__put657('daycare/irmaos', ${JSON.stringify(AB)}); REC_FONTES={quando:0, orc:null, irm:null};`);
+    await QSLE(); const a1 = QSCARDS();           // o quadro relido agora, antes da troca
+    r71(VELHA);
+    r71('__zpq657=[true]; __zp657=[];');
+    await abre71("setPelCategoria('morador')"); await esp71();
+    const t1 = J71('__zp657')[0][1].join(' ');
+    r71(VELHA); await QSLE(); const d1 = QSCARDS();   // o quadro relido depois da troca
+    const e1 = QSCONFERE(t1, a1, d1, 'velha');
+    console.log('QA|QA671S-02|velha|' + JSON.stringify({ outubro: [a1[3], d1[3]], frase: t1 }));
+    igual(Object.keys(e1.quadro).length, 0, 'velha: nunca «no Recebimentos» — ' + t1);
+    assert.ok(a1[3].planos !== d1[3].planos && e1.planos['2026-10'], 'velha: com o vínculo, a troca muda outubro e a frase diz — ' + t1);
+    // fresca: o quadro leu há 10 s SEM o vínculo (o ouvinte já tem): o efeito usa os irmãos do quadro e bate com ele sem reler
+    cena71(fam(), { irmaos: AB });
+    r71(`REC_FONTES={quando:${T671 - 10000}, irm:{}, orc:{}}; REC_AVULSO={mes:'2026-10', quando:${T671 - 10000}, lendo:false, ok:true, total_cent:0, n:0, semValor:0, futuros:0};`);
+    const a2 = QSCARDS();
+    r71('__zpq657=[true]; __zp657=[];');
+    await abre71("setPelCategoria('morador')"); await esp71();
+    const t2 = J71('__zp657')[0][1].join(' ');
+    const d2 = QSCARDS();
+    const e2 = QSCONFERE(t2, a2, d2, 'fresca');
+    console.log('QA|QA671S-02|fresca|' + JSON.stringify({ outubro: [a2[3], d2[3]], frase: t2 }));
+    igual(Object.keys(e2.planos).length, 0, 'fresca: nunca «planos» com as duas fontes frescas — ' + t2);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate 3 · QA671S-03 (REQ-003, virada de mês) — 31/10 às 23:59:30, as fontes lidas às 23:59:00: o anular de um pagamento de outubro diz «Total de outubro de 2026 no Recebimentos», igual ao quadro de outubro; às 00:00:20 de 01/11 (80 s depois da leitura), a mesma pergunta já diz «Total dos planos do Day Care»; com as fontes relidas às 00:00:00 e as diárias de outubro às 23:59:50, «no Recebimentos» de novo e o quadro de outubro (voltando o mês na tela) não relê e mostra o mesmo número', async () => {
+  arma71();
+  try {
+    const t0 = new Date(2026, 9, 31, 23, 59, 30).getTime();
+    cena71([BISCOITO(), { n: 'Nina', tutor: 'Noite Teste', ex: { dias: ['seg'], renov: GOLD71() } }, { n: 'Zuca', tutor: 'Dia Teste', ex: { dias: ['seg'], renov: GOLD71() } }]);
+    QSRELOGIO(t0);
+    r71(`REC_FONTES={quando:${t0 - 30000}, irm:{}, orc:{}}; REC_AVULSO={mes:'2026-10', quando:${t0 - 30000}, lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0};`);
+    const a = QSCARD('2026-10');
+    await abre71('planoAnularAtualAbrir()');
+    const c = cartaz71(); await toca71(SENHA657); r71('corrFechar()');
+    const d = QSCARD('2026-10');
+    igual(QSPARSE(c).quadro['2026-10'], [a.total, d.total], c);
+    const t1 = new Date(2026, 10, 1, 0, 0, 20).getTime();
+    QSRELOGIO(t1);
+    r71('pelAtual=PELUDINHOS[1]; pelAtualIdx=1;');
+    await abre71('planoAnularAtualAbrir()');
+    const c2 = cartaz71(); r71('corrFechar()');
+    const e2 = QSPARSE(c2);
+    igual([Object.keys(e2.quadro).length, Object.keys(e2.planos)], [0, ['2026-10']], c2);
+    igual(r71('recMesAtual()'), '2026-11', 'o quadro abre em novembro');
+    r71(`REC_FONTES=Object.assign({}, REC_FONTES, {quando:${t1 - 20000}}); REC_AVULSO=Object.assign({}, REC_AVULSO, {quando:${t1 - 30000}});`);
+    r71('pelAtual=PELUDINHOS[2]; pelAtualIdx=2;');
+    const a3 = QSCARD('2026-10');
+    await abre71('planoAnularAtualAbrir()');
+    const c3 = cartaz71(); await toca71(SENHA657); r71('corrFechar()');
+    r71('REC_MES="2026-10"; __qsRel=null; recAvulsoLer("2026-10").then(function(m){ __qsRel=m; });'); await esp71();
+    const d3 = QSCARD('2026-10');
+    igual([QSPARSE(c3).quadro['2026-10'], r71('__qsRel')], [[a3.total, d3.total], false], c3);
+    r71('REC_MES="";');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate 3 · QA671S-04 (REQ-003, a régua sem constante própria) — se o quadro mudar a janela (30 s no texto de recAvulsoLer), a pergunta segue a menor; se o texto deixar de ter a régua legível, a janela é 0 e o nome é sempre «Total dos planos do Day Care»', async () => {
+  arma71();
+  try {
+    r71('__qsBkF=recFontesLer; __qsBkA=recAvulsoLer;');
+    try {
+      r71(`recAvulsoLer=function(mes){ if(REC_AVULSO.mes===mes && REC_AVULSO.quando && (Date.now()-REC_AVULSO.quando)<30000) return Promise.resolve(false); return __qsBkA(mes); };`);
+      igual(r71('planoJanelaQuadro()'), 30000);
+      cena71([BISCOITO()]);
+      r71(`REC_FONTES={quando:${T671 - 45000}, irm:{}, orc:{}}; REC_AVULSO={mes:'2026-10', quando:${T671 - 45000}, lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0};`);
+      await abre71('planoAnularAtualAbrir()');
+      assert.ok(/Total dos planos do Day Care em outubro de 2026/.test(cartaz71()), '45 s com a janela de 30 s: «planos» — ' + cartaz71()); r71('corrFechar()');
+      r71(`recFontesLer=function(forcar){ var J=REC_JANELA_QS; if(!forcar && REC_FONTES.quando && (Date.now()-REC_FONTES.quando)<J) return Promise.resolve(true); return __qsBkF(forcar); }; REC_JANELA_QS=60000;`);
+      igual(r71('planoJanelaQuadro()'), 0, 'sem a régua legível, janela 0');
+      cena71([BISCOITO()]);
+      r71(`REC_FONTES={quando:${T671}, irm:{}, orc:{}}; REC_AVULSO={mes:'2026-10', quando:${T671}, lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0};`);
+      await abre71('planoAnularAtualAbrir()');
+      assert.ok(/Total dos planos do Day Care em outubro de 2026/.test(cartaz71()), 'janela 0: sempre «planos» — ' + cartaz71()); r71('corrFechar()');
+    } finally { r71('recFontesLer=__qsBkF; recAvulsoLer=__qsBkA;'); }
+    igual(r71('planoJanelaQuadro()'), 60000);
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate 3 · QA671S-05 (REL-007) — «Voltar o plano que saiu» na família em cadeia (Ana–Bia, Bia–Cacau): com as fontes frescas, a pergunta diz o «Total de outubro de 2026 no Recebimentos», igual ao quadro desenhado depois da volta; com as fontes de 2 horas (o quadro sem o vínculo Bia–Cacau), «Total dos planos do Day Care», igual ao quadro RELIDO do banco', async () => {
+  arma71();
+  try {
+    const sem = (o) => { const r = Object.assign({}, o); delete r.ordemPet; delete r.valor_plano_cent; delete r.mensalidade_cent; return r; };
+    const fichas = () => [{ n: 'Ana', tutor: 'Família Teste', ex: { dias: ['seg'], categoria: 'morador', renov: { plano: 'morador', inicio: '', fim: '', mesRenov: '', aulas: '' }, renov_hist: { v1: H71(sem(GOLD71()), 400, 'virou morador') } } },
+      { n: 'Bia', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(GOLD71()) } },
+      { n: 'Cacau', tutor: 'Família Teste', ex: { dias: ['seg'], renov: sem(Object.assign(GOLD71(), { inicio: '2026-10-08', quando: '2026-10-08' })) } }];
+    const IRM = { x: { a: 'ana__família teste', b: 'bia__família teste' }, y: { a: 'bia__família teste', b: 'cacau__família teste' } };
+    cena71(fichas(), { irmaos: IRM });
+    r71(`REC_FONTES={quando:${T671}, irm:IRMAOS_CACHE, orc:{}}; REC_AVULSO={mes:'2026-10', quando:${T671}, lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0};`);
+    const antes = QSCARDS();
+    r71('__zpq657=[true];');
+    await abre71("setPelCategoria('auluno')"); await esp71();
+    const p = J71('__zp657').filter((x) => x[0] === 'VOLTAR O PLANO QUE SAIU?')[0];
+    const depois = QSCARDS();
+    const ef = QSCONFERE(p[1].join(' '), antes, depois, 'voltar em cadeia (fresca)');
+    console.log('QA|QA671S-05|fresca|' + JSON.stringify({ outubro: [antes[3], depois[3]], frase: p[1].join(' ') }));
+    assert.ok(ef.quadro['2026-10'] && antes[3].total !== depois[3].total, p[1].join(' '));
+    igual(ficha71(0).categoria, 'auluno');
+    // fontes velhas: o quadro leu sem o vínculo Bia–Cacau; o banco e o ouvinte têm a cadeia
+    cena71(fichas(), { irmaos: IRM });
+    r71(`__put657('daycare/irmaos', ${JSON.stringify(IRM)}); REC_FONTES={quando:0, orc:null, irm:null};`);
+    await QSLE(); const a2 = QSCARDS();
+    const VELHA = `REC_FONTES={quando:${T671 - 2 * 3600000}, irm:{x:IRMAOS_CACHE.x}, orc:{}}; REC_AVULSO=Object.assign({}, REC_AVULSO, {quando:${T671 - 2 * 3600000}});`;
+    r71(VELHA); r71('__zpq657=[true]; __zp657=[];');
+    await abre71("setPelCategoria('auluno')"); await esp71();
+    const p2 = J71('__zp657').filter((x) => x[0] === 'VOLTAR O PLANO QUE SAIU?')[0];
+    r71(VELHA); await QSLE(); const d2 = QSCARDS();
+    const ef2 = QSCONFERE(p2[1].join(' '), a2, d2, 'voltar em cadeia (velha)');
+    console.log('QA|QA671S-05|velha|' + JSON.stringify({ outubro: [a2[3], d2[3]], frase: p2[1].join(' ') }));
+    igual(Object.keys(ef2.quadro).length, 0, p2[1].join(' '));
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate 3 · QA671S-06 (REL-006b) — o desfazer do meio do mês sem resposta: as duas gravam depois → nenhum «SÓ EM PARTE», UMA entrada da 6.57; as duas recusadas depois → «O REGISTRO NÃO FOI DESFEITO», nenhuma entrada e os dois registros na ficha; uma recusada → a tela diz qual, com uma entrada para a que gravou', async () => {
+  arma71();
+  try {
+    const mm = MM71();
+    const dois = () => [{ n: 'Maria Eduarda', tutor: 'Clara Teste', ex: { dias: ['seg'], sexo: 'Fêmea', renov: Object.assign(GOLD71(), { inicio: '2026-10-07', fim: '2027-01-31', fim_anterior: '2026-12-31', meio_mes: mm }) } },
+      { n: 'Beethoven', tutor: 'Clara Teste', ex: { dias: ['seg'], renov: Object.assign(GOLD71(), { inicio: '2026-10-07', fim: '2027-01-31', fim_anterior: '2026-12-31', meio_mes: mm }) } }];
+    const IRM = { irmaos: { x: { a: 'maria eduarda__clara teste', b: 'beethoven__clara teste' } } };
+    const vai = async (fim) => {
+      r71(`__pendura657='^daycare/cadastro/';`);
+      await abre71('mmDesfazer()'); r71(`__t71r=corrToque('confirmar', {motivo:'o tutor desistiu da opção dois', senha:'s-bia'})`); await esp71();
+      igual(r71('__tm657.filter(function(t){ return t.ms===20000; }).length') >= 1, true, 'o prazo de 20 s armado');
+      r71('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await esp71();
+      assert.ok(/AINDA NÃO CONFIRMOU/.test(cartaz71()) && J71('__pend657.length') >= 2, 'sem resposta de verdade: ' + cartaz71());
+      r71(`__pend657.forEach(function(x){ var m=/beethoven/.test(x.p)?'${fim[1]}':'${fim[0]}'; x[m](); }); __pend657=[];`); await esp71();
+    };
+    cena71(dois(), IRM); await vai(['ok', 'ok']);
+    igual([aud71('plano-meio-mes-desfeito').length, aud71('registro-reaberto').length, titulos71().filter((t) => /SÓ EM PARTE|NÃO FOI DESFEITO/.test(t))], [2, 1, []], 'as duas gravam depois do prazo');
+    cena71(dois(), IRM); await vai(['nao', 'nao']);
+    igual([aud71('plano-meio-mes-desfeito').length, aud71('registro-reaberto').length, titulos71().indexOf('O REGISTRO NÃO FOI DESFEITO') >= 0, 'meio_mes' in ficha71(0).renov, 'meio_mes' in ficha71(1).renov], [0, 0, true, true, true]);
+    cena71(dois(), IRM); await vai(['ok', 'nao']);
+    const z = za71('O REGISTRO FOI DESFEITO SÓ EM PARTE');
+    igual([aud71('registro-reaberto').length, z[0], /^Beethoven: NÃO FOI DESFEITO \(/.test(z[1])], [1, 'Maria Eduarda: o registro foi desfeito.', true], JSON.stringify(z));
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate 3 · QA671S-07 (REQ-003, sem internet e o quadro de outro aparelho) — as fontes frescas e o banco sem responder: a pergunta tem o nome do quadro, e quando o banco confirma (ainda dentro da janela) o quadro deste aparelho dá o número do cartaz; o quadro de OUTRO aparelho, que lê tudo de novo, dá o mesmo número enquanto ninguém mais grava', async () => {
+  arma71();
+  try {
+    cena71([BISCOITO()]);
+    r71(`__put657('auaulandia/orcamentos', {}); __put657('daycare/irmaos', {});
+      REC_FONTES={quando:${T671}, irm:{}, orc:{}}; REC_AVULSO={mes:'2026-10', quando:${T671}, lendo:false, ok:true, total_cent:0, n:0, semValor:0, futuros:0}; __pendura657='^daycare/cadastro/';`);
+    await abre71('planoAnularAtualAbrir()');
+    const c = cartaz71();
+    r71(`__t71r=corrToque('confirmar', {motivo:${JSON.stringify(MOT71)}, senha:${JSON.stringify(SENHA657)}})`); await esp71();
+    r71('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await esp71(); r71('corrFechar()');
+    const e = QSPARSE(c).quadro['2026-10'];
+    igual(e && e[1], QSCARD('2026-10').total, 'este aparelho — ' + c);
+    // o outro aparelho: relê as fontes e as diárias avulsas do banco (forçado) e desenha o quadro com o cadastro do banco
+    r71(`__qsCad=pelCadCache; pelCadCache={}; Object.keys(__qsCad).forEach(function(k){ pelCadCache[k]=__get657('daycare/cadastro/'+k); }); REC_FONTES={quando:0, orc:null, irm:null}; REC_AVULSO={mes:'', quando:0, lendo:false, ok:false, total_cent:0, n:0, semValor:0, futuros:0};`);
+    await QSLE();
+    igual(QSCARD('2026-10').total, e[1], 'o outro aparelho');
+  } finally { solta71(); }
+});
+
+provaAsync('6.71 QA re-gate 3 · QA671S-08 (REQ-003, sem internet) — as fontes de 2 horas e a releitura falhando (o banco não responde à leitura): o quadro não troca o carimbo das fontes, as diárias ficam «não lidas», e a pergunta continua «Total dos planos do Day Care»', async () => {
+  arma71();
+  try {
+    cena71([BISCOITO()]);
+    const v = T671 - 2 * 3600000;
+    r71(`REC_FONTES={quando:${v}, irm:{}, orc:{}}; REC_AVULSO={mes:'2026-10', quando:${v}, lendo:false, ok:true, total_cent:13500, n:1, semValor:0, futuros:0};
+      __qsDB=DB; DB={ref:function(p){ var r=__qsDB.ref(p); return Object.assign({}, r, {once:function(){ return Promise.reject(new Error('client is offline')); }}); }};
+      __qsLog=_logLeituraFalhou; _logLeituraFalhou=function(){};`);
+    try {
+      await QSLE();
+      igual(J71('[REC_FONTES.quando, REC_AVULSO.ok]'), [v, false]);
+      await abre71('planoAnularAtualAbrir()');
+      const c = cartaz71(); r71('corrFechar()');
+      assert.ok(/Total dos planos do Day Care em outubro de 2026/.test(c) && !/no Recebimentos:/.test(c), c);
+    } finally { r71('DB=__qsDB; _logLeituraFalhou=__qsLog;'); }
+  } finally { solta71(); }
+});
+
+// ---- o achado do re-gate 3 (QA671S-A1), agora corrigido
+provaAsync('6.71 QA re-gate 3 · QA671S-A1 (REL-006b) — a resposta atrasada do desfazer do meio do mês (uma ficha recusada minutos depois do «O BANCO AINDA NÃO CONFIRMOU») não pode fechar o cartaz de OUTRA correção que a Consultora abriu enquanto isso (o motivo que ela já escreveu se perde)', async () => {
+  arma71();
+  try {
+    const mm = MM71();
+    cena71([{ n: 'Maria Eduarda', tutor: 'Clara Teste', ex: { dias: ['seg'], sexo: 'Fêmea', renov: Object.assign(GOLD71(), { inicio: '2026-10-07', fim: '2027-01-31', fim_anterior: '2026-12-31', meio_mes: mm }) } },
+      { n: 'Beethoven', tutor: 'Clara Teste', ex: { dias: ['seg'], renov: Object.assign(GOLD71(), { inicio: '2026-10-07', fim: '2027-01-31', fim_anterior: '2026-12-31', meio_mes: mm }) } },
+      { n: 'Biscoito', tutor: 'Rosa Teste', ex: { dias: ['seg'], renov: GOLD71() } }],
+    { irmaos: { x: { a: 'maria eduarda__clara teste', b: 'beethoven__clara teste' } } });
+    r71(`__pendura657='^daycare/cadastro/(maria|beethoven)';`);
+    await abre71('mmDesfazer()'); r71(`__t71r=corrToque('confirmar', {motivo:'o tutor desistiu da opção dois', senha:'s-bia'})`); await esp71();
+    r71('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await esp71();
+    assert.ok(/AINDA NÃO CONFIRMOU/.test(cartaz71()), cartaz71());
+    r71('corrFechar(); pelAtual=PELUDINHOS[2]; pelAtualIdx=2;');
+    await abre71('planoAnularAtualAbrir()');
+    r71(`CORR_ATUAL.motivo='o pagamento foi lançado em dobro hoje';`);
+    const antes = [passo71(), /Biscoito/.test(cartaz71())];
+    r71(`__pend657.forEach(function(x){ x[/beethoven/.test(x.p)?'nao':'ok'](); }); __pend657=[];`); await esp71();
+    const depois = [passo71(), /Biscoito/.test(cartaz71()), titulos71().indexOf('O REGISTRO FOI DESFEITO SÓ EM PARTE') >= 0];
+    console.log('QA|QA671S-A1|' + JSON.stringify({ antes, depois }));
+    igual(antes, ['conferir', true]);
+    igual(depois, ['conferir', true, true], 'o cartaz do Biscoito continua aberto (e o resultado do meio do mês aparece)');
+  } finally { solta71(); }
+});
+}
+}
+// ================================================================== 6.68 — Orçamento, parte 1: a reserva e a planilha de estadias
+{
+console.log('\n6.68 — Orçamento: «Fechou», «Não fechou», «Voltar para pendente», «Mudar as datas», «Cancelar» e «Reativar», «Anular», a linha do dinheiro que acompanha a reserva e a lista além dos 60 (S7, parte 1)');
+// O palco: o banco de mentira da 6.57 (ARMA657: conta as gravações, sabe recusar e ficar sem responder; relógio parado na sexta,
+// 09/10/2026, 10:00) e a ponte de mentira — o Codigo.gs DE VERDADE (versão 6) numa sandbox, com a planilha de duas abas
+// (tests/lib/planilha-falsa.js). MODO668: '6' a ponte nova; '5' a ponte de hoje (o GET sem versão, a ação que ela não conhece
+// vira «gravar» — B4 — e a marca é ignorada); 'mudo' o GET não responde; 'cai' a conexão cai em todo pedido.
+const PF668 = require('./lib/planilha-falsa.js');
+const URL668 = 'https://script.google.com/macros/s/teste668/exec';
+let B668 = PF668.carregarPonte(), MODO668 = '6';
+const PED668 = [];
+ctx.__ponte668 = (url, metodo, corpo) => {
+  if (url !== URL668) { PED668.push({ metodo: metodo, url: url }); return { erro: 'Failed to fetch' }; }
+  if (metodo === 'GET') {
+    PED668.push({ metodo: 'GET' });
+    if (MODO668 === 'mudo') return null;
+    if (MODO668 === 'cai') return { erro: 'Failed to fetch' };
+    const j = B668.get(); if (MODO668 !== '6') delete j.versao;
+    return { txt: JSON.stringify(j) };
+  }
+  const c = JSON.parse(corpo || '{}');
+  PED668.push({ metodo: 'POST', corpo: c });
+  if (MODO668 === 'cai') return { erro: 'Failed to fetch' };
+  const c2 = Object.assign({}, c);
+  if (MODO668 !== '6') { if (c2.acao === 'atualizar') delete c2.acao; delete c2.marca; }
+  const r = B668.post(c2);
+  if (MODO668 !== '6') delete r.versao;
+  return { txt: JSON.stringify(r) };
+};
+const ponte668 = (modo) => { MODO668 = modo || '6'; B668 = PF668.carregarPonte(); PED668.length = 0;
+  run("__max668=0; __vivo668=0; if(typeof ORC_PONTE_VER!=='undefined'){ ORC_PONTE_VER.url=''; ORC_PONTE_VER.v=0; ORC_PONTE_VER.quando=0; ORC_PONTE_VER.lendo=null; }"); };
+const posts668 = () => PED668.filter((p) => p.metodo === 'POST').map((p) => p.corpo);
+const gets668 = () => PED668.filter((p) => p.metodo === 'GET').length;
+const resumoPosts668 = () => posts668().map((c) => [c.acao || 'gravar', c.peludoTutor, c.entrada, c.saida].concat(c.acao === 'cancelar' ? [c.soCalendario ? 'soCalendario' : 'risca', c.marca || '-'] : [])
+  .concat(c.acao === 'atualizar' ? [c.entradaAntes, c.saidaAntes, c.naoLiberar ? 'naoLiberar' : 'libera', c.peludoTutorAntes || '-'] : []));
+const ARMA668X = `__bk668={sc:orcSheetsCfg, fe:(typeof fetch!=='undefined'?fetch:undefined), es:ORC_ESTADIAS_CACHE, rc:REPO_CACHE, dos:ORC_DUP_OK_STATUS, la:ORC_LINHA_ABERTA,
+    ed:ORC_EDITANDO, ea:ORC_EDIT_ANTES, ca:ORC_CALC, se:ORC_SEL, rp:ORC_REP, ri:ORC_RESERVA_IGNORAR, dk:ORC_DUP_OK, ciL:__ciOrcLido, ciQ:__ciOrcQuando, ocl2:orcCarregarLista,
+    v:(typeof ORC_VIVOS!=='undefined')?{l:ORC_VIVOS.lido, q:ORC_VIVOS.quando, t:ORC_VIVOS.todos, f:ORC_VIVOS.falhou}:null,
+    p:(typeof ORC_PONTE_VER!=='undefined')?{u:ORC_PONTE_VER.url, v:ORC_PONTE_VER.v, q:ORC_PONTE_VER.quando}:null, bt:(typeof ORC_BUSCA_TERMO!=='undefined')?ORC_BUSCA_TERMO:''};
+  orcSheetsCfg={url:'${URL668}', token:'tk-de-mentira'};
+  __vivo668=0; __max668=0;
+  fetch=function(u,o){ __vivo668++; if(__vivo668>__max668) __max668=__vivo668; var r=__ponte668(String(u), String((o&&o.method)||'GET'), String((o&&o.body)||''));
+    if(r===null) return new Promise(function(){});
+    return new Promise(function(ok, nao){ Promise.resolve().then(function(){ __vivo668--; if(r.erro) nao(new TypeError(r.erro)); else ok({text:function(){ return Promise.resolve(r.txt); }}); }); }); };
+  orcTirarDaPlanilha=__bk657.otp; ORC_ESTADIAS_CACHE={}; REPO_CACHE={}; ORC_DUP_OK_STATUS={}; ORC_LINHA_ABERTA={}; ORC_DUP_OK=null; __ciOrcLido=false; __ciOrcQuando=0; CORR_ATUAL=null;
+  __bk668.cf=CF_ESTADIAS_LIDO; CF_ESTADIAS_LIDO=false;
+  if(typeof ORC_VIVOS!=='undefined'){ ORC_VIVOS.lido=false; ORC_VIVOS.quando=0; ORC_VIVOS.todos=null; ORC_VIVOS.lendo=null; ORC_VIVOS.falhou=false; }
+  if(typeof ORC_PONTE_VER!=='undefined'){ ORC_PONTE_VER.url=''; ORC_PONTE_VER.v=0; ORC_PONTE_VER.quando=0; ORC_PONTE_VER.lendo=null; }
+  if(typeof ORC_BUSCA_TERMO!=='undefined') ORC_BUSCA_TERMO='';
+  PELUDINHOS=[{n:'Thor', tutor:'Renata Teste', raca:'Spitz'}, {n:'Nala', tutor:'Renata Teste', raca:'SRD'}, {n:'Maya', tutor:'Luciana Teste', raca:'SRD'}];
+  __el657['orcSalvoStatus']={style:{}, textContent:''}; __el657['orcMsg']={value:''}; __el657['orcLista']={innerHTML:''}; __el657['orcBuscaRes']={innerHTML:''}; __el657['ciOrcHoje']={innerHTML:''};`;
+const SOLTA668X = `orcSheetsCfg=__bk668.sc; fetch=__bk668.fe; ORC_ESTADIAS_CACHE=__bk668.es; REPO_CACHE=__bk668.rc; ORC_DUP_OK_STATUS=__bk668.dos; ORC_LINHA_ABERTA=__bk668.la;
+  ORC_EDITANDO=__bk668.ed; ORC_EDIT_ANTES=__bk668.ea; ORC_CALC=__bk668.ca; ORC_SEL=__bk668.se; ORC_REP=__bk668.rp; ORC_RESERVA_IGNORAR=__bk668.ri; ORC_DUP_OK=__bk668.dk;
+  __ciOrcLido=__bk668.ciL; __ciOrcQuando=__bk668.ciQ; CF_ESTADIAS_LIDO=__bk668.cf;
+  if(__bk668.v){ ORC_VIVOS.lido=__bk668.v.l; ORC_VIVOS.quando=__bk668.v.q; ORC_VIVOS.todos=__bk668.v.t; ORC_VIVOS.lendo=null; ORC_VIVOS.falhou=__bk668.v.f; }
+  if(__bk668.p){ ORC_PONTE_VER.url=__bk668.p.u; ORC_PONTE_VER.v=__bk668.p.v; ORC_PONTE_VER.quando=__bk668.p.q; ORC_PONTE_VER.lendo=null; }
+  if(typeof ORC_BUSCA_TERMO!=='undefined') ORC_BUSCA_TERMO=__bk668.bt;`;
+const arma668 = () => { run(ARMA657); run(ARMA668X); ponte668('6'); };
+const solta668 = () => { run(SOLTA668X); run(SOLTA657); };
+const espera668 = async (n) => { for (let i = 0; i < (n || 3000); i++) await Promise.resolve(); };
+const db668 = (p) => run(`__get657(${JSON.stringify(p)})`);
+const J668 = (c) => { const v = run(c); return (v === undefined) ? null : JSON.parse(JSON.stringify(v)); };
+const ID668 = 'k668thor', IDC668 = '68THOR';   // repOrcCurto = os 6 últimos, em caixa alta
+const OP668 = 'auaulandia/orcamentos/';
+const THOR668 = (extra) => Object.assign({ key: 'thor__renata teste', nome: 'Thor', raca: 'Spitz', tutor: 'Renata Teste', diarias: 4, subtotal_diarias_cent: 52000, subtotal_cent: 52000, reposicoes: 0 }, extra || {});
+const NALA668 = (extra) => Object.assign({ key: 'nala__renata teste', nome: 'Nala', raca: 'SRD', tutor: 'Renata Teste', diarias: 4, subtotal_diarias_cent: 40000, subtotal_cent: 40000, reposicoes: 0 }, extra || {});
+const MAYA668 = (extra) => Object.assign({ key: 'maya__luciana teste', nome: 'Maya', raca: 'SRD', tutor: 'Luciana Teste', diarias: 4, subtotal_diarias_cent: 40000, subtotal_cent: 40000, reposicoes: 0 }, extra || {});
+const ORC668 = (extra) => Object.assign({ criado_em: T658(8, 9, 0), criado_por: 'Bia Consultora Teste', entrada: '2026-10-10', saida: '2026-10-14', noites: 4,
+  total_cent: 52000, parcela1_cent: 26000, parcela2_cent: 26000, tutor: 'Renata Teste', status: 'aguardando', pets: [THOR668()] }, extra || {});
+// o orçamento no banco e na memória da tela (como o orcCarregarLista deixaria)
+const orc668 = (id, o) => { ctx.__o668 = o; run(`__put657('${OP668}${id}', __o668); ORC_LISTA_CACHE['${id}']=__get657('${OP668}${id}'); __esc657=[]; __au657=[]; __za657=[]; __zp657=[]; __zt657=[]; __al657=[];`); };
+// a reposição na ficha: n créditos livres e as reservas de outros orçamentos
+const rep668 = (key, creditos, reservas) => {
+  const L = {}; for (let i = 1; i <= creditos; i++) L['c' + i] = { tipo: 'credito', data: '2026-09-0' + i, motivo: 'viagem', ts: i };
+  ctx.__r668 = { lancamentos: L, reservas: reservas || {} };
+  run(`REPO_CACHE[${JSON.stringify(key)}]=__r668; __put657('daycare/reposicao/${key}', __r668);`);
+};
+// «Mudar as datas»: o que o orcMudarDatas monta (ORC_EDITANDO, ORC_EDIT_ANTES só com nome, raça e tutor — e, desde a 3ª rodada, o
+// status_em e a foto `vista` de onde o formulário nasceu, REL-004) e a conta nova (ORC_CALC)
+const edita668 = (id, n) => {
+  ctx.__ed668 = n;
+  run(`(function(){ var o=ORC_LISTA_CACHE['${id}']||{}, n=__ed668;
+    ORC_EDITANDO='${id}'; ORC_RESERVA_IGNORAR='${id}';
+    ORC_EDIT_ANTES=n.antes||{entrada:o.entrada||'', saida:o.saida||'', total_cent:o.total_cent||0, status:o.status||'aguardando', status_em:Number(o.status_em)||0,
+      pets:(o.pets||[]).map(function(p){ return {nome:p.nome||'', raca:p.raca||'', tutor:p.tutor||o.tutor||''}; }), vista:(typeof orcVistaDe==='function')?orcVistaDe(o):undefined};
+    var tot=0, pets=n.pets.map(function(p, i){ tot+=p.total; return {sel:{key:p.key, nome:p.nome, raca:p.raca||'', tutor:p.tutor||'', rotulo:'Avulso', compromisso:'', trocas:{}},
+      ordem:i+1, off:0, nDia:p.dias, nPer:0, repUsa:p.repUsa||0, repEconomia:0, liqDia:p.total, brutoPer:0, total:p.total}; });
+    ORC_CALC={entrada:n.entrada, saida:n.saida, saidaPedida:n.saida, noites:pets[0].nDia, temporada:'baixa', alta:false, total:tot, p1:Math.ceil(tot/2), p2:tot-Math.ceil(tot/2), pets:pets};
+  })();`);
+};
+const MOT668 = 'a tutora adiou a volta da viagem';
+const alteraSenha668 = (motivo, senha) => run(`__zpq657=[true]; __ztq657=[${JSON.stringify(motivo || MOT668)}, ${JSON.stringify(senha || SENHA657)}];`);
+const zaTitulos668 = () => J668('__za657').map((z) => z[0]);
+const zaLinhas668 = (re) => { const z = J668('__za657').filter((x) => re.test(x[0])); return z.length ? z[z.length - 1][1] : null; };
+const updRaiz668 = () => J668('__esc657').filter((e) => e[0] === 'update' && e[1] === '');
+const hist668 = (id) => { const h = db668(OP668 + id + '/status_hist') || {}; return Object.keys(h).map((k) => h[k]).sort((a, b) => a.ts - b.ts); };
+const linhaPlan668 = (nome) => B668.linhas().filter((x) => x.nome === nome);
+// a linha que a reserva fechada escreveu na planilha, como se o «Fechou» tivesse sido no dia `dia`
+const lancaPlan668 = (o, dia) => run(`orcLinhasPlanilha(${JSON.stringify(o)}, '${dia}')`).forEach((L) => B668.post(JSON.parse(JSON.stringify(L))));
+
+// ---- AC1 — «Fechou» ---------------------------------------------------------------------------------------------------------------------------
+provaAsync('6.68 P1 (AC1.1) — «Fechou» pergunta, com a cascata (as datas e o valor, a planilha, a reposição que vira baixa); «Ainda não»: nada gravado e nenhum pedido à ponte', async () => {
+  arma668();
+  try {
+    rep668('thor__renata teste', 2, { k668thor: { n: 1, entrada: '2026-10-10', saida: '2026-10-14' } });
+    orc668(ID668, ORC668({ pets: [THOR668({ reposicoes: 1 })] }));
+    run('__zpq657=[false];');
+    await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    const zp = J668('__zp657');
+    igual(zp, [['Fechou a reserva de Thor?', ['10/10/2026 a 14/10/2026 · R$ 520,00', 'Ela entra na planilha de estadias: uma linha de dinheiro por FILHOt e as noites no calendário.',
+      '1 dia(s) de reposição de Thor deixam de ficar reservados e viram baixa na ficha.']]]);
+    igual([escritas657().length, PED668.length, db668(OP668 + ID668 + '/status')], [0, 0, 'aguardando'], '«Ainda não»: nada');
+  } finally { solta668(); }
+});
+provaAsync('6.68 P2 (AC1.2, AC1.3) — com «Fechou», o status_hist entra na MESMA escrita; o card de Estadias fechadas diz «Fechou: {quem}, {quando}»; voltar para pendente e fechar de novo não apaga a 1ª entrada', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    run('__zpq657=[true];');
+    await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    const u = updRaiz668();
+    igual(u.length, 1, 'uma escrita só');
+    igual(u[0][2].filter((k) => /k668thor\/(status|status_em|status_por|status_hist\/.+)$/.test(k)).length, 4, JSON.stringify(u[0][2]));
+    const h1 = hist668(ID668);
+    igual(h1.map((x) => [x.de, x.para, x.quem, x.papel, x.login, x.ts]), [['aguardando', 'fechado', 'Gestora Teste', 'gestao', 'Gestora Teste', T657(9, 10, 0)]]);
+    igual([db668(OP668 + ID668 + '/status_em'), db668(OP668 + ID668 + '/status_por')], [T657(9, 10, 0), 'Gestora Teste'], 'status_em e status_por continuam');
+    const card = run(`orcCardHtml('${ID668}', ORC_LISTA_CACHE['${ID668}'], '2026-10-09', {}, false, 1)`);
+    assert.ok(/Fechou: Gestora Teste, 09\/10 às 10:00/.test(card), card);
+    // volta para pendente (fechado hoje: a própria senha) e fecha de novo
+    run(`__p668=orcStatus('${ID668}','aguardando');`); await espera668();
+    const r = await assina658(SENHA657, 'a tutora pediu para pensar mais'); await espera668();
+    run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    const h3 = hist668(ID668);
+    igual([r[0], h3.map((x) => x.de + '→' + x.para), h3[0]], ['pronto', ['aguardando→fechado', 'fechado→aguardando', 'aguardando→fechado'], h1[0]], 'o 1º fica como estava');
+  } finally { solta668(); }
+});
+provaAsync('6.68 P3 (AC1.4) — a auditoria orcamento-status diz quem, as datas e o orçamento: «Thor (10/10/2026 a 14/10/2026, orçamento 68THOR): aguardando o tutor → fechou»', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    igual(aud657('orcamento-status').map((a) => a[1]), ['Thor (10/10/2026 a 14/10/2026, orçamento ' + IDC668 + '): aguardando o tutor → fechou']);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P4 (AC1.5, AC12) — «Fechou» pelo console de quem não trabalha no Orçamento: BARROU e nada gravado (nem pergunta); quem recebeu a tela Orçamento no Time fecha', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    papel657('monitor', 'Caio Encãotador Teste');
+    await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    const r2 = await run(`orcStatusGravar('${ID668}','fechado',{de:'aguardando'})`); await espera668();
+    igual([escritas657().length, J668('__zp657').length, barrou657().length >= 2, r2.ok, r2.barrou], [0, 0, true, false, true]);
+    papel657('monitor', 'Caio Encãotador Teste', ['orcamento']);
+    run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), barrou657().length], ['fechado', 0]);
+  } finally { solta668(); }
+});
+
+// ---- AC2 — «Não fechou» e «Reabrir» -------------------------------------------------------------------------------------------------------------
+provaAsync('6.68 P5 (AC2.1, AC2.2) — «Não fechou» com 3 palavras: a frase da régua, nada gravado (na tela e na função); com 4: nao_fechou no formato da linha 81, o status_hist e a reserva de reposição devolvida, numa escrita', async () => {
+  arma668();
+  try {
+    rep668('thor__renata teste', 2, { k668thor: { n: 1, entrada: '2026-10-10', saida: '2026-10-14' } });
+    orc668(ID668, ORC668({ pets: [THOR668({ reposicoes: 1 })] }));
+    run(`__ztq657=['achou muito caro'];`);
+    await run(`orcStatus('${ID668}','nao_fechou')`); await espera668();
+    const zt = J668('__zt657');
+    igual(zt[0][0], 'O tutor não fechou a reserva de Thor?');
+    igual(zt[0][1].slice(0, 2), ['Ela sai de Orçamentos a confirmar e vai para Cancelados.', '1 dia(s) de reposição de Thor voltam a ficar livres na ficha.']);
+    assert.ok(/pelo menos 4 palavras/.test(J668('__al657')[0]) && /Nada foi gravado/.test(J668('__al657')[0]), JSON.stringify(run('__al657')));
+    const rf = await run(`orcStatusGravar('${ID668}','nao_fechou',{texto:'achou muito caro', de:'aguardando'})`); await espera668();
+    igual([escritas657().length, rf.ok, rf.onde], [0, false, 'motivo'], 'a função confere de novo');
+    run(`__ztq657=['achou o valor alto'];`);
+    await run(`orcStatus('${ID668}','nao_fechou')`); await espera668();
+    const u = updRaiz668();
+    igual(u.length, 1);
+    assert.ok(u[0][2].includes('daycare/reposicao/thor__renata teste/reservas/k668thor') && u[0][2].includes(OP668 + ID668 + '/nao_fechou'), JSON.stringify(u[0][2]));
+    igual(db668(OP668 + ID668 + '/nao_fechou'), { motivo: '', texto: 'achou o valor alto', estado: 'respondido', por: 'Gestora Teste', papel: 'gestao', ts: T657(9, 10, 0) });
+    igual([db668(OP668 + ID668 + '/status'), db668('daycare/reposicao/thor__renata teste/reservas/k668thor'), hist668(ID668).map((x) => [x.de, x.para, x.texto])],
+      ['nao_fechou', null, [['aguardando', 'nao_fechou', 'achou o valor alto']]]);
+    igual(PED668.length, 0, 'não esteve na planilha: nada à ponte');
+  } finally { solta668(); }
+});
+provaAsync('6.68 P6 (AC2.3) — a linha de Cancelados diz «Não fechou: {texto}»; o antigo, sem nao_fechou nem cancelado_motivo, continua «sem motivo registrado»', async () => {
+  arma668();
+  try {
+    const novo = run(`orcLinhaHistoricoHtml('a1', ${JSON.stringify(ORC668({ status: 'nao_fechou', nao_fechou: { motivo: '', texto: 'achou o valor alto', estado: 'respondido', por: 'Bia', ts: 1 } }))}, 2)`);
+    const antigo = run(`orcLinhaHistoricoHtml('a2', ${JSON.stringify(ORC668({ status: 'nao_fechou' }))}, 2)`);
+    assert.ok(/Não fechou: achou o valor alto/.test(novo) && !/sem motivo registrado/.test(novo), novo);
+    assert.ok(/sem motivo registrado/.test(antigo), antigo);
+    assert.ok(/orcNaoFechouReabrirAbrir\('a1'\)">Reabrir</.test(novo) && /min-height:44px/.test(novo), 'o «Reabrir» na linha, 44 px');
+    // a régua do harness (v-20): a linha do histórico não ganha Cancelar, Mudar as datas, apagar nem Check-in
+    const fonte = extractMainScript(fs.readFileSync(APP, 'utf8')), i = fonte.indexOf('function orcLinhaHistoricoHtml(id, o, g){'), f = fonte.indexOf('function orcRenderLista(){');
+    const bloco = fonte.slice(i, f);
+    igual([i > 0 && f > i, ['orcCancelar(', 'orcMudarDatas(', 'orcApagar(', 'orcAbrirCheckin('].filter((x) => bloco.indexOf(x) >= 0)], [true, []]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P7 (AC2.4, AC2.5) — «Reabrir» o «Não fechou»: volta a aguardar, a reserva de reposição de novo e o nao_fechou no histórico; o saldo que não cobre e a duplicidade recusam (a Gestão passa por cima da duplicidade)', async () => {
+  arma668();
+  try {
+    const NF = { motivo: '', texto: 'achou o valor alto', estado: 'respondido', por: 'Bia Consultora Teste', papel: 'consultora', ts: T657(8, 9, 0) };
+    // o saldo: 1 crédito, já reservado por outro orçamento
+    rep668('thor__renata teste', 1, { outro: { n: 1, entrada: '2026-11-01', saida: '2026-11-03' } });
+    orc668(ID668, ORC668({ status: 'nao_fechou', nao_fechou: NF, pets: [THOR668({ reposicoes: 1 })] }));
+    await run(`orcNaoFechouReabrirAbrir('${ID668}')`); await espera668();
+    igual(J668('__za657').map((z) => [z[0], z[1]]), [['NÃO DÁ PARA REABRIR', ['O saldo de reposição de Thor já não cobre os 1 dias deste orçamento (livres hoje: 0). Faça um orçamento novo.']]]);
+    igual([run('CORR_ATUAL'), escritas657().length], [null, 0]);
+    // a duplicidade: outro orçamento vivo do Thor nas mesmas datas
+    rep668('thor__renata teste', 2, {});
+    orc668('dup1', ORC668({ criado_em: T658(7, 9, 0), status: 'aguardando' }));
+    orc668(ID668, ORC668({ status: 'nao_fechou', nao_fechou: NF, pets: [THOR668({ reposicoes: 1 })] }));
+    papel657('consultora', 'Bia Consultora Teste');
+    await run(`orcNaoFechouReabrirAbrir('${ID668}')`); await espera668();
+    igual([J668('__ze657').map((z) => z[2]), run('CORR_ATUAL')], [[['Ver o orçamento existente', 'Cancelar — não lançar']], null], 'a Consultora: sem passar por cima');
+    papel657('gestao', 'Gestora Teste');
+    run('__ze657=[];'); await run(`orcNaoFechouReabrirAbrir('${ID668}')`); await espera668();
+    igual(J668('__ze657').map((z) => z[2]), [['Ver o orçamento existente', 'É outra hospedagem mesmo', 'Cancelar — não lançar']], 'a Gestão pode');
+    run(`__put657('${OP668}dup1', null); delete ORC_LISTA_CACHE['dup1']; ORC_VIVOS.lido=false;`);
+    run(`__p668=orcNaoFechouReabrirAbrir('${ID668}');`); await espera668();
+    const cart = String(run('corrCartazHTML(CORR_ATUAL)') || '');
+    assert.ok(/Volta para Orçamentos a confirmar, aguardando o tutor\./.test(cart) && /1 dia\(s\) de reposição de Thor voltam a ficar reservados\./.test(cart), cart);
+    const r = await assina658('s-bia', 'o tutor ligou e quer fechar'); await espera668();
+    const h = hist668(ID668);
+    igual([r[0], db668(OP668 + ID668 + '/status'), db668(OP668 + ID668 + '/nao_fechou'), (db668('daycare/reposicao/thor__renata teste/reservas/k668thor') || {}).n, h.length, h[0].antes, h[0].de, h[0].para, h[0].quem],
+      ['pronto', 'aguardando', null, 1, 1, { nao_fechou: NF }, 'nao_fechou', 'aguardando', 'Bia Consultora Teste']);
+  } finally { solta668(); }
+});
+
+// ---- AC3 — «Voltar para pendente» --------------------------------------------------------------------------------------------------------------
+provaAsync('6.68 P8 (AC3) — «Voltar para pendente»: o cartaz com a cascata; a escrita; DEPOIS do ok, o «cancelar» à ponte com a marca; fechado ontem pede a Gestão; a outra reserva viva da Maya fica fora do pedido; o planilha_tirada e o «Fechou» que o limpa', async () => {
+  arma668();
+  try {
+    // fechado hoje, lançado na planilha
+    const O = ORC668({ status: 'fechado', status_em: T657(9, 8, 0), status_por: 'Bia Consultora Teste', planilha_em: T657(9, 8, 1), planilha_ok: true, pets: [THOR668()] });
+    orc668(ID668, O); lancaPlan668(O, '2026-10-09');
+    run(`__p668=orcStatus('${ID668}','aguardando');`); await espera668();
+    const cart = String(run('corrCartazHTML(CORR_ATUAL)') || '');
+    assert.ok(/Volta a ficar:<\/strong> aguardando o tutor/.test(cart) && /As linhas de Thor saem da planilha: a linha do dinheiro fica riscada e as noites de 10\/10\/2026 a 14\/10\/2026 são liberadas no calendário\./.test(cart)
+      && /O botão Check-in sai de Estadias fechadas\./.test(cart) && /Sua senha/.test(cart), cart);
+    igual(PED668.length, 0, 'nada à ponte antes da senha');
+    const r = await assina658('s-bia', 'a tutora pediu para pensar mais'); await espera668();
+    const post = resumoPosts668();
+    igual([r[0], db668(OP668 + ID668 + '/status'), post], ['pronto', 'aguardando', [['cancelar', 'Thor/Spitz/Renata Teste', '2026-10-10', '2026-10-14', 'risca', 'VOLTOU PARA PENDENTE']]]);
+    igual([linhaPlan668('VOLTOU PARA PENDENTE por Bia Consultora Teste em 09/10/2026 às 10:00 - Thor/Spitz/Renata Teste').length, B668.noites('Thor/Spitz/Renata Teste')], [1, []]);
+    const tir = db668(OP668 + ID668 + '/planilha_tirada');
+    igual([tir.porque, tir.resultado.ok, run(`orcFoiAPlanilha(ORC_LISTA_CACHE['${ID668}'])`)], ['voltar-pendente', true, false], 'o planilha_tirada: a proposta não aparece «na planilha»');
+    assert.ok(!/Tirar da planilha/.test(run(`orcCardHtml('${ID668}', ORC_LISTA_CACHE['${ID668}'], '2026-10-09', {}, false, 0)`)), 'sem «Tirar da planilha»');
+    // um «Fechou» depois limpa o planilha_tirada (ele fica no planilha_hist)
+    run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    const ph = db668(OP668 + ID668 + '/planilha_hist') || {};
+    igual([db668(OP668 + ID668 + '/planilha_tirada'), Object.keys(ph).map((k) => ph[k].porque).sort()], [null, ['fechou', 'voltar-pendente']]);
+    // fechado ONTEM: a Gestão assina (a Consultora é recusada)
+    orc668('k668ont', ORC668({ status: 'fechado', status_em: T657(8, 15, 0), status_por: 'Bia Consultora Teste' }));
+    run(`__p668=orcStatus('k668ont','aguardando');`); await espera668();
+    assert.ok(/Senha da Gestão/.test(String(run('corrCartazHTML(CORR_ATUAL)'))), 'nível Gestão');
+    const r2 = await assina658('s-bia', 'a tutora pediu para pensar mais');
+    igual([r2[0], /Quem assina: a Gestão ou a Diretoria/.test(r2[1]), db668(OP668 + 'k668ont/status')], ['conferir', true, 'fechado']);
+    await fecha658();
+    const r3 = await run(`orcStatusGravar('k668ont', 'aguardando', {de:'fechado', reg:{por:'Bia Consultora Teste', papel:'consultora', motivo:'a tutora pediu para pensar mais'}})`); await espera668();
+    igual([r3.ok, r3.barrou, db668(OP668 + 'k668ont/status')], [false, true, 'fechado'], 'a função também confere (tela velha, console)');
+  } finally { solta668(); }
+});
+provaAsync('6.68 P8b (AC3.1, AC3.2) — «Voltar para pendente» com a outra reserva viva da Maya nas mesmas noites: a cascata manda riscar à mão, o pedido não leva a Maya e a frase da trava diz «voltou para pendente»', async () => {
+  arma668();
+  try {
+    orc668('k668m2', ORC668({ tutor: 'Luciana Teste', status: 'fechado', entrada: '2026-10-15', saida: '2026-10-24', pets: [MAYA668()] }));
+    orc668('k668m1', ORC668({ tutor: 'Luciana Teste', status: 'fechado', status_em: T657(9, 8, 0), entrada: '2026-10-16', saida: '2026-10-20', pets: [MAYA668()] }));
+    run(`__p668=orcStatus('k668m1','aguardando');`); await espera668();
+    const cart = String(run('corrCartazHTML(CORR_ATUAL)') || '');
+    assert.ok(/As noites de Maya continuam com a outra reserva \(15\/10\/2026 a 24\/10\/2026\): o calendário não é mexido\. Risque à mão só a linha desta reserva na aba Hospedagem\./.test(cart), cart);
+    const r = await assina658('s-bia', 'a tutora pediu para pensar mais'); await espera668();
+    igual([r[0], posts668().length, zaTitulos668().includes('AS NOITES CONTINUAM OCUPADAS POR OUTRA RESERVA'), (zaLinhas668(/CONTINUAM OCUPADAS/) || [])[0]],
+      ['pronto', 0, true, 'Esta reserva voltou para pendente no sistema.']);
+  } finally { solta668(); }
+});
+
+provaAsync('6.68 P8c (AC3.2) — «Voltar para pendente» com o banco recusando: nada vai à planilha (a planilha só depois do ok)', async () => {
+  arma668();
+  try {
+    const O = ORC668({ status: 'fechado', status_em: T657(9, 8, 0), status_por: 'Bia Consultora Teste', planilha_em: T657(9, 8, 1), planilha_ok: true });
+    orc668(ID668, O); lancaPlan668(O, '2026-10-09');
+    run(`__recusa657='^$'; __p668=orcStatus('${ID668}','aguardando');`); await espera668();
+    const r = await assina658('s-bia', 'a tutora pediu para pensar mais'); await espera668();
+    igual([r[0], posts668().length, db668(OP668 + ID668 + '/status'), B668.linhas().map((x) => x.riscada)], ['falhou', 0, 'fechado', [false]]);
+  } finally { run('__recusa657=null;'); solta668(); }
+});
+// ---- AC4 — «Mudar as datas» --------------------------------------------------------------------------------------------------------------------
+provaAsync('6.68 P9 (AC4.1, caminho 1) — «Mudar as datas» de uma proposta AGUARDANDO: nenhum pedido à ponte (nem GET); a pergunta e o aviso dizem «A planilha não muda…» (base: libera e lança)', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    edita668(ID668, { entrada: '2026-10-10', saida: '2026-10-16', pets: [{ key: 'thor__renata teste', nome: 'Thor', raca: 'Spitz', tutor: 'Renata Teste', dias: 6, total: 78000 }] });
+    alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668();
+    const fr = 'A planilha não muda: a reserva ainda aguarda o tutor. Ela entra na planilha quando alguém tocar «Fechou».';
+    igual([PED668.length, J668('__zp657')[0][1].includes(fr), (zaLinhas668(/^RESERVA ALTERADA$/) || []).includes(fr)], [0, true, true]);
+    igual([db668(OP668 + ID668 + '/saida'), db668(OP668 + ID668 + '/planilha_ok'), db668(OP668 + ID668 + '/planilha_msg')], ['2026-10-16', null, null], 'o aguardando não ganha planilha_ok:false');
+  } finally { solta668(); }
+});
+provaAsync('6.68 P10 (AC4.1) — a proposta aguardando que AINDA está na planilha (planilha_em, sem planilha_tirada): a pergunta avisa; só o «cancelar» das linhas antigas vai; nenhuma linha nova', async () => {
+  arma668();
+  try {
+    const O = ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: true });
+    orc668(ID668, O); lancaPlan668(O, '2026-10-05');
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [{ key: 'thor__renata teste', nome: 'Thor', raca: 'Spitz', tutor: 'Renata Teste', dias: 4, total: 52000 }] });
+    alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668();
+    assert.ok(J668('__zp657')[0][1].includes('Esta proposta ainda está na planilha (lançada em 05/10), mas o tutor ainda não fechou. Eu tiro da planilha as linhas antigas dela, sem lançar as novas.'), JSON.stringify(run('__zp657')));
+    igual(resumoPosts668(), [['cancelar', 'Thor/Spitz/Renata Teste', '2026-10-10', '2026-10-14', 'risca', 'VOLTOU PARA PENDENTE']]);
+    igual([B668.linhas().map((x) => x.riscada), db668(OP668 + ID668 + '/planilha_ok'), (db668(OP668 + ID668 + '/planilha_tirada') || {}).porque], [[true], true, 'mudar-datas']);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P11 (AC4.2) — motivo com 3 palavras: a frase da régua e nada gravado; as frases da senha continuam letra por letra', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    const ed = () => edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [{ key: 'thor__renata teste', nome: 'Thor', raca: 'Spitz', tutor: 'Renata Teste', dias: 4, total: 52000 }] });
+    ed(); alteraSenha668('a tutora adiou');
+    await run('orcSalvarEdicao()'); await espera668();
+    igual([escritas657().length, J668('__al657')], [0, ['Escreva o que aconteceu em pelo menos 4 palavras (faltam 1). A reserva NÃO foi alterada.']]);
+    ed(); run('__al657=[];'); alteraSenha668(MOT668, 'senha-de-ninguem');
+    await run('orcSalvarEdicao()'); await espera668();
+    igual(J668('__al657'), ['Essa senha não é de ninguém cadastrado. A reserva NÃO foi alterada.']);
+    ed(); run('__al657=[];'); alteraSenha668(MOT668, 's-posto');
+    await run('orcSalvarEdicao()'); await espera668();
+    assert.ok(/senha de posto não assina o Orçamento\. Use a senha da própria pessoa\. A reserva NÃO foi alterada\./.test(J668('__al657')[0]), JSON.stringify(run('__al657')));
+    igual(escritas657().length, 0);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P12 (AC4.3) — o historico entra na MESMA escrita da mudança (com os FILHOts de antes e de depois, o status, o papel e o login); com o banco recusando, nenhuma entrada fica', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    const ed = () => edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [{ key: 'thor__renata teste', nome: 'Thor', raca: 'Spitz', tutor: 'Renata Teste', dias: 4, total: 56000 }] });
+    ed(); alteraSenha668(); run(`__recusa657='^$';`);
+    await run('orcSalvarEdicao()'); await espera668();
+    igual([db668(OP668 + ID668 + '/historico'), J668('__esc657').filter((e) => !/RECUSADO/.test(e[0])).length], [null, 0], 'recusado: nenhuma entrada (antes, o push à parte ficava)');
+    ed(); alteraSenha668(); run(`__recusa657=null; __esc657=[];`);
+    await run('orcSalvarEdicao()'); await espera668();
+    const u = updRaiz668();
+    igual(u.length, 1);
+    assert.ok(u[0][2].some((k) => new RegExp('^' + OP668 + ID668 + '/historico/').test(k)) && u[0][2].includes(OP668 + ID668 + '/entrada'), JSON.stringify(u[0][2]));
+    const H = db668(OP668 + ID668 + '/historico'); const h = H[Object.keys(H)[0]];
+    igual([h.de_entrada, h.para_entrada, h.de_total_cent, h.para_total_cent, h.motivo, h.por, h.status, h.papel, h.login, h.de_pets, h.para_pets],
+      ['2026-10-10', '2026-10-11', 52000, 56000, MOT668, 'Gestora Teste', 'aguardando', 'gestao', 'Gestora Teste',
+        [{ key: 'thor__renata teste', nome: 'Thor', raca: 'Spitz', tutor: 'Renata Teste', subtotal_cent: 52000 }], [{ key: 'thor__renata teste', nome: 'Thor', raca: 'Spitz', tutor: 'Renata Teste', subtotal_cent: 56000 }]]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P13 (AC4.4) — «Mudanças desta reserva (N)» no card (recolhido) e no «ver» da linha, com quando, quem, o motivo, de/para e o resultado da planilha daquela mudança', async () => {
+  arma668();
+  try {
+    const O = ORC668({ status: 'fechado', status_em: T657(5, 9, 0), planilha_em: T657(5, 9, 1), planilha_ok: true,
+      historico: { h1: { de_entrada: '2026-10-09', de_saida: '2026-10-13', de_total_cent: 52000, para_entrada: '2026-10-10', para_saida: '2026-10-14', para_total_cent: 52000, motivo: 'a tutora adiou a viagem', por: 'Bia Consultora Teste', em_br: '07/10/2026 às 15:00', ts: T657(7, 15, 0), status: 'fechado' } },
+      planilha_hist: { p1: { porque: 'mudar-datas', mudanca: 'h1', versaoPonte: 6, pets: [{ nome: 'Thor', acao: 'atualizar', ok: true, financeiro: 'linha 2 atualizada', calendario: '4 noite(s) liberada(s) no calendario; 4 noite(s) marcada(s) na coluna Hospede 1' }], quem: 'Bia', ts: T657(7, 15, 1) } } });
+    const card = run(`orcCardHtml('${ID668}', ${JSON.stringify(O)}, '2026-10-09', {}, false, 1)`);
+    assert.ok(/<details class="orc-mud"/.test(card) && !/<details[^>]*open/.test(card) && /Mudanças desta reserva \(1\)/.test(card), card);
+    assert.ok(/07\/10\/2026 às 15:00 — Bia Consultora Teste: de 09\/10\/2026 a 13\/10\/2026 · R\$ 520,00 para 10\/10\/2026 a 14\/10\/2026 · R\$ 520,00\. Motivo: a tutora adiou a viagem\. Planilha — Thor: linha atualizada, 4 noite\(s\) liberada\(s\), 4 noite\(s\) marcada\(s\)\./.test(card), card);
+    run(`ORC_LINHA_ABERTA={'${ID668}':true};`);
+    const linha = run(`orcLinhaHistoricoHtml('${ID668}', ${JSON.stringify(O)}, 3)`);
+    assert.ok(/Mudanças desta reserva \(1\):/.test(linha) && /Planilha — Thor: linha atualizada/.test(linha), linha);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P14 (AC4.5, caminho 4) — o FILHOt tirado pelo × no «Mudar as datas»: a reserva de reposição dele volta na MESMA escrita e a pergunta diz «{FILHOt} sai desta reserva: {n} dia(s) de reposição voltam à ficha.» (base: presa)', async () => {
+  arma668();
+  try {
+    rep668('thor__renata teste', 2, { k668thor: { n: 1, entrada: '2026-10-10', saida: '2026-10-14' } });
+    rep668('nala__renata teste', 0, {});
+    orc668(ID668, ORC668({ pets: [THOR668({ reposicoes: 1 }), NALA668()], total_cent: 92000 }));
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [{ key: 'nala__renata teste', nome: 'Nala', raca: 'SRD', tutor: 'Renata Teste', dias: 4, total: 40000 }] });
+    alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668();
+    assert.ok(J668('__zp657')[0][1].includes('Thor sai desta reserva: 1 dia(s) de reposição voltam à ficha.'), JSON.stringify(run('__zp657')));
+    const u = updRaiz668();
+    igual([u.length, u[0][2].includes('daycare/reposicao/thor__renata teste/reservas/k668thor'), db668('daycare/reposicao/thor__renata teste/reservas/k668thor')], [1, true, null]);
+  } finally { solta668(); }
+});
+
+// ---- AC5 — a linha do dinheiro acompanha a reserva fechada ---------------------------------------------------------------------------------------
+// A reserva fechada de 05/10 (a «Data reserva» é a do fechamento), lançada na planilha: Thor sozinho (ou com a Nala).
+const FECH668 = (extra) => ORC668(Object.assign({ status: 'fechado', status_em: T657(5, 9, 0), status_por: 'Bia Consultora Teste', planilha_em: T657(5, 9, 1), planilha_ok: true }, extra || {}));
+const altera668 = async (o, novo, modo) => {
+  orc668(ID668, o); ponte668(modo); lancaPlan668(o, '2026-10-05');
+  edita668(ID668, novo); alteraSenha668();
+  await run('orcSalvarEdicao()'); await espera668(); await espera668();
+};
+const THORn668 = (dias, total, extra) => Object.assign({ key: 'thor__renata teste', nome: 'Thor', raca: 'Spitz', tutor: 'Renata Teste', dias: dias, total: total }, extra || {});
+provaAsync('6.68 P15 (AC5.2) — ponte nova: um «atualizar» por FILHOt que fica (o período antigo, o novo, a «Data reserva» do fechamento, a «R$ Reserva» da metade), quem sai «cancelar», quem entra o envio de sempre; um pedido de cada vez', async () => {
+  arma668();
+  try {
+    await altera668(FECH668({ pets: [THOR668(), NALA668()], total_cent: 92000 }), { entrada: '2026-10-10', saida: '2026-10-16',
+      pets: [THORn668(6, 78000), { key: 'maya__luciana teste', nome: 'Maya', raca: 'SRD', tutor: 'Luciana Teste', dias: 6, total: 60000 }] }, '6');
+    igual(gets668(), 1, 'o GET da versão, antes');
+    igual(resumoPosts668(), [
+      ['atualizar', 'Thor/Spitz/Renata Teste', '2026-10-10', '2026-10-16', '2026-10-10', '2026-10-14', 'libera', '-'],
+      ['gravar', 'Maya/SRD/Luciana Teste', '2026-10-10', '2026-10-16'],
+      ['cancelar', 'Nala/SRD/Renata Teste', '2026-10-10', '2026-10-14', 'risca', 'CANCELADO']]);
+    const at = posts668()[0];
+    igual([at.dataReserva, at.reserva, at.total, at.noites, at.aPagar], ['2026-10-05', 390, 780, 6, 390]);
+    igual(run('__max668'), 1, 'um de cada vez');
+    const L = B668.linhas();
+    igual(L.map((x) => [x.nome, x.saida, x.total, x.dataReserva, x.riscada]), [['Thor/Spitz/Renata Teste', '16/10', 780, '05/10', false],
+      ['CANCELADO por Gestora Teste em 09/10/2026 às 10:00 - Nala/SRD/Renata Teste', '14/10', 400, '05/10', true], ['Maya/SRD/Luciana Teste', '16/10', 600, '05/10', false]]);
+    assert.ok(/^Alterada em 09\/10\/2026 às 10:00 por Gestora Teste: 10\/10\/2026 a 14\/10\/2026 → 10\/10\/2026 a 16\/10\/2026\. Motivo: a tutora adiou a volta da viagem\.$/.test(L[0].nota), L[0].nota);
+    igual([db668(OP668 + ID668 + '/planilha_ok'), zaTitulos668().slice(-1)[0], (zaLinhas668(/RESERVA ALTERADA NA PLANILHA/) || [])[0]],
+      [true, '✅ RESERVA ALTERADA NA PLANILHA', 'A linha de Thor foi atualizada no lugar, com as datas e os valores novos.']);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P16 (AC5.3, AC10.6) — ponte de hoje (o GET sem versão) e o GET sem resposta em 20 s: «cancelar» com soCalendario:false e a marca, depois o envio; a frase da ponte antiga; nenhuma ação nova; os números da linha que vale iguais aos do «atualizar»', async () => {
+  arma668();
+  try {
+    const O = FECH668(), N = { entrada: '2026-10-10', saida: '2026-10-16', pets: [THORn668(6, 78000)] };
+    await altera668(O, N, '6');
+    const nova = B668.linhas().filter((x) => !x.riscada).map((x) => [x.nome, x.entrada, x.saida, x.diarias, x.reserva, x.dataReserva, x.total, x.diaria, x.aPagar, x.dataAPagar]);
+    await altera668(O, N, '5');
+    igual(resumoPosts668(), [['cancelar', 'Thor/Spitz/Renata Teste', '2026-10-10', '2026-10-14', 'risca', 'ALTERADA'], ['gravar', 'Thor/Spitz/Renata Teste', '2026-10-10', '2026-10-16']]);
+    igual(posts668().filter((c) => c.acao === 'atualizar').length, 0, 'nenhuma ação nova à ponte de hoje (B4)');
+    const velha = B668.linhas().filter((x) => !x.riscada).map((x) => [x.nome, x.entrada, x.saida, x.diarias, x.reserva, x.dataReserva, x.total, x.diaria, x.aPagar, x.dataAPagar]);
+    igual(velha, nova, 'os mesmos números na linha que vale');
+    igual(B668.linhas().filter((x) => x.riscada).map((x) => x.nome), ['CANCELADO por Gestora Teste em 09/10/2026 às 10:00 - Thor/Spitz/Renata Teste'], 'a ponte de hoje escreve «CANCELADO por …»');
+    igual((zaLinhas668(/RESERVA ALTERADA NA PLANILHA/) || [])[0], 'A planilha está com a ponte antiga: a linha antiga de Thor foi riscada e uma linha nova entrou com as datas novas. Para a linha ser atualizada no lugar, a ponte nova precisa ser publicada.');
+    // o GET que não responde: depois dos 20 segundos, o caminho antigo
+    orc668(ID668, O); ponte668('mudo'); lancaPlan668(O, '2026-10-05');
+    edita668(ID668, N); alteraSenha668(); run('__tm657=[];');
+    await run('orcSalvarEdicao()'); await espera668();
+    igual([gets668(), posts668().length], [1, 0], 'esperando o GET');
+    run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); });'); await espera668();
+    igual(resumoPosts668().map((p) => p[0]), ['cancelar', 'gravar']);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P17 (AC5.1) — a ficha corrigida desde o fechamento (o nome composto mudou): peludoTutorAntes no «atualizar»; na ponte de hoje, o «cancelar» com o nome antigo; o antes vem do orçamento salvo (com a chave), não do ORC_EDIT_ANTES', async () => {
+  arma668();
+  try {
+    const O = FECH668({ pets: [THOR668({ raca: 'SRD', tutor: 'Renata' })], tutor: 'Renata' });
+    const N = { entrada: '2026-10-10', saida: '2026-10-15', pets: [THORn668(5, 65000)],
+      antes: { entrada: '2026-10-10', saida: '2026-10-14', total_cent: 52000, status: 'fechado', pets: [{ nome: 'Thor', raca: '', tutor: 'Renata' }] } };
+    await altera668(O, N, '6');
+    igual(resumoPosts668(), [['atualizar', 'Thor/Spitz/Renata Teste', '2026-10-10', '2026-10-15', '2026-10-10', '2026-10-14', 'libera', 'Thor/SRD/Renata']], 'um «atualizar», sem «sai e entra»');
+    igual(B668.linhas().map((x) => [x.nome, x.saida, x.riscada]), [['Thor/Spitz/Renata Teste', '15/10', false]]);
+    await altera668(O, N, '5');
+    igual(resumoPosts668().map((p) => [p[0], p[1]]), [['cancelar', 'Thor/SRD/Renata'], ['gravar', 'Thor/Spitz/Renata Teste']]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P18 (AC5.4) — «ja estava la» numa alteração: sem «Lançado», a frase, planilha_ok:false e o planilha_hist com a resposta; no «reenviar» simples continua valendo como ok', async () => {
+  arma668();
+  try {
+    const O = FECH668();
+    orc668(ID668, O); ponte668('5'); lancaPlan668(O, '2026-10-05');
+    // alguém lançou à mão uma linha com as datas novas: a ponte de hoje responde «ja estava la» ao envio da linha nova
+    B668.post({ peludoTutor: 'Thor/Spitz/Renata Teste', hospedes: 1, entrada: '2026-10-11', saida: '2026-10-14', noites: 3, total: 390 });
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-16', pets: [THORn668(5, 65000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    const L = zaLinhas668(/RESERVA ALTERADA — CONFIRA A PLANILHA/) || [];
+    assert.ok(L.includes('A planilha já tinha uma linha de Thor com entrada 11/10/2026: o valor e a saída dela NÃO foram atualizados. Confira a aba Hospedagem e corrija à mão.'), JSON.stringify(run('__za657')));
+    assert.ok(!zaTitulos668().some((t) => /LANÇAD/.test(t)), 'sem «Lançado»');
+    const ph = db668(OP668 + ID668 + '/planilha_hist') || {};
+    const ent = Object.keys(ph).map((k) => ph[k]).filter((x) => x.porque === 'mudar-datas')[0];
+    igual([db668(OP668 + ID668 + '/planilha_ok'), ent.pets.map((x) => [x.acao, x.ok, x.financeiro])], [false, [['riscar', true, 'linha 2 marcada como CANCELADA'], ['lançar', false, 'ja estava la']]]);
+    // o «reenviar» simples (a mesma reserva de novo): «ja estava la» vale como ok (6.48)
+    run('__za657=[];'); await run(`orcEnviarPlanilha('${ID668}')`); await espera668();
+    igual([db668(OP668 + ID668 + '/planilha_ok'), zaTitulos668()], [true, ['✅ FECHADO E LANÇADO NA PLANILHA']]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P19 (AC5.5, caminho 5) — a trava da Maya no «Mudar as datas» e no orcLiberarNaPlanilha: as noites dela não são liberadas (naoLiberar na nova; nenhum «cancelar» na de hoje) e a frase manda riscar à mão (base: manda o «cancelar»)', async () => {
+  arma668();
+  try {
+    const M2 = ORC668({ tutor: 'Luciana Teste', status: 'fechado', entrada: '2026-10-15', saida: '2026-10-24', pets: [MAYA668()] });
+    const M1 = FECH668({ tutor: 'Luciana Teste', entrada: '2026-10-16', saida: '2026-10-20', pets: [MAYA668()] });
+    const N = { entrada: '2026-10-17', saida: '2026-10-21', pets: [{ key: 'maya__luciana teste', nome: 'Maya', raca: 'SRD', tutor: 'Luciana Teste', dias: 4, total: 40000 }] };
+    const roda = async (modo) => {
+      run('ORC_LISTA_CACHE={};'); orc668('k668m2', M2); orc668(ID668, M1); ponte668(modo); lancaPlan668(M2, '2026-10-01'); lancaPlan668(M1, '2026-10-05');
+      edita668(ID668, N); alteraSenha668(); await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    };
+    await roda('6');
+    igual(resumoPosts668(), [['atualizar', 'Maya/SRD/Luciana Teste', '2026-10-17', '2026-10-21', '2026-10-16', '2026-10-20', 'naoLiberar', '-']]);
+    await roda('5');
+    igual(resumoPosts668().filter((p) => p[0] === 'cancelar').length, 0, 'nenhum «cancelar» que apagaria as noites da outra reserva (B5)');
+    assert.ok((zaLinhas668(/RESERVA ALTERADA/) || []).includes('Risque à mão a linha antiga de Maya (16/10/2026 a 20/10/2026) na aba Hospedagem: as noites de Maya continuam com a outra reserva (15/10/2026 a 24/10/2026).'), JSON.stringify(run('__za657')));
+    // o orcLiberarNaPlanilha também consulta a trava
+    ponte668('6'); run('ORC_LISTA_CACHE={};'); orc668('k668m2', M2); orc668('k668m1', M1);
+    const r = await run(`orcLiberarNaPlanilha(ORC_LISTA_CACHE['k668m1'], 'Gestora Teste', '09/10/2026 às 10:00', {id:'k668m1', silencioso:true})`); await espera668();
+    // 2ª rodada (LOW-4): a trava confere a lista INTEIRA — a outra reserva viva da Maya (k668m2) segura as noites (o banco desta prova
+    // ainda tem a k668thor da Maya, também viva: ela conta junto)
+    igual([posts668().length, r.pets.map((x) => x.acao), r.presas.some((x) => x.outroId === 'k668m2')], [0, ['preservada'], true]);
+  } finally { solta668(); }
+});
+
+// ---- AC6 — «Cancelar reserva» e «Reativar reserva» -----------------------------------------------------------------------------------------------
+provaAsync('6.68 P20 (AC6.1) — «Cancelar reserva» com 3 palavras: recusado na tela e no orcCancelarGravar (o contrato {ok, erro} de sempre)', async () => {
+  arma668();
+  try {
+    orc668(ID668, FECH668());
+    run(`__zpq657=[true]; __ztq657=['a viagem caiu', '${SENHA657}'];`);
+    await run(`orcCancelar('${ID668}')`); await espera668();
+    igual([escritas657().length, J668('__al657')], [0, ['Escreva o que aconteceu em pelo menos 4 palavras (faltam 1). A reserva NÃO foi cancelada.']]);
+    const r = await run(`orcCancelarGravar('${ID668}', 'a viagem caiu', {nome:'Gestora Teste', role:'gestao'})`); await espera668();
+    igual([r.ok, /pelo menos 4 palavras/.test(r.erro), escritas657().length], [false, true, 0]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P21 (AC6.2, caminho 6) — cancelado_de e o status_hist gravados; o 4º parâmetro (o Excluir da 6.53) grava cancelado_origem; com 3 parâmetros, o contrato e as frases de sempre', async () => {
+  arma668();
+  try {
+    orc668(ID668, FECH668());
+    const r = await run(`orcCancelarGravar('${ID668}', 'a viagem foi desmarcada pela tutora', {nome:'Amanda Supervisora Teste', role:'supervisor'})`); await espera668();
+    igual([r, db668(OP668 + ID668 + '/cancelado_de'), db668(OP668 + ID668 + '/cancelado_origem')],
+      [{ ok: true }, { status: 'fechado', status_em: T657(5, 9, 0), status_por: 'Bia Consultora Teste' }, null]);
+    igual(hist668(ID668).map((x) => [x.de, x.para, x.quem, x.papel, x.motivo]), [['fechado', 'cancelado', 'Amanda Supervisora Teste', 'supervisor', 'a viagem foi desmarcada pela tutora']]);
+    orc668('k668exc', FECH668());
+    await run(`orcCancelarGravar('k668exc', 'lançada por engano, ele não veio', {nome:'Gestora Teste', role:'gestao'}, {origem:'hospedagem-excluida'})`); await espera668();
+    igual([db668(OP668 + 'k668exc/cancelado_origem'), hist668('k668exc')[0].origem], ['hospedagem-excluida', 'hospedagem-excluida']);
+    assert.ok(/orcCancelarGravar\(S\.orcId, mot, \{nome:ass\.nome, role:ass\.papel\}, \{origem:'hospedagem-excluida'\}\)/.test(run('hospExcluirGravar.toString()')), 'o Excluir passa a origem');
+  } finally { solta668(); }
+});
+provaAsync('6.76 × publicadas · 6.68 — o orçamento (na junção): «Reativar reserva» pelo cartaz, e «Cancelar reserva» e «Mudar as datas» (orcCancelar e orcSalvarEdicao, juntadas em 3 vias), que pedem a senha pelo próprio cartaz de texto: a senha certa assina; a provisória ainda não trocada, a senha do código sem o banco e sem a cópia e a de quem foi desativado são recusadas, cada uma com a sua frase e sem gravar nada', async () => {
+  arma668();
+  try {
+    rep668('thor__renata teste', 2, {});
+    orc668(ID668, FECH668({ status: 'cancelado', status_em: T657(8, 11, 0), status_por: 'Gestora Teste', cancelado_por: 'Gestora Teste', cancelado_role: 'gestao', cancelado_ts: T657(8, 11, 0),
+      cancelado_em_br: '08/10/2026 às 11:00', cancelado_motivo: 'a viagem foi desmarcada pela tutora', cancelado_planilha_ok: true, cancelado_planilha_msg: 'Thor/Spitz/Renata Teste: linha riscada',
+      cancelado_de: { status: 'fechado', status_em: T657(5, 9, 0), status_por: 'Bia Consultora Teste' }, pets: [THOR668({ reposicoes: 1 })] }));
+    run(`__p668=orcReativarAbrir('${ID668}');`); await espera668();
+    await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668();
+    igual(await x676Portas(run, espera668, 'a tutora remarcou a mesma viagem', SENHA657), x676Esperado(), 'Reativar reserva');
+    run("if(CORR_ATUAL) corrToque('fechar');"); await espera668();
+    // «Cancelar reserva»
+    const canc = await x676Orc(run, espera668, () => orc668(ID668, ORC668()), `orcCancelar('${ID668}')`, 'a viagem foi desmarcada pela tutora', SENHA657);
+    const NC = 'Essa senha não é de ninguém cadastrado. A reserva NÃO foi cancelada.\n\nConfira a senha e tente de novo.';
+    igual(canc, { provisoria: [[NC], [], false], codigoSemBanco: [[], ['SEM CONEXÃO COM O BANCO'], false], desativada: [[NC], [], false], certa: [[], ['✅ RESERVA CANCELADA'], true] }, 'Cancelar reserva');
+    igual(db668(OP668 + ID668 + '/status'), 'cancelado');
+    // «Mudar as datas»
+    const muda = await x676Orc(run, espera668, () => { orc668(ID668, ORC668()); edita668(ID668, { entrada: '2026-10-10', saida: '2026-10-16', pets: [{ key: 'thor__renata teste', nome: 'Thor', raca: 'Spitz', tutor: 'Renata Teste', dias: 6, total: 78000 }] }); },
+      'orcSalvarEdicao()', MOT668, SENHA657);
+    const NA = 'Essa senha não é de ninguém cadastrado. A reserva NÃO foi alterada.';
+    igual([muda.provisoria, muda.codigoSemBanco, muda.desativada, muda.certa[0], muda.certa[2]], [[[NA], [], false], [[], ['SEM CONEXÃO COM O BANCO'], false], [[NA], [], false], [], true], 'Mudar as datas');
+    igual(db668(OP668 + ID668 + '/saida'), '2026-10-16');
+  } finally { solta668(); }
+});
+provaAsync('6.68 P22 (AC6.3) — o cancelamento de uma proposta que nunca foi à planilha: nenhum pedido à ponte, e a tela diz «Ela não estava na planilha: nada a tirar.»', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', '${SENHA657}'];`);
+    await run(`orcCancelar('${ID668}')`); await espera668();
+    igual([J668('__zp657')[0][1][1], PED668.length, db668(OP668 + ID668 + '/status')], ['Ela não estava na planilha: nada a tirar.', 0, 'cancelado']);
+    igual(J668('__za657').map((z) => [z[0], z[1][0]]), [['✅ RESERVA CANCELADA', 'Ela não estava na planilha: nada a tirar.']]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P23 (AC6.4, AC6.5) — «Reativar reserva» como «Fechou»: o status_em e o status_por do fechamento de volta, cancelamentos_desfeitos, a baixa de reposição de novo e o envio depois do ok; como «Aguardando»: a reserva; o cancelamento antigo marca a opção por «foi à planilha»; a frase da hospedagem excluída', async () => {
+  arma668();
+  try {
+    rep668('thor__renata teste', 2, {});
+    const C = FECH668({ status: 'cancelado', status_em: T657(8, 11, 0), status_por: 'Gestora Teste', cancelado_por: 'Gestora Teste', cancelado_role: 'gestao', cancelado_ts: T657(8, 11, 0),
+      cancelado_em_br: '08/10/2026 às 11:00', cancelado_motivo: 'a viagem foi desmarcada pela tutora', cancelado_planilha_ok: true, cancelado_planilha_msg: 'Thor/Spitz/Renata Teste: linha riscada',
+      cancelado_de: { status: 'fechado', status_em: T657(5, 9, 0), status_por: 'Bia Consultora Teste' }, cancelado_origem: 'hospedagem-excluida', pets: [THOR668({ reposicoes: 1 })] });
+    orc668(ID668, C);
+    run(`__p668=orcReativarAbrir('${ID668}');`); await espera668();
+    const c1 = String(run('corrCartazHTML(CORR_ATUAL)') || '');
+    assert.ok(/Volta como</.test(c1) && /<option value="Fechou" selected>/.test(c1), 'marcada pelo cancelado_de: ' + c1);
+    await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668();
+    const c2 = String(run('corrCartazHTML(CORR_ATUAL)') || '');
+    assert.ok(/As linhas de Thor entram de novo na planilha \(a linha riscada continua riscada, como registro\)\./.test(c2) && /1 dia\(s\) de reposição de Thor viram baixa de novo\./.test(c2)
+      && /A hospedagem que foi excluída continua excluída: só o orçamento volta\./.test(c2), c2);
+    const r = await assina658(SENHA657, 'a tutora remarcou a mesma viagem'); await espera668();   // quem reativa não é quem fechou
+    const cd = db668(OP668 + ID668 + '/cancelamentos_desfeitos'), cdx = cd[Object.keys(cd)[0]];
+    igual([r[0], db668(OP668 + ID668 + '/status'), db668(OP668 + ID668 + '/status_em'), db668(OP668 + ID668 + '/status_por'), db668(OP668 + ID668 + '/cancelado_motivo'), db668(OP668 + ID668 + '/cancelado_de'),
+      cdx.cancelado_motivo, cdx.cancelado_de.status, cdx.registro.por, Object.keys(db668('daycare/reposicao/thor__renata teste/lancamentos') || {}).filter((k) => /^orc-/.test(k))],
+      ['pronto', 'fechado', T657(5, 9, 0), 'Bia Consultora Teste', null, null, 'a viagem foi desmarcada pela tutora', 'fechado', 'Gestora Teste', ['orc-k668thor-1']]);
+    const fp = run(`orcFechouPor(ORC_LISTA_CACHE['${ID668}'])`);
+    igual([resumoPosts668().map((p) => p[0]), posts668()[0].dataReserva, fp.quem, fp.ts], [['gravar'], '2026-10-05', 'Bia Consultora Teste', T657(5, 9, 0)],
+      'o envio de sempre, depois do ok, com a «Data reserva» do fechamento original (S7-P9); «Fechou:» de quem fechou, na hora em que fechou (não de quem reativou)');
+    // como «Aguardando o tutor»: a reserva de reposição
+    orc668('k668ag', Object.assign({}, C, { entrada: '2026-11-10', saida: '2026-11-14', pets: [THOR668({ reposicoes: 1 })] }));
+    run(`__p668=orcReativarAbrir('k668ag');`); await espera668();
+    await run(`corrToque('continuar', {valores:['Aguardando o tutor']})`); await espera668();
+    await assina658('s-bia', 'a tutora quer pensar de novo'); await espera668();
+    igual([db668(OP668 + 'k668ag/status'), (db668('daycare/reposicao/thor__renata teste/reservas/k668ag') || {}).n], ['aguardando', 1]);
+    // o cancelamento antigo, sem cancelado_de: a opção marcada por «foi à planilha»
+    orc668('k668old', ORC668({ status: 'cancelado', entrada: '2026-12-01', saida: '2026-12-03', cancelado_motivo: 'desistiu da viagem marcada' }));
+    run(`__p668=orcReativarAbrir('k668old');`); await espera668();
+    const c3 = String(run('corrCartazHTML(CORR_ATUAL)') || '');
+    assert.ok(/<option value="Aguardando o tutor" selected>/.test(c3) && /Este registro é antigo/.test(c3), c3);
+    await fecha658();
+    orc668('k668old2', ORC668({ status: 'cancelado', entrada: '2026-12-05', saida: '2026-12-07', planilha_em: T657(3, 9, 0), cancelado_motivo: 'desistiu da viagem marcada' }));
+    run(`__p668=orcReativarAbrir('k668old2');`); await espera668();
+    assert.ok(/<option value="Fechou" selected>/.test(String(run('corrCartazHTML(CORR_ATUAL)'))), 'foi à planilha: «Fechou»');
+    await fecha658();
+  } finally { solta668(); }
+});
+
+// ---- AC7 — «Anular (lançado por engano)» --------------------------------------------------------------------------------------------------------
+provaAsync('6.68 P24 (AC7.1 a AC7.3, caminho 3) — «Anular» com a senha da Consultora: recusado; com a da Gestão: anulado, anulado_de, a reposição devolvida com a frase nova no Extrato, o nó nunca vai a null, o «cancelar» com a marca ANULADO depois do ok (base: o nó vai a null)', async () => {
+  arma668();
+  try {
+    rep668('thor__renata teste', 2, {});
+    const O = FECH668({ pets: [THOR668({ reposicoes: 1 })] });
+    orc668(ID668, O); lancaPlan668(O, '2026-10-05');
+    run(`REPO_CACHE['thor__renata teste'].lancamentos['orc-k668thor-1']={tipo:'uso', data:'2026-10-10', orcId:'k668thor', orcSeq:1, ts:5};`);
+    papel657('consultora', 'Bia Consultora Teste');
+    const card = run(`orcCardHtml('${ID668}', ORC_LISTA_CACHE['${ID668}'], '2026-10-09', {}, false, 1)`);
+    assert.ok(/onclick="orcApagar\('k668thor'\)">Anular \(lançado por engano\)</.test(card) && !/>apagar</.test(card), 'o botão, para quem trabalha no Orçamento: ' + card);
+    run(`__p668=orcApagar('${ID668}');`); await espera668();
+    const cart = String(run('corrCartazHTML(CORR_ATUAL)') || '');
+    assert.ok(/Senha da Gestão/.test(cart) && /Sai das contas: Orçamentos a confirmar, Estadias fechadas, a trava de duplicidade e o Financeiro\./.test(cart) && /1 dia\(s\) de reposição de Thor voltam à ficha\./.test(cart)
+      && /Fica guardado em Cancelados, riscado, com quem, quando e o motivo\./.test(cart) && (cart.match(/Nada é apagado/g) || []).length === 1, cart);   // 2ª rodada: o «Nada é apagado.» só na frase do cartaz (6.57)
+    const r1 = await assina658('s-bia', 'orçamento lançado em duplicidade por engano');
+    igual([r1[0], escritas657().length, PED668.length], ['conferir', 0, 0], 'a Consultora não assina');
+    const r2 = await assina658(SENHA657, 'orçamento lançado em duplicidade por engano'); await espera668();
+    const est = db668('daycare/reposicao/thor__renata teste/lancamentos/est-orc-k668thor-1');
+    igual([r2[0], db668(OP668 + ID668 + '/status'), db668(OP668 + ID668 + '/anulado_de'), db668(OP668 + ID668 + '/anulado').por, (db668(OP668 + ID668) || {}).pets.length, est.obs],
+      ['pronto', 'anulado', { status: 'fechado', status_em: T657(5, 9, 0), status_por: 'Bia Consultora Teste' }, 'Gestora Teste', 1, 'Devolvida — o orçamento de hospedagem ' + IDC668 + ' foi anulado (lançado por engano)']);
+    igual(resumoPosts668(), [['cancelar', 'Thor/Spitz/Renata Teste', '2026-10-10', '2026-10-14', 'risca', 'ANULADO']]);
+    igual(B668.linhas().map((x) => [x.nome, x.riscada]), [['ANULADO por Gestora Teste em 09/10/2026 às 10:00 - Thor/Spitz/Renata Teste', true]]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P25 (AC7.4) — «Anular» de um orçamento que já virou check-in: recusado (a tela e a função)', async () => {
+  arma668();
+  try {
+    orc668(ID668, FECH668());
+    run(`ORC_ESTADIAS_CACHE={e1:{refKey:'thor__renata teste', nome:'Thor', tutor:'Renata Teste', entrada:'2026-10-10', saida:'2026-10-14', status:'ativa'}};`);
+    await run(`orcApagar('${ID668}')`); await espera668();
+    const rb = await run(`orcAnularGravar('${ID668}', {por:'Bia Consultora Teste', papel:'consultora', motivo:'lançado por engano no sistema'})`); await espera668();
+    igual([rb.ok, rb.barrou], [false, true], 'a Consultora não anula, nem pelo console');
+    run('__au657=[];');
+    const r = await run(`orcAnularGravar('${ID668}', {por:'Gestora Teste', papel:'gestao', motivo:'lançado por engano no sistema'})`); await espera668();
+    igual([J668('__za657').map((z) => [z[0], z[1][0]]), run('CORR_ATUAL'), r.ok, r.erro, escritas657().length],
+      [[['NÃO DÁ PARA ANULAR', 'Esta reserva já virou estadia. Corrija primeiro a hospedagem («Corrigir esta hospedagem › Excluir», em Hóspedes de hoje).']], null, false,
+        'Esta reserva já virou estadia. Corrija primeiro a hospedagem («Corrigir esta hospedagem › Excluir», em Hóspedes de hoje).', 0]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 P26 (AC7.5) — a varredura: todo leitor do status do orçamento trata «anulado» como fora de conta; o grupo 2 (Cancelados); os três rótulos; o Financeiro sem ele', async () => {
+  arma668();
+  try {
+    const A = ORC668({ status: 'anulado', anulado: { acao: 'anular', oque: 'o orçamento de Thor', por: 'Gestora Teste', papel: 'gestao', motivo: 'lançado por engano no sistema', quando: '09/10/2026 às 10:00', ts: 1 } });
+    const F = FECH668({ entrada: '2026-10-09', saida: '2026-10-14' });
+    const An = Object.assign({}, A, { id: 'an', entrada: '2026-10-09' });
+    igual([run(`orcGrupoDe(${JSON.stringify(A)}, '2026-10-09', false)`), run(`orcDuplicados([${JSON.stringify(An)}], ${JSON.stringify(F)}, null).length`),
+      run(`Object.keys(orcDuplicadosNaLista([${JSON.stringify(An)}, ${JSON.stringify(Object.assign({}, F, { id: 'f' }))}])).length`),
+      run(`orcNoitesDeOutraReserva([${JSON.stringify(An)}], 'f', ${JSON.stringify(F)}).length`), run(`orcChegamHoje({an:${JSON.stringify(An)}}, {}, '2026-10-09').length`),
+      run(`orcCheckinFeitoNoOrcamento(${JSON.stringify(An)}, {e:{refKey:'thor__renata teste', nome:'Thor', tutor:'Renata Teste', entrada:'2026-10-09', status:'ativa'}})`),
+      run(`pcDadosOrcamentos({an:${JSON.stringify(A)}}).pendentes.length`)], [2, 0, 0, 0, 0, false, 0]);
+    run(`ORC_LISTA_CACHE={an:${JSON.stringify(An)}};`);
+    igual(run(`hospOrcamentoDaEstadia({refKey:'thor__renata teste', nome:'Thor', tutor:'Renata Teste', entrada:'2026-10-09', saida:'2026-10-14'}, {estrito:true})`), '');
+    igual(J668(`paDadosOrcamentos({an:${JSON.stringify(Object.assign({}, A, { status_em: T657(9, 9, 0) }))}}, '2026-10-09').resolvidosHoje.map(function(x){ return x.rotulo; })`), ['anulado']);
+    run(`__bkRX668=relBaixarXLS; relBaixarXLS=function(h){ __rx668=String(h); };`);
+    try { run(`ORC_LISTA_CACHE={an:${JSON.stringify(An)}}; relOrcamentos();`); assert.ok(/Anulado \(lançado por engano\)/.test(run('__rx668')), 'o relatório'); } finally { run('relBaixarXLS=__bkRX668;'); }
+    const linha = run(`orcLinhaHistoricoHtml('an', ${JSON.stringify(A)}, 2)`);
+    assert.ok(/ANULADO/.test(linha) && /orcAnulacaoDesfazerAbrir\('an'\)">Reabrir</.test(linha), linha);
+    run(`ORC_LINHA_ABERTA={an:true};`);
+    assert.ok(/corr-riscado/.test(run(`orcLinhaHistoricoHtml('an', ${JSON.stringify(A)}, 2)`)), 'o riscado, com «Reabrir»');
+    // o Financeiro: o anulado não conta (os mesmos números que sem ele)
+    const fin = (orcs) => JSON.parse(JSON.stringify(FIN_NOVO36.finResumoMes({ cadastro: {}, peludinhos: [], irmaos: {}, orcamentos: orcs, pagamentos: null, planos: {} }, '2026-10', { hoje: '2026-10-09' })));
+    const semA = fin({ f: F }), comA = fin({ f: F, an: A });
+    igual([comA.porServico.auaulandia, comA.aReceberTotal, comA.propostasAbertas], [semA.porServico.auaulandia, semA.aReceberTotal, semA.propostasAbertas]);
+    // a varredura do código: os leitores do status do orçamento são estes (um leitor novo derruba a prova: confira se ele trata o «anulado»)
+    const html = fs.readFileSync(APP, 'utf8'), main = extractMainScript(html), fns = []; let cur = null;
+    main.split('\n').forEach((l) => { const m = /^  (?:async\s+)?function\s+([\w$]+)\s*\(/.exec(l); if (m) { cur = { n: m[1], t: [] }; fns.push(cur); } if (cur) cur.t.push(l); });
+    const RE = /\.status\b[^;\n]{0,60}?(['"])(aguardando|fechado|nao_fechou|cancelado|anulado)\1|(['"])(aguardando|fechado|nao_fechou|cancelado|anulado)\3[^;\n]{0,40}?\.status\b|status\s*\|\|\s*'aguardando'|ORC_STATUS_ROTULO|PA_ORC_ROTULO\[|\bstt\[/;
+    const achados = fns.filter((f) => RE.test(f.t.join('\n'))).map((f) => f.n).sort();
+    const LEITORES = {
+      // contam só «aguardando» e «fechado» (o «anulado» fica de fora sem mudar)
+      soVivos: ['orcChegamHoje', 'orcHospedagemPassada', 'orcDuplicados', 'orcDuplicadosNaLista', 'orcResumoDuplicado', 'orcCheckinFeitoNoOrcamento', 'orcNoitesDeOutraReserva', 'hospOrcamentoDaEstadia', 'pcDadosOrcamentos', 'orcFoiAPlanilha', 'orcFechouPor', 'orcPlanilhaCascata', 'orcMudarDatas', 'orcRenderAvisoEdicao', 'orcSalvarEdicao', 'orcEnviarPlanilha'],
+      // nomeiam o status (ganharam a palavra «anulado») ou decidem o grupo
+      nomeiam: ['orcGrupoDe', 'orcCardHtml', 'orcLinhaHistoricoHtml', 'relOrcamentos', 'paDadosOrcamentos', 'orcStatusRotulo', 'repOrcAcerto'],
+      // as ações desta story (cada uma confere o status de antes)
+      acoes668: ['orcStatus', 'orcStatusGravar', 'orcVoltarPendenteAbrir', 'orcVoltaAbrir', 'orcAnularAbrir', 'orcTirarDaPlanilhaAbrir', 'orcTirarDaPlanilhaGravar', 'orcMudancaLinhas', 'orcCancelarGravar',
+        // 2ª rodada: a releitura antes de gravar (compara o status relido com o que a tela viu) e as gravações pelo relido; o «anular»
+        // só de aguardando ou fechado; a memória da tela (o achado da busca só entra na lista se ficou vivo)
+        'orcRelerParaGravar', 'orcStatusGravarRelido', 'orcVoltarRelido', 'orcAnulavel', 'orcNaoAnulavelTexto', 'orcAnularRelido', 'orcCancelarRelido', 'orcCacheTrocar',
+        // 3ª rodada (REL-004): a forma da vista que a releitura compara (o status, as datas, o valor e os FILHOts) — não conta nada
+        'orcVistaDe'],
+      // não são do orçamento (pernoites, a ficha da reposição, a falta): o mesmo nome de status, outro nó
+      outros: ['repPelaChave', 'faltaDormiuAqui', 'pernAtrasadasDeDias', 'pernLista', 'pernContagem', 'dashPernEtiquetaHTML', 'pernConferirNoite', 'pernMarcarCheckinFeito', 'pernCancelar', 'hospSugestaoNovo'] };
+    igual(achados, [].concat(LEITORES.soVivos, LEITORES.nomeiam, LEITORES.acoes668, LEITORES.outros).sort(), 'leitores do status');
+  } finally { solta668(); }
+});
+provaAsync('6.76 × publicadas · QA676J-04 (6.68, portas da Gestão no orçamento) — «Anular (lançado por engano)» (orcAnularAbrir: Gestão, capacidade assinar-orcamento) e «Reabrir» o anulado (orcVoltaAbrir, uma das 18 fora da varredura: Gestão com a tela «orcamento»): a Consultora e a Supervisão (que têm a capacidade) recusadas; a provisória, a do código sem banco e a desativada recusadas; a Gestão assina', async () => {
+  arma668();
+  try {
+    orc668(ID668, FECH668());
+    run(`__p668=orcAnularAbrir('${ID668}');`); await espera668();
+    igual([J668('CORR_ATUAL.op.nivel'), J668('CORR_ATUAL.op.capacidade')], ['gestao', 'assinar-orcamento']);
+    const r1 = await assina658('s-bia', 'lançado por engano no sistema'), r2 = await assina658('s-amanda', 'lançado por engano no sistema');
+    igual([r1[0], /não pode assinar|Quem assina/.test(r1[1]), r2[0], /não pode assinar|Quem assina/.test(r2[1]), db668(OP668 + ID668 + '/status')], ['conferir', true, 'conferir', true, 'fechado'], JSON.stringify([r1, r2]));
+    igual(await x676Portas(run, espera668, 'lançado por engano no sistema', SENHA657), x676Esperado(), 'Anular');
+    igual(db668(OP668 + ID668 + '/status'), 'anulado');
+    run("if(CORR_ATUAL) corrToque('fechar');"); await espera668();
+    const REG = { acao: 'anular', oque: 'o orçamento de Thor', por: 'Gestora Teste', papel: 'gestao', motivo: 'lançado por engano no sistema', quando: '09/10/2026 às 09:00', ts: T657(9, 9, 0) };
+    orc668(ID668, ORC668({ status: 'anulado', status_em: T657(9, 9, 0), anulado: REG, anulado_de: { status: 'aguardando', status_em: T657(8, 9, 0), status_por: 'Bia Consultora Teste' } }));
+    run(`__p668=orcAnulacaoDesfazerAbrir('${ID668}');`); await espera668();
+    await run(`corrToque('continuar', {valores:['Aguardando o tutor']})`); await espera668();
+    igual([J668('CORR_ATUAL.op.nivel'), J668('CORR_ATUAL.op.telaConcedida')], ['gestao', 'orcamento']);
+    const r3 = await assina658('s-bia', 'não foi lançado por engano afinal');
+    igual([r3[0], db668(OP668 + ID668 + '/status')], ['conferir', 'anulado']);
+    igual(await x676Portas(run, espera668, 'não foi lançado por engano afinal', SENHA657), x676Esperado(), 'Reabrir o anulado');
+    igual(db668(OP668 + ID668 + '/status'), 'aguardando');
+  } finally { solta668(); }
+});
+provaAsync('6.68 P27 (AC7.6) — «Reabrir» o anulado (Gestão): volta ao status de antes, com as recusas do «Reativar»; o registro vai para anulacoes_desfeitas', async () => {
+  arma668();
+  try {
+    const REG = { acao: 'anular', oque: 'o orçamento de Thor', por: 'Gestora Teste', papel: 'gestao', motivo: 'lançado por engano no sistema', quando: '09/10/2026 às 09:00', ts: T657(9, 9, 0) };
+    orc668(ID668, ORC668({ status: 'anulado', status_em: T657(9, 9, 0), anulado: REG, anulado_de: { status: 'aguardando', status_em: T657(8, 9, 0), status_por: 'Bia Consultora Teste' } }));
+    run(`__p668=orcAnulacaoDesfazerAbrir('${ID668}');`); await espera668();
+    assert.ok(/<option value="Aguardando o tutor" selected>/.test(String(run('corrCartazHTML(CORR_ATUAL)'))), 'marcada pelo anulado_de');
+    await run(`corrToque('continuar', {valores:['Aguardando o tutor']})`); await espera668();
+    assert.ok(/Senha da Gestão/.test(String(run('corrCartazHTML(CORR_ATUAL)'))));
+    const r1 = await assina658('s-bia', 'não foi lançado por engano afinal');
+    const r2 = await assina658(SENHA657, 'não foi lançado por engano afinal'); await espera668();
+    const ad = db668(OP668 + ID668 + '/anulacoes_desfeitas');
+    igual([r1[0], r2[0], db668(OP668 + ID668 + '/status'), db668(OP668 + ID668 + '/anulado'), ad[Object.keys(ad)[0]].anulado, hist668(ID668)[0].de], ['conferir', 'pronto', 'aguardando', null, REG, 'anulado']);
+    // a duplicidade recusa (a Consultora não passa por cima)
+    await fecha658();
+    orc668('k668d', ORC668({ criado_em: T658(7, 9, 0) }));
+    orc668('k668an2', ORC668({ status: 'anulado', anulado: REG, anulado_de: { status: 'aguardando', status_em: 0, status_por: '' } }));
+    papel657('consultora', 'Bia Consultora Teste');
+    await run(`orcAnulacaoDesfazerAbrir('k668an2')`); await espera668();
+    igual([J668('__ze657').length, run('CORR_ATUAL')], [1, null]);
+  } finally { solta668(); }
+});
+
+// ---- AC8 — «Tirar da planilha» ------------------------------------------------------------------------------------------------------------------
+provaAsync('6.68 P28 (AC8) — «Tirar da planilha»: o aviso e o botão só na proposta aguardando com planilha_em e sem planilha_tirada, com a frase certa (confirmou ou não); a gravação do planilha_tirada; o status e a reposição não mudam', async () => {
+  arma668();
+  try {
+    rep668('thor__renata teste', 2, { k668thor: { n: 1, entrada: '2026-10-10', saida: '2026-10-14' } });
+    const card = (o, g) => run(`orcCardHtml('x', ${JSON.stringify(o)}, '2026-10-09', {}, false, ${g || 0})`);
+    assert.ok(/Esta proposta ainda está na planilha \(lançada em 05\/10\), mas o tutor ainda não fechou\./.test(card(ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: true }))) && /orcTirarDaPlanilhaAbrir\('x'\)">Tirar da planilha</.test(card(ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: true }))));
+    assert.ok(/Esta proposta pode ter ficado na planilha: o último envio, em 05\/10, não confirmou tudo\./.test(card(ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: false }))));
+    igual([/Tirar da planilha/.test(card(ORC668())), /Tirar da planilha/.test(card(ORC668({ planilha_em: 1, planilha_tirada: { resultado: { ok: true } } }))),
+      /Tirar da planilha/.test(card(FECH668(), 1))], [false, false, false]);
+    const O = ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: true, pets: [THOR668({ reposicoes: 1 })] });
+    orc668(ID668, O); lancaPlan668(O, '2026-10-05');
+    run(`__p668=orcTirarDaPlanilhaAbrir('${ID668}');`); await espera668();
+    const cart = String(run('corrCartazHTML(CORR_ATUAL)') || '');
+    assert.ok(/Tirar da planilha/.test(cart) && /As linhas de Thor saem da planilha/.test(cart) && /Sua senha/.test(cart), cart);
+    const r = await assina658('s-bia', 'a proposta ficou na planilha por engano'); await espera668();
+    const t = db668(OP668 + ID668 + '/planilha_tirada');
+    igual([r[0], t.porque, t.resultado.ok, t.registro.por, t.registro.rotulo, db668(OP668 + ID668 + '/status'), (db668('daycare/reposicao/thor__renata teste/reservas/k668thor') || {}).n, resumoPosts668()],
+      ['pronto', 'tirar', true, 'Bia Consultora Teste', 'Tirada da planilha', 'aguardando', 1, [['cancelar', 'Thor/Spitz/Renata Teste', '2026-10-10', '2026-10-14', 'risca', 'VOLTOU PARA PENDENTE']]]);
+    assert.ok(!/Tirar da planilha/.test(run(`orcCardHtml('${ID668}', ORC_LISTA_CACHE['${ID668}'], '2026-10-09', {}, false, 0)`)), 'o botão some');
+  } finally { solta668(); }
+});
+
+// ---- AC9 — o rastro do envio ----------------------------------------------------------------------------------------------------------------------
+provaAsync('6.68 P29 (AC9) — o planilha_hist e a auditoria orcamento-planilha em todo pedido (lançar, atualizar, riscar, liberar), em português; o orcLiberarNaPlanilha com falha diz na tela; nenhuma tela com «Failed to fetch»', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    run(`__sec668=ORC_SEC_ABERTA; ORC_SEC_ABERTA={'1':true};`);   // Estadias fechadas aberta: o card desenhado
+    try { run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668(); } finally { run('ORC_SEC_ABERTA=__sec668;'); }
+    assert.ok(/Lançado na planilha/.test(String(run("__el657['orcLista'].innerHTML") || '')), 'o card diz na hora que a linha entrou (redesenhado quando a planilha respondeu)');
+    edita668(ID668, { entrada: '2026-10-10', saida: '2026-10-16', pets: [THORn668(6, 78000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    run(`__p668=orcStatus('${ID668}','aguardando');`); await espera668();
+    await assina658(SENHA657, 'a tutora pediu para pensar mais'); await espera668();
+    const ph = db668(OP668 + ID668 + '/planilha_hist') || {};
+    const E = Object.keys(ph).map((k) => ph[k]).sort((a, b) => a.ts - b.ts);
+    igual(E.map((x) => [x.porque, x.versaoPonte, x.quem, x.pets.map((p) => p.nome + ':' + p.acao + ':' + p.ok)]),
+      [['fechou', 6, 'Gestora Teste', ['Thor:lançar:true']], ['mudar-datas', 6, 'Gestora Teste', ['Thor:atualizar:true']], ['voltar-pendente', 6, 'Gestora Teste', ['Thor:riscar:true']]]);
+    igual(aud657('orcamento-planilha').map((a) => a[1]), ['Planilha — Thor: linha lançada, 4 noite(s) marcada(s)', 'Planilha — Thor: linha atualizada, 4 noite(s) liberada(s), 6 noite(s) marcada(s)',
+      'Planilha — Thor: linha riscada («VOLTOU PARA PENDENTE»), 6 noite(s) liberada(s)']);
+    // liberar (o orcLiberarNaPlanilha): o rastro e, na queda, a frase na tela — sem «Failed to fetch»
+    ponte668('cai'); run('__za657=[]; __al657=[];');
+    const r = await run(`orcLiberarNaPlanilha({id:'${ID668}', entrada:'2026-10-10', saida:'2026-10-14', pets:[{nome:'Thor', raca:'Spitz', tutor:'Renata Teste'}]}, 'Gestora Teste', '09/10/2026')`); await espera668();
+    const ph2 = db668(OP668 + ID668 + '/planilha_hist') || {}, ult = Object.keys(ph2).map((k) => ph2[k]).sort((a, b) => a.ts - b.ts).pop();
+    igual([r.ok, ult.porque, ult.pets[0].acao, ult.pets[0].ok, zaTitulos668()], [false, 'mudar-datas', 'liberar', false, ['AS NOITES ANTIGAS NÃO SAÍRAM DA PLANILHA']]);
+    // a queda em todas as portas: nenhuma tela diz «Failed to fetch»
+    orc668('k668q', FECH668()); run(`__zpq657=[true,true]; __ztq657=['a viagem foi desmarcada pela tutora', '${SENHA657}'];`);
+    await run(`orcEnviarPlanilha('k668q')`); await espera668();
+    edita668('k668q', { entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668();
+    run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', '${SENHA657}'];`); await run(`orcCancelar('k668q')`); await espera668();
+    const telas = JSON.stringify(run('__za657')) + JSON.stringify(run('__al657'));
+    assert.ok(!/Failed to fetch/.test(telas) && /NÃO CONFIRMOU/.test(telas), telas);
+  } finally { solta668(); }
+});
+
+// ---- AC10 — a ponte: a versão perguntada por GET, só na URL do Apps Script --------------------------------------------------------------------------
+provaAsync('6.68 P29b (AC5.2, AC10.6) — orcPonteVersao: o GET só na URL do Apps Script (outra URL: nenhum pedido, versão 0); guardada 10 minutos; sem resposta, 0', async () => {
+  arma668();
+  try {
+    igual([await run('orcPonteVersao()'), gets668()], [6, 1]);
+    igual([await run('orcPonteVersao()'), gets668()], [6, 1], 'guardada');
+    run(`ORC_PONTE_VER.quando=Date.now()-11*60*1000;`);
+    igual([await run('orcPonteVersao()'), gets668()], [6, 2], 'depois de 10 minutos, pergunta de novo');
+    run(`orcSheetsCfg={url:'https://outra.example.com/exec', token:'tk-de-mentira'}; ORC_PONTE_VER.quando=0;`);
+    igual([await run('orcPonteVersao(true)'), PED668.filter((p) => p.url).length], [0, 0], 'nenhum pedido a outra URL');
+    run(`orcSheetsCfg={url:'${URL668}', token:'tk-de-mentira'};`); ponte668('5');
+    igual(await run('orcPonteVersao(true)'), 0, 'a ponte de hoje: sem versão');
+  } finally { solta668(); }
+});
+
+// ---- AC11 — a lista além dos 60 -------------------------------------------------------------------------------------------------------------------
+// O banco de mentira ganha o limitToLast(60) da tela (os 60 de chave mais nova).
+const LISTA668 = `__dbr668=DB.ref; DB.ref=function(p){ var r=__dbr668(p); if(p==='auaulandia/orcamentos'){ r.limitToLast=function(n){ return {once:function(){
+    var v=__get657(p)||{}, ks=Object.keys(v).sort().slice(-n), o={}; ks.forEach(function(k){ o[k]=v[k]; }); __leu668.push('60'); return Promise.resolve({val:function(){ return o; }}); }}; };
+    var once=r.once; r.once=function(){ __leu668.push('tudo'); if(__lerFalha668) return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); return once.apply(r, arguments); }; } return r; };
+  __leu668=[]; __lerFalha668=false; orcCarregarLista=__bk657.ocl;`;
+const muitos668 = () => { // 60 orçamentos novos (aguardando, de outros FILHOts) e os antigos de fora da janela
+  ctx.__mu668 = {}; for (let i = 0; i < 60; i++) ctx.__mu668['z' + String(i).padStart(3, '0')] = ORC668({ pets: [{ key: 'f' + i, nome: 'Filhot' + i, tutor: 'Tutor Teste ' + i }], tutor: 'Tutor Teste ' + i, entrada: '2026-11-0' + (1 + (i % 9)), saida: '2026-11-1' + (i % 9) });
+  run(`Object.keys(__mu668).forEach(function(k){ __put657('${OP668}'+k, __mu668[k]); });`);
+  // os antigos (chaves menores = mais velhos)
+  run(`__put657('${OP668}a01fech', ${JSON.stringify(FECH668({ entrada: '2026-12-20', saida: '2026-12-27' }))});
+    __put657('${OP668}a02agu', ${JSON.stringify(ORC668({ pets: [NALA668()], entrada: '2026-12-01', saida: '2026-12-03' }))});
+    __put657('${OP668}a03canc', ${JSON.stringify(ORC668({ status: 'cancelado', tutor: 'Renata Teste', cancelado_motivo: 'a viagem foi desmarcada', entrada: '2026-08-01', saida: '2026-08-03' }))});
+    __put657('${OP668}a04pass', ${JSON.stringify(FECH668({ entrada: '2026-09-01', saida: '2026-09-03' }))});
+    __put657('${OP668}a05hoje', ${JSON.stringify(FECH668({ pets: [MAYA668()], tutor: 'Luciana Teste', entrada: '2026-10-09', saida: '2026-10-12' }))});`);
+};
+provaAsync('6.68 P30 (AC11.1, AC11.2) — a leitura inteira acrescenta o fechado de fora dos 60 com saída futura e o aguardando antigo; Cancelados e Já hospedados continuam nos 60; «Procurar um orçamento antigo» acha o cancelado antigo, com «Reativar reserva»', async () => {
+  arma668();
+  try {
+    run(LISTA668); muitos668();
+    run('orcCarregarLista();'); await espera668();
+    const ids = J668('Object.keys(ORC_LISTA_CACHE)');
+    igual([J668('__leu668'), ids.length, ['a01fech', 'a02agu', 'a05hoje'].every((k) => ids.includes(k)), ids.includes('a03canc'), ids.includes('a04pass')], [['60', 'tudo'], 63, true, false, false]);
+    // guardada 3 minutos: abrir de novo não relê a coleção
+    run('orcCarregarLista();'); await espera668();
+    igual(J668('__leu668'), ['60', 'tudo', '60'], 'sem a guarda, cada desenho desceria a coleção inteira');
+    // a busca: o cancelado antigo, sem acento e sem caixa, com os botões da seção dele
+    await run(`orcProcurar('renáta')`); await espera668();
+    const res = String(run("__el657['orcBuscaRes'].innerHTML") || '');
+    assert.ok(/orcReativarAbrir\('a03canc'\)">Reativar reserva</.test(res) && /Cancelados/.test(res), res.slice(0, 600));
+    igual(run(`orcProcurarAchar(ORC_VIVOS.todos, 'r').length`), 0, 'menos de 2 letras: nada');
+    // a caixa de busca e a lista de achados têm id só delas na tela (no navegador, o getElementById pega o PRIMEIRO id repetido)
+    const caixa = /<input id="([^"]+)"[^>]*oninput="orcProcurar\(this\.value\)"/.exec(SRC619);
+    assert.ok(caixa, 'a caixa «Procurar um orçamento antigo» chama orcProcurar');
+    igual([caixa[1], SRC619.split('id="' + caixa[1] + '"').length - 1, SRC619.split('id="orcBuscaRes"').length - 1], ['orcProcBusca', 1, 1], 'id repetido: a caixa ou os achados de outra tela');
+  } finally { solta668(); }
+});
+provaAsync('6.68 P31 (AC11.3) — a duplicidade com um fechado de fora dos 60: o orcSalvar recusa; com a leitura falhando, a frase e segue com os 60', async () => {
+  arma668();
+  try {
+    run(LISTA668); muitos668();
+    run('orcCarregarLista();'); await espera668();
+    // a lista da tela tem só os 60 (como se a juntada não tivesse rodado): a trava lê a coleção inteira
+    run(`ORC_LISTA_CACHE={}; ORC_TEMP='baixa'; ORC_EDITANDO=null;`);
+    edita668('nada', { entrada: '2026-12-21', saida: '2026-12-24', pets: [THORn668(3, 39000)] }); run('ORC_EDITANDO=null;');
+    run(`ORC_VIVOS.quando=Date.now()-4*60*1000;`);   // a leitura tem mais de 3 minutos: é refeita antes
+    await run('orcSalvar()'); await espera668();
+    igual([J668('__leu668').filter((x) => x === 'tudo').length, J668('__ze657').length, String(run("__el657['orcSalvoStatus'].textContent"))], [2, 1, 'NÃO foi salvo: já existe orçamento deste FILHOt para estas datas. Veja o cartaz.']);
+    // o «Fechou» de um aguardando da tela também lê a coleção inteira: o fechado de fora dos 60 barra (nem chega a perguntar)
+    run(`__ze657=[]; __esc657=[]; __zp657=[]; __zpq657=[true]; ORC_LISTA_CACHE={k668fe:${JSON.stringify(ORC668({ entrada: '2026-12-21', saida: '2026-12-24' }))}}; ORC_VIVOS.quando=Date.now()-4*60*1000;`);
+    await run(`orcStatus('k668fe','fechado')`); await espera668();
+    igual([J668('__ze657').length, J668('__zp657').length, updRaiz668().length, String(run("(ORC_LISTA_CACHE['k668fe']||{}).status"))], [1, 0, 0, 'aguardando'],
+      'o «Fechou» confere a lista inteira: o cartaz de duplicidade, nenhuma pergunta, nada gravado');
+    // a leitura falhou: a frase, e segue com os 60
+    run(`__lerFalha668=true; ORC_VIVOS.quando=0; ORC_VIVOS.lido=false; __ze657=[]; __esc657=[]; ORC_LISTA_CACHE={};`);
+    edita668('nada', { entrada: '2026-12-21', saida: '2026-12-24', pets: [THORn668(3, 39000)] }); run('ORC_EDITANDO=null;');
+    await run('orcSalvar()'); await espera668();
+    assert.ok(/Não consegui conferir os orçamentos antigos: confira se já existe reserva deste FILHOt para estas datas\./.test(String(run("__el657['orcSalvoStatus'].textContent"))), String(run("__el657['orcSalvoStatus'].textContent")));
+    igual(updRaiz668().length, 1, 'salvou com os 60');
+  } finally { solta668(); }
+});
+provaAsync('6.68 P32 (AC11.4) — o cartão «chegam hoje» do Check-in mostra a reserva fechada de fora dos 60 com entrada hoje; o desenho e o __ciGravar não mudam', async () => {
+  arma668();
+  try {
+    run(LISTA668); muitos668();
+    run(`ORC_ESTADIAS_CACHE={x:{refKey:'outro', nome:'Outro', tutor:'X', entrada:'2026-10-01', saida:'2026-10-02', status:'ativa'}}; ciOrcHojeCarregar();`); await espera668();
+    const h = String(run("__el657['ciOrcHoje'].innerHTML") || '');
+    assert.ok(/Chegam pelos orçamentos fechados \(1\)/.test(h) && /Maya/.test(h) && /orcAbrirCheckin\('a05hoje'/.test(h), h.slice(0, 500));
+    const hh = (n) => crypto658.createHash('sha256').update(String(run(n + '.toString()'))).digest('hex');
+    igual([hh('__ciGravar'), hh('ciOrcHojeRender'), hh('orcChegamHoje')], [BASE668.__ciGravar, BASE668.ciOrcHojeRender, BASE668.orcChegamHoje]);
+  } finally { solta668(); }
+});
+
+// ---- AC13 — a Linha do tempo e a senha ----------------------------------------------------------------------------------------------------------
+provaAsync('6.68 P33 (AC13) — a Linha do tempo traduz as ações novas e as nove do Orçamento, também no resumo por pessoa; a senha em nenhum nó gravado nem na auditoria', async () => {
+  arma668();
+  try {
+    const acoes = ['orcamento-nao-fechou', 'orcamento-reaberto', 'orcamento-voltou-pendente', 'orcamento-reativado', 'orcamento-anulado', 'orcamento-anulacao-desfeita', 'orcamento-planilha',
+      'orcamento-planilha-tirada', 'orcamento-calendario-preservado', 'orcamento-criado', 'orcamento-status', 'orcamento-datas-alteradas', 'orcamento-apagado', 'orcamento-duplicado-confirmado',
+      'orcamento-ponte-planilha', 'orcamento-precos', 'orcamento-atalho-checkin', 'reposicao-baixa-orcamento'];
+    igual(acoes.filter((a) => run(`acaoNome(${JSON.stringify(a)})`) === a), [], 'sem tradução');
+    igual(run(`acaoRotulo({acao:'orcamento-status', detalhe:'Thor (10/10/2026 a 14/10/2026, orçamento 68THOR): aguardando o tutor → fechou'})`), 'Mudou a situação do orçamento — Thor (10/10/2026 a 14/10/2026, orçamento 68THOR): aguardando o tutor → fechou');
+    // um caminho inteiro com senha: anular, reabrir; nenhuma senha gravada
+    orc668(ID668, FECH668());
+    run(`__p668=orcApagar('${ID668}');`); await espera668(); await assina658(SENHA657, 'orçamento lançado em duplicidade por engano'); await espera668();
+    run(`__p668=orcAnulacaoDesfazerAbrir('${ID668}');`); await espera668(); await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668();
+    await assina658(SENHA657, 'não foi lançado por engano afinal'); await espera668();
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000)] }); alteraSenha668(MOT668, 's-bia');
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', 's-bia'];`); await run(`orcCancelar('${ID668}')`); await espera668();
+    const tudo = JSON.stringify(run('__db657')) + JSON.stringify(run('__au657'));
+    igual([db668(OP668 + ID668 + '/status'), db668(OP668 + ID668 + '/entrada'), tudo.indexOf(SENHA657), tudo.indexOf('s-bia')], ['cancelado', '2026-10-11', -1, -1]);
+  } finally { solta668(); }
+});
+
+// ---- AC15 e AC16 — o que não pode mudar --------------------------------------------------------------------------------------------------------
+// os valores de cada função na base 910b143 (versão 2026-10-09-20), sha-256 do texto (num sandbox novo, o mesmo carregamento da Fase 0)
+const BASE668 = {"orcFeriados": "785ee66dd1cf76073210f65508c4c02abadc5d6453c567deacdd146153c619e6", "orcEhFeriado": "77df0299778edc768e00a25506f073ea954fac02e8277701701ede24e5e66685", "orcFeriadosGarantir": "8c75afa83c7084c77d8fad49f1c15d806fe43289b6ba0b036d003a8df84848ef", "ORC_FERIADOS_PADRAO": "da488611c3acf6221d8dd6aa3ebc07102fce90580195e44379d35f0fcd896513", "hospConfirmarAntecipada": "626c463d53e361d819dc385be496f223e5114d22e3f745d1ba4ee060ba6b8d8e", "repSaldo": "566c707e9b91295e7f498532b5c59c00772525fe829081ed5b3864266aed6c9c", "__ciGravar": "58d574cb3e860997260773429498704ffe49fae1d7ed12cf849faef5a75b8067", "repAnulados": "6e310abb12aca9e4e23b627bd38d5b7d8f79395c19d767c3a560783c02a3f587", "repAgendaDe": "6250ee1d9dcd111e953577bdbf238caa605b0bd060188daff1d41b6d24ae7916", "repAgendaDeL": "26d9ab54f79e6d431390c5a9ed9ac5d6c5ecc3b185b681053da39f5cc0d8d94f", "repSaldoDe": "66cfbca5de0062599b253ac3d253f0c4a73fd36c5aedcee99e0ffe365c425e1a", "repSaldoReposicao": "300b3fd968334c7beee48a8c39dc8017e0dd60c2b0c6889c7aeced7c94b07253", "repSaldoReposicaoDe": "4c40b17e4573d280fced0b8fdd80011b35b6635e89262463398f80a128e7ffbf", "repSaldoRepDepois": "056465752fd250dce69fb5374b0da3edc8f08a372a7ce04fcb4262899a04d4a4", "repTetosDe": "f4bf8f7e9b0e5c37656bfec99ed9b733cd0d4fb91da75df6ea764ede13700731", "repTetoVencidas": "c98fa52623cd05028b2806f86f7726a05910289a03d23213c6bab9007edeb574", "repTrocasPendentesLista": "4b385e6e6aed312bf4b80d56de0569df5035ad8cc09eda5a43c48a314d46a4e8", "repVoltasVencidas": "50c7396bdde63eeadae143c005306ed1b46e73aad1701efeeec3ec8c8714c1e5", "repVoltasVencidasValendo": "9f280e810abe51240ad3b2ddd6b37bedff4af9c521afcfa3df9fb58657e29477", "repVencidasSemDesfecho": "aa10590f67b3a659eb7c8bea6eba0019f20b88dc8fb5055ee1c4a001dab19d0f", "repLivresParaMarcar": "0e3be33e19678e9bb089202ac7a8f35a27c187297378841e00b8c6b10dfde8a8", "repCreditoLivre": "c067dcf0ae259d45de5116111c1136a628b9b2be3e1aa089e570b1166fcaf7a1", "repRepetidas": "edaa3359be68bf3aca24d49ccf389ebfa5b6c817de44ba62988d84a24873ae1d", "repCreditoVivoNaData": "60be90cc31b12d3dd080b999395108d7f74b447ad2929461f9b0a36c65fa1e4f", "repFaltaChave": "b992f24f940cd0e7b6859e3bb6b0815a3d8cb28bd9c1e51e507025386782840e", "repVeioChave": "8546c8e199b4ee96a9ca5fc89f783f574f42516418caf07deeac918c388dd8ae", "repDiaTemUso": "b950e48dd4e895daa8956a567a8d78ca80c5cdc369cd464839f2cc1b3dc211a4", "repVeioDevolvido": "28a52eb718b1dc8f5df5fa90eed50a1cbea0944ee6f0040e155079aa57e351cc", "repExtratoPares": "1779749be00c5ee6fb9e7d2e3c7319798e7953ffc340fd99338c707f33784a90", "repDesfechoRegistro": "ed2fc57bd306e5427237b862c2bc03372366099b8e8ba7370ef9e4f2063fd1d7", "repDesfechoGravar": "62279ae41b19ae4d4d69545522c4471ae852d7769c3334fdce437c76d7e1d99c", "repBaixaPelaPresenca": "f47db188a17d584f92a06512fccf5e72b11dcc579d74848495e7201404912de5", "repTransacaoExtrato": "8c5dd1d9c5aae5dc7218873406d5b3ac88ea52d98fe9613d781ca95801d63787", "repLoteEstornarGravar": "8e3122cea6575a93921b7fa85bf44f4b4fe5d8ec6fae866cbfff5886d62a38b6", "ciOrcHojeRender": "be044cb0a3bd3dff0c4d11ed6ffd902b2e3f0ff854c650bb33cc7ca2d78ecd4c", "orcChegamHoje": "5a84d231647b9dcf0cdb0c6adb0211800498c650b6cad5affcc610f44d317fa1", "repDisponivel": "d2e85cb1701781ae7c0f17b607777e84356d7da744ab14aa78054963934bd4f6", "repReservado": "30eb9c49c0397db73c406bc99f6f3c47348c3b9723b55c21de0fcdd7217befbb", "orcNoitesDeOutraReserva": "7048175801fb2bbaf230dc29f0d52f851b66c05fb025543ea1391659fda8e064", "orcDuplicados": "83ff000f55394b7801af24c09cac27af3d7a87fec92dd2f3e89c7473731d58a3", "orcCheckinFeitoNoOrcamento": "19d6c63de546f8103f252ea0a2f2a27aad7df6729f089d8148cb76bac1836bf3", "orcLinhasPlanilha": "2be4e2decc6122a55606802422e7bc7b95eb9b7564d23e75fbc9182a4c45a790", "orcPonteMotivo": "d55124c2047945e47ce8e64690e955c0ad65d10112b990b12a39e58b0c1797f1", "orcPlanilhaMotivo": "8b5af6182c058a186f181055c36d94c6ed75fba9bb5ea443d7696bdf83f1c167", "hospOrcamentoDaEstadia": "cdd472f2ab2ff274004223b566c463bd9860eed459165c4bd0eaca8eed52ccbb", "pcDadosOrcamentos": "548caa93e4d87c513979da7a6881b925b9262553415bdcbf31b0d58f8eac4a32"};
+provaAsync('6.68 P34 (AC15, guarda) — a área protegida e as declarações ck*/pt* sem mudança; nenhuma função nova começa com ck ou pt; o que a falta automática lê (orcFeriados, orcEhFeriado, orcFeriadosGarantir, ORC_FERIADOS_PADRAO), hospConfirmarAntecipada, repSaldo, o livro-caixa, o __ciGravar e as peças reaproveitadas, letra por letra iguais', async () => {
+  const h = (t) => crypto658.createHash('sha256').update(t).digest('hex');
+  const nomes = run("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  const html = fs.readFileSync(APP, 'utf8');
+  const sec = (x) => { const i = x.indexOf('id="v-daycare"'); const j = x.indexOf('id="v-', i + 10); return x.slice(i, j); };
+  const decl = (x) => x.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n');
+  igual([nomes.length, h(nomes.map((n) => n + '\n' + run(n + '.toString()')).join('\n\n')), h(sec(html)), h(decl(html))], [PROT_BASE658.n, PROT_BASE658.funcoes, PROT_BASE658.daycare, PROT_BASE658.decl]);
+  const agora = {}; Object.keys(BASE668).forEach((n) => { agora[n] = h(String(run('typeof ' + n + "==='function' ? " + n + '.toString() : JSON.stringify(' + n + ')'))); });
+  igual(agora, BASE668, 'letra por letra iguais às da base');
+});
+provaAsync('6.68 P35 (AC16, guarda) — o finResumoMes dá o mesmo total com os campos novos (status_hist, planilha_hist, historico, cancelamentos_desfeitos) e com a reativação que devolve o status_em original; as provas antigas do Orçamento passaram', async () => {
+  const base = FECH668({ entrada: '2026-10-20', saida: '2026-10-24' });
+  const novo = Object.assign({}, base, { status_hist: { h1: { de: 'aguardando', para: 'fechado', quem: 'Bia', ts: T657(5, 9, 0) }, h2: { de: 'cancelado', para: 'fechado', quem: 'Gestora Teste', ts: T657(9, 10, 0), fechou_original: { quem: 'Bia Consultora Teste', ts: T657(5, 9, 0) } } },
+    planilha_hist: { p1: { porque: 'reativar', versaoPonte: 6, pets: [], quem: 'Gestora Teste', ts: 1 } }, historico: { x: { de_entrada: '2026-10-19', para_entrada: '2026-10-20', ts: 1 } },
+    cancelamentos_desfeitos: { c1: { cancelado_motivo: 'a viagem foi desmarcada', registro: { por: 'Gestora Teste' } } } });
+  const fin = (o) => JSON.parse(JSON.stringify(FIN_NOVO36.finResumoMes({ cadastro: {}, peludinhos: [], irmaos: {}, orcamentos: { o: o }, pagamentos: null, planos: {} }, '2026-10', { hoje: '2026-10-09' })));
+  igual(fin(novo), fin(base));
+  const caiu = falhas.filter((f) => /^6\.(48|53|57)\b/.test(f));
+  igual(caiu, [], 'falharam: ' + caiu.join(' | '));
+});
+// ---- 2ª rodada (gate do QA, 11/out/2026): as provas de ataque do QA independente (Quinn), trazidas para a Fase 0 ---------------------------
+// Os nomes «QA668-nn» viraram «6.68 QA668-nn». Mudanças: a QA668-08 ganhou a célula protegida que recusa também o setValues (a
+// ponte nova escreve a linha inteira numa escrita só — no Apps Script, a escrita que alcança uma célula protegida é recusada inteira); a
+// QA668-20 passou a exigir o «Nada é apagado» uma vez só no cartaz «Anular» (antes só mostrava a contagem).
+const QAP668 = (o) => run(`__put657('${OP668}${ID668}', ${JSON.stringify(o)});`);            // o banco muda (outro aparelho); a memória desta tela, não
+const vivas668 = (nome) => B668.linhas().filter((x) => x.nome === nome && !x.riscada).length;
+const TH668 = 'Thor/Spitz/Renata Teste';
+const VISIVEL668 = () => JSON.stringify([run('__za657'), run('__zp657'), run('__zt657'), run('__al657'), run('__ze657')]);
+const CANC668 = (extra) => FECH668(Object.assign({ status: 'cancelado', status_em: T657(8, 11, 0), status_por: 'Gestora Teste', cancelado_por: 'Gestora Teste', cancelado_role: 'gestao',
+  cancelado_ts: T657(8, 11, 0), cancelado_em_br: '08/10/2026 às 11:00', cancelado_motivo: 'a viagem foi desmarcada pela tutora', cancelado_planilha_ok: true,
+  cancelado_de: { status: 'fechado', status_em: T657(5, 9, 0), status_por: 'Bia Consultora Teste' } }, extra || {}));
+provaAsync('6.68 QA668-01 (dois aparelhos) — o aparelho B, com a tela velha («aguardando»), toca «Fechou» num orçamento que o aparelho A acabou de ANULAR: nada é gravado e nada vai à planilha', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    QAP668(ORC668({ status: 'anulado', status_em: T657(9, 9, 50), status_por: 'Gestora Teste', anulado: { por: 'Gestora Teste', papel: 'gestao', motivo: 'lançado por engano no sistema' },
+      anulado_de: { status: 'aguardando', status_em: 0, status_por: '' } }));
+    run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), posts668().length, vivas668(TH668)], ['anulado', 0, 0], 'o anulado do outro aparelho foi desfeito pela tela velha');
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA668-02 (dois aparelhos) — B (tela velha, «aguardando», sem planilha) anula um orçamento que A acabou de FECHAR e lançar: a planilha não pode ficar com a linha viva de um orçamento anulado', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    const F = FECH668({ status_em: T657(9, 9, 55), status_por: 'Bia Consultora Teste', planilha_em: T657(9, 9, 56) });
+    QAP668(F); lancaPlan668(F, '2026-10-09');
+    run(`__p668=orcApagar('${ID668}');`); await espera668();
+    const r = await assina658(SENHA657, 'orçamento lançado em duplicidade por engano'); await espera668();
+    const st = db668(OP668 + ID668 + '/status');
+    igual([r[0], st === 'anulado' ? vivas668(TH668) : 0, st === 'anulado' ? (db668(OP668 + ID668 + '/anulado_de') || {}).status : 'fechado'], [r[0], 0, 'fechado'],
+      'anulado com a linha viva na planilha (ou o «de» errado): ' + JSON.stringify([st, B668.linhas().map((x) => [x.nome, x.riscada]), db668(OP668 + ID668 + '/anulado_de')]));
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA668-03 (dois aparelhos) — A reativou a reserva como «Fechou» (e ela entrou na planilha); B, com a tela velha («cancelado»), reativa como «Aguardando o tutor»: nada é gravado', async () => {
+  arma668();
+  try {
+    rep668('thor__renata teste', 2, {});
+    const C = CANC668();
+    orc668(ID668, C);
+    const F = FECH668({ status_em: T657(5, 9, 0), status_por: 'Bia Consultora Teste', planilha_em: T657(9, 9, 58) });
+    QAP668(F); lancaPlan668(F, '2026-10-05');
+    run(`__p668=orcReativarAbrir('${ID668}');`); await espera668();
+    await run(`corrToque('continuar', {valores:['Aguardando o tutor']})`); await espera668();
+    const r = await assina658('s-bia', 'a tutora quer pensar de novo'); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), vivas668(TH668)], ['fechado', 1],
+      'a reserva fechada virou «aguardando» com a linha viva na planilha (r=' + JSON.stringify(r) + ')');
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA668-04 (dois aparelhos) — A voltou a reserva para pendente (a linha saiu da planilha); B, com a tela velha («fechado»), muda as datas: nenhuma linha viva volta à planilha', async () => {
+  arma668();
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('5'); lancaPlan668(F, '2026-10-05');
+    B668.post({ acao: 'cancelar', soCalendario: false, peludoTutor: TH668, entrada: '2026-10-10', saida: '2026-10-14', canceladoPor: 'Bia Consultora Teste', canceladoEm: '09/10/2026 às 09:50' });
+    QAP668(Object.assign({}, F, { status: 'aguardando', status_em: T657(9, 9, 50), planilha_tirada: { porque: 'voltar-pendente', por: 'Bia', ts: 1, resultado: { ok: true, msg: 'riscada' } } }));
+    PED668.length = 0;
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    igual([vivas668(TH668), db668(OP668 + ID668 + '/status')], [0, 'aguardando'], 'a proposta que aguarda voltou à planilha: ' + JSON.stringify(resumoPosts668()));
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA668-05 (dois aparelhos) — A cancelou a reserva; B, com a tela velha («fechado»), toca «Voltar para pendente»: o cancelamento não é desfeito por baixo', async () => {
+  arma668();
+  try {
+    const F = FECH668({ status_em: T657(9, 8, 0) });
+    orc668(ID668, F);
+    QAP668(CANC668({ status_em: T657(9, 9, 50) }));
+    run(`__p668=orcStatus('${ID668}','aguardando');`); await espera668();
+    const r = await assina658('s-bia', 'a tutora pediu para pensar mais'); await espera668();
+    igual([db668(OP668 + ID668 + '/status')], ['cancelado'], 'o cancelado virou «aguardando» (r=' + JSON.stringify(r) + ', cancelado_motivo=' + JSON.stringify(db668(OP668 + ID668 + '/cancelado_motivo')) + ')');
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA668-06 (ponte de hoje) — «Mudar as datas» (entrada 10 → 11) e o «cancelar» da linha antiga cai na rede: a linha nova não pode entrar por cima da antiga viva (dinheiro em dobro), ou a tela diz qual riscar', async () => {
+  arma668();
+  const orig = ctx.__ponte668;
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('5'); lancaPlan668(F, '2026-10-05');
+    ctx.__ponte668 = (url, metodo, corpo) => (metodo === 'POST' && /"acao":"cancelar"/.test(corpo || '')) ? { erro: 'Failed to fetch' } : orig(url, metodo, corpo);
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    const tela = VISIVEL668();
+    const diz = /linha antiga|duas linhas|risque/i.test(tela);
+    const v1 = vivas668(TH668), z1 = JSON.stringify([B668.linhas().map((x) => [x.nome, x.entrada, x.riscada]), zaTitulos668(), zaLinhas668(/RESERVA ALTERADA/)]);
+    // e o «reenviar» do card, depois disso, não pode dizer «Lançado» com as duas vivas
+    run('__za657=[];'); await run(`orcEnviarPlanilha('${ID668}')`); await espera668();
+    console.log('    QA668|06|' + JSON.stringify([v1, zaTitulos668(), db668(OP668 + ID668 + '/planilha_ok')]));
+    igual([v1 <= 1 || diz], [true], 'duas linhas vivas e a tela não manda riscar a antiga: ' + z1);
+    igual([vivas668(TH668) <= 1 || !zaTitulos668().includes('✅ FECHADO E LANÇADO NA PLANILHA')], [true], 'reenviar: ✅ com duas linhas vivas');
+  } finally { ctx.__ponte668 = orig; solta668(); }
+});
+provaAsync('6.68 QA668-08 (ponte nova) — o «atualizar» que a ponte não conseguiu escrever (erro dentro dela: célula protegida) não vira «✅ … atualizada no lugar» nem planilha_ok', async () => {
+  arma668();
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('6'); lancaPlan668(F, '2026-10-05');
+    const fin = B668.P.fin, gr = fin.getRange;
+    fin.getRange = function (r, c, nr, nc) { const x = gr.call(fin, r, c, nr, nc); if (r > 1) { x.setValue = () => { throw new Error('Exception: You are trying to edit a protected cell'); }; x.setValues = x.setValue; } return x; };
+    edita668(ID668, { entrada: '2026-10-10', saida: '2026-10-16', pets: [THORn668(6, 78000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    const L = B668.linhas().filter((x) => !x.riscada);
+    igual([L.map((x) => x.saida), db668(OP668 + ID668 + '/planilha_ok'), zaTitulos668().includes('✅ RESERVA ALTERADA NA PLANILHA')], [['14/10'], false, false],
+      'a linha continua 14/10 e a tela diz verde: ' + JSON.stringify([zaTitulos668(), zaLinhas668(/RESERVA ALTERADA/)]));
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA668-09 (ponte nova) — calendário sem coluna livre para as datas novas: as noites antigas não somem caladas atrás de um «✅»', async () => {
+  arma668();
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('6'); lancaPlan668(F, '2026-10-05');
+    for (let k = 1; k <= 4; k++) B668.post({ acao: 'calendario', peludoTutor: 'Outro' + k + '/SRD/Teste', entrada: '2026-10-14', saida: '2026-10-16' });
+    edita668(ID668, { entrada: '2026-10-10', saida: '2026-10-16', pets: [THORn668(6, 78000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    igual([B668.noites(TH668).length > 0 || !zaTitulos668().includes('✅ RESERVA ALTERADA NA PLANILHA')], [true],
+      'Thor saiu do calendário e a tela diz verde: ' + JSON.stringify([B668.noites(TH668), zaTitulos668(), db668(OP668 + ID668 + '/planilha_msg')]));
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA668-15 — banco recusando: «Fechou» e «Não fechou» não ficam calados (a pessoa vê que NÃO foi gravado) e nada vai à planilha', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: true }));
+    run(`__recusa657='^$'; __zpq657=[true];`); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    const t1 = VISIVEL668();
+    run(`__za657=[]; __al657=[]; __ztq657=['achou o valor muito alto'];`); await run(`orcStatus('${ID668}','nao_fechou')`); await espera668();
+    const t2 = JSON.stringify([run('__za657'), run('__al657')]);
+    igual([posts668().length, /NÃO foi|não foi gravad|Nada foi gravado/i.test(t1.replace(/Fechou a reserva/g, '')), /NÃO foi|não foi gravad|Nada foi gravado/i.test(t2)], [0, true, true],
+      'calado: ' + JSON.stringify([t1.slice(0, 300), t2.slice(0, 300)]));
+  } finally { run('__recusa657=null;'); solta668(); }
+});
+provaAsync('6.68 QA668-17 — «Procurar» com a seção aberta: o mesmo orçamento não aparece com o mesmo id duas vezes na tela (orc-card-{id})', async () => {
+  arma668();
+  try {
+    orc668(ID668, FECH668());
+    run(`ORC_SEC_ABERTA={'0':true,'1':true,'2':true,'3':true}; orcRenderLista();`);
+    await run(`orcProcurar('Thor')`); await espera668();
+    const html = String(run("__el657['orcLista'].innerHTML")) + String(run("__el657['orcBuscaRes'].innerHTML"));
+    const ids = (html.match(/id="([^"]+)"/g) || []).map((x) => x.slice(4, -1));
+    const rep = ids.filter((x, i) => ids.indexOf(x) !== i);
+    igual(rep, [], 'ids repetidos: ' + rep.join(', '));
+  } finally { run("ORC_SEC_ABERTA={};"); solta668(); }
+});
+provaAsync('6.68 QA668-18 — «Procurar» não muda a lista de trabalho: o cancelado antigo achado na busca não passa a morar em «Cancelados» da lista (AC11.1: Cancelados continuam com os 60)', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    run(`__put657('${OP668}velho', ${JSON.stringify(CANC668({ criado_em: T658(1, 9, 0), entrada: '2026-03-10', saida: '2026-03-12' }))});`);
+    run(`ORC_SEC_ABERTA={'2':true}; orcRenderLista();`);
+    const antes = String(run("__el657['orcLista'].innerHTML"));
+    await run(`orcProcurar('Renata')`); await espera668();
+    run('orcRenderLista();');
+    const depois = String(run("__el657['orcLista'].innerHTML"));
+    igual([/orc-card-velho/.test(antes), /orc-card-velho/.test(depois)], [false, false]);
+  } finally { run("ORC_SEC_ABERTA={};"); solta668(); }
+});
+provaAsync('6.68 QA668-19 — a trava da Maya com a outra reserva viva FORA da memória da tela (a lista inteira ainda não chegou ou falhou): «Voltar para pendente» não apaga as noites da outra reserva', async () => {
+  arma668();
+  try {
+    const M2 = ORC668({ tutor: 'Luciana Teste', status: 'fechado', criado_em: T658(1, 9, 0), entrada: '2026-10-15', saida: '2026-10-24', pets: [MAYA668()] });
+    const M1 = FECH668({ tutor: 'Luciana Teste', status_em: T657(9, 8, 0), entrada: '2026-10-16', saida: '2026-10-20', pets: [MAYA668()] });
+    run(`__put657('${OP668}k668m2', ${JSON.stringify(M2)});`); lancaPlan668(M2, '2026-10-01');
+    orc668('k668m1', M1); lancaPlan668(M1, '2026-10-05');
+    run(`__p668=orcStatus('k668m1','aguardando');`); await espera668(); await assina658('s-bia', 'a tutora pediu para pensar mais'); await espera668();
+    const n = B668.noites('Maya/SRD/Luciana Teste');
+    igual([16, 17, 18, 19].every((d) => n.indexOf(d) >= 0), true, 'as noites 16 a 19 da outra reserva sumiram: ' + JSON.stringify(n));
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA668-20 (julgar) — o cartaz «Anular» mostra «Nada é apagado.» mais de uma vez; o orcLiberarNaPlanilha sem id não libera nada (conta a própria reserva) e diz «risque à mão»', async () => {
+  arma668();
+  try {
+    orc668(ID668, FECH668());
+    run(`__p668=orcApagar('${ID668}');`); await espera668();
+    const cart = String(run('corrCartazHTML(CORR_ATUAL)') || '');
+    igual((cart.match(/Nada é apagado/g) || []).length, 1, 'o «Nada é apagado.» só na frase do cartaz (6.57)');
+    await fecha658();
+    const r = await run(`orcLiberarNaPlanilha({entrada:'2026-10-10', saida:'2026-10-14', tutor:'Renata Teste', pets:[ORC_LISTA_CACHE['${ID668}'].pets[0]]}, 'Gestora Teste', '09/10/2026 às 10:00', {silencioso:true})`); await espera668();
+    console.log('    QA668|SEM_ID|' + JSON.stringify([posts668().length, r.pets.map((x) => x.acao), (r.pets[0] || {}).falha]));
+    igual(posts668().length, 0);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA668-21 — «Anular» pelo console de um orçamento já CANCELADO ou «Não fechou» é recusado (o botão só existe nas seções 0 e 1)', async () => {
+  arma668();
+  try {
+    orc668('xc', CANC668());
+    orc668('xn', ORC668({ status: 'nao_fechou', nao_fechou: { motivo: '', texto: 'achou o valor alto', estado: 'respondido', por: 'Bia', ts: 1 } }));
+    const r1 = await run(`orcAnularGravar('xc', {por:'Gestora Teste', papel:'gestao', motivo:'lançado por engano no sistema'})`); await espera668();
+    const r2 = await run(`orcAnularGravar('xn', {por:'Gestora Teste', papel:'gestao', motivo:'lançado por engano no sistema'})`); await espera668();
+    igual([r1.ok, r2.ok, db668(OP668 + 'xc/status'), db668(OP668 + 'xn/status')], [false, false, 'cancelado', 'nao_fechou']);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA668-22 — «Fechou» tocado duas vezes com o banco lento (a 1ª gravação ainda no ar): uma entrada no status_hist e um envio à planilha', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    run(`__pendura657='^$'; __zpq657=[true, true];`);
+    run(`__q1=orcStatus('${ID668}','fechado');`); await espera668();
+    run(`__q2=orcStatus('${ID668}','fechado');`); await espera668();
+    run('__pendura657=null; __pend657.forEach(function(p){ p.ok(); }); __pend657=[];'); await espera668(); await espera668();
+    igual([hist668(ID668).length, posts668().filter((c) => !c.acao).length], [1, 1]);
+  } finally { run('__pendura657=null;'); solta668(); }
+});
+// ---- 2ª rodada: as provas dos defeitos do QA que passavam vivos (TEST-001) e dos caminhos novos (o «reenviar» da alteração pela metade, a
+// trava sem a leitura) -------------------------------------------------------------------------------------------------------------------------
+provaAsync('6.68 QA q04 — ponte nova: o «atualizar» sem a linha antiga na planilha («NAO ACHEI») lança a linha nova (a reserva fechada não fica fora da planilha) e conta como feito', async () => {
+  arma668();
+  try {
+    orc668(ID668, FECH668()); ponte668('6');   // a linha antiga nunca entrou na planilha
+    edita668(ID668, { entrada: '2026-10-10', saida: '2026-10-16', pets: [THORn668(6, 78000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    igual([resumoPosts668().map((p) => p[0]), B668.linhas().filter((x) => !x.riscada).map((x) => [x.entrada, x.saida, x.total]), db668(OP668 + ID668 + '/planilha_ok'), zaTitulos668().includes('✅ RESERVA ALTERADA NA PLANILHA')],
+      [['atualizar', 'gravar'], [['10/10', '16/10', 780]], true, true]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA q16 — «Reativar» como «Fechou» limpa o planilha_tirada: cancelar de novo chama a ponte e a linha que voltou sai da planilha', async () => {
+  arma668();
+  try {
+    orc668(ID668, CANC668({ planilha_tirada: { porque: 'cancelar', por: 'Gestora Teste', ts: T657(8, 11, 0), resultado: { ok: true, msg: 'riscada' } } })); ponte668('6');
+    run(`__p668=orcReativarAbrir('${ID668}');`); await espera668();
+    await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668();
+    await assina658(SENHA657, 'a tutora remarcou a mesma viagem'); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), db668(OP668 + ID668 + '/planilha_tirada'), vivas668(TH668)], ['fechado', null, 1]);
+    PED668.length = 0;
+    run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', '${SENHA657}'];`); await run(`orcCancelar('${ID668}')`); await espera668();
+    igual([posts668().filter((c) => c.acao === 'cancelar').length, vivas668(TH668)], [1, 0]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA q21 — «Tirar da planilha» com a ponte recusando: o planilha_tirada NÃO é gravado e o card continua com «Tirar da planilha»', async () => {
+  arma668();
+  try {
+    const O = ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: true });
+    orc668(ID668, O); ponte668('6'); lancaPlan668(O, '2026-10-05');
+    run(`orcSheetsCfg={url:'${URL668}', token:'palavra-errada'};`);
+    run(`__p668=orcTirarDaPlanilhaAbrir('${ID668}');`); await espera668(); await assina658('s-bia', 'a proposta voltou a aguardar o tutor'); await espera668();
+    const card = String(run(`orcCardHtml('${ID668}', ORC_LISTA_CACHE['${ID668}'], '2026-10-09', {}, false, 0)`));
+    igual([db668(OP668 + ID668 + '/planilha_tirada'), /orcTirarDaPlanilhaAbrir\('k668thor'\)/.test(card), vivas668(TH668)], [null, true, 1]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA q43 — «Não fechou» da proposta que ainda está na planilha tira as linhas dela (marca CANCELADO), depois do ok do banco', async () => {
+  arma668();
+  try {
+    const O = ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: true });
+    orc668(ID668, O); ponte668('6'); lancaPlan668(O, '2026-10-05');
+    run(`__ztq657=['achou o valor acima do esperado'];`); await run(`orcStatus('${ID668}','nao_fechou')`); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), resumoPosts668().filter((p) => p[0] === 'cancelar').map((p) => p.slice(4)), vivas668(TH668)], ['nao_fechou', [['risca', 'CANCELADO']], 0]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA q42 — o status_por da mudança é quem ASSINOU o cartaz (não quem está logado no aparelho)', async () => {
+  arma668();
+  try {
+    orc668(ID668, FECH668({ status_em: T657(9, 8, 0) }));
+    run(`__p668=orcStatus('${ID668}','aguardando');`); await espera668(); await assina658('s-bia', 'a tutora pediu para pensar mais'); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), db668(OP668 + ID668 + '/status_por'), hist668(ID668).pop().quem], ['aguardando', 'Bia Consultora Teste', 'Bia Consultora Teste']);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA q18 e q19 — «Anular» uma proposta que AGUARDA e nunca foi à planilha: o anulado_de diz «aguardando» (com quando e quem) e nenhum pedido vai à ponte', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668({ status_em: T657(8, 9, 0), status_por: 'Bia Consultora Teste' }));
+    run(`__p668=orcApagar('${ID668}');`); await espera668(); await assina658(SENHA657, 'orçamento lançado em duplicidade por engano'); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), db668(OP668 + ID668 + '/anulado_de'), PED668.length], ['anulado', { status: 'aguardando', status_em: T657(8, 9, 0), status_por: 'Bia Consultora Teste' }, 0]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 R2 REL-002 — ponte de hoje: o riscar que caiu deixa a alteração pendente (nada novo lançado, a tela diz qual linha); o «reenviar» com o riscar ainda caindo não lança; com a rede de volta, risca PRIMEIRO a antiga e lança a nova: uma linha viva, planilha_ok e o planilha_pendente limpo', async () => {
+  arma668();
+  const orig = ctx.__ponte668;
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('5'); lancaPlan668(F, '2026-10-05');
+    ctx.__ponte668 = (url, metodo, corpo) => (metodo === 'POST' && /"acao":"cancelar"/.test(corpo || '')) ? { erro: 'Failed to fetch' } : orig(url, metodo, corpo);
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    const pend = db668(OP668 + ID668 + '/planilha_pendente') || {};
+    igual([vivas668(TH668), B668.linhas().filter((x) => !x.riscada).map((x) => x.entrada), pend.entrada, (pend.pets || []).map((p) => p.nome), db668(OP668 + ID668 + '/planilha_ok'), posts668().filter((c) => !c.acao).length],
+      [1, ['10/10'], '2026-10-10', ['Thor'], false, 0]);
+    assert.ok((zaLinhas668(/RESERVA ALTERADA/) || []).some((l) => /^A linha antiga de Thor \(10\/10\/2026 a 14\/10\/2026\) não foi riscada/.test(l) && /Nada novo foi lançado/.test(l)), JSON.stringify(run('__za657')));
+    run('__za657=[];'); await run(`orcEnviarPlanilha('${ID668}')`); await espera668();
+    igual([vivas668(TH668), zaTitulos668(), posts668().filter((c) => !c.acao).length], [1, ['A LINHA ANTIGA AINDA NÃO FOI RISCADA'], 0], 'o «reenviar» com o riscar ainda caindo');
+    ctx.__ponte668 = orig; run('__za657=[];'); await run(`orcEnviarPlanilha('${ID668}')`); await espera668();
+    const L = B668.linhas();
+    igual([L.filter((x) => !x.riscada).map((x) => [x.entrada, x.saida]), L.filter((x) => x.riscada).length, db668(OP668 + ID668 + '/planilha_ok'), db668(OP668 + ID668 + '/planilha_pendente'), zaTitulos668()],
+      [[['11/10', '15/10']], 1, true, null, ['✅ FECHADO E LANÇADO NA PLANILHA']]);
+  } finally { ctx.__ponte668 = orig; solta668(); }
+});
+provaAsync('6.68 R2 REL-003 — ponte nova: o «atualizar» que a ponte não escreveu deixa a alteração pendente; o «reenviar» risca a linha antiga («ALTERADA») e lança a nova: uma linha viva com as datas novas e o planilha_ok', async () => {
+  arma668();
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('6'); lancaPlan668(F, '2026-10-05');
+    const fin = B668.P.fin, gr = fin.getRange;
+    fin.getRange = function (r, c, nr, nc) { const x = gr.call(fin, r, c, nr, nc); if (r > 1) { x.setValue = () => { throw new Error('Exception: You are trying to edit a protected cell'); }; x.setValues = x.setValue; } return x; };
+    edita668(ID668, { entrada: '2026-10-10', saida: '2026-10-16', pets: [THORn668(6, 78000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    const pend = db668(OP668 + ID668 + '/planilha_pendente') || {};
+    igual([db668(OP668 + ID668 + '/planilha_ok'), pend.saida, B668.linhas().map((x) => [x.saida, x.riscada]), B668.noites(TH668)], [false, '2026-10-14', [['14/10', false]], [10, 11, 12, 13]]);
+    fin.getRange = gr; run('__za657=[];');
+    await run(`orcEnviarPlanilha('${ID668}')`); await espera668();
+    const L = B668.linhas();
+    igual([L.filter((x) => !x.riscada).map((x) => [x.entrada, x.saida, x.total]), L.filter((x) => x.riscada).map((x) => x.nome.split(' por ')[0]), db668(OP668 + ID668 + '/planilha_ok'), db668(OP668 + ID668 + '/planilha_pendente'), B668.noites(TH668)],
+      [[['10/10', '16/10', 780]], ['ALTERADA'], true, null, [10, 11, 12, 13, 14, 15]]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 R2 LOW-4 — sem a leitura da lista inteira, a trava da Maya não libera nada: «Voltar para pendente» grava, não manda nenhum «cancelar» à planilha e a tela diz por quê', async () => {
+  arma668();
+  try {
+    run(LISTA668); run('__lerFalha668=true;');
+    const F = FECH668({ status_em: T657(9, 8, 0) });
+    orc668(ID668, F); lancaPlan668(F, '2026-10-05');
+    run(`__p668=orcStatus('${ID668}','aguardando');`); await espera668(); await assina658('s-bia', 'a tutora pediu para pensar mais'); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), posts668().length, vivas668(TH668), zaTitulos668().includes('NÃO CONSEGUI CONFERIR AS OUTRAS RESERVAS'), db668(OP668 + ID668 + '/planilha_tirada')],
+      ['aguardando', 0, 1, true, null]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 R2 REL-001 b — cada gravação confere a situação RELIDA (o console, uma tela velha): «Reativar» de um fechado, «Tirar da planilha» de um fechado e a volta do «Não fechou» de um fechado: nada é gravado e nada vai à planilha', async () => {
+  arma668();
+  try {
+    const REG = { por: 'Gestora Teste', papel: 'gestao', motivo: 'motivo bem explicado aqui', quando: '09/10/2026 às 10:00', ts: T657(9, 10, 0) };
+    const F = FECH668({ status_em: T657(9, 8, 0) });
+    orc668(ID668, F); lancaPlan668(F, '2026-10-05');
+    const r1 = await run(`orcVoltarAoStatusDeAntes('${ID668}', 'cancelado', 'fechado', ${JSON.stringify(REG)})`); await espera668();
+    const r2 = await run(`orcTirarDaPlanilhaGravar('${ID668}', ${JSON.stringify(REG)})`); await espera668();
+    const r3 = await run(`orcStatusGravar('${ID668}', 'aguardando', {de:'nao_fechou', reg:${JSON.stringify(REG)}})`); await espera668();
+    igual([r1.ok, r2.ok, r3.ok, escritas657().length, posts668().length, db668(OP668 + ID668 + '/status'), vivas668(TH668)], [false, false, false, 0, 0, 'fechado', 1],
+      JSON.stringify([r1, r2, r3]));
+  } finally { solta668(); }
+});
+provaAsync('6.68 R2 REL-001 c — a mesma situação, outra mudança (o status_em é outro): B, com a tela de antes, toca «Voltar para pendente» num fechado que A voltou e fechou de novo, e «Reativar» num cancelado que A cancelou de novo: nada é gravado', async () => {
+  arma668();
+  try {
+    const F = FECH668({ status_em: T657(9, 8, 0) });
+    orc668(ID668, F);
+    QAP668(Object.assign({}, F, { status_em: T657(9, 9, 55), status_por: 'Gestora Teste' }));
+    run(`__p668=orcStatus('${ID668}','aguardando');`); await espera668();
+    await assina658('s-bia', 'a tutora pediu para pensar mais'); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), db668(OP668 + ID668 + '/status_em'), escritas657().filter((e) => e[0] === 'update').length, posts668().length], ['fechado', T657(9, 9, 55), 0, 0]);
+    await fecha658();
+    const C = CANC668({ entrada: '2026-11-10', saida: '2026-11-14' });
+    orc668('k668c2', C);
+    run(`__put657('${OP668}k668c2', ${JSON.stringify(Object.assign({}, C, { status_em: T657(9, 9, 58), cancelado_motivo: 'outro cancelamento feito depois' }))});`);
+    run(`__p668=orcReativarAbrir('k668c2');`); await espera668(); await run(`corrToque('continuar', {valores:['Aguardando o tutor']})`); await espera668();
+    await assina658('s-bia', 'a tutora quer pensar de novo'); await espera668();
+    igual([db668(OP668 + 'k668c2/status'), db668(OP668 + 'k668c2/cancelado_motivo'), escritas657().filter((e) => e[0] === 'update').length], ['cancelado', 'outro cancelamento feito depois', 0]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 R2 REL-001 d — «Mudar as datas»: outro aparelho mudou as datas da mesma reserva enquanto esta tela editava: nada é gravado, a planilha não é mexida e a tela diz', async () => {
+  arma668();
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('6'); lancaPlan668(F, '2026-10-05');
+    QAP668(Object.assign({}, F, { saida: '2026-10-15', total_cent: 65000 }));
+    edita668(ID668, { entrada: '2026-10-10', saida: '2026-10-16', pets: [THORn668(6, 78000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    igual([db668(OP668 + ID668 + '/saida'), escritas657().filter((e) => e[0] === 'update').length, posts668().length, zaTitulos668()], ['2026-10-15', 0, 0, ['A RESERVA NÃO FOI ALTERADA']]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 R2 REL-001 e — «Cancelar reserva» com a tela velha («fechado») de um orçamento que outro aparelho voltou para pendente: nada é gravado; o Excluir da 6.53 (que vem de outra tela) só relê e cancela', async () => {
+  arma668();
+  try {
+    const F = FECH668({ status_em: T657(9, 8, 0) });
+    orc668(ID668, F);
+    QAP668(Object.assign({}, F, { status: 'aguardando', status_em: T657(9, 9, 50), status_por: 'Gestora Teste' }));
+    run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', '${SENHA657}'];`); await run(`orcCancelar('${ID668}')`); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), escritas657().filter((e) => e[0] === 'update').length], ['aguardando', 0]);
+    const r = await run(`orcCancelarGravar('${ID668}', 'lançada por engano, ele não veio', {nome:'Gestora Teste', role:'gestao'}, {origem:'hospedagem-excluida'})`); await espera668();
+    igual([r.ok, db668(OP668 + ID668 + '/status'), (db668(OP668 + ID668 + '/cancelado_de') || {}).status, db668(OP668 + ID668 + '/cancelado_origem')], [true, 'cancelado', 'aguardando', 'hospedagem-excluida']);
+  } finally { solta668(); }
+});
+provaAsync('6.68 R2 REL-001 f — a releitura que falha (o banco não responde a leitura) e o orçamento que sumiu do banco: nada é gravado (nenhum nó novo pela metade) e a tela diz por quê', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    // a leitura do orçamento falha
+    run(`__dbr668f=DB.ref; DB.ref=function(p){ var r=__dbr668f(p); if(p==='${OP668}${ID668}'){ r.once=function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }; } return r; };`);
+    run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    const t1 = JSON.stringify(run('__za657'));
+    igual([db668(OP668 + ID668 + '/status'), escritas657().filter((e) => e[0] === 'update').length, posts668().length, /Não consegui conferir o orçamento no banco antes de gravar/.test(t1)], ['aguardando', 0, 0, true], t1);
+    run('DB.ref=__dbr668f; __za657=[];');
+    // o orçamento sumiu do banco (o «apagar» antigo de outro aparelho): nenhum nó novo é criado pela metade
+    run(`__put657('${OP668}${ID668}', null);`);
+    run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    igual([db668(OP668 + ID668), escritas657().filter((e) => e[0] === 'update').length, /não está mais no sistema/.test(JSON.stringify(run('__za657')))], [null, 0, true]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 R2 REL-001 g — «Anular» decide a planilha pelo RELIDO: outro aparelho já tirou a proposta da planilha (o status não muda): o anular não chama a ponte', async () => {
+  arma668();
+  try {
+    const O = ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: true });
+    orc668(ID668, O);
+    QAP668(Object.assign({}, O, { planilha_tirada: { porque: 'tirar', por: 'Bia Consultora Teste', ts: T657(9, 9, 0), resultado: { ok: true, msg: 'riscada' } } }));
+    run(`__p668=orcApagar('${ID668}');`); await espera668(); await assina658(SENHA657, 'orçamento lançado em duplicidade por engano'); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), posts668().length], ['anulado', 0]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 R2 REL-003 b — uma ponte que responde ok:true com erro na linha (uma versão com defeito): o app não diz «atualizada no lugar», não grava planilha_ok e deixa a alteração pendente', async () => {
+  arma668();
+  const orig = ctx.__ponte668;
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('6'); lancaPlan668(F, '2026-10-05');
+    ctx.__ponte668 = (url, metodo, corpo) => (metodo === 'POST' && /"acao":"atualizar"/.test(corpo || '')) ? { txt: JSON.stringify({ ok: true, financeiro: 'ERRO - Exception: Service Spreadsheets timed out', calendario: '', versao: 6 }) } : orig(url, metodo, corpo);
+    edita668(ID668, { entrada: '2026-10-10', saida: '2026-10-16', pets: [THORn668(6, 78000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    igual([db668(OP668 + ID668 + '/planilha_ok'), !!db668(OP668 + ID668 + '/planilha_pendente'), zaTitulos668().includes('✅ RESERVA ALTERADA NA PLANILHA')], [false, true, false]);
+  } finally { ctx.__ponte668 = orig; solta668(); }
+});
+provaAsync('6.68 R2 LOW-1 b — o «Não fechou» que o banco recusou: o texto do tutor fica guardado, aparece na tela e volta no próximo «Não fechou»', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    run(`__recusa657='^$'; __ztq657=['achou o valor muito acima do esperado'];`); await run(`orcStatus('${ID668}','nao_fechou')`); await espera668();
+    const L = zaLinhas668(/NÃO FOI GRAVADO/) || [];
+    igual([run(`ORC_NF_RASCUNHO['${ID668}']`), L.some((l) => /achou o valor muito acima do esperado/.test(l))], ['achou o valor muito acima do esperado', true]);
+    // a próxima vez: o campo já vem com o texto; gravado, o rascunho sai
+    run(`__recusa657=null; __zt657=[]; __ztq657=['achou o valor muito acima do esperado'];`);
+    run(`__ztOp668=null; __zt668b=zTexto; zTexto=function(t, l, op){ __ztOp668=op; return __zt668b(t, l, op); };`);
+    await run(`orcStatus('${ID668}','nao_fechou')`); await espera668();
+    igual([run('__ztOp668 && __ztOp668.valor'), db668(OP668 + ID668 + '/status'), run(`ORC_NF_RASCUNHO['${ID668}']===undefined`)], ['achou o valor muito acima do esperado', 'nao_fechou', true]);
+  } finally { run('__recusa657=null; if(typeof __zt668b!=="undefined") zTexto=__zt668b;'); solta668(); }
+});
+provaAsync('6.68 R2 REL-002 b — uma alteração nova em cima de outra que ficou pela metade: a linha antiga da primeira é riscada PRIMEIRO; no fim, uma linha viva só, com as datas da segunda', async () => {
+  arma668();
+  const orig = ctx.__ponte668;
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('5'); lancaPlan668(F, '2026-10-05');
+    ctx.__ponte668 = (url, metodo, corpo) => (metodo === 'POST' && /"acao":"cancelar"/.test(corpo || '')) ? { erro: 'Failed to fetch' } : orig(url, metodo, corpo);
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    igual([vivas668(TH668), !!db668(OP668 + ID668 + '/planilha_pendente')], [1, true], 'a primeira ficou pela metade');
+    ctx.__ponte668 = orig;
+    edita668(ID668, { entrada: '2026-10-12', saida: '2026-10-16', pets: [THORn668(4, 52000)] }); alteraSenha668('a tutora mudou de novo a viagem');
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    igual([B668.linhas().filter((x) => !x.riscada).map((x) => [x.entrada, x.saida]), db668(OP668 + ID668 + '/planilha_pendente'), db668(OP668 + ID668 + '/planilha_ok')], [[['12/10', '16/10']], null, true]);
+  } finally { ctx.__ponte668 = orig; solta668(); }
+});
+// ---- 2ª rodada: as telas e os textos que os defeitos do QA mostraram sem prova (q07, q08, q09, q20, q26, q27, q30, q33, q34, q48) ----------
+provaAsync('6.68 QA q07 — ponte de hoje: a antiga riscada e a nova recusada — a tela NÃO diz «uma linha nova entrou» e diz a falha da nova; sem ✅', async () => {
+  arma668();
+  const orig = ctx.__ponte668;
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('5'); lancaPlan668(F, '2026-10-05');
+    ctx.__ponte668 = (url, metodo, corpo) => (metodo === 'POST' && !/"acao"/.test(corpo || '')) ? { txt: JSON.stringify({ ok: false, erro: 'Exception: Lock timeout' }) } : orig(url, metodo, corpo);
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    const L = zaLinhas668(/RESERVA ALTERADA/) || [];
+    igual([L.some((l) => /uma linha nova entrou/.test(l)), L.some((l) => /^Thor: Exception: Lock timeout/.test(l)), zaTitulos668().includes('✅ RESERVA ALTERADA NA PLANILHA'), db668(OP668 + ID668 + '/planilha_ok')], [false, true, false, false], JSON.stringify(L));
+  } finally { ctx.__ponte668 = orig; solta668(); }
+});
+prova('6.68 QA q08 e q09 — o aviso da proposta na planilha: a data é a do ENVIO (não a da situação); sem a confirmação do envio, «pode ter ficado» (também na cascata)', () => {
+  const O = { status: 'aguardando', status_em: T657(8, 9, 0), planilha_em: T657(5, 9, 0), planilha_ok: true, entrada: '2026-10-10', saida: '2026-10-14', pets: [{ nome: 'Thor' }] };
+  igual(run(`orcAvisoPlanilhaTexto(${JSON.stringify(O)})`), 'Esta proposta ainda está na planilha (lançada em 05/10), mas o tutor ainda não fechou.');
+  const S = Object.assign({}, O, { planilha_ok: false });
+  assert.ok(/^Esta proposta pode ter ficado na planilha: o último envio, em 05\/10, não confirmou tudo\.$/.test(run(`orcAvisoPlanilhaTexto(${JSON.stringify(S)})`)));
+  assert.ok(/^Ela pode ter ficado na planilha: o último envio não confirmou tudo\./.test(run(`orcPlanilhaCascata('x', ${JSON.stringify(S)})[0]`)), 'a cascata sem a confirmação');
+  assert.ok(/^As linhas de Thor saem da planilha/.test(run(`orcPlanilhaCascata('x', ${JSON.stringify(O)})[0]`)), 'a cascata com a confirmação');
+});
+provaAsync('6.68 QA q20 e q33 — «Anular» com a outra reserva viva da Maya nas mesmas noites: o cartaz diz a frase da trava; a auditoria nomeia «anulado (lançado por engano)»', async () => {
+  arma668();
+  try {
+    orc668('k668m2', ORC668({ tutor: 'Luciana Teste', status: 'fechado', entrada: '2026-10-15', saida: '2026-10-24', pets: [MAYA668()] }));
+    orc668(ID668, FECH668({ tutor: 'Luciana Teste', entrada: '2026-10-16', saida: '2026-10-20', pets: [MAYA668()] }));
+    run(`__p668=orcApagar('${ID668}');`); await espera668();
+    const cart = String(run('corrCartazHTML(CORR_ATUAL)') || '');
+    assert.ok(/As noites de Maya continuam com a outra reserva \(15\/10\/2026 a 24\/10\/2026\): o calendário não é mexido\./.test(cart), cart.slice(0, 900));
+    await assina658(SENHA657, 'orçamento lançado em duplicidade por engano'); await espera668();
+    assert.ok(aud657('orcamento-status').some((a) => /: fechou → anulado \(lançado por engano\)$/.test(a[1])), JSON.stringify(aud657('orcamento-status')));
+  } finally { solta668(); }
+});
+prova('6.68 QA q26, q27 e q34 — «Procurar»: acha pelo tutor do orçamento e com 2 letras; «Mudanças desta reserva» na ordem em que aconteceram', () => {
+  const todos = { a: { tutor: 'Renata Teste', criado_em: 2, pets: [{ nome: 'Thor', tutor: '' }] }, b: { tutor: 'Luciana Teste', criado_em: 1, pets: [{ nome: 'Maya', tutor: 'Luciana Teste' }] } };
+  igual(run(`orcProcurarAchar(${JSON.stringify(todos)}, 'renata').map(function(x){ return x.id; })`), ['a'], 'pelo tutor do orçamento');
+  igual(run(`orcProcurarAchar(${JSON.stringify(todos)}, 'ma').map(function(x){ return x.id; })`), ['b'], 'com 2 letras');
+  const o = { historico: { h2: { ts: 2000, de_entrada: '2026-10-11', de_saida: '2026-10-15', para_entrada: '2026-10-12', para_saida: '2026-10-16', motivo: 'segunda mudança da tutora', por: 'B', em_br: '09/10/2026 às 10:02' },
+    h1: { ts: 1000, de_entrada: '2026-10-10', de_saida: '2026-10-14', para_entrada: '2026-10-11', para_saida: '2026-10-15', motivo: 'primeira mudança da tutora', por: 'A', em_br: '09/10/2026 às 10:01' } } };
+  igual(run(`orcMudancaLinhas(${JSON.stringify(o)}).map(function(t){ return t.split(' — ')[0]; })`), ['09/10/2026 às 10:01', '09/10/2026 às 10:02']);
+});
+provaAsync('6.68 QA q30 e q48 — a versão da ponte fica guardada (9 minutos depois, nenhum GET novo); a linha aberta do anulado tem UM «Reabrir»', async () => {
+  arma668();
+  try {
+    igual([await run('orcPonteVersao()'), gets668()], [6, 1]);
+    run(`ORC_PONTE_VER.quando=Date.now()-9*60*1000;`);
+    igual([await run('orcPonteVersao()'), gets668()], [6, 1], 'guardada por 10 minutos');
+    const A = ORC668({ status: 'anulado', anulado: { acao: 'anular', por: 'Gestora Teste', papel: 'gestao', motivo: 'lançado por engano no sistema', quando: '09/10/2026 às 09:00', ts: T657(9, 9, 0) }, anulado_de: { status: 'aguardando', status_em: 0, status_por: '' } });
+    orc668(ID668, A);
+    run(`ORC_LINHA_ABERTA['${ID668}']=true;`);
+    const h = String(run(`orcLinhaHistoricoHtml('${ID668}', ORC_LISTA_CACHE['${ID668}'], 2)`));
+    igual((h.match(/orcAnulacaoDesfazerAbrir\(/g) || []).length, 1, h.slice(0, 600));
+  } finally { solta668(); }
+});
+// ================================================================== 6.68, 3ª rodada — as 23 provas do re-gate do QA (Quinn, qa668r2/ataque668r2.js),
+// trazidas como estavam (só o nome ganhou o prefixo «6.68 QA re-gate · »). Usam os helpers do bloco (arma668, orc668, ponte668, B668,
+// edita668, QAP668, vivas668, TH668, CANC668, VISIVEL668, LISTA668…). Sem a 3ª rodada, caem a 07 e a 19 (REL-004) e a 18 (REL-005).
+const NA668 = 'Nala/SRD/Renata Teste';
+const vivasL668 = () => B668.linhas().filter((x) => !x.riscada).map((x) => [x.nome.split('/')[0], x.entrada, x.saida, x.total, x.reserva, x.dataReserva]).sort();
+const noitesDe668 = () => ({ Thor: B668.noites(TH668), Nala: B668.noites(NA668), Maya: B668.noites('Maya/SRD/Luciana Teste') });
+const cancFalha668 = (orig, re) => (url, metodo, corpo) => (metodo === 'POST' && /"acao":"cancelar"/.test(corpo || '') && (!re || re.test(corpo))) ? { erro: 'Failed to fetch' } : orig(url, metodo, corpo);
+
+// ---- REL-001: dois aparelhos em cada ação ----------------------------------------------------------------------------------------------------
+provaAsync('6.68 QA re-gate · QA668R-01 (dois aparelhos) — «Fechou» na tela velha de um orçamento que outro aparelho CANCELOU: nada gravado, nada à planilha, a tela diz', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    QAP668(CANC668({ status_em: T657(9, 9, 50), planilha_em: undefined, planilha_ok: undefined }));
+    run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), posts668().length, zaTitulos668().includes('ESTE ORÇAMENTO MUDOU')], ['cancelado', 0, true]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-02 (dois aparelhos) — «Não fechou» na tela velha de um orçamento que outro aparelho FECHOU e lançou: nada gravado, a linha da planilha continua viva', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    const F = FECH668({ status_em: T657(9, 9, 55), planilha_em: T657(9, 9, 56) }); QAP668(F); lancaPlan668(F, '2026-10-09');
+    run(`__ztq657=['achou o valor alto demais'];`); await run(`orcStatus('${ID668}','nao_fechou')`); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), db668(OP668 + ID668 + '/nao_fechou'), posts668().length, vivas668(TH668)], ['fechado', null, 0, 1]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-03 (dois aparelhos) — «Reabrir» o «Não fechou» na tela velha, depois que outro aparelho reabriu e FECHOU: nada gravado', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668({ status: 'nao_fechou', nao_fechou: { motivo: '', texto: 'achou o valor alto', estado: 'respondido', por: 'Bia', ts: 1 } }));
+    QAP668(FECH668({ status_em: T657(9, 9, 55) }));
+    run(`__p668=orcNaoFechouReabrirAbrir('${ID668}');`); await espera668();
+    const r = await assina658('s-bia', 'o tutor ligou e quer fechar agora'); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), escritas657().filter((e) => e[0] === 'update').length], ['fechado', 0], JSON.stringify(r));
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-04 (dois aparelhos) — «Cancelar reserva» na tela velha de um orçamento que outro aparelho ANULOU: nada gravado, nada à planilha', async () => {
+  arma668();
+  try {
+    orc668(ID668, FECH668());
+    QAP668(FECH668({ status: 'anulado', status_em: T657(9, 9, 50), anulado: { por: 'Gestora Teste', papel: 'gestao', motivo: 'lançado por engano no sistema' }, anulado_de: { status: 'fechado', status_em: T657(5, 9, 0), status_por: 'Bia' } }));
+    run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', '${SENHA657}'];`); await run(`orcCancelar('${ID668}')`); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), db668(OP668 + ID668 + '/cancelado_motivo'), posts668().length], ['anulado', null, 0]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-05 (dois aparelhos) — «Tirar da planilha» na tela velha de uma proposta que outro aparelho FECHOU (a linha viva é da reserva fechada): nada é riscado', async () => {
+  arma668();
+  try {
+    const O = ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: true }); orc668(ID668, O);
+    const F = FECH668({ status_em: T657(9, 9, 55), planilha_em: T657(9, 9, 56) }); QAP668(F); lancaPlan668(F, '2026-10-09');
+    run(`__p668=orcTirarDaPlanilhaAbrir('${ID668}');`); await espera668();
+    await assina658('s-bia', 'a proposta voltou a aguardar o tutor'); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), posts668().length, vivas668(TH668), db668(OP668 + ID668 + '/planilha_tirada')], ['fechado', 0, 1, null]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-06 (dois aparelhos) — «Anular» na tela velha («fechado») de uma reserva que outro aparelho voltou para pendente: nada gravado, nada à planilha', async () => {
+  arma668();
+  try {
+    orc668(ID668, FECH668());
+    QAP668(FECH668({ status: 'aguardando', status_em: T657(9, 9, 50), planilha_tirada: { porque: 'voltar-pendente', por: 'Bia', ts: 1, resultado: { ok: true, msg: 'riscada' } } }));
+    run(`__p668=orcApagar('${ID668}');`); await espera668();
+    await assina658(SENHA657, 'orçamento lançado em duplicidade por engano'); await espera668();
+    igual([db668(OP668 + ID668 + '/status'), posts668().length], ['aguardando', 0]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-07 (dois aparelhos) — «Mudar as datas»: o outro aparelho mudou as datas ANTES de esta tela abrir a edição, e a lista foi relida ao abrir (irParaView → orcInit): a pergunta não pode mostrar o «DE» velho nem gravar por cima calada', async () => {
+  arma668();
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('6'); lancaPlan668(F, '2026-10-05');
+    // a tela de B ainda mostra 10 a 14; B toca «Mudar as datas» (o formulário nasce da memória velha)…
+    edita668(ID668, { entrada: '2026-10-10', saida: '2026-10-15', pets: [THORn668(5, 65000)] });
+    // …e, como em produção, abrir a edição relê a lista: o banco e a memória já têm a mudança de A (10 a 16, R$ 780,00)
+    const A = Object.assign({}, F, { saida: '2026-10-16', noites: 6, total_cent: 78000, pets: [THOR668({ diarias: 6, subtotal_diarias_cent: 78000, subtotal_cent: 78000 })] });
+    QAP668(A); run(`ORC_LISTA_CACHE['${ID668}']=__get657('${OP668}${ID668}');`);
+    alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    const zp = J668('__zp657'), de = ((zp[0] || [])[1] || [])[0] || '', dif = ((zp[0] || [])[1] || [])[2] || '';
+    console.log('    QA668R|07|' + JSON.stringify({ pergunta: (zp[0] || [])[1], saida: db668(OP668 + ID668 + '/saida'), titulos: zaTitulos668(), historicoDe: Object.values(db668(OP668 + ID668 + '/historico') || {}).map((h) => [h.de_saida, h.de_total_cent]) }));
+    const recusou = db668(OP668 + ID668 + '/saida') === '2026-10-16';
+    igual([recusou || (/16\/10\/2026/.test(de) && /A MENOS/.test(dif))], [true], 'gravou por cima com o «DE» velho: ' + de + ' / ' + dif);
+  } finally { solta668(); }
+});
+
+// ---- REL-002: o riscar que cai no meio; o pendente com outra alteração; o cancelamento com pendente ---------------------------------------
+provaAsync('6.68 QA re-gate · QA668R-08 (ponte de hoje) — dois FILHOts, entrada 10 → 11: o riscar da Nala cai e o do Thor passa — nunca duas linhas vivas do mesmo FILHOt; com a rede de volta, o «reenviar» deixa uma linha viva de cada, com as datas novas', async () => {
+  arma668();
+  const orig = ctx.__ponte668;
+  try {
+    const F = FECH668({ pets: [THOR668(), NALA668()], total_cent: 92000 });
+    orc668(ID668, F); ponte668('5'); lancaPlan668(F, '2026-10-05');
+    ctx.__ponte668 = cancFalha668(orig, /Nala/);
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000), { key: 'nala__renata teste', nome: 'Nala', raca: 'SRD', tutor: 'Renata Teste', dias: 4, total: 40000 }] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    const v1 = [vivas668(TH668), vivas668(NA668)];
+    const ok1 = db668(OP668 + ID668 + '/planilha_ok'), pend1 = db668(OP668 + ID668 + '/planilha_pendente');
+    ctx.__ponte668 = orig; run('__za657=[];'); await run(`orcEnviarPlanilha('${ID668}')`); await espera668();
+    console.log('    QA668R|08|' + JSON.stringify({ v1, ok1, pend1: pend1 && pend1.pets.map((p) => p.nome), fim: vivasL668(), titulos: zaTitulos668() }));
+    igual([v1[0] <= 1 && v1[1] <= 1, ok1, vivasL668().map((x) => [x[0], x[1], x[2]]), db668(OP668 + ID668 + '/planilha_pendente'), db668(OP668 + ID668 + '/planilha_ok')],
+      [true, false, [['Nala', '11/10', '15/10'], ['Thor', '11/10', '15/10']], null, true]);
+  } finally { ctx.__ponte668 = orig; solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-09 (ponte de hoje) — pendente e uma 2ª alteração ainda com a rede caindo: nada novo entra, o pendente continua sendo o período da 1ª (a linha que está viva); com a rede de volta, o «reenviar» deixa uma linha viva só, com as datas da 2ª', async () => {
+  arma668();
+  const orig = ctx.__ponte668;
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('5'); lancaPlan668(F, '2026-10-05');
+    ctx.__ponte668 = cancFalha668(orig);
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    edita668(ID668, { entrada: '2026-10-12', saida: '2026-10-16', pets: [THORn668(4, 52000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    const pend = db668(OP668 + ID668 + '/planilha_pendente') || {};
+    const meio = [vivasL668().map((x) => x[1]), pend.entrada, posts668().filter((c) => !c.acao).length];
+    ctx.__ponte668 = orig; await run(`orcEnviarPlanilha('${ID668}')`); await espera668();
+    console.log('    QA668R|09|' + JSON.stringify({ meio, fim: vivasL668(), noites: B668.noites(TH668) }));
+    igual([meio, vivasL668().map((x) => [x[1], x[2]]), B668.noites(TH668), db668(OP668 + ID668 + '/planilha_pendente')],
+      [[['10/10'], '2026-10-10', 0], [['12/10', '16/10']], [12, 13, 14, 15], null]);
+  } finally { ctx.__ponte668 = orig; solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-10 — pendente da ponte de hoje e a 2ª alteração já com a ponte NOVA publicada: a linha antiga da 1ª é riscada, a da 2ª entra: uma linha viva com as datas da 2ª e as noites certas', async () => {
+  arma668();
+  const orig = ctx.__ponte668;
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('5'); lancaPlan668(F, '2026-10-05');
+    ctx.__ponte668 = cancFalha668(orig);
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    ctx.__ponte668 = orig; MODO668 = '6'; run('ORC_PONTE_VER.quando=0;');
+    edita668(ID668, { entrada: '2026-10-12', saida: '2026-10-16', pets: [THORn668(4, 52000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    console.log('    QA668R|10|' + JSON.stringify({ fim: vivasL668(), noites: B668.noites(TH668), pend: db668(OP668 + ID668 + '/planilha_pendente'), ok: db668(OP668 + ID668 + '/planilha_ok'), titulos: zaTitulos668() }));
+    igual([vivasL668().map((x) => [x[1], x[2]]), B668.noites(TH668), db668(OP668 + ID668 + '/planilha_pendente'), db668(OP668 + ID668 + '/planilha_ok')], [[['12/10', '16/10']], [12, 13, 14, 15], null, true]);
+  } finally { ctx.__ponte668 = orig; solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-11 — pendente e «Cancelar reserva»: a linha antiga da alteração pela metade sai junto; nenhuma linha viva fica', async () => {
+  arma668();
+  const orig = ctx.__ponte668;
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('5'); lancaPlan668(F, '2026-10-05');
+    ctx.__ponte668 = cancFalha668(orig);
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    ctx.__ponte668 = orig;
+    run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', '${SENHA657}'];`); await run(`orcCancelar('${ID668}')`); await espera668(); await espera668();
+    igual([vivasL668(), B668.noites(TH668), db668(OP668 + ID668 + '/planilha_pendente'), db668(OP668 + ID668 + '/status')], [[], [], null, 'cancelado']);
+  } finally { ctx.__ponte668 = orig; solta668(); }
+});
+
+// ---- REL-003: a ponte nova com erro depois da linha escrita; o calendário sem coluna --------------------------------------------------------
+provaAsync('6.68 QA re-gate · QA668R-12 (ponte nova) — a linha foi escrita mas o calendário estourou no meio (ok:false): sem ✅, pendente; o «reenviar» deixa UMA linha viva com as datas novas e as noites novas (as antigas livres) — com a entrada mudada e só com a saída mudada', async () => {
+  for (const [ent, sai, noitesFim] of [['2026-10-11', '2026-10-16', [11, 12, 13, 14, 15]], ['2026-10-10', '2026-10-16', [10, 11, 12, 13, 14, 15]]]) {
+    arma668();
+    try {
+      const F = FECH668();
+      orc668(ID668, F); ponte668('6'); lancaPlan668(F, '2026-10-05');
+      const cal = B668.P.cal, gr = cal.getRange; let n = 0;
+      cal.getRange = function (r, c, nr, nc) { const x = gr.call(cal, r, c, nr, nc); const sv = x.setValue; x.setValue = function (v) { if (v !== '' && ++n === 2) throw new Error('Service Spreadsheets timed out'); return sv.call(this, v); }; return x; };
+      const dias = (Date.parse(sai) - Date.parse(ent)) / 864e5;
+      edita668(ID668, { entrada: ent, saida: sai, pets: [THORn668(dias, 13000 * dias)] }); alteraSenha668();
+      await run('orcSalvarEdicao()'); await espera668(); await espera668();
+      const meio = { ok: db668(OP668 + ID668 + '/planilha_ok'), pend: !!db668(OP668 + ID668 + '/planilha_pendente'), verde: zaTitulos668().includes('✅ RESERVA ALTERADA NA PLANILHA'), vivas: vivasL668() };
+      cal.getRange = gr; run('__za657=[];'); await run(`orcEnviarPlanilha('${ID668}')`); await espera668();
+      console.log('    QA668R|12|' + ent + '|' + JSON.stringify({ meio, fim: vivasL668(), noites: B668.noites(TH668), titulos: zaTitulos668() }));
+      igual([meio.ok, meio.pend, meio.verde, vivasL668().map((x) => [x[1], x[2]]), B668.noites(TH668), db668(OP668 + ID668 + '/planilha_ok')],
+        [false, true, false, [[ent.slice(8) + '/10', sai.slice(8) + '/10']], noitesFim, true], ent);
+    } finally { solta668(); }
+  }
+});
+provaAsync('6.68 QA re-gate · QA668R-13 (ponte nova) — calendário sem coluna livre: nada muda, sem ✅, pendente; aberta uma vaga, o «reenviar» acerta (uma linha viva, as noites novas)', async () => {
+  arma668();
+  try {
+    const F = FECH668();
+    orc668(ID668, F); ponte668('6'); lancaPlan668(F, '2026-10-05');
+    for (let k = 1; k <= 4; k++) B668.post({ acao: 'calendario', peludoTutor: 'Outro' + k + '/SRD/Teste', entrada: '2026-10-14', saida: '2026-10-16' });
+    edita668(ID668, { entrada: '2026-10-10', saida: '2026-10-16', pets: [THORn668(6, 78000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    const meio = [vivasL668().map((x) => [x[1], x[2]]), B668.noites(TH668), zaTitulos668().includes('✅ RESERVA ALTERADA NA PLANILHA'), !!db668(OP668 + ID668 + '/planilha_pendente')];
+    B668.post({ acao: 'cancelar', soCalendario: true, peludoTutor: 'Outro4/SRD/Teste', entrada: '2026-10-14', saida: '2026-10-16' });
+    run('__za657=[];'); await run(`orcEnviarPlanilha('${ID668}')`); await espera668();
+    igual([meio, vivasL668().map((x) => [x[1], x[2]]), B668.noites(TH668), db668(OP668 + ID668 + '/planilha_pendente')],
+      [[[['10/10', '14/10']], [10, 11, 12, 13], false, true], [['10/10', '16/10']], [10, 11, 12, 13, 14, 15], null]);
+  } finally { solta668(); }
+});
+
+// ---- A ponte de hoje e a nova, lado a lado ------------------------------------------------------------------------------------------------------
+provaAsync('6.68 QA re-gate · QA668R-14 — a ponte de hoje (5) e a nova (6) lado a lado, na mesma sequência (mudar as datas com quem fica, sai e entra; voltar; fechar; cancelar; reativar; anular): as linhas vivas e as noites iguais em cada passo', async () => {
+  const roda = async (modo) => {
+    const passos = [];
+    arma668();
+    try {
+      rep668('thor__renata teste', 3, {});
+      const F = FECH668({ pets: [THOR668(), NALA668()], total_cent: 92000, status_em: T657(9, 8, 0) });
+      orc668(ID668, F); ponte668(modo); lancaPlan668(F, '2026-10-09');
+      const foto = () => passos.push(JSON.stringify([vivasL668(), noitesDe668()]));
+      edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-16', pets: [THORn668(5, 65000), { key: 'maya__luciana teste', nome: 'Maya', raca: 'SRD', tutor: 'Luciana Teste', dias: 5, total: 50000 }] }); alteraSenha668();
+      await run('orcSalvarEdicao()'); await espera668(); await espera668(); foto();
+      run(`__p668=orcStatus('${ID668}','aguardando');`); await espera668(); await assina658('s-bia', 'a tutora pediu para pensar mais'); await espera668(); await fecha658(); foto();
+      run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668(); foto();
+      run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', '${SENHA657}'];`); await run(`orcCancelar('${ID668}')`); await espera668(); foto();
+      run(`__p668=orcReativarAbrir('${ID668}');`); await espera668(); await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668(); await assina658(SENHA657, 'a tutora remarcou a mesma viagem'); await espera668(); await fecha658(); foto();
+      run(`__p668=orcApagar('${ID668}');`); await espera668(); await assina658(SENHA657, 'orçamento lançado em duplicidade por engano'); await espera668(); await fecha658(); foto();
+    } finally { solta668(); }
+    return passos;
+  };
+  const v5 = await roda('5'), v6 = await roda('6');
+  console.log('    QA668R|14|' + JSON.stringify({ v5: v5.map((x) => x.slice(0, 160)), v6: v6.map((x) => x.slice(0, 160)) }));
+  igual(v6, v5);
+});
+
+// ---- Sem internet, a 6.53, a busca e o «ver» ---------------------------------------------------------------------------------------------------------
+provaAsync('6.68 QA re-gate · QA668R-15 — sem internet: a releitura do «Fechou» fica no ar — nada gravado, nada verde; o 2º toque diz «JÁ ESTOU GRAVANDO»; quando a leitura volta, grava uma vez só e a trava solta', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    run(`__dbr668r=DB.ref; __solta668r=null; DB.ref=function(p){ var r=__dbr668r(p); if(p==='${OP668}${ID668}'){ var o=r.once; r.once=function(){ var a=arguments; return new Promise(function(ok){ __solta668r=function(){ ok(o.apply(r, a)); }; }); }; } return r; };`);
+    run('__zpq657=[true, true];'); run(`__q1=orcStatus('${ID668}','fechado');`); await espera668();
+    const meio = [db668(OP668 + ID668 + '/status'), zaTitulos668()];
+    run(`__q2=orcStatus('${ID668}','fechado');`); await espera668();
+    const t2 = zaTitulos668();
+    run('DB.ref=__dbr668r; __solta668r();'); await espera668(); await espera668();
+    igual([meio, t2.includes('JÁ ESTOU GRAVANDO'), db668(OP668 + ID668 + '/status'), hist668(ID668).length, posts668().filter((c) => !c.acao).length, run(`!!ORC_GRAVANDO['${ID668}']`)],
+      [['aguardando', []], true, 'fechado', 1, 1, false]);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-16 (6.53) — o Excluir da hospedagem com o orçamento já cancelado (ou anulado) em outro aparelho: não cancela de novo nem grava por cima; com o fechado, cancela como sempre', async () => {
+  arma668();
+  try {
+    orc668('ex1', CANC668({ entrada: '2026-11-01', saida: '2026-11-03' }));
+    const r1 = await run(`orcCancelarGravar('ex1', 'lançada por engano, ele não veio', {nome:'Gestora Teste', role:'gestao'}, {origem:'hospedagem-excluida'})`); await espera668();
+    orc668('ex2', FECH668({ entrada: '2026-11-05', saida: '2026-11-07', status: 'anulado', anulado: { por: 'G', motivo: 'lançado por engano no sistema' } }));
+    const r2 = await run(`orcCancelarGravar('ex2', 'lançada por engano, ele não veio', {nome:'Gestora Teste', role:'gestao'}, {origem:'hospedagem-excluida'})`); await espera668();
+    orc668('ex3', FECH668({ entrada: '2026-11-09', saida: '2026-11-11' }));
+    const r3 = await run(`orcCancelarGravar('ex3', 'lançada por engano, ele não veio', {nome:'Gestora Teste', role:'gestao'}, {origem:'hospedagem-excluida'})`); await espera668();
+    igual([r1.ok, db668(OP668 + 'ex1/cancelado_origem'), r2.ok, db668(OP668 + 'ex2/status'), r3.ok, db668(OP668 + 'ex3/status'), db668(OP668 + 'ex3/cancelado_origem')],
+      [false, null, false, 'anulado', true, 'cancelado', 'hospedagem-excluida']);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-17 — «ver» (orcLinhaVer) de um cancelado antigo achado na busca: a linha da busca abre, a lista de trabalho não ganha o antigo, nenhum id repete; «Reativar» dele pela busca grava e lança', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    run(`__put657('${OP668}velho', ${JSON.stringify(CANC668({ criado_em: T658(1, 9, 0), entrada: '2026-12-10', saida: '2026-12-12' }))});`);
+    run(`ORC_SEC_ABERTA={'0':true,'1':true,'2':true,'3':true}; orcRenderLista();`);
+    await run(`orcProcurar('Renata')`); await espera668();
+    run(`orcLinhaVer('velho')`); await espera668();
+    const busca = String(run("__el657['orcBuscaRes'].innerHTML")), lista = String(run("__el657['orcLista'].innerHTML"));
+    const ids = ((busca + lista).match(/id="([^"]+)"/g) || []).map((x) => x.slice(4, -1));
+    const aberta = /Orçamento feito em/.test(busca.split('orc-busca-velho')[1] || '');
+    run(`__p668=orcReativarAbrir('velho');`); await espera668(); await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668();
+    const r = await assina658(SENHA657, 'a tutora remarcou a mesma viagem'); await espera668();
+    igual([aberta, /orc-card-velho/.test(lista), ids.filter((x, i) => ids.indexOf(x) !== i), r[0], db668(OP668 + 'velho/status'), posts668().filter((c) => !c.acao).map((c) => c.entrada)],
+      [true, false, [], 'pronto', 'fechado', ['2026-12-10']]);
+  } finally { run("ORC_SEC_ABERTA={};"); solta668(); }
+});
+
+// ---- As da 1ª rodada que passavam e não foram trazidas (para conferir que continuam passando) --------------------------------------------------
+provaAsync('6.68 QA re-gate · QA668R-1-07 — nenhuma ação da 6.68 manda ação nova à ponte de hoje (5 e GET mudo)', async () => {
+  arma668();
+  try {
+    const acoes = new Set(); const regs = () => posts668().forEach((c) => acoes.add(c.acao || 'gravar'));
+    for (const modo of ['5', 'mudo']) {
+      const O = FECH668({ pets: [THOR668({ raca: 'SRD' }), NALA668()], total_cent: 92000 });
+      orc668(ID668, O); ponte668(modo); run('__tm657=[];'); lancaPlan668(O, '2026-10-05');
+      edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-16', pets: [THORn668(5, 65000), { key: 'maya__luciana teste', nome: 'Maya', raca: 'SRD', tutor: 'Luciana Teste', dias: 5, total: 50000 }] }); alteraSenha668();
+      await run('orcSalvarEdicao()'); await espera668();
+      run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); });'); await espera668(); await espera668();
+      regs();
+      const F = FECH668({ status_em: T657(9, 8, 0), entrada: '2026-11-02', saida: '2026-11-04' }); orc668('qv', F); lancaPlan668(F, '2026-10-09');
+      run(`__p668=orcStatus('qv','aguardando');`); await espera668(); await assina658('s-bia', 'a tutora pediu para pensar mais'); await espera668(); await fecha658();
+      run(`__p668=orcApagar('qv');`); await espera668(); await assina658(SENHA657, 'orçamento lançado em duplicidade por engano'); await espera668(); await fecha658();
+      run(`__p668=orcAnulacaoDesfazerAbrir('qv');`); await espera668(); await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668(); await assina658(SENHA657, 'não foi lançado por engano afinal'); await espera668(); await fecha658();
+      run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', '${SENHA657}'];`); await run(`orcCancelar('qv')`); await espera668();
+      run(`__p668=orcReativarAbrir('qv');`); await espera668(); await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668(); await assina658(SENHA657, 'a tutora remarcou a mesma viagem'); await espera668(); await fecha658();
+      run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); });'); await espera668();
+      regs();
+    }
+    igual([...acoes].filter((a) => ['gravar', 'cancelar', 'calendario'].indexOf(a) < 0), []);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-1-11 — senhas por papel continuam: Supervisão não anula; posto não tira; Encãotador sem a tela não reativa; Consultora não reabre o anulado; Veterinária com a tela tira', async () => {
+  arma668();
+  try {
+    const tenta = async (abrir, senha, valores) => { run('__esc657=[];'); run(abrir); await espera668();
+      if (valores) { await run(`corrToque('continuar', {valores:${JSON.stringify(valores)}})`); await espera668(); }
+      const r = await assina658(senha, 'motivo bem explicado aqui'); await espera668(); const g = escritas657().filter((e) => !/RECUSADO/.test(e[0])).length; await fecha658(); return [r[0], g]; };
+    orc668(ID668, FECH668({ entrada: '2026-11-01', saida: '2026-11-03' }));
+    igual(await tenta(`__p668=orcApagar('${ID668}');`, 's-amanda'), ['conferir', 0]);
+    orc668('qt', ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: true, entrada: '2026-11-09', saida: '2026-11-11' }));
+    igual(await tenta(`__p668=orcTirarDaPlanilhaAbrir('qt');`, 's-posto'), ['conferir', 0]);
+    orc668('qc', CANC668({ entrada: '2026-11-13', saida: '2026-11-15' }));
+    igual(await tenta(`__p668=orcReativarAbrir('qc');`, 's-caio', ['Fechou']), ['conferir', 0]);
+    orc668('qa', ORC668({ entrada: '2026-11-17', saida: '2026-11-19', status: 'anulado', anulado: { por: 'Gestora Teste', papel: 'gestao', motivo: 'lançado por engano no sistema', quando: '09/10/2026', ts: 1 }, anulado_de: { status: 'aguardando', status_em: 0, status_por: '' } }));
+    igual(await tenta(`__p668=orcAnulacaoDesfazerAbrir('qa');`, 's-bia', ['Aguardando o tutor']), ['conferir', 0]);
+    orc668('qt2', ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: true, entrada: '2026-11-21', saida: '2026-11-23' }));
+    const rv = await tenta(`__p668=orcTirarDaPlanilhaAbrir('qt2');`, 's-vera');
+    igual([rv[0], (db668(OP668 + 'qt2/planilha_tirada') || {}).por], ['pronto', 'Vera Veterinária Teste']);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-1-14 — o Financeiro: fechar em 05/10, cancelar e reativar como «Fechou» dá o mesmo total de outubro; o anulado sai como o cancelado', async () => {
+  arma668();
+  try {
+    const fin = (o) => JSON.parse(JSON.stringify(FIN_NOVO36.finResumoMes({ cadastro: {}, peludinhos: [], irmaos: {}, orcamentos: { o: o }, pagamentos: null, planos: {} }, '2026-10', { hoje: '2026-10-09' })));
+    orc668(ID668, FECH668({ entrada: '2026-10-20', saida: '2026-10-24' }));
+    const antes = fin(db668(OP668 + ID668));
+    await run(`orcCancelarGravar('${ID668}', 'a viagem foi desmarcada pela tutora', {nome:'Gestora Teste', role:'gestao'})`); await espera668();
+    const cancelado = fin(db668(OP668 + ID668));
+    run(`__p668=orcReativarAbrir('${ID668}');`); await espera668(); await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668();
+    await assina658(SENHA657, 'a tutora remarcou a mesma viagem'); await espera668(); await fecha658();
+    igual(fin(db668(OP668 + ID668)), antes);
+    run(`__p668=orcApagar('${ID668}');`); await espera668(); await assina658(SENHA657, 'orçamento lançado em duplicidade por engano'); await espera668();
+    igual(fin(db668(OP668 + ID668)), cancelado);
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-1-16 — sem internet (a ponte cai em todo pedido): nenhum «Failed to fetch»/«TypeError» na tela, nenhum ✅ de planilha, nenhum «Lançado»', async () => {
+  arma668();
+  try {
+    const telas = [];
+    orc668('s1', ORC668()); ponte668('cai');
+    run('__zpq657=[true];'); await run(`orcStatus('s1','fechado')`); await espera668(); telas.push(VISIVEL668(), run(`orcCardHtml('s1', ORC_LISTA_CACHE['s1'], '2026-10-09', {}, false, 1)`));
+    const F = FECH668({ status_em: T657(9, 8, 0), entrada: '2026-11-02', saida: '2026-11-04' });
+    orc668('s2', F); run(`__p668=orcStatus('s2','aguardando');`); await espera668(); await assina658('s-bia', 'a tutora pediu para pensar mais'); telas.push(VISIVEL668(), String(run('CORR_ATUAL?corrCartazHTML(CORR_ATUAL):""'))); await fecha658();
+    orc668('s3', Object.assign({}, F, { entrada: '2026-11-06', saida: '2026-11-08' })); run(`__p668=orcApagar('s3');`); await espera668(); await assina658(SENHA657, 'orçamento lançado em duplicidade por engano'); telas.push(VISIVEL668()); await fecha658();
+    orc668(ID668, FECH668()); edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668(); telas.push(VISIVEL668(), run(`orcCardHtml('${ID668}', ORC_LISTA_CACHE['${ID668}'], '2026-10-09', {}, false, 1)`));
+    run('__za657=[];'); await run(`orcEnviarPlanilha('${ID668}')`); await espera668(); telas.push(VISIVEL668());
+    const tudo = telas.join('\n');
+    igual([/Failed to fetch|TypeError/.test(tudo), /✅ (FECHADO E LANÇADO|RESERVA ALTERADA NA PLANILHA|VOLTOU PARA PENDENTE E SAIU|ANULADO E TIRADO|A PROPOSTA SAIU)/.test(tudo), /Lançado na planilha/.test(tudo)], [false, false, false],
+      (tudo.match(/.{0,80}(Failed to fetch|TypeError|✅ [A-ZÁÉÍÓÚÃÕÇ ]+|Lançado na planilha).{0,60}/g) || []).join(' || '));
+  } finally { solta668(); }
+});
+provaAsync('6.68 QA re-gate · QA668R-18 — a alteração que ficou pela metade e voltou pelo «reenviar» mantém a «Data reserva» do fechamento (S7-P8, AC5.2): ponte de hoje (o riscar caiu) e ponte nova (o atualizar falhou)', async () => {
+  const out = [];
+  for (const modo of ['5', '6']) {
+    arma668();
+    const orig = ctx.__ponte668;
+    try {
+      const F = FECH668();   // fechada em 05/10
+      orc668(ID668, F); ponte668(modo); lancaPlan668(F, '2026-10-05');
+      let restaura = () => {};
+      if (modo === '5') { ctx.__ponte668 = cancFalha668(orig); restaura = () => { ctx.__ponte668 = orig; }; }
+      else { const fin = B668.P.fin, gr = fin.getRange; fin.getRange = function (r, c, nr, nc) { const x = gr.call(fin, r, c, nr, nc); if (r > 1) { x.setValue = () => { throw new Error('Exception: You are trying to edit a protected cell'); }; x.setValues = x.setValue; } return x; }; restaura = () => { fin.getRange = gr; }; }
+      edita668(ID668, { entrada: '2026-10-10', saida: '2026-10-16', pets: [THORn668(6, 78000)] }); alteraSenha668();
+      await run('orcSalvarEdicao()'); await espera668(); await espera668();
+      restaura(); await run(`orcEnviarPlanilha('${ID668}')`); await espera668();
+      out.push([modo].concat(vivasL668().map((x) => [x[1], x[2], x[3], x[5]])));
+    } finally { ctx.__ponte668 = orig; solta668(); }
+  }
+  console.log('    QA668R|18|' + JSON.stringify(out));
+  igual(out, [['5', ['10/10', '16/10', 780, '05/10']], ['6', ['10/10', '16/10', 780, '05/10']]]);
+});
+provaAsync('6.68 QA re-gate · QA668R-19 (observação) — «Fechou» na tela velha de uma proposta cujas DATAS outro aparelho mudou (o status e o status_em iguais): o que a pergunta mostrou × o que foi fechado', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    QAP668(ORC668({ saida: '2026-10-16', noites: 6, total_cent: 78000, pets: [THOR668({ diarias: 6, subtotal_diarias_cent: 78000, subtotal_cent: 78000 })] }));
+    run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    const zp = J668('__zp657');
+    console.log('    QA668R|19|' + JSON.stringify({ pergunta: (zp[0] || [])[1], status: db668(OP668 + ID668 + '/status'), lancado: posts668().filter((c) => !c.acao).map((c) => [c.entrada, c.saida, c.total]) }));
+    igual([db668(OP668 + ID668 + '/status') !== 'fechado' || /16\/10\/2026/.test(((zp[0] || [])[1] || [])[0] || '')], [true]);
+  } finally { solta668(); }
+});
+// ================================================================== 6.68, 3ª rodada (11/out/2026) — as provas do @dev para o re-gate:
+// REL-004 (a releitura compara também as datas, o valor e os FILHOts, com a vista de quem confirmou: a pergunta, o cartaz, o
+// ORC_EDIT_ANTES), REL-005 (a «Data reserva» do fechamento no envio de uma reserva fechada), LOW-R2 (o prazo de 20 s na
+// releitura da rotina) e OBS-R2 (o Excluir da 6.53 com o orçamento que já estava fora).
+// O que o orcMudarDatas não faz no palco (ler os campos de data da tela): a conta nova vem pronta, como no edita668.
+const conta668r3 = (n) => {
+  ctx.__ed668 = n;
+  run(`(function(){ var n=__ed668, tot=0, pets=n.pets.map(function(p, i){ tot+=p.total; return {sel:{key:p.key, nome:p.nome, raca:p.raca||'', tutor:p.tutor||'', rotulo:'Avulso', compromisso:'', trocas:{}},
+      ordem:i+1, off:0, nDia:p.dias, nPer:0, repUsa:p.repUsa||0, repEconomia:0, liqDia:p.total, brutoPer:0, total:p.total}; });
+    ORC_CALC={entrada:n.entrada, saida:n.saida, saidaPedida:n.saida, noites:pets[0].nDia, temporada:'baixa', alta:false, total:tot, p1:Math.ceil(tot/2), p2:tot-Math.ceil(tot/2), pets:pets};
+  })();`);
+};
+const TEMP668R3 = `__bkT668r3={t:ORC_TEMP, tm:ORC_TEMP_MANUAL, ta:ORC_TEMP_AUTO, au:ORC_AULUNO};`;
+const TEMP668R3_VOLTA = `if(typeof __bkT668r3!=='undefined'){ ORC_TEMP=__bkT668r3.t; ORC_TEMP_MANUAL=__bkT668r3.tm; ORC_TEMP_AUTO=__bkT668r3.ta; ORC_AULUNO=__bkT668r3.au; }`;
+// o Rex/Thor de 10 a 16 (R$ 780,00): a mudança que o outro aparelho gravou
+const OUTRO668R3 = (base) => Object.assign({}, base, { saida: '2026-10-16', noites: 6, total_cent: 78000, pets: [THOR668({ diarias: 6, subtotal_diarias_cent: 78000, subtotal_cent: 78000 })] });
+const relida668r3 = (id) => run(`ORC_LISTA_CACHE['${id}']=__get657('${OP668}${id}');`);   // a lista desta tela relida (orcCarregarLista)
+
+provaAsync('6.68 R3 REL-004 a — «Mudar as datas» pelo orcMudarDatas DE VERDADE: o ORC_EDIT_ANTES guarda a foto de onde o formulário nasceu (com o status_em); outro aparelho mudou as datas e a lista foi relida ao abrir: nada gravado, nada à planilha, a frase mostra como ele está agora; sem a mudança de lá, grava', async () => {
+  for (const outro of [true, false]) {
+    arma668(); run(TEMP668R3);
+    try {
+      const F = FECH668();
+      orc668(ID668, F); ponte668('6'); lancaPlan668(F, '2026-10-05');
+      run(`orcMudarDatas('${ID668}')`); await espera668();
+      const ea = J668('ORC_EDIT_ANTES') || {};
+      if (outro) QAP668(OUTRO668R3(F));
+      relida668r3(ID668);   // abrir a edição relê a lista (irParaView → orcInit → orcCarregarLista)
+      conta668r3({ entrada: '2026-10-10', saida: '2026-10-15', pets: [THORn668(5, 65000)] });
+      alteraSenha668();
+      await run('orcSalvarEdicao()'); await espera668(); await espera668();
+      const L = zaLinhas668(/A RESERVA NÃO FOI ALTERADA/) || [];
+      const fim = [db668(OP668 + ID668 + '/saida'), db668(OP668 + ID668 + '/total_cent'), posts668().length, Object.keys(db668(OP668 + ID668 + '/historico') || {}).length];
+      igual([ea.status_em, (ea.vista || {}).saida, (ea.vista || {}).total_cent, (ea.vista || {}).status_em], [T657(5, 9, 0), '2026-10-14', 52000, T657(5, 9, 0)], 'a foto');
+      if (outro) igual([fim, /^Este orçamento mudou em outro aparelho \(agora está «fechou», com outra mudança gravada depois que esta tela abriu\): Thor, 10\/10\/2026 a 16\/10\/2026 · R\$ 780,00\. Nada foi gravado/.test(L[0] || ''), /Desistir da alteração/.test(L[1] || '')],
+        [['2026-10-16', 78000, 0, 0], true, true], JSON.stringify(L));
+      else igual([fim[0], fim[1], fim[3], posts668().filter((c) => c.acao === 'atualizar').length, L.length], ['2026-10-15', 65000, 1, 1, 0], JSON.stringify(zaTitulos668()));
+    } finally { run(TEMP668R3_VOLTA); solta668(); }
+  }
+});
+provaAsync('6.68 R3 REL-004 b — «Fechou» e «Não fechou»: a lista é relida ENQUANTO a pergunta está na tela e outro aparelho tinha mudado as datas: a comparação é com o que a PERGUNTA mostrou — nada gravado, nada à planilha', async () => {
+  for (const [novo, perg] of [['fechado', 'zPergunta'], ['nao_fechou', 'zTexto']]) {
+    arma668();
+    try {
+      orc668(ID668, ORC668());
+      QAP668(OUTRO668R3(ORC668()));
+      run(`__pg668r3=${perg}; ${perg}=function(){ ORC_LISTA_CACHE['${ID668}']=__get657('${OP668}${ID668}'); return __pg668r3.apply(this, arguments); };`);
+      try { run("__zpq657=[true]; __ztq657=['achou o valor alto demais'];"); await run(`orcStatus('${ID668}','${novo}')`); await espera668(); } finally { run(`${perg}=__pg668r3;`); }
+      const viu = (novo === 'fechado') ? (((J668('__zp657')[0] || [])[1] || [])[0] || '') : '';
+      igual([novo === 'nao_fechou' || /14\/10\/2026 · R\$ 520,00/.test(viu), db668(OP668 + ID668 + '/status'), posts668().length, hist668(ID668).length, zaTitulos668().includes('ESTE ORÇAMENTO MUDOU')],
+        [true, 'aguardando', 0, 0, true], novo + ' ' + viu);
+    } finally { solta668(); }
+  }
+});
+provaAsync('6.68 R3 REL-004 c — os cartazes («Voltar para pendente», «Reabrir» o «Não fechou», «Reativar», «Reabrir» o anulado, «Anular», «Tirar da planilha»): a lista relida com o cartaz aberto e as datas mudadas em outro aparelho — nada gravado; sem a mudança de lá, cada um grava', async () => {
+  const CASOS = [
+    ['voltar', FECH668(), `__p668=orcStatus('${ID668}','aguardando');`, null, SENHA657, 'aguardando'],
+    ['reabrir-nf', ORC668({ status: 'nao_fechou', nao_fechou: { motivo: '', texto: 'achou o valor alto', estado: 'respondido', por: 'Bia', ts: 1 } }), `__p668=orcNaoFechouReabrirAbrir('${ID668}');`, null, 's-bia', 'aguardando'],
+    ['reativar', CANC668(), `__p668=orcReativarAbrir('${ID668}');`, ['Fechou'], SENHA657, 'fechado'],
+    ['reabrir-anulado', FECH668({ status: 'anulado', status_em: T657(9, 9, 0), anulado: { por: 'Gestora Teste', papel: 'gestao', motivo: 'lançado por engano no sistema' }, anulado_de: { status: 'fechado', status_em: T657(5, 9, 0), status_por: 'Bia Consultora Teste' } }),
+      `__p668=orcAnulacaoDesfazerAbrir('${ID668}');`, ['Fechou'], SENHA657, 'fechado'],
+    ['anular', FECH668(), `__p668=orcApagar('${ID668}');`, null, SENHA657, 'anulado'],
+    ['tirar', ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: true }), `__p668=orcTirarDaPlanilhaAbrir('${ID668}');`, null, 's-bia', 'aguardando'],
+  ];
+  const res = [];
+  for (const [nome, O, abrir, valores, senha, final] of CASOS) {
+    for (const outro of [true, false]) {
+      arma668();
+      try {
+        orc668(ID668, O); lancaPlan668(Object.assign({}, O, { status: 'fechado' }), '2026-10-05');
+        run(abrir); await espera668();
+        if (valores) { await run(`corrToque('continuar', {valores:${JSON.stringify(valores)}})`); await espera668(); }
+        if (outro) QAP668(OUTRO668R3(O));
+        relida668r3(ID668);
+        await assina658(senha, 'o motivo desta mudança bem explicado'); await espera668();
+        const st = db668(OP668 + ID668 + '/status'), saida = db668(OP668 + ID668 + '/saida');
+        const ok = outro ? (st === (O.status || 'aguardando') && saida === '2026-10-16' && posts668().length === 0) : (st === final);
+        res.push([nome, outro ? 'outro aparelho' : 'sem mudança', ok ? 'certo' : ('ERRADO: ' + st + ' ' + saida + ' posts ' + posts668().length + ' ' + String(run('CORR_ATUAL?CORR_ATUAL.aviso:""') || '').slice(0, 160))]);
+      } finally { solta668(); }
+    }
+  }
+  igual(res.filter((x) => x[2] !== 'certo'), [], JSON.stringify(res));
+});
+provaAsync('6.68 R3 REL-004 d — os FILHOts: outro aparelho trocou a Nala pela Maya (as mesmas datas, o mesmo valor, o mesmo status_em): «Fechou» na tela velha não grava; a frase diz quem está agora', async () => {
+  arma668();
+  try {
+    const O = ORC668({ pets: [THOR668(), NALA668()], total_cent: 92000 });
+    orc668(ID668, O);
+    QAP668(Object.assign({}, O, { pets: [THOR668(), NALA668({ key: 'maya__luciana teste', nome: 'Maya', tutor: 'Luciana Teste' })] }));
+    run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    const L = zaLinhas668(/ESTE ORÇAMENTO MUDOU/) || [];
+    igual([db668(OP668 + ID668 + '/status'), posts668().length, /: Thor e Maya, 10\/10\/2026 a 14\/10\/2026 · R\$ 920,00\. Nada foi gravado/.test(L[0] || '')], ['aguardando', 0, true], JSON.stringify(L));
+  } finally { solta668(); }
+});
+prova('6.68 R3 REL-004 e — orcVistaDe (função pura): cada campo que as perguntas e os cartazes mostram muda a vista (status, status_em, entrada, saída, valor; a chave, o nome e o subtotal de cada FILHOt; um FILHOt a mais); o resto do orçamento não; aplicada à própria forma, devolve a mesma; os FILHOts guardados como objeto dão a mesma vista', () => {
+  const O = ORC668({ pets: [THOR668(), NALA668()], total_cent: 92000, status: 'fechado', status_em: T657(5, 9, 0) });
+  const V = (o) => JSON.stringify(run(`orcVistaDe(${JSON.stringify(o)})`));
+  const base = V(O);
+  const muda = {
+    status: Object.assign({}, O, { status: 'aguardando' }), status_em: Object.assign({}, O, { status_em: T657(6, 9, 0) }), entrada: Object.assign({}, O, { entrada: '2026-10-11' }),
+    saida: Object.assign({}, O, { saida: '2026-10-15' }), total: Object.assign({}, O, { total_cent: 92100 }), chave: Object.assign({}, O, { pets: [THOR668({ key: 'thor__outra' }), NALA668()] }),
+    nome: Object.assign({}, O, { pets: [THOR668({ nome: 'Thor Jr' }), NALA668()] }), subtotal: Object.assign({}, O, { pets: [THOR668({ subtotal_cent: 52100 }), NALA668()] }),
+    umAMais: Object.assign({}, O, { pets: [THOR668(), NALA668(), NALA668({ key: 'maya__luciana teste', nome: 'Maya' })] }) };
+  const naoMuda = { planilha: Object.assign({}, O, { planilha_ok: false, planilha_msg: 'x', planilha_em: 5 }), mensagem: Object.assign({}, O, { mensagem: 'oi' }), historico: Object.assign({}, O, { historico: { a: { ts: 1 } } }),
+    raca: Object.assign({}, O, { pets: [THOR668({ raca: 'SRD', trocas: {} }), NALA668()] }), numeroTexto: Object.assign({}, O, { total_cent: '92000', status_em: String(T657(5, 9, 0)) }),
+    objeto: Object.assign({}, O, { pets: { 0: THOR668(), 1: NALA668() } }) };
+  igual(Object.keys(muda).filter((k) => V(muda[k]) === base), [], 'campos que precisam mudar a vista');
+  igual(Object.keys(naoMuda).filter((k) => V(naoMuda[k]) !== base), [], 'campos que não mudam a vista');
+  igual(JSON.stringify(run(`orcVistaDe(orcVistaDe(${JSON.stringify(O)}))`)), base, 'idempotente');
+  igual([V({}), V(null)], [JSON.stringify({ status: 'aguardando', status_em: 0, entrada: '', saida: '', total_cent: 0, pets: [] }), JSON.stringify({ status: 'aguardando', status_em: 0, entrada: '', saida: '', total_cent: 0, pets: [] })]);
+});
+provaAsync('6.68 R3 REL-005 — a «Data reserva» de uma reserva fechada é a do fechamento: o «reenviar» de um «Fechou» cuja planilha falhou (05/10 → 09/10), a reserva antiga sem status_hist (o status_em) e a de dois FILHOts; sem fechamento conhecido, hoje; o «Fechou» de hoje, hoje', async () => {
+  const out = [];
+  const caso = async (rot, O, acao) => {
+    arma668();
+    try {
+      orc668(ID668, O); ponte668('6');
+      if (acao === 'fechou') { run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); }
+      else await run(`orcEnviarPlanilha('${ID668}')`);
+      await espera668();
+      out.push([rot].concat(posts668().filter((c) => !c.acao).map((c) => c.dataReserva)));
+    } finally { solta668(); }
+  };
+  const HIST = { h1: { de: 'aguardando', para: 'fechado', quem: 'Bia Consultora Teste', ts: T657(5, 9, 0) } };
+  await caso('reenviar (status_hist 05/10)', FECH668({ status_hist: HIST, planilha_ok: false, planilha_msg: 'a ponte não respondeu' }), 'reenviar');
+  await caso('reenviar (sem status_hist: status_em 03/10)', FECH668({ status_em: T657(3, 9, 0), planilha_ok: false }), 'reenviar');
+  await caso('reenviar dois FILHOts', FECH668({ status_hist: HIST, pets: [THOR668(), NALA668()], total_cent: 92000, planilha_ok: false }), 'reenviar');
+  await caso('reenviar sem quem fechou', FECH668({ status_por: '', planilha_ok: false }), 'reenviar');
+  await caso('«Fechou» hoje', ORC668(), 'fechou');
+  igual(out, [['reenviar (status_hist 05/10)', '2026-10-05'], ['reenviar (sem status_hist: status_em 03/10)', '2026-10-03'], ['reenviar dois FILHOts', '2026-10-05', '2026-10-05'],
+    ['reenviar sem quem fechou', '2026-10-09'], ['«Fechou» hoje', '2026-10-09']]);
+});
+provaAsync('6.68 R3 LOW-R2 — sem internet, a releitura do «Fechou» e do «Não fechou» tem prazo: passados 20 s, «NÃO FOI GRAVADO» com a frase do prazo e a trava solta (o texto do tutor fica guardado); a leitura que chega depois não grava nada; o toque seguinte grava', async () => {
+  for (const [novo, prep] of [['fechado', '__zpq657=[true];'], ['nao_fechou', "__ztq657=['achou o valor alto demais'];"]]) {
+    arma668();
+    try {
+      orc668(ID668, ORC668());
+      run(`__dbr668r3=DB.ref; __solta668r3=null; DB.ref=function(p){ var r=__dbr668r3(p); if(p==='${OP668}${ID668}'){ var o=r.once; r.once=function(){ var a=arguments; return new Promise(function(ok){ __solta668r3=function(){ ok(o.apply(r, a)); }; }); }; } return r; };`);
+      run('__tm657=[];'); run(prep); run(`__q1=orcStatus('${ID668}','${novo}');`); await espera668();
+      const meio = [db668(OP668 + ID668 + '/status'), zaTitulos668()];
+      run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); });'); await espera668();
+      const L = zaLinhas668(/NÃO FOI GRAVADO/) || [];
+      const trava = run(`!!ORC_GRAVANDO['${ID668}']`), rasc = run(`ORC_NF_RASCUNHO['${ID668}']||''`);
+      run('__solta668r3();'); await espera668(); await espera668();   // a leitura chega depois do prazo
+      const depois = [db668(OP668 + ID668 + '/status'), hist668(ID668).length, posts668().filter((c) => !c.acao).length];
+      run('DB.ref=__dbr668r3;'); run(prep); await run(`orcStatus('${ID668}','${novo}')`); await espera668();
+      igual([meio, /^O banco não respondeu em 20 segundos: nada foi gravado\. Confira na lista antes de tocar de novo\./.test(L[0] || ''), trava, novo === 'fechado' ? '' : rasc, depois, db668(OP668 + ID668 + '/status'), hist668(ID668).length],
+        [['aguardando', []], true, false, novo === 'fechado' ? '' : 'achou o valor alto demais', ['aguardando', 0, 0], novo, 1], novo + ' ' + JSON.stringify(L));
+    } finally { run('if(typeof __dbr668r3!=="undefined" && __dbr668r3) DB.ref=__dbr668r3;'); solta668(); }
+  }
+});
+provaAsync('6.68 R3 OBS-R2 (6.53) — o Excluir da hospedagem com o orçamento já cancelado (ou anulado) em outro aparelho: «o orçamento já estava…», sem mandar cancelar em Orçamentos, e o orçamento não muda; a falha de verdade continua dizendo «NÃO foi cancelado»', async () => {
+  const res = [];
+  for (const [st, rot] of [['cancelado', 'cancelado'], ['anulado', 'anulado (lançado por engano)']]) {
+    run(ARMA653);
+    try {
+      semearBolt653q();
+      run(`ORC_LISTA_CACHE={o9:{status:'fechado', entrada:'2026-10-09', saida:'2026-10-11', tutor:'Rui Teste', pets:[{key:'bolt__rui teste', nome:'Bolt', tutor:'Rui Teste'}]}};
+        __put653('auaulandia/orcamentos/o9', Object.assign({}, ORC_LISTA_CACHE.o9, {status:'${st}', status_em:5}));`);
+      run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+      const r = await run("hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {orcamento:'cancelar'})"); await espera653();
+      const ex = (r && r.extras) || [];
+      res.push([st, !!(r && r.ok), ex.includes('o orçamento já estava «' + rot + '»: nada mudou nele, e não é preciso cancelar em Orçamentos'), ex.some((t) => /cancele em Orçamentos/.test(t)),
+        run("__get653('auaulandia/orcamentos/o9/status')"), run("__get653('auaulandia/orcamentos/o9/cancelado_origem')")]);
+    } finally { run(SOLTA653); }
+  }
+  igual(res, [['cancelado', true, true, false, 'cancelado', null], ['anulado', true, true, false, 'anulado', null]], JSON.stringify(res));
+});
+provaAsync('6.68 R3 REL-004 f — a busca acompanha a lista inteira relida: o cancelado antigo achado na busca muda de datas em outro aparelho, a lista inteira é relida (passados os 3 minutos) e a busca mostra as datas novas; o «Reativar» pela busca grava, sem um «mudou em outro aparelho» falso', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    run(`__put657('${OP668}velho', ${JSON.stringify(CANC668({ criado_em: T658(1, 9, 0), entrada: '2026-12-10', saida: '2026-12-12' }))});`);
+    await run(`orcProcurar('Renata')`); await espera668();
+    const antes = run("ORC_BUSCA_MAPA.velho ? ORC_BUSCA_MAPA.velho.entrada : ''");
+    run(`__put657('${OP668}velho', ${JSON.stringify(CANC668({ criado_em: T658(1, 9, 0), entrada: '2026-12-11', saida: '2026-12-12' }))});`);   // o outro aparelho
+    run('ORC_VIVOS.quando=0;');   // passaram os 3 minutos da lista inteira
+    await run(`orcProcurar('Renata')`); await espera668();
+    const depois = run("ORC_BUSCA_MAPA.velho ? ORC_BUSCA_MAPA.velho.entrada : ''"), busca = String(run("__el657['orcBuscaRes'].innerHTML"));
+    run(`__p668=orcReativarAbrir('velho');`); await espera668(); await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668();
+    const r = await assina658(SENHA657, 'a tutora remarcou a mesma viagem'); await espera668();
+    igual([antes, depois, /11\/12\/2026/.test(busca), r[0], db668(OP668 + 'velho/status'), posts668().filter((c) => !c.acao).map((c) => c.entrada)],
+      ['2026-12-10', '2026-12-11', true, 'pronto', 'fechado', ['2026-12-11']], JSON.stringify(r));
+  } finally { run("ORC_SEC_ABERTA={};"); solta668(); }
+});
+// ================================================================== 6.68, fechamento dos CONCERNS — as 8 provas do re-gate 3 do QA (Quinn,
+// qa668r3/ataque668r3.js), trazidas como estavam (só o nome ganhou o prefixo «6.68 QA re-gate 3 · »). Usam os helpers do bloco (arma668,
+// orc668, ponte668, B668, QAP668, vivas668, TH668, CANC668, FECH668, ORC668, conta668r3, relida668r3…), com o sufixo q3 nos próprios.
+// Sem o QA3_TOLERA (que só a corrida de defeitos do QA usava): a QA668T-01 e a 02 contam também o LOW-R3-2 e o REL-006, fechados aqui.
+const mais1q3 = (iso) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
+const NFq3 = { motivo: '', texto: 'achou o valor alto', estado: 'respondido', por: 'Bia', ts: 1 };
+const ANULq3 = (extra) => FECH668(Object.assign({ status: 'anulado', status_em: T657(9, 9, 0), anulado: { por: 'Gestora Teste', papel: 'gestao', motivo: 'lançado por engano no sistema' },
+  anulado_de: { status: 'fechado', status_em: T657(5, 9, 0), status_por: 'Bia Consultora Teste' } }, extra || {}));
+// as variações do outro aparelho: UM campo de cada vez (o resto igual); 'nada' e 'volta' são os controles (tem de gravar)
+const VARq3 = (O, stOutro) => ({
+  entrada: Object.assign({}, O, { entrada: mais1q3(O.entrada) }),
+  saida: Object.assign({}, O, { saida: mais1q3(O.saida) }),
+  valor: Object.assign({}, O, { total_cent: (Number(O.total_cent) || 0) + 100 }),
+  'filhot-nome': Object.assign({}, O, { pets: O.pets.map((p, i) => (i === 0 ? Object.assign({}, p, { nome: p.nome + ' Jr' }) : p)) }),
+  'filhot-chave': Object.assign({}, O, { pets: O.pets.map((p, i) => (i === 0 ? Object.assign({}, p, { key: p.key + ' 2' }) : p)) }),
+  'filhot-subtotal': Object.assign({}, O, { pets: O.pets.map((p, i) => (i === 0 ? Object.assign({}, p, { subtotal_cent: (Number(p.subtotal_cent) || 0) + 100 }) : p)) }),
+  'filhot-a-mais': Object.assign({}, O, { pets: O.pets.concat([NALA668()]) }),
+  status_em: Object.assign({}, O, { status_em: (Number(O.status_em) || T657(8, 9, 0)) + 60000 }),
+  status: Object.assign({}, O, { status: stOutro }),
+  nada: null,
+  // o outro aparelho mudou e VOLTOU exatamente ao que a pessoa viu (o desvio declarado: sem o carimbo alterado_ts)
+  volta: Object.assign({}, O, { historico: { qa1: { de_saida: O.saida, para_saida: mais1q3(O.saida), ts: T657(9, 9, 20) }, qa2: { de_saida: mais1q3(O.saida), para_saida: O.saida, ts: T657(9, 9, 21) } },
+    alterado_por: 'Gestora Teste', alterado_ts: T657(9, 9, 21), alterado_motivo: 'mudou e desfez a mudança' }),
+});
+const muta3 = (id, novo, relida) => { ctx.__q3novo = novo; run((novo ? `__put657('${OP668}${id}', __q3novo);` : '') + (relida ? `ORC_LISTA_CACHE['${id}']=__get657('${OP668}${id}');` : '')); };
+const gancho3 = (fn, id, novo, relida) => { ctx.__q3novo = novo; run(`__q3fn=${fn}; __q3feito=false; ${fn}=function(){ if(!__q3feito){ __q3feito=true; ${novo ? `__put657('${OP668}${id}', __q3novo);` : ''} ${relida ? `ORC_LISTA_CACHE['${id}']=__get657('${OP668}${id}');` : ''} } return __q3fn.apply(this, arguments); };`); };
+const soltaGancho3 = (fn) => run(`if(typeof __q3fn!=='undefined' && __q3fn){ ${fn}=__q3fn; __q3fn=null; }`);
+const nodo3 = (id) => JSON.stringify(db668(OP668 + id));
+const cartaz3 = () => String(run('CORR_ATUAL?((CORR_ATUAL.erro||"")+" "+(CORR_ATUAL.aviso||"")):""') || '');
+const assinaq3 = async (senha, motivo) => { const r = await assina658(senha, motivo); return r[1] + ' ' + cartaz3(); };
+// as portas: [nome, O, stOutro, executar(id, novo, relida) → aviso]
+const PORTASq3 = [
+  ['mudar-datas', FECH668(), 'aguardando', async (id, novo, relida) => {
+    run(TEMP668R3);
+    try {
+      lancaPlan668(FECH668(), '2026-10-05');
+      run(`orcMudarDatas('${id}')`); await espera668();
+      muta3(id, novo, relida);
+      conta668r3({ entrada: '2026-10-10', saida: '2026-10-17', pets: [THORn668(7, 91000)] });
+      alteraSenha668(); await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    } finally { run(TEMP668R3_VOLTA); }
+    return '';
+  }],
+  ['fechou', ORC668(), 'fechado', async (id, novo, relida) => {
+    gancho3('zPergunta', id, novo, relida);
+    try { run('__zpq657=[true];'); await run(`orcStatus('${id}','fechado')`); await espera668(); } finally { soltaGancho3('zPergunta'); }
+    return '';
+  }],
+  ['nao-fechou', ORC668(), 'fechado', async (id, novo, relida) => {
+    gancho3('zTexto', id, novo, relida);
+    try { run("__ztq657=['achou o valor alto demais']; "); await run(`orcStatus('${id}','nao_fechou')`); await espera668(); } finally { soltaGancho3('zTexto'); }
+    return '';
+  }],
+  ['voltar', FECH668(), 'anulado', async (id, novo, relida) => {
+    lancaPlan668(FECH668(), '2026-10-05');
+    run(`__p668=orcStatus('${id}','aguardando');`); await espera668(); muta3(id, novo, relida);
+    return await assinaq3(SENHA657, 'o tutor pediu para voltar a pensar');
+  }],
+  ['reabrir-nf', ORC668({ status: 'nao_fechou', nao_fechou: NFq3, status_em: T657(8, 15, 0) }), 'aguardando', async (id, novo, relida) => {
+    run(`__p668=orcNaoFechouReabrirAbrir('${id}');`); await espera668(); muta3(id, novo, relida);
+    return await assinaq3('s-bia', 'o tutor ligou e quer pensar mais');
+  }],
+  ['reativar', CANC668(), 'aguardando', async (id, novo, relida) => {
+    lancaPlan668(FECH668(), '2026-10-05');
+    run(`__p668=orcReativarAbrir('${id}');`); await espera668(); await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668(); muta3(id, novo, relida);
+    return await assinaq3(SENHA657, 'a tutora remarcou a mesma viagem');
+  }],
+  ['reabrir-anulado', ANULq3(), 'aguardando', async (id, novo, relida) => {
+    run(`__p668=orcAnulacaoDesfazerAbrir('${id}');`); await espera668(); await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668(); muta3(id, novo, relida);
+    return await assinaq3(SENHA657, 'a anulação foi feita por engano');
+  }],
+  ['anular', FECH668(), 'aguardando', async (id, novo, relida) => {
+    lancaPlan668(FECH668(), '2026-10-05');
+    run(`__p668=orcApagar('${id}');`); await espera668(); muta3(id, novo, relida);
+    return await assinaq3(SENHA657, 'orçamento lançado em duplicidade por engano');
+  }],
+  ['tirar', ORC668({ planilha_em: T657(5, 9, 0), planilha_ok: true }), 'fechado', async (id, novo, relida) => {
+    lancaPlan668(FECH668(), '2026-10-05');
+    run(`__p668=orcTirarDaPlanilhaAbrir('${id}');`); await espera668(); muta3(id, novo, relida);
+    return await assinaq3('s-bia', 'a proposta voltou a aguardar o tutor');
+  }],
+];
+const rodaPortaq3 = async ([nome, O, stOutro, exec]) => {
+  const res = [];
+  const V = VARq3(O, stOutro);
+  for (const vn of Object.keys(V)) {
+    for (const relida of [false, true]) {
+      arma668();
+      try {
+        orc668(ID668, O); ponte668('6');
+        const novo = V[vn];
+        let aviso = '', antes = '';
+        // o nó como o outro aparelho deixou: lido dentro da execução (logo depois da mudança) — aqui, o esperado
+        const esperado = JSON.stringify(JSON.parse(JSON.stringify(novo || O)));
+        aviso = await exec(ID668, novo, relida);
+        const fim = db668(OP668 + ID668), vis = VISIVEL668() + ' ' + aviso;
+        const gravou = JSON.stringify(fim) !== esperado;
+        const mudou = /mudou em outro aparelho/.test(vis);
+        const frase = (vis.match(/Este orçamento mudou em outro aparelho[^"]*?Nada foi gravado/) || vis.match(/Esta mudança de situação não existe[^"]*?Nada foi gravado/) || [''])[0];
+        res.push({ porta: nome, var: vn, relida, gravou, mudou, posts: posts668().length, frase: frase.slice(0, 260) });
+      } finally { solta668(); }
+    }
+  }
+  return res;
+};
+// QA3_TOLERA=1 (só na corrida dos defeitos plantados): os 2 achados conhecidos da 3ª rodada não contam (a «Fechou»/«Não fechou» calada com a
+// situação mudada e a lista relida; o «Cancelar» com a lista relida durante a pergunta) — para o defeito plantado ser pego por OUTRA coisa
+const conhecidoq3 = (r) => !!process.env.QA3_TOLERA && ((r.var === 'status' && r.relida && (r.porta === 'fechou' || r.porta === 'nao-fechou') && !r.gravou && !r.posts) || (r.porta === undefined && r.relida));
+const avaliaq3 = (res) => res.filter((r) => !conhecidoq3(r)).filter((r) => {
+  if (r.var === 'nada' || r.var === 'volta') return !(r.gravou && !r.mudou);
+  if (r.gravou || r.posts) return true;
+  if (r.var === 'status') return !(r.frase || r.mudou);          // a situação mudou: basta não gravar e dizer (mudou ou «não existe»)
+  return !r.mudou;
+});
+provaAsync('6.68 QA re-gate 3 · QA668T-01 (REL-004, matriz) — 9 portas × 9 mudanças de UM campo do outro aparelho (entrada, saída, valor, nome/chave/subtotal do FILHOt, um FILHOt a mais, status_em, status) × lista relida ou não: nada gravado, nada à planilha, a frase diz; os controles («nada» e «mudou e voltou») gravam', async () => {
+  const todos = [];
+  for (const P of PORTASq3) todos.push(...(await rodaPortaq3(P)));
+  console.log('    QA668T|01|' + JSON.stringify({ casos: todos.length, gravaram: todos.filter((r) => r.gravou).map((r) => [r.porta, r.var, r.relida]), statusFrases: todos.filter((r) => r.var === 'status').map((r) => [r.porta, r.relida, r.frase.slice(0, 90)]) }));
+  igual(avaliaq3(todos), [], 'casos errados');
+  // a frase mostra como ele está AGORA (o valor novo; o nome novo)
+  const fv = todos.filter((r) => r.var === 'valor' && r.porta === 'fechou')[0].frase, fn = todos.filter((r) => r.var === 'filhot-nome' && r.porta === 'voltar')[0].frase;
+  igual([/R\$ 521,00/.test(fv), /Thor Jr/.test(fn)], [true, true], fv + ' | ' + fn);
+});
+provaAsync('6.68 QA re-gate 3 · QA668T-02 (REL-004, «Cancelar reserva») — a mudança de UM campo do outro aparelho com a pergunta do «Cancelar» na tela: sem a lista relida, nada gravado; com a lista relida ENQUANTO a pergunta está aberta (o orcCarregarLista de outra ação que termina), o que acontece', async () => {
+  const res = [];
+  const O = FECH668(), V = VARq3(O, 'aguardando');
+  for (const vn of Object.keys(V)) {
+    for (const relida of [false, true]) {
+      arma668();
+      try {
+        orc668(ID668, O); ponte668('6'); lancaPlan668(O, '2026-10-05');
+        const esperado = JSON.stringify(V[vn] || O);
+        gancho3('zPergunta', ID668, V[vn], relida);
+        try { run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', '${SENHA657}'];`); await run(`orcCancelar('${ID668}')`); await espera668(); } finally { soltaGancho3('zPergunta'); }
+        const vis = VISIVEL668();
+        res.push({ var: vn, relida, gravou: nodo3(ID668) !== esperado, mudou: /mudou em outro aparelho/.test(vis), posts: posts668().length, frase: ((vis.match(/Este orçamento mudou em outro aparelho[^"]*?Nada foi gravado/) || vis.match(/Este orçamento já está[^"]*?Nada foi gravado/) || [''])[0]).slice(0, 200) });
+      } finally { solta668(); }
+    }
+  }
+  console.log('    QA668T|02|' + JSON.stringify(res.map((r) => [r.var, r.relida ? 'relida' : 'sem', r.gravou ? 'GRAVOU' : 'nada', r.mudou ? 'mudou' : '-'])));
+  igual(avaliaq3(res.filter((r) => !r.relida)), [], 'sem a lista relida');
+  igual(avaliaq3(res.filter((r) => r.relida)), [], 'com a lista relida durante a pergunta (a vista é a memória, não a pergunta)');
+});
+provaAsync('6.68 QA re-gate 3 · QA668T-03 (REL-004, a busca) — o cancelado antigo achado em «Procurar»: o cartaz «Reativar» aberto, o outro aparelho muda UM campo; com e sem a lista inteira relida (os achados acompanham): nada gravado; os controles gravam', async () => {
+  const res = [];
+  const VELHO = CANC668({ criado_em: T658(1, 9, 0), entrada: '2026-12-10', saida: '2026-12-12' });
+  const V = VARq3(VELHO, 'aguardando');
+  for (const vn of Object.keys(V)) {
+    for (const relida of [false, true]) {
+      arma668();
+      try {
+        orc668(ID668, ORC668());
+        ctx.__q3v = VELHO; run(`__put657('${OP668}velho', __q3v);`);
+        await run(`orcProcurar('Renata')`); await espera668();
+        run(`__p668=orcReativarAbrir('velho');`); await espera668(); await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668();
+        if (V[vn]) { ctx.__q3v = V[vn]; run(`__put657('${OP668}velho', __q3v);`); }
+        if (relida) { run('ORC_VIVOS.quando=0;'); await run('orcLerVivos()'); await espera668(); }
+        const r1 = await assinaq3(SENHA657, 'a tutora remarcou a mesma viagem');
+        const vis = VISIVEL668() + ' ' + r1;
+        res.push({ porta: 'busca-reativar', var: vn, relida, gravou: nodo3('velho') !== JSON.stringify(V[vn] || VELHO), mudou: /mudou em outro aparelho/.test(vis), posts: posts668().length,
+          frase: ((vis.match(/Este orçamento mudou em outro aparelho[^"]*?Nada foi gravado/) || vis.match(/Esta mudança de situação não existe[^"]*?Nada foi gravado/) || [''])[0]).slice(0, 200) });
+      } finally { run('ORC_SEC_ABERTA={};'); solta668(); }
+    }
+  }
+  console.log('    QA668T|03|' + JSON.stringify(res.map((r) => [r.var, r.relida ? 'relida' : 'sem', r.gravou ? 'GRAVOU' : 'nada', r.mudou ? 'mudou' : '-', r.posts])));
+  igual(avaliaq3(res), [], 'casos errados');
+});
+
+// ---- um aparelho só: as ações em sequência, sem a lista relida, nunca dão um «mudou em outro aparelho» falso -----------------------
+provaAsync('6.68 QA re-gate 3 · QA668T-04 (sem «mudou» falso) — um aparelho, sem reler a lista: «Mudar as datas» (o orcMudarDatas de verdade) → «Fechou» → «Voltar para pendente» → «Fechou» → «Anular» → «Reabrir» (Fechou) → «Mudar as datas» → «Cancelar» → «Reativar» (Fechou) → «Tirar»? não (fechada): cada passo grava', async () => {
+  arma668(); run(TEMP668R3);
+  const passos = [];
+  const ok = (rot, cond, extra) => passos.push([rot, cond ? 'ok' : ('ERRADO ' + (extra || ''))]);
+  try {
+    orc668(ID668, ORC668()); ponte668('6');
+    const st = () => db668(OP668 + ID668 + '/status');
+    run(`orcMudarDatas('${ID668}')`); await espera668(); conta668r3({ entrada: '2026-10-10', saida: '2026-10-15', pets: [THORn668(5, 65000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    ok('mudar as datas (aguardando)', db668(OP668 + ID668 + '/saida') === '2026-10-15', zaTitulos668().join('/'));
+    run('__za657=[]; __zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    ok('fechou', st() === 'fechado', zaTitulos668().join('/'));
+    run('__za657=[];'); run(`__p668=orcStatus('${ID668}','aguardando');`); await espera668(); let r = await assina658(SENHA657, 'o tutor pediu para voltar a pensar');
+    ok('voltar para pendente', st() === 'aguardando', r[1]);
+    run('__za657=[]; __zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    ok('fechou de novo', st() === 'fechado', zaTitulos668().join('/'));
+    run(`__p668=orcApagar('${ID668}');`); await espera668(); r = await assina658(SENHA657, 'orçamento lançado em duplicidade por engano');
+    ok('anular', st() === 'anulado', r[1]);
+    run(`__p668=orcAnulacaoDesfazerAbrir('${ID668}');`); await espera668(); await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668(); r = await assina658(SENHA657, 'a anulação foi feita por engano');
+    ok('reabrir o anulado', st() === 'fechado', r[1]);
+    run('__za657=[];'); run(`orcMudarDatas('${ID668}')`); await espera668(); conta668r3({ entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    ok('mudar as datas (fechada)', db668(OP668 + ID668 + '/entrada') === '2026-10-11', zaTitulos668().join('/') + ' ' + JSON.stringify(zaLinhas668(/NÃO FOI ALTERADA/)));
+    run('__za657=[]; __al657=[];'); run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', '${SENHA657}'];`); await run(`orcCancelar('${ID668}')`); await espera668();
+    ok('cancelar', st() === 'cancelado', JSON.stringify(J668('__al657')));
+    run(`__p668=orcReativarAbrir('${ID668}');`); await espera668(); await run(`corrToque('continuar', {valores:['Fechou']})`); await espera668(); r = await assina658(SENHA657, 'a tutora remarcou a mesma viagem');
+    ok('reativar', st() === 'fechado', r[1]);
+    run('__za657=[];'); run(`__p668=orcStatus('${ID668}','aguardando');`); await espera668(); r = await assina658(SENHA657, 'o tutor pediu para voltar a pensar');
+    ok('voltar para pendente (2)', st() === 'aguardando', r[1]);
+    run(`__ztq657=['achou o valor alto demais'];`); await run(`orcStatus('${ID668}','nao_fechou')`); await espera668();
+    ok('não fechou', st() === 'nao_fechou', zaTitulos668().join('/'));
+    run(`__p668=orcNaoFechouReabrirAbrir('${ID668}');`); await espera668(); r = await assina658('s-bia', 'o tutor ligou e quer pensar mais');
+    ok('reabrir o não fechou', st() === 'aguardando', r[1]);
+    console.log('    QA668T|04|' + JSON.stringify(passos));
+    igual(passos.filter((p) => p[1] !== 'ok'), [], 'passos que não gravaram');
+  } finally { run(TEMP668R3_VOLTA); solta668(); }
+});
+
+// ---- REL-005: a «Data reserva» do fechamento nas duas pontes ------------------------------------------------------------------------
+provaAsync('6.68 QA re-gate 3 · QA668T-05 (REL-005, duas pontes) — a alteração que fica pela metade e o «reenviar»: a reserva fechada em 05/10, a reativada (fechamento original 05/10) e a fechada de novo hoje (09/10): a «Data reserva» de cada linha nova é a do fechamento, na ponte 5 e na 6', async () => {
+  const out = [];
+  const HIST5 = { h1: { de: 'aguardando', para: 'fechado', quem: 'Bia Consultora Teste', ts: T657(5, 12, 0) } };
+  const casos = [
+    ['fechada 05/10', FECH668({ status_em: T657(5, 12, 0), status_hist: HIST5 }), '2026-10-05'],
+    ['reativada (original 05/10)', FECH668({ status_em: T657(5, 12, 0), status_hist: Object.assign({}, HIST5, { h2: { de: 'cancelado', para: 'fechado', quem: 'Gestora Teste', ts: T657(8, 12, 0), fechou_original: { quem: 'Bia Consultora Teste', ts: T657(5, 12, 0) } } }) }), '2026-10-05'],
+    ['fechada de novo hoje', FECH668({ status_em: T657(9, 8, 0), status_hist: Object.assign({}, HIST5, { h2: { de: 'fechado', para: 'aguardando', quem: 'Gestora Teste', ts: T657(7, 12, 0) }, h3: { de: 'aguardando', para: 'fechado', quem: 'Bia Consultora Teste', ts: T657(9, 8, 0) } }) }), '2026-10-09'],
+    ['antiga sem histórico (status_em 03/10)', FECH668({ status_em: T657(3, 12, 0) }), '2026-10-03'],
+  ];
+  for (const modo of ['5', '6']) {
+    for (const [rot, F, dataEsp] of casos) {
+      arma668();
+      const orig = ctx.__ponte668;
+      try {
+        orc668(ID668, F); ponte668(modo); lancaPlan668(F, dataEsp);
+        // a 1ª tentativa cai na hora de escrever a linha nova (gravar/atualizar): fica pela metade (planilha_pendente)
+        ctx.__ponte668 = (url, metodo, corpo) => (metodo === 'POST' && !/"acao":"cancelar"/.test(corpo || '') && !/"acao":"calendario"/.test(corpo || '')) ? { erro: 'Failed to fetch' } : orig(url, metodo, corpo);
+        edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-15', pets: [THORn668(4, 52000)] }); alteraSenha668();
+        await run('orcSalvarEdicao()'); await espera668(); await espera668();
+        const meio = posts668().filter((c) => !c.acao || c.acao === 'atualizar').map((c) => c.dataReserva);
+        ctx.__ponte668 = orig; PED668.length = 0;
+        await run(`orcEnviarPlanilha('${ID668}')`); await espera668(); await espera668();
+        const reenv = posts668().filter((c) => !c.acao || c.acao === 'atualizar').map((c) => [c.acao || 'gravar', c.dataReserva, c.entrada]);
+        const vivas = B668.linhas().filter((x) => !x.riscada).map((x) => [x.entrada, x.dataReserva]);
+        out.push([modo, rot, meio.every((d) => d === dataEsp), reenv.length > 0 && reenv.every((x) => x[1] === dataEsp), JSON.stringify(reenv), JSON.stringify(vivas)]);
+      } finally { ctx.__ponte668 = orig; solta668(); }
+    }
+  }
+  console.log('    QA668T|05|' + JSON.stringify(out));
+  igual(out.filter((x) => !(x[2] && x[3])), [], 'a «Data reserva» que não é a do fechamento');
+});
+
+// ---- LOW-R2: o prazo da releitura da rotina --------------------------------------------------------------------------------------------
+provaAsync('6.68 QA re-gate 3 · QA668T-06 (LOW-R2) — durante os 20 s, o 2º toque não relê nem grava; passado o prazo, a 1ª leitura chega DEPOIS com o banco mudado em outro aparelho (fechou): nada gravado por ela; o 2º toque depois do prazo e a leitura atrasada juntas: UMA gravação só', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    run(`__dbr668q3=DB.ref; __soltas668q3=[]; __lidas668q3=0; DB.ref=function(p){ var r=__dbr668q3(p); if(p==='${OP668}${ID668}'){ var o=r.once; r.once=function(){ var a=arguments; __lidas668q3++; if(__lidas668q3>1) return o.apply(r, a); return new Promise(function(ok){ __soltas668q3.push(function(){ ok(o.apply(r, a)); }); }); }; } return r; };`);
+    run('__tm657=[]; __zpq657=[true];'); run(`__q1=orcStatus('${ID668}','fechado');`); await espera668();
+    run('__zpq657=[true];'); const r2 = await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    const durante = [r2 && r2.erro ? /ainda está gravando/.test(r2.erro) : JSON.stringify(r2), run('__lidas668q3')];
+    run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); });'); await espera668();
+    // o 2º toque depois do prazo (lê na hora) e grava
+    run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+    const depois2 = [db668(OP668 + ID668 + '/status'), hist668(ID668).length];
+    // e a leitura atrasada do 1º toque chega agora: não grava de novo
+    run('__soltas668q3.forEach(function(f){ f(); });'); await espera668(); await espera668();
+    console.log('    QA668T|06|' + JSON.stringify({ durante, depois2, fim: [db668(OP668 + ID668 + '/status'), hist668(ID668).length, posts668().filter((c) => !c.acao).length] }));
+    igual([durante, depois2, hist668(ID668).length, posts668().filter((c) => !c.acao).length], [[true, 1], ['fechado', 1], 1, 1]);
+  } finally { run('if(typeof __dbr668q3!=="undefined" && __dbr668q3) DB.ref=__dbr668q3;'); solta668(); }
+});
+provaAsync('6.68 QA re-gate 3 · QA668T-07 (LOW-R2 + REL-004) — a leitura do «Não fechou» passa do prazo; o outro aparelho fecha nesse meio-tempo; o texto guardado volta no próximo «Não fechou», que NÃO grava (agora está «fechou»; pelo console, a barreira do status da memória, calada)', async () => {
+  arma668();
+  try {
+    orc668(ID668, ORC668());
+    run(`__dbr668q3=DB.ref; __soltas668q3=[]; __lidas668q3=0; DB.ref=function(p){ var r=__dbr668q3(p); if(p==='${OP668}${ID668}'){ var o=r.once; r.once=function(){ var a=arguments; __lidas668q3++; if(__lidas668q3>1) return o.apply(r, a); return new Promise(function(ok){ __soltas668q3.push(function(){ ok(o.apply(r, a)); }); }); }; } return r; };`);
+    run(`__tm657=[]; __ztq657=['achou o valor alto demais'];`); run(`__q1=orcStatus('${ID668}','nao_fechou');`); await espera668();
+    run('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); });'); await espera668();
+    QAP668(FECH668({ status_em: T657(9, 9, 59) }));
+    run('__soltas668q3.forEach(function(f){ f(); });'); await espera668();
+    run('__zt657=[]; __za657=[];'); run(`__ztq657=['achou o valor alto demais'];`);
+    // a lista relida (o card já mostra «fechou») — e, sem relida, a pergunta da memória; nos dois, nada gravado
+    await run(`orcStatus('${ID668}','nao_fechou')`); await espera668();
+    const zt = J668('__zt657');
+    console.log('    QA668T|07|' + JSON.stringify({ status: db668(OP668 + ID668 + '/status'), hist: hist668(ID668).length, titulos: zaTitulos668(), texto: run(`ORC_NF_RASCUNHO['${ID668}']||''`), perguntas: zt.length }));
+    igual([db668(OP668 + ID668 + '/status'), db668(OP668 + ID668 + '/nao_fechou'), hist668(ID668).length, run(`ORC_NF_RASCUNHO['${ID668}']||''`)], ['fechado', null, 0, 'achou o valor alto demais']);
+  } finally { run('if(typeof __dbr668q3!=="undefined" && __dbr668q3) DB.ref=__dbr668q3;'); solta668(); }
+});
+
+// ---- OBS-R2: o Excluir da 6.53 com o orçamento «não fechou» e com o orçamento que sumiu ---------------------------------------------
+provaAsync('6.68 QA re-gate 3 · QA668T-08 (OBS-R2) — o Excluir da hospedagem com o orçamento «não fechou» em outro aparelho: «já estava «não fechou»», nada muda nele; o «Fechou» de outro aparelho (fechado) é cancelado como sempre; o orçamento apagado diz o motivo', async () => {
+  const res = [];
+  for (const [st, extra] of [['nao_fechou', { nao_fechou: NFq3 }], ['fechado', {}], ['sumiu', null]]) {
+    run(ARMA653);
+    try {
+      semearBolt653q();
+      ctx.__q3e = extra; ctx.__q3st = st;
+      run(`ORC_LISTA_CACHE={o9:{status:'fechado', entrada:'2026-10-09', saida:'2026-10-11', tutor:'Rui Teste', pets:[{key:'bolt__rui teste', nome:'Bolt', tutor:'Rui Teste'}]}};
+        if(__q3e) __put653('auaulandia/orcamentos/o9', Object.assign({}, ORC_LISTA_CACHE.o9, {status:__q3st, status_em:5}, __q3e));`);
+      run(`hospCorrigirAbrir('${IDB653q}'); hospCorrEscolher('excluir');`); await espera653();
+      const r = await run("hospExcluirGravar('lançada por engano, ele não veio', 'senhaAmanda653', {orcamento:'cancelar'})"); await espera653();
+      res.push([st, !!(r && r.ok), (r && r.extras) || [], run("__get653('auaulandia/orcamentos/o9/status')")]);
+    } finally { run(SOLTA653); }
+  }
+  console.log('    QA668T|08|' + JSON.stringify(res));
+  igual([res[0][2].includes('o orçamento já estava «não fechou»: nada mudou nele, e não é preciso cancelar em Orçamentos'), res[0][3], res[1][3], res[1][2].some((t) => /cancel/.test(t) && /NÃO/.test(t))],
+    [true, 'nao_fechou', 'cancelado', false], JSON.stringify(res));
+});
+// ================================================================== 6.68, fechamento dos CONCERNS do re-gate 3 (12/out/2026) — as provas do @dev:
+// REL-006 (o «Cancelar reserva» compara com a pergunta), LOW-R3-2 (a barreira da situação pela vista; sem «BARROU» falso), TEST-R3-1
+// (a reserva fechada de novo hoje: o último fechamento vale) e OBS-R3-1 (sem coluna livre, o aviso diz que as noites não foram marcadas).
+const relidaNo668r4 = (fn, id, novo) => { ctx.__r4novo = novo; run(`__r4fn=${fn}; __r4feito=false; ${fn}=function(){ if(!__r4feito){ __r4feito=true; if(__r4novo) __put657('${OP668}${id}', __r4novo); ORC_LISTA_CACHE['${id}']=__get657('${OP668}${id}'); } return __r4fn.apply(this, arguments); };`); };
+const soltaRelida668r4 = (fn) => run(`if(typeof __r4fn!=='undefined' && __r4fn){ ${fn}=__r4fn; __r4fn=null; }`);
+const ocupa668r4 = (ent, sai) => { for (let k = 1; k <= 4; k++) B668.post({ acao: 'calendario', peludoTutor: 'Outro' + k + '/SRD/Teste', entrada: ent, saida: sai }); };
+
+provaAsync('6.68 R4 REL-006 — «Cancelar reserva»: a lista é relida enquanto a SENHA está na tela (o outro aparelho mudou a saída): nada gravado, nada à planilha, e a tela diz como ele está agora — sem o «confira se a reserva foi cancelada» de depois de gravar; sem a mudança de lá, cancela', async () => {
+  const res = [];
+  for (const outro of [true, false]) {
+    arma668();
+    try {
+      const F = FECH668({ pets: [THOR668({ nome: 'Bob', key: 'bob__renata teste' })], entrada: '2026-10-27', saida: '2026-10-30', noites: 3, total_cent: 39000 });
+      orc668(ID668, F); ponte668('6'); lancaPlan668(F, '2026-10-05');
+      // a 2ª pergunta de texto (a senha): a lista é relida — e, no caso «outro», o outro aparelho já tinha mudado para 27 a 31
+      run(`__r4fn2=zTexto; zTexto=function(){ __r4n=(typeof __r4n==='number'?__r4n:0)+1; if(__r4n===2){ ${outro ? `__put657('${OP668}${ID668}', ${JSON.stringify(Object.assign({}, F, { saida: '2026-10-31', noites: 4, total_cent: 52000 }))});` : ''} ORC_LISTA_CACHE['${ID668}']=__get657('${OP668}${ID668}'); } return __r4fn2.apply(this, arguments); }; __r4n=0;`);
+      try { run(`__zpq657=[true]; __ztq657=['a viagem foi desmarcada pela tutora', '${SENHA657}'];`); await run(`orcCancelar('${ID668}')`); await espera668(); }
+      finally { run('zTexto=__r4fn2; __r4n=0;'); }
+      const al = J668('__al657').join(' || ');
+      res.push([outro ? 'outro' : 'sem', db668(OP668 + ID668 + '/status'), posts668().length,
+        outro ? /^NÃO consegui cancelar: Este orçamento mudou em outro aparelho \(agora está «fechou», com outra mudança gravada depois que esta tela abriu\): Bob, 27\/10\/2026 a 31\/10\/2026 · R\$ 520,00\. Nada foi gravado: a lista já mostra como ele está agora\.$/.test(al) : al === '',
+        /se a reserva foi cancelada/.test(al)]);
+    } finally { solta668(); }
+  }
+  igual(res, [['outro', 'fechado', 0, true, false], ['sem', 'cancelado', res[1][2], true, false]], JSON.stringify(res));
+  assert.ok(res[1][2] > 0, 'sem a mudança de lá, a planilha é acertada');
+});
+provaAsync('6.68 R4 LOW-R3-2 — a situação mudou em outro aparelho e a lista foi relida com a pergunta ou o cartaz aberto: «Fechou» e «Não fechou» dizem «ESTE ORÇAMENTO MUDOU» (como ele está agora); «Voltar» e «Reabrir» dizem «mudou em outro aparelho», e não «(«aguardando o tutor» → «aguardando o tutor»)»; nenhum «BARROU» falso; nada gravado', async () => {
+  const res = [];
+  const casos = [
+    ['fechou', ORC668(), CANC668({ status_em: T657(9, 9, 50), planilha_em: undefined, planilha_ok: undefined }), async () => { relidaNo668r4('zPergunta', ID668, null); try { run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668(); } finally { soltaRelida668r4('zPergunta'); } return ''; }],
+    ['nao-fechou', ORC668(), FECH668({ status_em: T657(9, 9, 50) }), async () => { relidaNo668r4('zTexto', ID668, null); try { run("__ztq657=['achou o valor alto demais'];"); await run(`orcStatus('${ID668}','nao_fechou')`); await espera668(); } finally { soltaRelida668r4('zTexto'); } return ''; }],
+    ['voltar', FECH668(), ORC668({ status_em: T657(9, 9, 50) }), async () => { run(`__p668=orcStatus('${ID668}','aguardando');`); await espera668(); run(`ORC_LISTA_CACHE['${ID668}']=__get657('${OP668}${ID668}');`); const r = await assina658(SENHA657, 'o tutor pediu para voltar a pensar'); return r[1] + ' ' + String(run('CORR_ATUAL?(CORR_ATUAL.erro||""):""') || ''); }],
+    ['reabrir-nf', ORC668({ status: 'nao_fechou', nao_fechou: { motivo: '', texto: 'achou o valor alto', estado: 'respondido', por: 'Bia', ts: 1 }, status_em: T657(8, 15, 0) }), ORC668({ status_em: T657(9, 9, 50) }),
+      async () => { run(`__p668=orcNaoFechouReabrirAbrir('${ID668}');`); await espera668(); run(`ORC_LISTA_CACHE['${ID668}']=__get657('${OP668}${ID668}');`); const r = await assina658('s-bia', 'o tutor ligou e quer pensar mais'); return r[1] + ' ' + String(run('CORR_ATUAL?(CORR_ATUAL.erro||""):""') || ''); }],
+  ];
+  for (const [nome, O, OUTRO, exec] of casos) {
+    arma668();
+    try {
+      orc668(ID668, O); ponte668('6');
+      QAP668(OUTRO);   // o outro aparelho mudou a situação; a lista desta tela é relida com a pergunta (ou o cartaz) aberta
+      const aviso = await exec();
+      const vis = VISIVEL668() + ' ' + aviso + ' ' + cartaz658();
+      res.push([nome, db668(OP668 + ID668 + '/status') === (OUTRO.status || 'aguardando'), posts668().length, /mudou em outro aparelho \(agora está «/.test(vis), /não existe no Orçamento/.test(vis), barrou657().length,
+        (nome === 'fechou' || nome === 'nao-fechou') ? zaTitulos668().includes('ESTE ORÇAMENTO MUDOU') : true]);
+    } finally { solta668(); }
+  }
+  igual(res.filter((r) => !(r[1] && r[2] === 0 && r[3] && !r[4] && r[5] === 0 && r[6])), [], JSON.stringify(res));
+});
+provaAsync('6.68 R4 LOW-R3-2 b — pelo console, uma mudança de situação que não existe a partir do que a tela viu: com o banco igual, a frase de sempre («NÃO FOI GRAVADO»); com o banco mudado em outro aparelho, como ele está agora; nunca «BARROU» (não é falta de permissão); a falta de permissão de verdade continua barrando', async () => {
+  arma668();
+  try {
+    orc668(ID668, FECH668());
+    const r = await run(`orcStatusGravar('${ID668}', 'nao_fechou', {texto:'achou o valor alto demais', de:'aguardando'})`); await espera668();
+    const L = zaLinhas668(/NÃO FOI GRAVADO/) || [];
+    igual([r.ok, /^Esta mudança de situação não existe no Orçamento \(«fechou» → «não fechou»\)\. Nada foi gravado\.$/.test(L[0] || ''), barrou657().length, db668(OP668 + ID668 + '/status')], [false, true, 0, 'fechado'], JSON.stringify([r, L]));
+    // «Voltar para pendente» de uma reserva fechada em dia anterior, assinado por quem não é da Gestão: barra, como sempre
+    const r2 = await run(`orcStatusGravar('${ID668}', 'aguardando', {de:'fechado', reg:{por:'Bia Consultora Teste', papel:'consultora', motivo:'o tutor pediu para pensar'}})`); await espera668();
+    igual([r2.ok, !!r2.barrou, barrou657().length, db668(OP668 + ID668 + '/status')], [false, true, 1, 'fechado'], JSON.stringify(r2));
+  } finally { solta668(); }
+  // a memória velha («não fechou») e o banco já reaberto em outro aparelho («aguardando»), sem vista: relê e diz como ele está agora
+  arma668();
+  try {
+    orc668(ID668, ORC668({ status: 'nao_fechou', nao_fechou: { motivo: '', texto: 'achou o valor alto', estado: 'respondido', por: 'Bia', ts: 1 }, status_em: T657(8, 15, 0) }));
+    QAP668(ORC668({ status_em: T657(9, 9, 50) }));
+    const r3 = await run(`orcStatusGravar('${ID668}', 'fechado', {de:'aguardando'})`); await espera668();
+    const L3 = zaLinhas668(/ESTE ORÇAMENTO MUDOU/) || [];
+    igual([r3.ok, !!r3.mudou, /^Este orçamento mudou em outro aparelho \(agora está «aguardando o tutor»/.test(L3[0] || ''), barrou657().length, db668(OP668 + ID668 + '/status'), posts668().length],
+      [false, true, true, 0, 'aguardando', 0], JSON.stringify([r3, L3]));
+  } finally { solta668(); }
+});
+provaAsync('6.68 R4 TEST-R3-1 — a reserva fechada, voltada para pendente e fechada de novo HOJE: orcFechouPor é o último fechamento (09/10, não o de 05/10) — no card, no «reenviar» e no reenvio da alteração pela metade, nas duas pontes', async () => {
+  const HIST = { h3: { de: 'aguardando', para: 'fechado', quem: 'Bia Consultora Teste', ts: T657(9, 8, 0) }, h1: { de: 'aguardando', para: 'fechado', quem: 'Gestora Teste', ts: T657(5, 12, 0) },
+    h2: { de: 'fechado', para: 'aguardando', quem: 'Gestora Teste', ts: T657(7, 12, 0) } };
+  const F = FECH668({ status_em: T657(9, 8, 0), status_por: 'Bia Consultora Teste', status_hist: HIST, planilha_ok: false, planilha_msg: 'a ponte não respondeu' });
+  const quem = run(`orcFechouPor(${JSON.stringify(F)})`);
+  const out = [];
+  for (const modo of ['5', '6']) {
+    arma668();
+    try {
+      orc668(ID668, F); ponte668(modo);
+      await run(`orcEnviarPlanilha('${ID668}')`); await espera668();
+      out.push([modo, posts668().filter((c) => !c.acao).map((c) => c.dataReserva)]);
+    } finally { solta668(); }
+  }
+  igual([quem, out], [{ quem: 'Bia Consultora Teste', ts: T657(9, 8, 0) }, [['5', ['2026-10-09']], ['6', ['2026-10-09']]]], JSON.stringify(out));
+});
+provaAsync('6.68 R4 OBS-R3-1 — sem coluna livre no calendário: o «Fechou» e o «reenviar» não dizem «✅ … Entrou nas duas abas»; a primeira linha diz que a linha do dinheiro entrou e que as noites não foram marcadas, e por quê; com coluna livre, o verde de sempre; a alteração que lança uma linha nova (ponte de hoje) também não fica verde', async () => {
+  const res = [];
+  for (const [rot, cheio] of [['sem coluna', true], ['com coluna', false]]) {
+    arma668();
+    try {
+      orc668(ID668, ORC668()); ponte668('6');
+      if (cheio) ocupa668r4('2026-10-12', '2026-10-13');
+      run('__zpq657=[true];'); await run(`orcStatus('${ID668}','fechado')`); await espera668();
+      const z = J668('__za657'), ult = z[z.length - 1] || [];
+      res.push([rot, ult[0], ((ult[1] || [])[0] || ''), B668.noites(TH668).length, B668.linhas().filter((x) => !x.riscada).length, db668(OP668 + ID668 + '/planilha_ok')]);
+    } finally { solta668(); }
+  }
+  igual(res.map((r) => [r[0], r[1], r[3], r[4], r[5]]), [['sem coluna', 'FECHADO — MAS AS NOITES NÃO FORAM MARCADAS NO CALENDÁRIO', 0, 1, true], ['com coluna', '✅ FECHADO E LANÇADO NA PLANILHA', 4, 1, true]], JSON.stringify(res));
+  assert.ok(/^Thor: a linha do dinheiro entrou na aba Hospedagem, mas as noites de 10\/10\/2026 a 14\/10\/2026 não foram marcadas no calendário: não há coluna de hóspede livre na estadia inteira\.$/.test(res[0][2]), res[0][2]);
+  // o «reenviar» de uma reserva fechada, sem coluna livre
+  arma668();
+  try {
+    orc668(ID668, FECH668({ planilha_ok: false, planilha_msg: 'a ponte não respondeu' })); ponte668('5'); ocupa668r4('2026-10-11', '2026-10-12');
+    await run(`orcEnviarPlanilha('${ID668}')`); await espera668();
+    igual(zaTitulos668(), ['FECHADO — MAS AS NOITES NÃO FORAM MARCADAS NO CALENDÁRIO']);
+  } finally { solta668(); }
+  // a alteração na ponte de hoje (riscada a antiga, a nova entra) com o calendário cheio nas noites novas: «CONFIRA», não verde
+  arma668();
+  try {
+    const F = FECH668(); orc668(ID668, F); ponte668('5'); lancaPlan668(F, '2026-10-05'); ocupa668r4('2026-10-15', '2026-10-16');
+    edita668(ID668, { entrada: '2026-10-11', saida: '2026-10-16', pets: [THORn668(5, 65000)] }); alteraSenha668();
+    await run('orcSalvarEdicao()'); await espera668(); await espera668();
+    const L = zaLinhas668(/RESERVA ALTERADA — CONFIRA A PLANILHA/) || [];
+    igual([zaTitulos668().includes('✅ RESERVA ALTERADA NA PLANILHA'), /^Thor: a linha do dinheiro entrou na aba Hospedagem, mas as noites de 11\/10\/2026 a 16\/10\/2026 não foram marcadas no calendário: não há coluna de hóspede livre na estadia inteira\./.test(L[0] || '')],
+      [false, true], JSON.stringify([zaTitulos668(), L]));
+  } finally { solta668(); }
+});
+}
+{
+// ================================================================== 6.80 — vermífugo: a série nova de verdade (caso Romeo)
+console.log('\n6.80 — vermífugo: a dose numa série vencida é a 1ª da série nova, a ficha da versão antiga, a tela antes de gravar e o toque no «Salvar» (Adriana, 11/out/2026)');
+// Tudo inventado: o FILHOt «Romeo», da tutora «Lia Teste», com a ficha como a do relato (1ª 23/05/2026, a 2ª de 13/06 nunca
+// lançada, o próximo vencendo em 11/10/2026). O setPelExtra e o pelExtra DE VERDADE sobre o banco de mentira da 6.57 (ARMA657):
+// cada porta grava no banco, a tela de quem gravou é capturada no redesenho, sem o ouvinte do cadastro. O relógio: domingo,
+// 11/10/2026, às 19:30 e às 21:30 de Brasília (os instantes em UTC), com o «hoje» pela hora local do processo (AC10): em
+// São Paulo, as duas horas são o dia 11/10; no processo em UTC, as 21:30 de Brasília já são 12/10 — cada prova confere o
+// resultado do dia local do seu fuso, nunca um dia misturado. Gestão e Consultora de Bem-Estar onde a tela muda.
+const I1930_680 = Date.UTC(2026, 9, 11, 22, 30), I2130_680 = Date.UTC(2026, 9, 12, 0, 30);
+const INST680 = [['19:30', I1930_680], ['21:30', I2130_680]];
+const PAPEIS680 = [['gestao', 'Gestora Teste'], ['consultora', 'Bia Consultora Teste']];
+const iso680 = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const dia680 = (ms) => iso680(new Date(ms));                 // o dia local deste processo (UTC ou São Paulo) — o do aparelho
+const mais680 = (iso, n) => { const a = iso.split('-').map(Number); return iso680(new Date(a[0], a[1] - 1, a[2] + n)); };
+const br680 = (iso) => iso.split('-').reverse().join('/');
+// a série nova que a dose de `dia` grava (a conta feita aqui, de forma independente do app)
+const nova680 = (dia, n) => ({ verm_t: dia, verm_dose2_t: '', verm_2a: mais680(dia, n || 21), verm_p: mais680(mais680(dia, n || 21), 120) });
+// D1: a 2ª de maio nunca lançada e o próximo vencendo hoje (23/05 + 21 + 120 = 11/10)
+const ROMEO680 = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-23', verm_2a: '2026-06-13', verm_p: '2026-10-11' };
+// a ficha que a versão antiga (-07-09) gravou: a 1ª nova, a 2ª de junho e o próximo velho
+const ROMEOH680 = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-10-11', verm_dose2_t: '2026-06-13', verm_2a: '2026-06-13', verm_p: '2026-10-11' };
+// a ficha que já caiu no D1: a dose de 11/10 gravada como a 2ª atrasada de maio
+const ROMEOD1680 = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-23', verm_dose2_t: '2026-10-11', verm_2a: '2026-10-11', verm_p: '2027-02-08' };
+// a ficha que o «Lance aqui mesmo» da -22 deixou com o próximo adiantado (S12)
+const ROMEOS12680 = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-10-11', verm_2a: '2026-11-01', verm_p: '2027-02-08' };
+const arma680 = (ficha, ms, papel) => {
+  run(ARMA657);
+  relogio658(ms || I1930_680);
+  const pp = papel || PAPEIS680[0];
+  ctx.__f680 = Object.assign({ n: 'Romeo', tutor: 'Lia Teste', raca: 'Spitz Alemão', dias: ['seg', 'qua'] }, ficha || {});
+  run(`__bk680={pr:pbRender, vr:vencRender, hr:hojeRender, rp:renderPrevencao, fc:prevCorrigeFecharConversa, vf:vencFecharAssuntosPelaFicha,
+      ok:PREV_CORRIGE_OK, pp:PB_PEND, ps:PB_SALVO, ra:PREV_RECALC_AVISO, ab:PREV_CORRIGE_ABERTO, ori:PREV_CORRIGE_ORIGEM, prr:prevRedesenhar,
+      ze:zEscolha, vm:VENC_MEMO, pev:PREV_ED_VISTO, ple:PREV_LANCE_ESTADO, pce:PREV_CORR_ESTADO, hrd:hojeRedesenhar, vcfg:VENC_CFG};
+    // as caixas novas da 6.80 (na base elas não existem: a prova roda igual contra a base, e as guardas valem lá)
+    __bk680n={}; ['PREV_VALE_CONTA','PB_TOQUE_SALVAR','PB_SALVOU_EM','PB_SERIE_NOVA','PEL_PREV_VISTO','PEL_PREV_ESPERA','HOJE_OUVINTE_ESPERA'].forEach(function(n){
+      __bk680n[n]=(typeof globalThis[n]!=='undefined')?globalThis[n]:undefined; });
+    document.body.dataset.role='${pp[0]}'; __login657={nome:${JSON.stringify(pp[1])}, role:'${pp[0]}'};
+    __r680={n:'Romeo', tutor:'Lia Teste', raca:'Spitz Alemão', dias:['seg','qua']}; PELUDINHOS=[__r680]; pelAtual=__r680;
+    PB_PEND={}; PB_SALVO={}; PREV_CORRIGE_OK={}; PREV_RECALC_AVISO={}; PREV_CORRIGE_ABERTO=''; PREV_CORRIGE_ORIGEM='';
+    PREV_ED_VISTO={}; PREV_VALE_CONTA={}; PREV_LANCE_ESTADO={}; PB_TOQUE_SALVAR=null; PB_SALVOU_EM={}; PB_SERIE_NOVA=null;
+    PEL_PREV_VISTO={k:'', j:''}; PEL_PREV_ESPERA=false; HOJE_OUVINTE_ESPERA=0; PREV_CORR_ESTADO={};
+    __k680=pelKey(__r680); __dc680=dcKey(__r680.n, __r680.tutor);
+    __put657('daycare/cadastro/'+__k680, __f680); pelCadCache={}; pelCadCache[__k680]=__get657('daycare/cadastro/'+__k680); __ls657={}; __esc657=[]; __au657=[];
+    __telas680=[]; __zeFn680=null;
+    zEscolha=function(t, l, b){ __ze657.push([t, l, (b||[]).map(function(x){ return x.t; })]); __zeFn680=b; };
+    pbRender=function(b){ var e=pbEx(b); __telas680.push({tela:'ficha', b:b, ex:JSON.parse(JSON.stringify(e)), html:(PB_HTML[b]?PB_HTML[b](e):''), salvo:!!PB_SALVO[b]}); };
+    var cap=function(t){ return function(){ __telas680.push({tela:t, ex:JSON.parse(JSON.stringify(pelExtra(__r680))), ok:JSON.parse(JSON.stringify(PREV_CORRIGE_OK))}); }; };
+    vencRender=cap('venc'); hojeRender=cap('hoje'); renderPrevencao=cap('prev'); prevRedesenhar=cap('prevR');
+    prevCorrigeFecharConversa=function(){}; vencFecharAssuntosPelaFicha=function(){};`);
+};
+const solta680 = () => {
+  try {
+    run(`pbRender=__bk680.pr; vencRender=__bk680.vr; hojeRender=__bk680.hr; renderPrevencao=__bk680.rp; prevCorrigeFecharConversa=__bk680.fc;
+      vencFecharAssuntosPelaFicha=__bk680.vf; PREV_CORRIGE_OK=__bk680.ok; PB_PEND=__bk680.pp; PB_SALVO=__bk680.ps; PREV_RECALC_AVISO=__bk680.ra;
+      PREV_CORRIGE_ABERTO=__bk680.ab; PREV_CORRIGE_ORIGEM=__bk680.ori; prevRedesenhar=__bk680.prr; zEscolha=__bk680.ze; VENC_MEMO=__bk680.vm;
+      PREV_ED_VISTO=__bk680.pev; PREV_LANCE_ESTADO=__bk680.ple; PREV_CORR_ESTADO=__bk680.pce; hojeRedesenhar=__bk680.hrd; VENC_CFG=__bk680.vcfg;
+      Object.keys(__bk680n).forEach(function(n){ if(__bk680n[n]===undefined){ try{ delete globalThis[n]; }catch(e){} } else globalThis[n]=__bk680n[n]; });
+      delete document.activeElement;`);
+  } finally { run(SOLTA657); }
+};
+const com680 = async (ficha, ms, papel, fn) => { arma680(ficha, ms, papel); try { const r = await fn(); await espera657(); return r; } finally { solta680(); } };
+const db680 = () => J630("__get657('daycare/cadastro/'+__k680)");
+const V680 = ['verm_t', 'verm_dose2_t', 'verm_2a', 'verm_p'];
+const pega680 = (o, cs) => (cs || V680).map((c) => ((o && Object.prototype.hasOwnProperty.call(o, c)) ? o[c] : '∅'));
+const quer680 = (o, cs) => (cs || V680).map((c) => o[c]);
+const esc680 = () => J630("__esc657.filter(function(e){ return /^daycare\\/cadastro\\//.test(e[1]); })");
+const za680 = () => J630('__za657');
+const aud680 = (a) => J630(`__au657.filter(function(x){ return x[0]===${JSON.stringify(a)}; })`);
+const telas680 = () => J630('__telas680');
+const ultFicha680 = () => { const t = telas680().filter((x) => x.tela === 'ficha' && x.b === 'verm'); return t[t.length - 1] || null; };
+const bloco680 = () => String(run("blocoVerm(pbEx('verm'))") || '');
+// PAINEL RÁPIDO: o chip `k` tocado na tela `tela` (venc|hoje|prev; origem 'resumo' para o nome do resumo), depois «Feito hoje»
+// (dt 'hoje') ou «Feito em…» + «Gravar esta data». A Prevenção fala na pelKey; Vencimentos e Hoje na Zêluz, na dcKey.
+const painel680 = (k, dt, tela, origem) => {
+  ctx.__pk680 = k; ctx.__pd680 = dt; ctx.__pt680 = tela || 'venc'; ctx.__po680 = origem || '';
+  run(`(function(){ var ch=(__pt680==='prev')?__k680:__dc680;
+    prevCorrigeAbrir(ch, __pk680, __pt680, __po680);
+    if(__pd680==='hoje') prevCorrigeFeitoHoje(ch, __pk680, __pt680);
+    else { __el657['prevCorrT_'+ch+'_'+__pk680]={value:__pd680}; prevCorrigeFeitoEm(ch, __pk680, __pt680); } })()`);
+};
+// «LANCE AQUI MESMO»: o «Feito em» com o onchange (prevRecalcular), o que estiver escrito por cima no campo da validade, e o «Salvar»
+const lance680 = (k, dt, porCima, quem) => {
+  ctx.__lk680 = k; ctx.__ld680 = dt; ctx.__lv680 = (porCima === undefined) ? null : porCima; ctx.__lq680 = quem || '';
+  run(`(function(){ var ch=__k680, ex=pelExtra(__r680);
+    __el657['prevT_'+ch+'_'+__lk680]={value:__ld680}; __el657['prevQ_'+ch+'_'+__lk680]={value:__lq680}; __el657['prevN_'+ch+'_'+__lk680]={value:''};
+    if(!__el657['prevP_'+ch+'_'+__lk680]) __el657['prevP_'+ch+'_'+__lk680]={value:ex[__lk680]||''};
+    prevRecalcular(ch, __lk680);
+    if(__lv680!==null) __el657['prevP_'+ch+'_'+__lk680].value=__lv680;
+    __vale680=__el657['prevP_'+ch+'_'+__lk680].value;
+    prevLancar(ch, __lk680); })()`);
+  return run('__vale680');
+};
+// O «Lance aqui mesmo» desenhado (prevEdicaoHTML) e os campos da tela com o que ele desenhou — sem nenhum toque
+const lanceAbre680 = () => {
+  const h = String(run("prevEdicaoHTML({p:__r680, nome:'Romeo'})") || '');
+  run(`(function(){ var ch=__k680, V=PREV_ED_VISTO[ch]||{};
+    Object.keys(V).forEach(function(k){ __el657['prevT_'+ch+'_'+k]={value:String(V[k].t||'')}; __el657['prevQ_'+ch+'_'+k]={value:''}; __el657['prevN_'+ch+'_'+k]={value:''}; });
+    __el657['prevP_'+ch+'_verm_p']={value:String((V.verm_p||{}).p||'')}; })()`);
+  return h;
+};
+const linha680 = (h, k) => h.split('<div style="border-top:1px solid var(--line);padding:9px 0').filter((s) => s.indexOf('id="prevT_') >= 0 && s.indexOf('_' + k + '" value') >= 0)[0] || '';
+const txt680 = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&laquo;/g, '«').replace(/&raquo;/g, '»').replace(/\s+/g, ' ').trim();
+// O toque de verdade no «Salvar …» do bloco `b` (o pointerdown que o app escuta na captura)
+const toque680 = (b) => run(`pbToqueAnotar({target:{closest:function(s){ return ${b ? `{getAttribute:function(){ return "pbSalvar('${b}')"; }}` : 'null'}; }}})`);
+// para cada fuso do processo: as duas horas e os dois papéis
+const todos680 = async (fn) => { for (const [hora, ms] of INST680) for (const pp of PAPEIS680) await fn(hora, ms, pp, dia680(ms)); };
+
+// ---------------------------------------------------------------- D1 (AC1, AC2)
+provaAsync('6.80 P01 (AC1.2a, AC2.3, C14) — o nome do Romeo no resumo «Vermífugo (n)» de Vencimentos aponta para o próximo (verm_p), e o painel tem «2 doses» e «15 | 21»; «Feito hoje» grava a série nova: 11/10, 2ª vazia, 01/11/2026 e 01/03/2027 (no dia local de cada fuso, às 19:30 e às 21:30, Gestão e Consultora)', async () => {
+  await todos680(async (hora, ms, pp, dia) => {
+    await com680(ROMEO680, ms, pp, async () => {
+      const alvos = J630(`(function(){ var ex=pelExtra(__r680), h=zHojeISO();
+        return vencResumoGrupos([{chave:__dc680, nome:'Romeo', itens:vencItensDe(ex, h, 7, h, {incluirSemRegistro:true})}]).filter(function(g){ return g.v==='verm'; }).map(function(g){ return g.alvos; }); })()`);
+      igual(alvos, [[{ nome: 'Romeo', chave: run('__dc680'), k: 'verm_p' }]], hora + ' ' + pp[0]);
+      run(`prevCorrigeAbrir(__dc680, 'verm_p', 'venc', 'resumo');`);
+      const ph = String(run(`prevCorrigePainelHTML(__dc680, 'venc', zHojeISO(), 'resumo')`) || '');
+      assert.ok(/id="prevCorrE2_[^"]*" checked/.test(ph) && /id="prevCorrI21_[^"]*" checked/.test(ph) && /id="prevCorrI15_/.test(ph), 'o painel do próximo: «2 doses» e «15 | 21»');
+      run(`prevCorrigeFeitoHoje(__dc680, 'verm_p', 'venc');`); await espera657();
+      igual(pega680(db680()), quer680(nova680(dia)), hora + ' ' + pp[0] + ' (dia ' + dia + ')');
+      igual(run('zHojeISO()'), dia, 'o «hoje» é o do aparelho');
+      if (dia === '2026-10-11') igual(pega680(db680()), ['2026-10-11', '', '2026-11-01', '2027-03-01'], 'o caso do Romeo');
+    });
+  });
+});
+provaAsync('6.80 P02 (AC1.2, AC2.1, C15, H3) — o cartão de Vencimentos e a Hoje na Zêluz NÃO listam a 2ª da série vencida; o chip da 2ª dose que ficou numa tela velha (Vencimentos, resumo, Hoje na Zêluz e a tabela da Prevenção) grava a série nova, nunca a 2ª no dia de hoje', async () => {
+  await todos680(async (hora, ms, pp, dia) => {
+    for (const [tela, origem] of [['venc', ''], ['venc', 'resumo'], ['hoje', ''], ['prev', '']]) {
+      await com680(ROMEO680, ms, pp, async () => {
+        const ks = J630("(function(){ var h=zHojeISO(); return vencItensDe(pelExtra(__r680), h, 7, h, {incluirSemRegistro:true}).filter(function(x){ return !x.sem_registro; }).map(function(x){ return x.k; }); })()");
+        igual(ks, ['verm_p'], 'o cartão e a Hoje na Zêluz: só o vermífugo');
+        painel680('verm_dose2_p', 'hoje', tela, origem); await espera657();
+        const d = db680();
+        igual(pega680(d), quer680(nova680(dia)), [hora, pp[0], tela, origem].join(' '));
+        assert.ok(d.verm_dose2_t !== dia && d.verm_t === dia, 'a dose de hoje é a 1ª, nunca a 2ª');
+        igual(esc680().map((e) => e[2]), [['verm_2a', 'verm_dose2_t', 'verm_p', 'verm_t']], 'sem o intervalo, sem o esquema');
+        igual(za680(), []);
+      });
+    }
+  });
+});
+provaAsync('6.80 P03 (AC1.3) — a frase: o verde e o rastro dizem que a série anterior já tinha vencido, que a dose entrou como 1ª da série nova e quando vence a 2ª; o painel fecha e o chip sai da lista; pelo «Feito em…» diz a data', async () => {
+  await todos680(async (hora, ms, pp, dia) => {
+    await com680(ROMEO680, ms, pp, async () => {
+      painel680('verm_dose2_p', 'hoje', 'venc'); await espera657();
+      const n = nova680(dia), ok = J630('PREV_CORRIGE_OK');
+      igual(Object.keys(ok), [run("__dc680+'|verm_p'")]);
+      igual(ok[Object.keys(ok)[0]].texto, 'Romeo — A série da 1ª dose de 23/05/2026 já tinha vencido: a dose de hoje entrou como 1ª dose da série nova; 2ª dose em '
+        + br680(n.verm_2a) + ' e próximo vermífugo em ' + br680(n.verm_p) + '.', hora + ' ' + pp[0]);
+      const a = aud680('prevencao-atualizada-na-tela');
+      igual(a.length, 1);
+      assert.ok(a[0][1].indexOf('a série anterior já tinha vencido: 1ª dose da série nova feita em ' + br680(dia) + '; 2ª dose em ' + br680(n.verm_2a)) >= 0, a[0][1]);
+      igual([a[0][2].item, a[0][2].de, a[0][2].para], ['verm_p', '2026-10-11', n.verm_p]);
+      igual(run('PREV_CORRIGE_ABERTO'), '', 'o painel fechou');
+      igual(J630("(function(){ var h=zHojeISO(); return vencItensDe(pelExtra(__r680), h, 7, h).filter(function(x){ return /^verm/.test(x.k); }).length; })()"), 0, 'o chip saiu');
+    });
+    await com680(ROMEO680, ms, pp, async () => {
+      painel680('verm_dose2_p', '2026-10-11', 'hoje'); await espera657();
+      const ok = J630('PREV_CORRIGE_OK'), t = ok[Object.keys(ok)[0]].texto;
+      assert.ok(t.indexOf(dia === '2026-10-11' ? 'a dose de hoje' : 'a dose de 11/10/2026') >= 0 && t.indexOf('2ª dose em 01/11/2026 e próximo vermífugo em 01/03/2027') >= 0, t);
+      igual(pega680(db680()), ['2026-10-11', '', '2026-11-01', '2027-03-01']);
+    });
+  });
+});
+provaAsync('6.80 P04 (AC1.1) — com «15 dias» na ficha: 2ª em 26/10/2026 e próximo em 23/02/2027, sem regravar o campo (pelo chip da 2ª e pelo chip do próximo)', async () => {
+  await todos680(async (hora, ms, pp, dia) => {
+    for (const k of ['verm_dose2_p', 'verm_p']) {
+      await com680(Object.assign({}, ROMEO680, { verm_dose2_dias: 15 }), ms, pp, async () => {
+        painel680(k, 'hoje', 'venc'); await espera657();
+        igual(pega680(db680(), V680.concat(['verm_dose2_dias'])), quer680(nova680(dia, 15)).concat([15]), [hora, pp[0], k].join(' '));
+        if (dia === '2026-10-11') igual(pega680(db680()), ['2026-10-11', '', '2026-10-26', '2027-02-23']);
+        assert.ok(esc680().every((e) => e[2].indexOf('verm_dose2_dias') < 0), 'o intervalo não é regravado');
+      });
+    }
+  });
+});
+provaAsync('6.80 P05 (AC1.1, C8, C11) — a 1ª em 20/05 e o próximo vencido em 08/10: «Feito hoje» e «Feito em 09/10» no chip da 2ª gravam a série nova a partir da data da dose', async () => {
+  const F = { verm_doses: '2 doses', verm_t: '2026-05-20', verm_2a: '2026-06-10', verm_p: '2026-10-08' };
+  await todos680(async (hora, ms, pp, dia) => {
+    await com680(F, ms, pp, async () => { painel680('verm_dose2_p', 'hoje', 'hoje'); await espera657(); igual(pega680(db680()), quer680(nova680(dia)), hora + ' ' + pp[0]); });
+    await com680(F, ms, pp, async () => { painel680('verm_dose2_p', '2026-10-09', 'venc'); await espera657(); igual(pega680(db680()), ['2026-10-09', '', '2026-10-30', '2027-02-27']); });
+  });
+});
+provaAsync('6.80 P06 (AC1.4) — a 2ª no mesmo dia da 1ª é recusada no painel (o chip «2ª dose» que ficou velho no 2º aparelho depois de a 1ª ser gravada): nada é gravado e o aviso diz por quê; a 2ª antes da 1ª continua com o texto de antes', async () => {
+  await todos680(async (hora, ms, pp, dia) => {
+    await com680(Object.assign({}, ROMEO680, nova680(dia)), ms, pp, async () => {
+      painel680('verm_dose2_p', 'hoje', 'hoje'); await espera657();
+      igual([esc680(), za680()], [[], [['Essa data não faz sentido', ['A 2ª dose (' + br680(dia) + ') cairia no mesmo dia da 1ª.',
+        'Se a dose de hoje foi a 1ª dose, ela já está registrada: toque em «fechar» e atualize a tela.'], { botao: 'Entendi' }]]], hora + ' ' + pp[0]);
+      run('__za657=[];');
+      painel680('verm_dose2_p', mais680(dia, -1), 'venc'); await espera657();
+      igual([esc680(), za680().map((z) => z[1])], [[], [['A 2ª dose (' + br680(mais680(dia, -1)) + ') ficou antes da 1ª (' + br680(dia) + ').',
+        'Confira a data da 2ª dose — ou, se a 1ª estiver errada, corrija na ficha.']]]);
+    });
+  });
+});
+provaAsync('6.80 P07 (AC1.5, guarda) — a 2ª legítima e atrasada, com o próximo no futuro (1ª 11/10, 2ª em 05/11), continua aceita (05/03/2027); com o próximo «à mão» a trava não age; a série que já tinha a 2ª registrada continua gravando a 2ª pelo painel (a decisão registrada no Dev Agent Record)', async () => {
+  await com680(Object.assign({}, ROMEO680, nova680('2026-10-11')), Date.UTC(2026, 10, 5, 15, 0), null, async () => {
+    painel680('verm_dose2_p', 'hoje', 'venc'); await espera657();
+    igual(pega680(db680()), ['2026-10-11', '2026-11-05', '2026-11-05', '2027-03-05']);
+  });
+  await com680(Object.assign({}, ROMEO680, { verm_p_manual: true }), I1930_680, null, async () => {
+    painel680('verm_dose2_p', '2026-10-11', 'venc'); await espera657();
+    igual(pega680(db680(), V680.concat(['verm_p_manual'])), ['2026-05-23', '2026-10-11', '2026-10-11', '2027-02-08', ''], 'como hoje');
+  });
+  await com680({ verm_doses: '2 doses', verm_t: '2026-05-08', verm_dose2_t: '2026-05-29', verm_2a: '2026-05-29', verm_p: '2026-09-26' }, I1930_680, null, async () => {
+    painel680('verm_dose2_p', '2026-10-09', 'venc'); await espera657();
+    igual(pega680(db680()), ['2026-05-08', '2026-10-09', '2026-10-09', '2027-02-06'], 'como a 6.65 P15');
+  });
+});
+provaAsync('6.80 P08 (AC1.6, guarda) — o caso-base: o chip «Vermífugo — vence em 11/10» grava como na base (11/10, vazio, 01/11, 01/03/2027; com 15, 26/10 e 23/02/2027, sem gravar o campo), também com a 2ª anterior registrada (C1, C2, C16)', async () => {
+  for (const F of [ROMEO680, Object.assign({}, ROMEO680, { verm_dose2_t: '2026-06-13' })]) {
+    await com680(F, I1930_680, null, async () => { painel680('verm_p', 'hoje', 'venc'); await espera657(); igual(pega680(db680()), ['2026-10-11', '', '2026-11-01', '2027-03-01']); igual(esc680().map((e) => e[2]), [['verm_2a', 'verm_dose2_t', 'verm_p', 'verm_t']]); });
+    await com680(Object.assign({}, F, { verm_dose2_dias: 15 }), I1930_680, PAPEIS680[1], async () => { painel680('verm_p', 'hoje', 'hoje'); await espera657(); igual(pega680(db680()), ['2026-10-11', '', '2026-10-26', '2027-02-23']); igual(esc680().map((e) => e[2]), [['verm_2a', 'verm_dose2_t', 'verm_p', 'verm_t']]); });
+  }
+});
+provaAsync('6.80 P09 (AC2.1, AC2.2, AC2.4) — vencItensDe: sem a 2ª quando o próximo está na lista; com a 2ª legítima quando não está (27/10: «vence em 01/11»; com 15, em 20/10: «vence em 26/10»); a mensagem pronta da série vencida não nasce «É dia da segunda dose»; pura (sem DB.ref, até 2.800 caracteres)', async () => {
+  const lista = (ex, alvo, hoje) => J630(`vencItensDe(${JSON.stringify(ex)}, '${alvo}', 7, '${hoje}').map(function(x){ return [x.k, x.vence, vencQuantoTexto(x, '${hoje}')]; })`);
+  igual(lista(ROMEO680, '2026-10-13', '2026-10-11').map((x) => x[0]), ['verm_p']);
+  igual(lista({ verm_doses: '2 doses', verm_t: '2026-05-20', verm_2a: '2026-06-10', verm_p: '2026-10-08' }, '2026-10-13', '2026-10-11').map((x) => x[0]), ['verm_p']);
+  igual(lista(Object.assign({ verm_doses: '2 doses' }, nova680('2026-10-11')), '2026-10-27', '2026-10-27').map((x) => x.slice(0, 2)), [['verm_dose2_p', '2026-11-01']]);
+  igual(lista(Object.assign({ verm_doses: '2 doses' }, nova680('2026-10-11')), '2026-10-27', '2026-10-27').map((x) => [x[0], x[2]]), [['verm_dose2_p', 'vence em ' + run("vencData('2026-11-01', '2026-10-27')")]]);
+  igual(lista(Object.assign({ verm_doses: '2 doses', verm_dose2_dias: 15 }, nova680('2026-10-11', 15)), '2026-10-20', '2026-10-20').map((x) => x.slice(0, 2)), [['verm_dose2_p', '2026-10-26']]);
+  // o próximo «à mão» antes da 2ª prevista: a 2ª sai da lista até o próximo ser gravado (Risco 2, registrado)
+  igual(lista({ verm_doses: '2 doses', verm_t: '2026-10-01', verm_p: '2026-10-20', verm_p_manual: true }, '2026-10-19', '2026-10-17').map((x) => x[0]), ['verm_p']);
+  run('__bkVC680=VENC_CFG; VENC_CFG={};');
+  try {
+    const m = J630(`vencMensagens({nome:'Romeo', tutor:'Lia Teste', sexo:'M', itens:vencItensDe(${JSON.stringify(ROMEO680)}, '2026-10-13', 7, '2026-10-11')}, '2026-10-13', '2026-10-11').map(function(x){ return [x.tipo, x.texto]; })`);
+    assert.ok(m.length >= 1 && m.every((x) => x[0] !== 'verm2' && x[1].indexOf('segunda dose') < 0) && m.some((x) => /vermífugo/.test(x[1])), JSON.stringify(m));
+  } finally { run('VENC_CFG=__bkVC680;'); }
+  const src = fs.readFileSync(APP, 'utf8');
+  assert.ok(/function vencItensDe\(ex, diaAlvo, margem, hoje, opc\)\{[\s\S]{0,2800}?\n  \}/.test(src) && !/function vencItensDe\([\s\S]{0,2800}?DB\.ref/.test(src), 'a régua do harness v-28');
+});
+provaAsync('6.80 P10 (AC2.3) — vencResumoGrupos: com os dois itens do vermífugo do mesmo FILHOt, o nome abre o do próximo (verm_p), em qualquer ordem; dois Thor de tutores diferentes continuam sendo dois; o texto do «Copiar resumo» não muda', async () => {
+  const G = (L) => J630(`vencResumoGrupos(${JSON.stringify(L)}).filter(function(g){ return g.v==='verm'; }).map(function(g){ return [g.nomes, g.alvos]; })`);
+  const d2 = { k: 'verm_dose2_p', vence: '2026-06-13' }, vp = { k: 'verm_p', vence: '2026-10-11' };
+  igual(G([{ chave: 'romeo__lia', nome: 'Romeo', itens: [d2, vp] }]), [[['Romeo'], [{ nome: 'Romeo', chave: 'romeo__lia', k: 'verm_p' }]]]);
+  igual(G([{ chave: 'romeo__lia', nome: 'Romeo', itens: [vp, d2] }]), [[['Romeo'], [{ nome: 'Romeo', chave: 'romeo__lia', k: 'verm_p' }]]]);
+  igual(G([{ chave: 'thor__ana', nome: 'Thor', itens: [d2] }, { chave: 'thor__bia', nome: 'Thor', itens: [d2, vp] }]),
+    [[['Thor', 'Thor'], [{ nome: 'Thor', chave: 'thor__ana', k: 'verm_dose2_p' }, { nome: 'Thor', chave: 'thor__bia', k: 'verm_p' }]]]);
+  igual(G([{ chave: 'luna__ana', nome: 'Luna', itens: [d2] }]), [[['Luna'], [{ nome: 'Luna', chave: 'luna__ana', k: 'verm_dose2_p' }]]], 'a 2ª sozinha continua abrindo a 2ª');
+  igual(run(`vencResumoTexto([{chave:'romeo__lia', nome:'Romeo', itens:[{k:'verm_dose2_p'},{k:'verm_p'}]}], '2026-10-13', '2026-10-11').split('\\n').slice(-1)[0]`), 'Vermífugo: Romeo');
+});
+provaAsync('6.80 P11 (AC1.7) — «Lance aqui mesmo», a linha da 2ª dose numa série vencida: grava a série nova (11/10, vazio, 01/11, 01/03/2027), o «Quem fez» vai para a 1ª; a frase aparece na linha, junto do «Salvo às HH:MM», e vai para o rastro; o banco recusando: «NÃO FOI SALVO» e nada gravado', async () => {
+  await todos680(async (hora, ms, pp, dia) => {
+    await com680(ROMEO680, ms, pp, async () => {
+      lance680('verm_dose2_p', '2026-10-11', undefined, 'Day Care'); await espera657();
+      igual(pega680(db680(), V680.concat(['verm_por', 'verm_dose2_por'])), ['2026-10-11', '', '2026-11-01', '2027-03-01', 'Day Care', '∅'], hora + ' ' + pp[0]);
+      const E = J630("PREV_LANCE_ESTADO[__k680+'|verm_dose2_p']"), fr = 'A série da 1ª dose de 23/05/2026 já tinha vencido: a dose de '
+        + (dia === '2026-10-11' ? 'hoje' : '11/10/2026') + ' entrou como 1ª dose da série nova; 2ª dose em 01/11/2026 e próximo vermífugo em 01/03/2027.';
+      igual([E.passo, E.frase], ['salvo', fr]);
+      const hl = txt680(run("prevLanceEstadoHTML(__k680, 'verm_dose2_p')"));
+      assert.ok(/^Salvo às \d\d:\d\d /.test(hl) && hl.indexOf(fr) > 0, hl);
+      const a = aud680('prevencao');
+      igual(a.length, 1);
+      assert.ok(a[0][1].indexOf(fr) > 0 && a[0][2].item === 'verm_p' && a[0][2].para === '2027-03-01', JSON.stringify(a));
+    });
+  });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    lance680('verm_dose2_p', '2026-10-11'); await espera657();
+    igual([pega680(db680()), J630("PREV_LANCE_ESTADO[__k680+'|verm_dose2_p'].passo")], [['2026-05-23', '∅', '2026-06-13', '2026-10-11'], 'falhou']);
+    assert.ok(/NÃO FOI SALVO/.test(txt680(run("prevLanceEstadoHTML(__k680, 'verm_dose2_p')"))));
+    run(`__recusa657=null;`);
+  });
+});
+
+// ---------------------------------------------------------------- o conserto (AC3)
+provaAsync('6.80 P12 (AC3.1, AC3.5, AC3.6) — o aviso: na ficha do D1 (a «2ª» em 11/10, igual ao vencimento da série) e na da versão antiga (a 2ª antes da 1ª: um aviso só, a frase e o botão); não aparece em dose única, sem a 1ª, com a 2ª legítima nem um dia antes do vencimento; aparece logo depois de alguém digitar a 2ª fora da série; o botão só para quem edita a ficha, com 44 px', async () => {
+  const BT = '>Corrigir: é a 1ª dose da série nova</button>';
+  for (const pp of PAPEIS680) {
+    await com680(ROMEOD1680, I1930_680, pp, async () => {
+      const h = bloco680(), t = txt680(h);
+      assert.ok(t.indexOf('A 2ª dose de 11/10/2026 foi dada quando a série da 1ª dose de 23/05/2026 já tinha vencido (em 11/10/2026): pode ser a 1ª dose de uma série nova. '
+        + 'Se for, toque no botão abaixo e fica: 1ª dose em 11/10/2026, 2ª dose prevista para 01/11/2026 e próximo vermífugo em 01/03/2027. Nada muda enquanto você não tocar.') >= 0, t);
+      igual((h.match(new RegExp(BT, 'g')) || []).length, 1);
+      assert.ok(/<button type="button" class="btn btn-gold" style="min-height:44px[^"]*" onclick="vermSerieNovaCorrigir\(\)">Corrigir/.test(h), '44 px');
+    });
+    await com680(ROMEOH680, I1930_680, pp, async () => {
+      const h = bloco680(), t = txt680(h);
+      assert.ok(t.indexOf('A 2ª dose de 13/06/2026 é da série anterior: sai quando você salvar. Com o botão, o próximo vermífugo passa a ser 01/03/2027, pela conta. Corrigir: é a 1ª dose da série nova') >= 0, t);
+      igual([(h.match(new RegExp(BT, 'g')) || []).length, (h.match(/série anterior/g) || []).length, /vm-serie-depois/.test(h), /2ª dose dada em 13\/06/.test(t)], [1, 1, false, false], 'um aviso só');
+    });
+  }
+  await com680(ROMEOD1680, I1930_680, ['vet', 'Vera Veterinária Teste'], async () => {
+    const h = bloco680();
+    assert.ok(h.indexOf(BT) < 0 && txt680(h).indexOf('Se for, quem edita a ficha corrige, e fica: 1ª dose em 11/10/2026') >= 0 && txt680(h).indexOf('Nada muda sozinho.') >= 0, txt680(h));
+  });
+  const sem = [{ verm_doses: 'Dose única', verm_t: '2026-05-23', verm_dose2_t: '2026-10-11', verm_p: '2026-09-20' }, { verm_doses: '2 doses', verm_dose2_t: '2026-10-11' },
+    { verm_doses: '2 doses', verm_t: '2026-10-11', verm_dose2_t: '2026-11-05', verm_p: '2027-03-05' }, { verm_doses: '2 doses', verm_t: '2026-10-11', verm_dose2_t: '2026-10-11' },
+    Object.assign({}, ROMEOD1680, { verm_dose2_t: '2026-10-10' })];
+  for (const F of sem) await com680(F, Date.UTC(2026, 10, 6, 15, 0), null, async () => { const h = bloco680(); assert.ok(h.indexOf(BT) < 0 && !/vm-serie-/.test(h), JSON.stringify(F)); });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    igual(/vm-serie-depois/.test(bloco680()), false);
+    run(`PB_PEND={verm:{verm_dose2_t:'2026-10-11'}};`);
+    const h = bloco680();
+    assert.ok(/vm-serie-depois/.test(h) && h.indexOf(BT) > 0, 'a 2ª digitada fora da série avisa');
+  });
+  igual([run("vermFichaForaDaSerie(" + JSON.stringify(ROMEOD1680) + ")"), run("vermFichaForaDaSerie(" + JSON.stringify(ROMEOH680) + ")"), run("vermFichaForaDaSerie({verm_doses:'2 doses', verm_dose2_dias:15, verm_t:'2026-05-23', verm_dose2_t:'2026-10-05'})"),
+    run("vermFichaForaDaSerie({verm_doses:'2 doses', verm_dose2_dias:15, verm_t:'2026-05-23', verm_dose2_t:'2026-10-04'})"),
+    run("vermFichaForaDaSerie({verm_doses:'Dose única', verm_t:'2026-10-11', verm_dose2_t:'2026-06-13'})"), run("vermFichaForaDaSerie({verm_doses:'Dose única', verm_t:'2026-05-23', verm_dose2_t:'2026-10-11'})")],
+    ['depois', 'antes', 'depois', '', '', '']);
+});
+provaAsync('6.80 P13 (AC3.2, AC3.4) — o toque grava a série nova pela conta: no caso «depois» a 1ª passa a ser a data da «2ª», no caso «antes» a 1ª fica; 21 e 15 dias; o «à mão» cai com o aviso; a trava de data pergunta; «Salvando…» até o ok; o rastro de → para da ficha e a linha de auditoria própria', async () => {
+  for (const pp of PAPEIS680) {
+    for (const [F, n, quer] of [[ROMEOD1680, 21, ['2026-10-11', '', '2026-11-01', '2027-03-01']], [Object.assign({}, ROMEOD1680, { verm_dose2_dias: 15 }), 15, ['2026-10-11', '', '2026-10-26', '2027-02-23']],
+      [ROMEOH680, 21, ['2026-10-11', '', '2026-11-01', '2027-03-01']], [Object.assign({}, ROMEOH680, { verm_dose2_dias: 15 }), 15, ['2026-10-11', '', '2026-10-26', '2027-02-23']]]) {
+      await com680(F, I1930_680, pp, async () => {
+        run('vermSerieNovaCorrigir();');
+        const t0 = ultFicha680();
+        assert.ok(/Salvando…/.test(t0.html) && !/✓ Salvo/.test(t0.html), 'Salvando… até o ok');
+        await espera657();
+        igual(pega680(db680()), quer, pp[0] + ' ' + JSON.stringify(F));
+        assert.ok(/✓ Salvo/.test(ultFicha680().html) && !/vm-serie-/.test(ultFicha680().html), 'o aviso saiu');
+        const a = aud680('prevencao-serie-nova-corrigida');
+        igual(a.length, 1);
+        assert.ok(a[0][1].indexOf('Romeo: vermífugo, série nova corrigida na ficha — ') === 0 && a[0][1].indexOf('1ª dose em 11/10/2026, 2ª dose prevista para ' + br680(quer[2]) + ', próximo vermífugo em ' + br680(quer[3])) > 0, a[0][1]);
+        const r = J630("__get657('daycare/ficha-rastro/'+__k680)") || {}, rs = {};
+        Object.keys(r).forEach((id) => { rs[r[id].campo] = [r[id].de, r[id].para]; });
+        igual(rs.verm_dose2_t, [F.verm_dose2_t, ''], 'o rastro de → para');
+        igual(rs.verm_p, [F.verm_p, quer[3]]);
+      });
+    }
+  }
+  await com680(Object.assign({}, ROMEOD1680, { verm_p_manual: true }), I1930_680, null, async () => {
+    run('vermSerieNovaCorrigir();'); await espera657();
+    igual(pega680(db680(), V680.concat(['verm_p_manual'])), ['2026-10-11', '', '2026-11-01', '2027-03-01', ''], 'o «à mão» cai');
+    igual(run('!!PREV_RECALC_AVISO.verm_p'), true, 'com o aviso «A próxima foi recalculada pela última dose.»');
+  });
+  // a 1ª antiga (caso «antes» com a 1ª de 2025): a trava de data pergunta antes de gravar
+  await com680({ verm_doses: '2 doses', verm_t: '2025-03-01', verm_dose2_t: '2025-02-01', verm_p: '2025-07-20' }, I1930_680, null, async () => {
+    run('vermSerieNovaCorrigir();'); await espera657();
+    igual([esc680(), J630('__ze657.map(function(z){ return z[0]; })')], [[], ['Vermífugo continua em atraso — confira a data.']]);
+  });
+});
+provaAsync('6.80 P14 (AC3.2) — o banco recusa o conserto: «NÃO FOI SALVO», nada de «✓ Salvo», a cópia em memória volta, o aviso continua e não sai a linha de auditoria', async () => {
+  await com680(ROMEOD1680, I1930_680, null, async () => {
+    run(`__recusa657='^daycare/cadastro/';`);
+    run('vermSerieNovaCorrigir();'); await espera657();
+    const t = ultFicha680();
+    igual([pega680(db680()), pega680(J630('pelCadCache[__k680]')), aud680('prevencao-serie-nova-corrigida').length, t.salvo], [pega680(ROMEOD1680), pega680(ROMEOD1680), 0, false]);
+    assert.ok(/NÃO FOI SALVO/.test(t.html) && !/✓ Salvo/.test(t.html) && /vm-serie-depois/.test(t.html), txt680(t.html));
+    run(`__recusa657=null;`);
+  });
+});
+provaAsync('6.80 P15 (AC3.3, guarda) — nada é corrigido sozinho: desenhar a ficha e o «Lance», salvar outro bloco e o ouvinte do cadastro chegar não gravam a série nova', async () => {
+  await com680(Object.assign({}, ROMEOD1680, { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-09-01', ecto_p: '2026-11-30' }), I1930_680, null, async () => {
+    bloco680(); lanceAbre680(); run(`__el657['pel-ficha']={style:{display:'block'}, contains:function(){ return false; }}; if(typeof pelPrevVistoMarcar==='function'){ pelPrevVistoMarcar(__r680); pelFichaPrevOuvinte(); }`);
+    igual(esc680(), [], 'abrir não grava');
+    run(`pbSet('ecto',{ecto_nome:'Bravecto 10-20 kg'}); pbSalvar('ecto');`); await espera657();
+    igual(esc680().map((e) => e[2]), [['ecto_nome', 'ecto_p']], 'salvar outro bloco não toca o vermífugo');
+    run(`pelCadCache=Object.assign({}, pelCadCache); pelCadCache[__k680]=Object.assign({}, pelCadCache[__k680], {verm_nome:'Drontal Plus'}); if(typeof pelFichaPrevOuvinte==='function') pelFichaPrevOuvinte();`); await espera657();
+    igual(pega680(db680()), pega680(ROMEOD1680), 'o ouvinte redesenha, não grava');
+  });
+});
+
+// ---------------------------------------------------------------- D2 (AC4)
+provaAsync('6.80 P16 (AC4.2) — a ficha da versão antiga, «Salvar vermífugo» sem mexer: grava a 2ª vazia, 01/11/2026 e 01/03/2027 (15 dias: 26/10 e 23/02/2027); «Salvando…» até o ok, nunca «✓ Salvo» sem gravar; com o banco recusando, «NÃO FOI SALVO»', async () => {
+  for (const pp of PAPEIS680) {
+    for (const [F, quer] of [[ROMEOH680, ['2026-10-11', '', '2026-11-01', '2027-03-01']], [Object.assign({}, ROMEOH680, { verm_dose2_dias: 15 }), ['2026-10-11', '', '2026-10-26', '2027-02-23']]]) {
+      await com680(F, I1930_680, pp, async () => {
+        run(`pbSalvar('verm');`);
+        assert.ok(/Salvando…/.test(ultFicha680().html) && !/✓ Salvo/.test(ultFicha680().html));
+        await espera657();
+        igual([pega680(db680()), esc680().map((e) => e[2])], [quer, [['verm_2a', 'verm_dose2_t', 'verm_p']]], pp[0]);
+        assert.ok(/✓ Salvo/.test(ultFicha680().html));
+      });
+    }
+  }
+  await com680(ROMEOH680, I1930_680, null, async () => {
+    run(`__recusa657='^daycare/cadastro/'; pbSalvar('verm');`); await espera657();
+    const t = ultFicha680();
+    assert.ok(/NÃO FOI SALVO/.test(t.html) && !/✓ Salvo/.test(t.html), txt680(t.html));
+    igual(pega680(db680()), pega680(ROMEOH680));
+    run(`__recusa657=null;`);
+  });
+});
+provaAsync('6.80 P17 (AC4.1, AC4.3) — a mesma ficha, com só o nome trocado: a 2ª antiga sai e o próximo vai a 01/03/2027', async () => {
+  await com680(ROMEOH680, I1930_680, PAPEIS680[1], async () => {
+    run(`pbSet('verm',{verm_nome:'Milbemax'}); pbSalvar('verm');`); await espera657();
+    igual(pega680(db680(), V680.concat(['verm_nome'])), ['2026-10-11', '', '2026-11-01', '2027-03-01', 'Milbemax']);
+    igual(za680(), []);
+  });
+});
+provaAsync('6.80 P18 (AC4.4) — o «Vence em» à mão é respeitado no Salvar sem mexer: o próximo e a marca não mudam; a 2ª sai e a 2ª prevista vem da conta', async () => {
+  await com680(Object.assign({}, ROMEOH680, { verm_p: '2027-03-15', verm_p_manual: true }), I1930_680, null, async () => {
+    run(`pbSalvar('verm');`); await espera657();
+    igual(pega680(db680(), V680.concat(['verm_p_manual'])), ['2026-10-11', '', '2026-11-01', '2027-03-15', true]);
+    igual([esc680().map((e) => e[2]), run('!!PREV_RECALC_AVISO.verm_p')], [[['verm_2a', 'verm_dose2_t']], false]);
+  });
+});
+provaAsync('6.80 P19 (AC4.1, AC4.5, guarda) — a 2ª igual ou posterior à 1ª fica (6.65 AC3.4); a ficha coerente sem mudança diz «✓ Salvo» sem gravar, como hoje; a 2ª digitada antes da 1ª continua recusada', async () => {
+  await com680({ verm_doses: '2 doses', verm_t: '2026-10-10', verm_dose2_t: '2026-10-10', verm_2a: '2026-10-10', verm_p: '2027-02-07' }, I1930_680, null, async () => {
+    run(`pbSet('verm',{verm_nome:'Milbemax'}); pbSalvar('verm');`); await espera657();
+    igual(esc680().map((e) => e[2]), [['verm_2a', 'verm_nome', 'verm_p']]);
+    igual(db680().verm_dose2_t, '2026-10-10');
+  });
+  await com680(Object.assign({}, ROMEO680, nova680('2026-10-11')), I1930_680, null, async () => {
+    run(`pbSalvar('verm');`); await espera657();
+    igual([esc680(), ultFicha680().salvo, /✓ Salvo/.test(ultFicha680().html)], [[], true, true]);
+  });
+  await com680(Object.assign({}, ROMEO680, nova680('2026-10-11')), I1930_680, null, async () => {
+    run(`pbSet('verm',{verm_dose2_t:'2026-10-05'}); pbSalvar('verm');`); await espera657();
+    igual([esc680(), za680().map((z) => z[1][0])], [[], ['A 2ª dose (05/10/2026) ficou antes da 1ª (11/10/2026).']]);
+  });
+  // a ficha que caiu no D1 (a «2ª» depois do vencimento) só muda pelo botão do conserto (AC3), nunca pelo Salvar sem mexer;
+  // e em «Dose única» (com uma 2ª antiga que sobrou antes da 1ª) o Salvar sem mexer também não grava nada (AC4.5)
+  for (const F of [ROMEOD1680, { verm_doses: 'Dose única', verm_t: '2026-10-11', verm_dose2_t: '2026-06-13', verm_p: '2027-02-08' }]) {
+    await com680(F, I1930_680, null, async () => {
+      run(`pbSalvar('verm');`); await espera657();
+      igual([esc680(), ultFicha680().salvo], [[], true], JSON.stringify(F));
+    });
+  }
+});
+
+// ---------------------------------------------------------------- D3 (AC5, AC6)
+provaAsync('6.80 P20 (AC5.1, AC5.2) — a ficha, a 1ª trocada para 11/10: antes do Salvar, a «2ª dose dada em» vazia com «sai quando você salvar», o «Vence em» e o selo com 01/03/2027 (23/02/2027 com 15), para a Gestão (campo) e a Consultora (texto); o banco intacto', async () => {
+  for (const pp of PAPEIS680) {
+    for (const [n, prox] of [[21, '2027-03-01'], [15, '2027-02-23']]) {
+      const F = { verm_doses: '2 doses', verm_t: '2026-05-23', verm_dose2_t: '2026-06-13', verm_2a: '2026-06-13', verm_p: '2026-10-11' };
+      if (n === 15) F.verm_dose2_dias = 15;
+      await com680(F, I1930_680, pp, async () => {
+        run(`pbSet('verm',{verm_t:'2026-10-11'});`);
+        const h = ultFicha680().html, t = txt680(h);
+        assert.ok(h.indexOf(`<label>2ª dose dada em</label><input type="date" class="cad-in" value="" onchange="pbSet('verm',{verm_dose2_t:this.value})" min="2015-01-01" max="2026-10-11"`) >= 0, t);
+        assert.ok(t.indexOf('A 2ª dose de 13/06/2026 é da série anterior: sai quando você salvar.') >= 0, t);
+        assert.ok(h.indexOf('<div class="prev-tit">Vermifugação ' + run(`seloValidade('${prox}')`) + '</div>') >= 0, 'o selo');
+        if (pp[0] === 'gestao') assert.ok(h.indexOf('id="prevVence_verm_p" value="' + prox + '"') >= 0, 'o campo da Gestão');
+        else assert.ok(h.indexOf('id="prevVence_verm_p">vence em ' + br680(prox) + '</div>') >= 0, 'o texto da Consultora');
+        await espera657();
+        igual(esc680(), [], 'nada gravado antes do Salvar');
+      });
+    }
+  }
+});
+provaAsync('6.80 P21 (AC5.3) — a ficha da versão antiga aberta, sem rascunho: a 2ª vazia com a frase e o «Vence em» com a conta que o Salvar vai gravar (01/03/2027)', async () => {
+  for (const pp of PAPEIS680) {
+    await com680(ROMEOH680, I1930_680, pp, async () => {
+      const h = bloco680(), t = txt680(h);
+      assert.ok(h.indexOf('<label>2ª dose dada em</label><input type="date" class="cad-in" value=""') >= 0 && t.indexOf('A 2ª dose de 13/06/2026 é da série anterior: sai quando você salvar.') >= 0, t);
+      assert.ok(pp[0] === 'gestao' ? h.indexOf('id="prevVence_verm_p" value="2027-03-01"') >= 0 : h.indexOf('id="prevVence_verm_p">vence em 01/03/2027</div>') >= 0, t);
+      assert.ok(h.indexOf(run(`seloValidade('2027-03-01')`)) >= 0);
+    });
+  }
+});
+provaAsync('6.80 P22 (AC5.2, guarda) — o «Vence em» digitado no rascunho manda; o «à mão» gravado aparece quando a última dose não foi mexida (também na ficha da versão antiga); o 21 tocado que já estava marcado não muda a tela', async () => {
+  await com680({ verm_doses: '2 doses', verm_t: '2026-05-23', verm_dose2_t: '2026-06-13', verm_2a: '2026-06-13', verm_p: '2026-10-11' }, I1930_680, null, async () => {
+    run(`pbSet('verm',{verm_t:'2026-10-11'}); prevVenceManualSet('verm_p','2027-04-01','verm');`);
+    assert.ok(ultFicha680().html.indexOf('id="prevVence_verm_p" value="2027-04-01"') >= 0);
+  });
+  for (const F of [Object.assign({}, nova680('2026-10-11'), { verm_doses: '2 doses', verm_p: '2027-03-15', verm_p_manual: true }), Object.assign({}, ROMEOH680, { verm_p: '2027-03-15', verm_p_manual: true })]) {
+    await com680(F, I1930_680, null, async () => {
+      run(`pbSet('verm',{verm_nome:'Milbemax'});`);
+      assert.ok(ultFicha680().html.indexOf('id="prevVence_verm_p" value="2027-03-15"') >= 0 && /Data digitada à mão\./.test(ultFicha680().html), JSON.stringify(F));
+    });
+  }
+  await com680(Object.assign({}, ROMEO680, { verm_t: '2026-10-11', verm_2a: '2026-11-01', verm_p: '2027-03-20', verm_p_manual: true }), I1930_680, null, async () => {
+    run(`pbSet('verm',{verm_dose2_dias:21});`);
+    assert.ok(ultFicha680().html.indexOf('id="prevVence_verm_p" value="2027-03-20"') >= 0);
+  });
+});
+provaAsync('6.80 P23 (AC6.1) — «Lance aqui mesmo»: a 1ª muda e a linha de baixo acompanha na hora — a 2ª antes da 1ª nova sai do «Feito em», o «Próximo vermífugo» e o selo passam aos da série nova; a 2ª igual ou posterior à 1ª nova fica; o selo tem id', async () => {
+  await com680({ verm_doses: '2 doses', verm_t: '2026-05-23', verm_dose2_t: '2026-06-13', verm_2a: '2026-06-13', verm_p: '2026-10-11' }, I1930_680, null, async () => {
+    const h = lanceAbre680(), K = run('__k680'), l2 = linha680(h, 'verm_dose2_p');
+    assert.ok(l2.indexOf('<span id="prevS_' + K + '_verm_dose2_p"><span class="vd vd-ok">dada em 13/06/2026</span></span>') >= 0, txt680(l2));
+    run(`__el657['prevP_'+__k680+'_verm_dose2_p']={value:'2026-10-11'}; __el657['prevS_'+__k680+'_verm_dose2_p']={innerHTML:'dada em'};`);
+    run(`__el657['prevT_'+__k680+'_verm_p'].value='2026-10-11'; prevRecalcular(__k680, 'verm_p');`);
+    igual(J630(`[__el657['prevP_'+__k680+'_verm_p'].value, __el657['prevT_'+__k680+'_verm_dose2_p'].value, __el657['prevP_'+__k680+'_verm_dose2_p'].value, __el657['prevS_'+__k680+'_verm_dose2_p'].innerHTML]`),
+      ['2027-03-01', '', '2027-03-01', run(`seloValidade('2026-11-01')`)]);
+    igual(esc680(), [], 'nada gravado');
+  });
+  // a 1ª corrigida para trás (11/10 → 09/10) com a 2ª dada em 01/11: a 2ª é desta série e fica
+  await com680(Object.assign({ verm_doses: '2 doses' }, nova680('2026-10-11'), { verm_dose2_t: '2026-11-01', verm_p: '2027-03-01' }), Date.UTC(2026, 10, 2, 15, 0), null, async () => {
+    lanceAbre680();
+    run(`__el657['prevP_'+__k680+'_verm_dose2_p']={value:'2027-03-01'}; __el657['prevS_'+__k680+'_verm_dose2_p']={innerHTML:'x'};`);
+    run(`__el657['prevT_'+__k680+'_verm_p'].value='2026-10-09'; prevRecalcular(__k680, 'verm_p');`);
+    igual(J630(`[__el657['prevT_'+__k680+'_verm_dose2_p'].value, __el657['prevP_'+__k680+'_verm_dose2_p'].value, __el657['prevS_'+__k680+'_verm_dose2_p'].innerHTML]`), ['2026-11-01', '2027-03-01', 'x']);
+  });
+});
+provaAsync('6.80 P24 (AC6.2) — «Lance aqui mesmo»: o «Próximo vermífugo» da linha da 2ª, só de leitura e com o mesmo id, mostra o próximo pela conta da 1ª (01/03/2027; 23/02/2027 com 15); com a 2ª dada, 2ª + 120; dose única e sem a 1ª: vazio', async () => {
+  const P = (F, quando) => com680(F, quando || I1930_680, null, async () => { const l2 = linha680(String(run("prevEdicaoHTML({p:__r680, nome:'Romeo'})")), 'verm_dose2_p'); return [(l2.match(/id="prevP_[^"]*_verm_dose2_p" value="([^"]*)" readonly/) || [])[1], l2]; });
+  igual((await P(ROMEOS12680))[0], '2027-03-01');
+  igual((await P(Object.assign({}, ROMEOS12680, { verm_dose2_dias: 15 })))[0], '2027-02-23');
+  igual((await P(Object.assign({}, ROMEOS12680, { verm_dose2_t: '2026-11-01' }), Date.UTC(2026, 10, 2, 15, 0)))[0], '2027-03-01');
+  igual((await P({ verm_doses: 'Dose única', verm_t: '2026-10-11', verm_p: '2027-02-08' }))[0], '');
+  igual((await P({ verm_doses: '2 doses' }))[0], '');
+});
+provaAsync('6.80 P25 (AC6.3, D5) — «Lance aqui mesmo»: a ficha do «Lance» antigo (próximo 08/02/2027) e só «Salvar» → 01/03/2027; o «Vale até» digitado nesta abertura (também escrito direto no campo, sem evento) continua valendo; o próximo «à mão» da ficha também; a conta que reescreve o campo derruba o digitado', async () => {
+  for (const pp of PAPEIS680) {
+    await com680(ROMEOS12680, I1930_680, pp, async () => {
+      lanceAbre680(); run(`prevLancar(__k680, 'verm_p');`); await espera657();
+      igual(pega680(db680()), ['2026-10-11', '∅', '2026-11-01', '2027-03-01'], pp[0]);
+    });
+  }
+  await com680(ROMEOS12680, I1930_680, null, async () => {
+    lanceAbre680(); run(`__el657['prevP_'+__k680+'_verm_p'].value='2027-03-20'; prevLancar(__k680, 'verm_p');`); await espera657();
+    igual(db680().verm_p, '2027-03-20', 'escrito por cima, sem evento');
+  });
+  await com680(Object.assign({}, ROMEOS12680, { verm_p_manual: true }), I1930_680, null, async () => {
+    lanceAbre680(); run(`prevLancar(__k680, 'verm_p');`); await espera657();
+    igual(db680().verm_p, '2027-02-08', 'o «à mão» da ficha');
+  });
+  await com680(ROMEOS12680, I1930_680, null, async () => {
+    lanceAbre680();
+    run(`__el657['prevP_'+__k680+'_verm_p'].value='2027-03-20'; __el657['prevT_'+__k680+'_verm_p'].value='2026-10-10'; prevRecalcular(__k680, 'verm_p'); prevLancar(__k680, 'verm_p');`); await espera657();
+    igual(pega680(db680()), ['2026-10-10', '∅', '2026-10-31', '2027-02-28'], 'a conta que reescreveu manda');
+  });
+  await com680(ROMEOS12680, I1930_680, null, async () => {   // sem a tela desenhada (o campo com o valor do banco): a conta refaz
+    run(`__el657['prevT_'+__k680+'_verm_p']={value:'2026-10-11'}; __el657['prevP_'+__k680+'_verm_p']={value:'2027-02-08'}; __el657['prevQ_'+__k680+'_verm_p']={value:''}; prevLancar(__k680, 'verm_p');`); await espera657();
+    igual(db680().verm_p, '2027-03-01');
+  });
+});
+
+// ---------------------------------------------------------------- D4 (AC7)
+provaAsync('6.80 P26 (AC7.1) — um toque: o change do campo e o «Salvar» no mesmo toque (campo de texto e campo de data) gravam UMA vez, com tudo o que estava no rascunho; o clique que chega depois não grava de novo', async () => {
+  for (const [campo, valor] of [['verm_nome', 'Milbemax'], ['verm_t', '2026-10-11']]) {
+    await com680(Object.assign({}, ROMEO680, { verm_dose2_t: '2026-06-13' }), I1930_680, null, async () => {
+      run(`pbSet('verm',{verm_doses:'2 doses'});`);
+      toque680('verm');
+      ctx.__c680 = campo; ctx.__v680 = valor;
+      run(`(function(){ var o={}; o[__c680]=__v680; pbSet('verm', o); })()`);
+      await espera657();
+      igual(esc680().length, 1, campo + ': gravou com o change');
+      assert.ok(esc680()[0][2].indexOf(campo) >= 0, 'com o que estava no rascunho');
+      run(`pbSalvar('verm');`); await espera657();
+      igual(esc680().length, 1, campo + ': o clique que chegou depois não grava de novo');
+    });
+  }
+  // o Salvar que pergunta (a data em atraso): o clique que chega depois não abre uma 2ª pergunta (que gravaria de novo)
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_t:'2026-01-10'}); pbSalvar('verm');`); await espera657();
+    igual([esc680(), J630('__ze657.length')], [[], 1], 'uma pergunta só');
+  });
+});
+provaAsync('6.80 P27 (AC7.2, AC7.2a) — o duplo toque não grava duas vezes; passada a janela de 1,5 s, um novo «Salvar» grava; um change sem toque novo no «Salvar» (depois da janela, depois de tocar em outro lugar ou depois do Salvar feito) não grava nada', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'}); pbSalvar('verm'); pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1, 'duplo toque');
+    relogio658(I1930_680 + 1600);
+    run(`pbSet('verm',{verm_nome:'Drontal'}); pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 2, 'depois da janela, o Salvar grava');
+  });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); relogio658(I1930_680 + 1600); run(`pbSet('verm',{verm_nome:'Milbemax'});`); await espera657();
+    igual(esc680(), [], 'o change depois de 1,5 s não grava sozinho');
+    toque680('verm'); toque680(null); run(`pbSet('verm',{verm_nome:'Drontal'});`); await espera657();
+    igual(esc680(), [], 'o toque em outro lugar derruba a anotação');
+    toque680('verm'); run(`pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1);
+    run(`pbSet('verm',{verm_nome:'Milbemax'});`); await espera657();
+    igual([esc680().length, J630('PB_PEND.verm')], [1, { verm_nome: 'Milbemax' }], 'depois do Salvar feito, o change fica no rascunho');
+  });
+  // o clique que se perdeu (só o pbSet gravou): passada a janela, o Salvar seguinte grava normalmente
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'});`); await espera657();
+    relogio658(I1930_680 + 1600);
+    run(`pbSet('verm',{verm_nome:'Drontal'}); pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 2, 'a janela expira mesmo sem o clique');
+  });
+});
+provaAsync('6.80 P28 (AC7.3) — o botão «Salvar» do rodapé mede pelo menos 44 px nos cinco blocos (carrapaticida, coleira, vermífugo, exame de fezes e vacinas)', async () => {
+  for (const [b, f] of [['ecto', 'blocoEcto'], ['col', 'blocoColeira'], ['verm', 'blocoVerm'], ['fezes', 'blocoFezes'], ['vac', 'blocoVacinas']]) {
+    const h = String(run(f + '({})'));
+    assert.ok(h.indexOf(`style="min-height:44px;padding:7px 16px;font-size:13px" onclick="pbSalvar('${b}')"`) >= 0, b);
+  }
+});
+provaAsync('6.80 P29 (AC7.4, guarda) — sem o pointerdown (este sandbox), o «Salvar» funciona como sempre (uma gravação, «Salvando…» e «✓ Salvo» com o ok); nenhuma anotação de toque; a instalação dentro de try com «silencioso de propósito»', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`pbSet('verm',{verm_nome:'Milbemax'}); pbSalvar('verm');`);
+    assert.ok(/Salvando…/.test(ultFicha680().html));
+    await espera657();
+    igual([esc680().length, /✓ Salvo/.test(ultFicha680().html)], [1, true]);
+  });
+  if (run('typeof pbToqueAnotar') === 'function') {   // na base não existe: a guarda acima é a que vale lá
+    igual(run('PB_TOQUE_SALVAR'), null);
+    assert.ok(/try\{ document\.addEventListener\('pointerdown', pbToqueAnotar, true\); \}\n\s*catch\(e\)\{\} \/\* silencioso de propósito/.test(fs.readFileSync(APP, 'utf8')));
+  }
+});
+
+// ---------------------------------------------------------------- secundários (AC8)
+provaAsync('6.80 P30 (AC8.1) — a ficha aberta se redesenha quando o cadastro DAQUELE FILHOt muda, sem perder o rascunho; não redesenha com um campo da ficha em foco (redesenha quando ele solta o foco), nem quando muda outra ficha, nem com a ficha fechada', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`__el657['pel-ficha']={style:{display:'block'}, contains:function(a){ return !!a && a===document.activeElement && !!a.dentro; }}; pelPrevVistoMarcar(__r680); PB_PEND={ecto:{ecto_nome:'rascunho'}};`);
+    const muda = (k, o) => { ctx.__mk680 = k; ctx.__mo680 = o; run(`pelCadCache=Object.assign({}, pelCadCache); pelCadCache[__mk680]=Object.assign({}, pelCadCache[__mk680]||{}, __mo680); __telas680=[]; pelFichaPrevOuvinte();`); return telas680(); };
+    igual(muda('outro__x', { verm_t: '2026-10-11' }).length, 0, 'outra ficha');
+    run(`pelFichaPrevOuvinte();`); igual(telas680().length, 0, 'nada mudou');
+    const t = muda(run('__k680'), Object.assign({ verm_dose2_t: '' }, nova680('2026-10-11')));
+    igual(t.map((x) => x.b), ['ecto', 'col', 'verm', 'fezes', 'vac']);
+    igual([t[0].ex.ecto_nome, t[2].ex.verm_p], ['rascunho', '2027-03-01'], 'o rascunho fica e o bloco mostra o gravado');
+    run(`__blur680=null; document.activeElement={tagName:'INPUT', dentro:true, addEventListener:function(ev, fn){ if(ev==='blur') __blur680=fn; }};`);
+    igual(muda(run('__k680'), { verm_nome: 'Milbemax' }).length, 0, 'com o foco num campo da ficha, não redesenha');
+    run(`delete document.activeElement; __tm657=[]; __blur680();`);
+    run(`__tm657.forEach(function(t){ t.fn(); });`);
+    igual(telas680().map((x) => x.b), ['ecto', 'col', 'verm', 'fezes', 'vac'], 'redesenhou quando o campo soltou o foco');
+    run(`__el657['pel-ficha'].style.display='none'; __telas680=[];`);
+    igual(muda(run('__k680'), { verm_nome: 'Drontal' }).length, 0, 'a ficha fechada não é redesenhada');
+  });
+  const src = fs.readFileSync(APP, 'utf8'), z = src.indexOf("zMapaVivo('daycare/cadastro','_pelcad'"), v = src.indexOf("getElementById('v-vacinas')", z);
+  assert.ok(v - z <= 2000 && src.indexOf('try{ pelFichaPrevOuvinte(); }', v) > v && src.indexOf('try{ pelFichaPrevOuvinte(); }', v) - v < 600, 'no ouvinte do cadastro, depois da linha da Prevenção (a janela do harness)');
+});
+provaAsync('6.80 P31 (AC8.2) — o aviso «Antiparasitários» da ficha passa de «URGENTE — vencido» a «em dia» logo depois de salvar o vermífugo vencido (o recipiente com id no modelo; o alertaPrevencao igual)', async () => {
+  const F = { verm_doses: '2 doses', verm_t: '2026-05-20', verm_2a: '2026-06-10', verm_p: '2026-10-08', ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-09-01', ecto_p: '2026-11-30' };
+  await com680(F, I1930_680, null, async () => {
+    run(`pbRender=__bk680.pr; __rw680=0; __el657['pb-verm']={replaceWith:function(){ __rw680++; }}; __el657['pelAlertaPrev_antip']={innerHTML:''}; __el657['pelAlertaPrev_vacina']={innerHTML:''};`);
+    run(`pbSet('verm',{verm_t:'2026-10-11'});`);
+    assert.ok(/URGENTE/.test(run("__el657['pelAlertaPrev_antip'].innerHTML")), 'antes de salvar');
+    run(`pbSalvar('verm');`);
+    igual(txt680(run("__el657['pelAlertaPrev_antip'].innerHTML")), 'Antiparasitários em dia.', 'na hora');
+    await espera657();
+    igual([txt680(run("__el657['pelAlertaPrev_antip'].innerHTML")), run('__rw680') > 0], ['Antiparasitários em dia.', true], 'com o ok');
+  });
+  const src = fs.readFileSync(APP, 'utf8');
+  igual(['saude', 'vacina', 'antip'].map((g) => src.indexOf('<div id="pelAlertaPrev_' + g + '">${alertaPrevencao(ex,\'' + g + '\',') >= 0), [true, true, true]);
+});
+provaAsync('6.80 P32 (AC8.3) — a memória de 20 s de Vencimentos esquece a lista de antes ao gravar prevenção: na hora, com o ok e na volta atrás da recusa', async () => {
+  for (const recusa of [false, true]) {
+    await com680(ROMEO680, I1930_680, null, async () => {
+      if (recusa) run(`__recusa657='^daycare/cadastro/';`);
+      run(`VENC_MEMO={'2026-10-13':{quando:Date.now(), L:[{nome:'velho'}]}}; __pg680=prevGravar(__r680, {verm_nome:'Milbemax'}, {tela:'Prova'});`);
+      igual(J630('Object.keys(VENC_MEMO)'), [], 'na hora');
+      run(`VENC_MEMO={'2026-10-13':{quando:Date.now(), L:[{nome:'velho'}]}};`);
+      await espera657();
+      igual(J630('Object.keys(VENC_MEMO)'), [], recusa ? 'na volta atrás da recusa' : 'com o ok');
+      run(`__recusa657=null;`);
+    });
+  }
+});
+provaAsync('6.80 P33 (AC8.4) — a Hoje na Zêluz aberta se redesenha quando o cadastro muda (outro aparelho gravou): uma vez por mudança, com atraso curto; nunca com um painel rápido aberto nem com um campo da tela em foco; o redesenho não chama a área protegida', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`__hj680=0; hojeRedesenhar=function(){ __hj680++; }; __el657['v-hoje']={classList:{contains:function(c){ return c==='active'; }}, contains:function(){ return false; }}; __tm657=[];`);
+    run(`hojeOuvinteCadastro(); hojeOuvinteCadastro(); hojeOuvinteCadastro();`);
+    igual([J630('__tm657.length'), run('__tm657[0].ms')], [1, 400], 'um redesenho só, com atraso curto');
+    run(`__tm657[0].fn();`); igual(run('__hj680'), 1);
+    run(`__tm657=[]; hojeOuvinteCadastro(); PREV_CORRIGE_ABERTO=__dc680+'|verm_p'; __tm657[0].fn();`); igual(run('__hj680'), 1, 'com o painel aberto, não');
+    run(`PREV_CORRIGE_ABERTO=''; __tm657=[]; hojeOuvinteCadastro(); document.activeElement={tagName:'TEXTAREA'}; __el657['v-hoje'].contains=function(){ return true; }; __tm657[0].fn();`); igual(run('__hj680'), 1, 'com o foco num campo da tela, não');
+    run(`delete document.activeElement; __el657['v-hoje']={classList:{contains:function(){ return false; }}}; __tm657=[]; hojeOuvinteCadastro();`); igual(J630('__tm657.length'), 0, 'a tela fechada não agenda nada');
+  });
+  const fonte = (n) => String(run('String(' + n + ')'));
+  igual(['hojeOuvinteCadastro', 'hojeRedesenhar', 'pelFichaPrevOuvinte'].filter((n) => /\b(ck|ckt|pt)[A-Z]\w*\(|pendAvisarChegada/.test(fonte(n))), [], 'nenhuma chamada à área protegida');
+  const src = fs.readFileSync(APP, 'utf8'), z = src.indexOf("zMapaVivo('daycare/cadastro','_pelcad'"), v = src.indexOf("getElementById('v-vacinas')", z), w = src.indexOf('try{ hojeOuvinteCadastro(); }', v);
+  assert.ok(w > v && w - v < 900, 'o ouvinte do cadastro chama a Hoje na Zêluz, depois da linha da Prevenção');
+});
+
+// ---------------------------------------------------------------- guardas (AC9, AC10, AC12, AC13)
+provaAsync('6.80 P34 (AC12) — a área protegida (155 funções, as declarações e o #v-daycare) sem mudança; nenhuma função nova começa com ck ou pt; as funções fixadas idênticas às da base ca69bc8, letra por letra, menos vencItensDe (a única que muda de propósito, AC2.1)', async () => {
+  const h = (s) => require('crypto').createHash('sha256').update(String(s)).digest('hex').slice(0, 16);
+  const novo = fs.readFileSync(APP, 'utf8');
+  const fonte = (nome) => { const i = novo.indexOf('function ' + nome + '('); if (i < 0) return null; let d = 0, j = novo.indexOf('{', i); for (let k = j; k < novo.length; k++) { if (novo[k] === '{') d++; else if (novo[k] === '}') { d--; if (!d) return novo.slice(i, k + 1); } } return null; };
+  const BASE680 = {"vermAvaliar":"dbb338c2bf7e64b5","vermFaixaKg":"30b015b84cf0ada4","vermMargemKg":"17d894cb494ce621","vermNumTexto":"fcf2a669fa302195","vermNumLer":"f3af1b973b05be92","vermDoseDe":"ca0de65413eef7e3","vermPertoDaVirada":"b40da171c0d5df85","vermFrasePeso":"34a4fcbaeed5260b","vermAvaliarFicha":"b33c7434482bf287","vermFichaTextoHTML":"c750d8f6a0fe1eed","vermPreMarcar":"9c3b3baca86cbcb3","vermBlocoPainelHTML":"fa6a626a6d27de72","dashLancar":"6267457666ad76f3","vermPreMarcarVenc":"47968aea4c549131","vermLinhaVencHTML":"77149b646c2ec3b8","vencBlocoLancHTML":"60cc11bb3c70521e","vermOuFezes":"e29f34cc2ad21b05","prevDispensadoPorExame":"f40ec4cc6325dbf0","prevForaDaCobranca":"0c57dfd57defbac2","podeVencManual":"88f0694c49496db7","prevVenceManualSet":"e583a6c8523f2e36","prevPendencias":"c87ce87973884715","alertaPrevencao":"8d52ba3995909460","prevFaltasDe":"521dab44ee9157f1","hojeAntecipar":"9b8fed3ad9122257","urgenciasGestao":"c192dbd0f0779796","vencLancarAuto":"414f3b8869277485","pelExtra":"e874a3d2b3b8767a","setPelExtra":"c37367acebfa2701","pelAplicarNoCache":"c174a71c267e339b","pelCamposBarrados":"99703a2869112cec","prevValor":"c4bc834fdc1a5e09","addDiasISO":"c3bc279a55f02afe","addMesesISO":"34de1566f1fe775c","podePapel":"f79e84fc5f1bd977","canEditPel":"712f761f9d9c3b93","prevCorrigePode":"9ee0f6648c608570","prevAvisoRecalc":"b295e4128828037a","prevEraManual":"567f58ccfaac2fb1","prevChecarLogica":"d28d9aeb0429193a","escovaCacheGravado":"452a789d84d96bb5","vencQuantoTexto":"7a4176b9d8d5c8de","pelSalvoMostrar":"e1f4ae9d461c3055","prevCorrigeRegistrar":"f1360a1fdbf2da9f","prevCorrigeRedesenhar":"62483ddb8dd49028","blocoFezes":"2dd50ba50fb2744e","blocoVacinas":"816ab98cf9e52ef6","blocoEcto":"8555e7943c933dcd","blocoColeira":"e3dda9ffae12e570","prevCorrigeFezesHTML":"b7cdeb888ff067bc","zAlertao":"e30d85cfd25aab3a","prevCorrigeExameFezes":"d6b8e673ee37db29","prevCorrigeVenceEm":"8723e245ae6a9237","prevCorrigeDoseUnica":"b5129f66aa4d2f76","vermDose2Prevista":"17903cb1b6ec99f1","vermDose2Data":"99382de94ed74724","vermIntervalo":"99e606e26e410fda","vermIntervaloDoBanco":"b1a418260fbf2957","prevVermSem2a":"96d814450d45b1ec","prevVermLanceConta":"a823a6ca65f06aa7","prevVermLancePatch":"0b1240967d2c86c2","prevCacheGravado":"d8cd714eef80f2c8","prevCacheDesfaz":"368e5997851b9bb9","prevCorrGravar":"25eb132824804e80","prevVenceCampoHTML":"bec046a7000553a2","vencMensagens":"57b62eedd274dde1","prevCorrigeVermHTML":"29384788522f231d","prevCorrigePainelHTML":"bb67d7fabe2794a0","prevCorrigeChip":"7b89aaf6facb0b35","hojeRedesenhar":"3ccefa2442100a84","hojeRender":"3c41edfd834bc0cb","vencMemoLimpar":"40345f0732ac5ac3","vencListaMemo":"c34c67b10788690d","prevCorrRegistrarDia":"4e731447be2cbc86","vencResumoHTML":"b1e9753b24613f93","vencResumoTexto":"955e50fa3eb77a88","pbItensParaChecagem":"2a0c88cefbce9c0b","prevLanceNaoSalvo":"5f751397ca0245cd"};
+  igual(Object.keys(BASE680).filter((n) => h(fonte(n)) !== BASE680[n]), [], 'as funções que não mudam');
+  const ctxN = vm.createContext(makeSandbox());
+  vm.runInContext(extractMainScript(novo), ctxN, { filename: 'index.html#script', timeout: 15000 });
+  const runN = (c) => vm.runInContext(c, ctxN);
+  const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n'))], [155, '5bac486c669007ec'], 'a área protegida (nomes e texto), num sandbox novo');
+  const i = novo.indexOf('id="v-daycare"'), j = novo.indexOf('id="v-', i + 10);
+  igual([h(novo.slice(i, j)), h(novo.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
+});
+provaAsync('6.80 P35 (AC13) — nenhuma prova antiga saiu do arquivo nem mudou de nome (os 2.328 títulos do 788fb9e, conferidos um por um); a 6.80 tem 67 provas com títulos únicos (38 do @dev, 3 do fechamento dos CONCERNS e as 26 do QA, «6.80 QA …»); as seis provas que a story nomeia mudaram só a asserção, com o comentário «6.80 (AC…)» (a 6.66 P38 e a 6.63 P47 conferem, cada uma, que as da 6.65 passaram)', async () => {
+  const me = fs.readFileSync(__filename, 'utf8');
+  const re = /\bprova(?:Async)?\(\s*(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g; let m; const tit = [];
+  const t680 = [];
+  while ((m = re.exec(me)) !== null) (/^6\.80 /.test(m[2]) ? t680 : tit).push(m[2]);
+  tit.sort();
+  igual([t680.length, new Set(t680).size, t680.filter((x) => /^6\.80 QA /.test(x)).length, t680.filter((x) => /^6\.80 P\d\d /.test(x)).length], [67, 67, 26, 41], 'os títulos da 6.80');
+  // 6.80 P35 — publicação no pull request #13 (12/out/2026, autorizada pela Adriana): a guarda deixava de valer a cada story publicada depois da 6.80,
+  // porque contava TODOS os títulos de fora da 6.80. Agora confere, um por um, os 2.328 títulos do 788fb9e (os 2.118 da ca69bc8, os 89 da 6.71 e os 121
+  // da 6.68), cada um pelos 8 primeiros caracteres do sha-256 do título: nenhum pode sair nem mudar de nome; provas novas de outras stories podem entrar.
+  const h8_680 = (x) => require('crypto').createHash('sha256').update(x).digest('hex').slice(0, 8);
+  const BASE680 = '000efdc4001027ad00369a91004e11870066d212007861e100a0450000ea1627011ba6a5014e9ff401773c2f017ae093017fcffd01a3dc9301c6876301d83416020dede30225d24d0234934b02379146025478c5025a9b24026a254902c9248d02daff5503256970032b4e9003437788039a2772039df2cb03a6d5e303adae2e03e9477003ffd03c0408bf68043583480436c65a046d7d3c048629ea049e108304a27f2704addb6604b8066904d397e904fc5509053515d905544e7205896171058beb5d0592bede05cd099405e2d7e405e7c0f805edcb6e061ed89a0621098b06299885063d59510641f99d066ac2e70694eeb506bb1f6e06bca7a406c05c8006d26caf06f259cb06f6c823071383a8072acd3507588ec10760d05e07642d410764a73f076b07e8078088a907a06b2c07a396e207b0eab007f6a47807f9780d0843aabe084fc348086a442f087871540882c57808972cf708c02c770911935e092dd1ff09455daa097b554109e15ac20a04adae0a251ac10a555e5c0a5dba950a74a2d80ac3ad9c0ae528b30afee9170b08bae90b0af8530b0bf6dd0b1c43970ba526de0bc650270bcdd6d10bce853e0bf434f00c129d960c15fd610c1f235a0c2b2ecb0c38e3820c3984420c63f7400c644c620cd5d7550d0b44b00d0c020d0d5eef310d8dcee00d9820280ddd8b690df673100e2109a40e2f41bb0e425fe70e5ea9d90e7e20ec0e8415c70ea012800eb94be80eb9c20a0f2fae8c0f71439a0fa32f6d0fac4cd50fb3c776103bd2e610415e6b104402a0106b65781090c35810ae7f1a10d30aa310d8ccf810eb6f0210fb093d10ff8fbb113d6246115b507d115fd7121175300711a6828211aefff811b5fbaf11bfe93411d323ba12494925128d713912950d3312ad14d212fcc0251304ec301343d00613670f16138f6506139707b0139854f51398f86013da024f14249aea14a2115a14a9afe314c60d6114eb916a14f846c01514a053152cceff154a94181574fb611596e5eb159b3b6b15ae14db15b0c5d015ba768d15bc08e915c4e08915cb98fc15e8b3c215e8f9bd15f02c4515f0728116181758161905ee1619f19c161c0ffa161e9e0c162705801660170c16801a8f1695ab5b16b6f0f716c8207117350d83173680f1173bce751742f3a11751135d1797629f17c3488f17c6efe8180e67c9187a4bea1884e022189f755018e21ef419153b1b193952621953f4f019937a1d19e3e1d619edd7ae1a5659e11a68b1451a7204671abd0be91abe0ff91acd38741ae745c11af338ff1b2373831b35bb861b61698f1b6e62e91bafcc4f1c01d7821c0346cb1c1ba9581c3388a41c448b401ca5ad7e1ca7ed8c1ceab5ba1ced1a6f1d0622971d06940b1d0c843b1d2568cf1d32d3e91d549b861d724ee61d9b91e31dcb146c1dd343bf1defb74b1dfa62341e35cf5a1e5720e11e5b6ab51e6d0cbd1e9cf83c1eba15691ecbfafb1edfff611f0b550b1f130c551f156b861f63770b1f9b34f51fa140a41fa952201fd04a37201071c820256309203cdd392043dd5e2054adcf20bcb7c620c65dc720df244520e6501b20f30f0220f37a3b214b439e2153ea2a2153f70a216376b821861bd92196bac521b884c321c19d7821d1ce1821f895842226fdd0223a4391228069bf22988b6d22a68aa422b1403d22cf5903230b9fc3231d2ea9235994b72372913023787351239b5a2123beeb7223d8aa5423e71ccf23fa91aa2413d6a1243945d8245ab306246298b72467681e24accd7324b2c05c24c4d73524e64fde24f9be9424ffe4292518c7f02535a51f2548e175256134d625c2377225e840d8262da2c32634dc5e2638b7e9264280ad264c853726524c98267215b7267debee2698b71a26a06d0726bd424926e84e7a26f5e4972721e2d12747c017275d52de276ffaf9277b43a0277b880e27e5e1b527ea3d4128061208280dd3d42817cd77285f184228608da028aa7eaa28e2456228ea319f2917612d2959fce42960294129ca9c2f29f50fac29fa631d2a09789c2a0ad2fd2a2ce5332a6fc45b2a79d48c2a7fb3ce2a8585ea2af066792afc9c5e2b2071582b27b7da2b39f9272b43d7982b6988032bccc0e62c1fde982c229ea82c521d9d2c81db9c2cc844f22cdab6de2cf01f452cf557322cf63fc92d07af332d17816a2d2e506e2d4ec87a2d9dcf672dadbd932dc901ef2dcf7cfc2e0d08602e11caca2e1b8b492e1d7ab32e3ddbbf2e442e352e5ac28d2eb98eb02eca66652edaedf02f03c15d2f0b22df2f0ed3802f227e7e2f276fff2f49d0bc2f4affd52f9bebcb2fed444d2feef4c8303eb2ba3041e6543045d0ea30554b353070c93a309e3c7330af2f4430c91f6830ce813730d32d553132b6043161693131bed32831d42a6331eac090326bd7d0326fd658328ab964328db367328f48ad328f5e9832a762ff32bdf06b32bed1e032cbd5d132d6c0ab32dbe3b0330444453308c5a6330e244f332e42223330af76335e007c33618c583362b46a336882c43373c05f3387b2433388ad1133b677b133b7b6d133dc48e733f08bde3405534b3417e90a343da5473446cd97346520bf346536b8346eca2134b7e01e351f049a3562a1493565a3f13565f428356ef738358001cc358dbf5d3595165935a9361f35ab5faa35b9438435bd46e435c24e4e35e88ff335f0f34435f1ad573607ad323615a3cf36271352363e5a023645d65f3648c438366d41b036ad8d2b36b9a88d36cc1cca36cee58f36e94cd03700c65f370cb0f53719f5e33743aa26374bb4d53757cc3837780080378150e43784d4a337a1471537b221c837c0fbb637cdbcf737f349283800bd88380614e3380ec6f1387ec7a43888ce5d38bc8be238da841b38dcf61b38f4b5d43904d8063932a42e3959cfac39686d75397449f83978ccd639acdbb839adc58939c43af039da344d3a14a8543a657ec43a973fc93a983a933a9bf6883a9cf0f63ab6f3663ab965693abd11a53add535b3aecf1c43b0925cd3b1a900a3b31e5a03b481e403b5064c23b6705763bfa449f3bfcd92b3c0f08e23c2c2e473c31e5533c4d022b3c52a62a3c6b10893ca59cc33cb9f7513d0d365f3d340e283d3e497d3d41864b3d4272893d6d2f6f3d902e793d9192ce3d9b2b9a3daec1ad3db302d93dc72ffe3dce200c3de304623e0bbc643e1dc8303e53be363eae49433ec8afb53edffceb3efe2e753f1cb9c93f2f8a2f3f33551b3f551c5c3f6a988a3f938a1d3f98af6e3ff2d9bb401b51a0402908b5403afc30403edcf44053e93a407e44b640807818408a80924099f1b7409a034f409ee78440abffae40b31d4d41005e054168f2c0417eac6041878f7941b4908441c1117641cb153b41ea6fa742044fe842052be0428b921842c93d9f42e551eb42fd72be4355037b437c13e8438b263b43aaa94a43af438543d08a9843d9823e43da9b2e440e4de14429fd9d448fdea244930a3144b05ce044bb34f844f999a14528789a45593fbe455f0d3a456b098c456b10a9458cae5345c130ac45daa7f44615c8134658903f465a122546888dde46abdb4b46bc290346daf22b46f8ff89470a5ffb470f70234718e3ff4749b259478731b94795a04b4799d26147b3eee347bfe62647c050074802489e480fd83748146e72482d14c7482fcbc24848c3df4866f1b14899bbc548dadb0948e1381248e9086149012d6f49b0121a49c47f074a1e7e7d4a29427e4a37092d4a3b288b4a3c06ce4a5c5b194a5e8cfd4a8189424a8561404a9759ea4aa9dbaf4ac76e9e4ac8bea64acdc2724ae734fe4b0de2974b2d00df4b5984c14b6400044b6587904b73df654b8340c24b85b9e54baaac9e4bb6727b4bde78164beca56a4c01b04e4c2c066c4c3c978a4c6f75ff4c850b594c9c58204cb7fcda4cc208134ce455504cf2aeb54d33210f4d3a2fd94d5bc8174d679b614d96f4a94dea9f754df0409c4e0ad4ad4e2e9f614e2fbd144e52a8c24e8c8f8a4ec2740e4ec6ae804ed803d04ede5b0b4efad9964f0363184f11f1524f1a76714f443b4d4fa1e9924fb4eb064fc3f3db4fe4fd1e4ffef29850406a70504820be50604ab950d20ba050eda48250f0075a5118233751188e8a51d40f7b5213408d52171562521d1a7d5224ccf3526417245279f34752805c19529a4ddd52bbb3bf52c4ce5c5327e62a5364b8e85376f4685378d8d253aa70ec53b390b953d3380c53f6ec73541122ad54474c4c5448911254603c17546f6d6a5483049f549e2dd154af35d054bd3e9654c9150d54cbf9a854db2b9a5508619c55119edd5521df715529b0985539781c554f0a1555526da4558d8c6b561c4620562b7cba5678d4e5570a6cdc574452bd5747988957484df6575b7a40577b74cb578f0df457a809c857b32d6757c695bf57d5583857d98cf257f42707580149565804769758195d12582b5f32583321595869fedf5874668a58769b9658b8592a58c8792458cf9aeb592dd3825961fc4c5963734b59838fbc5993c44559a1eddd59bde71959ccf0ed59f904e65a0ed48a5a1012b05a1b04025ab981975abad1765b3c48dd5b4cb9ca5b64036a5b6723285bd4afce5c0ae64c5c1476ca5c6122755c686b725c70709d5c8eacc65cb0b3005cb68ec65cd9d6475ce138965d99891c5db112f95dd1d1bd5dee3d5c5df6e9b85df8d23a5dfaa6305e06e6505e1221675e26c59a5e670c9d5e88d51c5ea47e985eb11fba5ece78405eecd0145ef6ade15f07d6ae5f1c6d335f219e605f315bb65f466c035f4f44b55f6ad08b5f852ad95f9f87715fa913e55fc90ec15fce857a5fceecee5ff5304c603a880f6052011e6072a8b56084e33360ac5aa860b0cf1d60b3f29960c373d360cb864b60e4ddc660e71a6a60e88d4460f99f6c61301eec616bccc56185f49761866f5861895bb26196042961a2eec761ac55b061b8649a61ca9dc261db919e61f4509f61fbbeb06221465c624c0c63625ed7e1626697a7627cbf8862a701f262b1c8fc62c64c3a62d26bed62e38a5d62e5b99262f99db9630229866322aebe63423bc5636a9586636ae10c6374738c638ee52a63b6b7e963ccb30463d9de47640aaf326449611d644a1d7e6455738a645b849364d079fc64e15e1064e9e27464f748a364fc2a2a650157c965399e8165545bcf6557f151656a13bd659f45f16630f2a6663325fe665148b3665c63d0665f465066630dec667d592066a2333a66a5134666a892d166a8f18f66ecc66b66f0102266fdab73672c3264673bd5d36742a3346759673267638c57678c85ad679dda2c67a9c1ea67c945d667daf41167dcb53767ee87a867fa2e0e681d20f1684c07fc686a35fd68739a3c68a4506c68f95b236916c494691a754e692f117f693689896979b5cf69b9084669ead4df69f753326a34e0456a45f9dc6a5279386a76ad4a6a79c1b46a97124a6ab24c536ab69af86abb50ad6afece266b0374a16b0e2bc56b48ec466b98e07b6bb300c66bc00df56bdb60c86bddc9776bdf70af6c140c006c1564086c4e3cc56c57a4186c63e53a6c7c60146c91c2296c953c716c9a12496ce5af7e6cff26366d10249a6d218e346d2d670f6d5e7e2f6d68f4c36d91d27f6da2b03d6dff52a86e0599506e0a79746e0d01746e34f9c66e5e5e9a6e6ca32d6e77f62a6e8f9a656ee1389d6ee655516efbb20e6f016c516f15c96d6f540cf46f578b5f6fcbdf65701529f970683dab70772666707f4240709bf7eb70aa7dd770b6a27e70caea8070d3c7c470ef551c70f5d0da71159451714e2052718c5d5371a233d471b0f76971b74d3371c1705571caa6e071d77b6d71f3c98272080d197230c881723ae3a47255f456729d749c72ea4e7372f6dba97303e01a7316a3be7335f621734459e77379d2327381668e7382de927386f0ee738f7208739f9b3973b580f573bda83073df88937466230774c5de3074c929e374efb71e74fc08dc752e6169754beef4757a85e27591a10175b3584b75b587357667afe976714ae376a5824c76c3084176d41a6076dbfabe77313d0b774af68a775d4a3a77878c81779f1f7877dccf8178350c24787811fa78fa41367909144a790cb5eb790d446b79346b5b7936876c7940aeac79705672797ae1d0797debcb79a8fd307a2114f97a449fb27a4ef25f7a5e80007a6850d77a6c7adf7a74e9a17a7901917aa466c47aab52bf7acd81c87ae496187ae855ab7afc7ae47b363c9e7b50d2a87b69ea827b7b81837b9b33407bac21777bc3e16f7bd86ad87bff0e597c2657e07ca1df2c7ca25bc97cb5e7857ce4016a7d22926d7d362dfd7d468fd17d4a3b907d7b36457da323bd7da5da5b7dbfa1aa7dcc2c037dcc9b857de6cf5b7dfeb4647e1811fb7e33d7d47e449f447e48ac967e65bb3a7e67e5477e68fb147e78c63d7e88937a7e96897f7eb8efdb7eb998d67f146fde7f1563fc7f18c3457f5273aa7f7297a97fa7085b7fd50e267ff19f457ff8fd3d8003f6628018aff8801f69e38021440a8044c18d804799d18092269280acf31880c3908180c8e56580dc5917813e4aa08183781d819a293381d2f3e1821101a082129e4382347cfa824f5c54825160bf826f9900829399ce82a9073d82c0285582e0545282f75834835cf62b835f352d83721d3c83764e2c83796887838b41cb83908ef683a435b883b0a76283da6d468403783c841398e1842f9e1f844ba2af8450e3de84546a258463a40984b30f3084b3429e84c5252984eadc3d853a7bd4854b38808561b7338572886c8574b4ba8594c3ba85d149b085d474a385d7f5888641f203864c705086688d02868d900b869dfbb986c5544d8742c866874bc1d687561e538769bda287a3094487ae6d3a87ccd52c8819ce40884980ee886453a388648b9e8896345788a7fbc488be8dbc88fed7be893fc31b894da7f38951456a89e4a6d28a1eb8008a48383a8a6f9cf78a79debc8a81fe6f8a8349438a83bfa78ac2e11e8b0056ab8b1d62868b5b79d78b66aae78b74aac48b9241098bb3d78a8bb8f1488bb9e4c38bbf6ad18bc81ee08be9c4778c18a2258c3310ac8c38faa38c6c295b8cd4f0598cdeae488cfa3d328cfcb6948d0161528d07f70c8d1663538d2fab308d3d003e8d5be7458d6353c58d6db5b98d7260fe8d82cca48db2b2a48de361968dfceef48e0e32238e6273088e68c6148e8a4a598e8c9eab8e8d64878e95510e8ec2d9218ecbe0fe8ed5b01a8edf04438ef73dd18f5f8d9e8f7971958f7aa0418f99e15b8fa0e7958fa18dd99025b2299039ffd99042bfb8904f82bc905c236f906e3b7e908ca77c9093dcc790a0518090a25f2390a92be390d4da6590d5728d90f1a2fb91385ef7913a6ecc917d46419188196691933bf591abfd2491f8ffbc91fda001921a5bd592255ab492339b04927368ce9274291d92742cbb929ad43e92ab3e1992bcd3d592fd0cf19346a40f934e1433935a031c9391337a939eef9493ab9a2793abce3093e32e8093f1fb2c943f90cd9467f3f2947ec4c994814c1294893676949476f494e657da95765ec8957fcf299595ab3d95b0b91995c7b8e59616e737965255f1968a02219695a5e796c9284a96cbbe9697038069972640ad975bf9ce97616f0d976397b997838da197adf8c197d0897097fda2e7980831b9981e9fa198415bff9848026e984e45ac9879ea0d9883328a9891bf9a9938c7499957ac25997f2579998a8b4a999bf09499afcd4299b2ec059a04367f9a1008509a3c96fd9a9a42b49a9d64fe9aa392e49aa84c429ad44db69aef5ba89b2468299b75f8129b86cb819bb9a7139bce9d739befd9919c486fe39c5118589c641d8e9ca56c099cabadc09cae9ffc9cc9ed279ccc43e59ce8b6a59cfcc0d49cfd42709d1beb6b9d23484e9d33c6049d48687c9d7066fd9da0ce6e9daa50c59df03ba99e0bfd989e304fe59e4c31169e8a15c89e8a3f649ebc4ef99ee79d0b9ee9086d9efc68499f4692809f79d3229fc47ddd9fd42219a02646c4a044c991a05d2a92a05de458a08b9167a0a4e4d4a0a7bf1ea0ba3a1da0bb1282a0be1ddea0c82071a0e6537fa1188257a16c2c96a16cafb1a187d991a1a62fdca1a651fda1b27834a1da5de3a1ece5e5a1f0534ea21ab982a2233549a2276d3ca24660a1a2543160a2587940a26fa144a281b84ba2ab1cf4a2c46766a2c5d864a2d26f2ea2f943d9a3084420a32b8fa5a38230b7a38fc572a3b2e683a3b5ee5da3fe2b88a41a3091a4237b30a4388be8a44f41eca4697268a4ac6b9da4dd8728a4e0f543a4e11edba4f6560ea50e00f8a52b15a5a546a099a5751f31a57c1e1ea59c4bafa5d68113a5e5e63ba5f84f75a60a9617a63f091fa656953fa66579eca6763e85a6a8376ba6af4907a6c0e460a6da4f8ca6e17528a6fa89bca6fb948ba707b5a7a7248c8ea7347e60a73c82eda7579cd1a761384ba770989aa7cf2abaa7d98752a7e05c16a8087a69a809fa8aa8555b01a85f533fa861cca8a86ee955a87039b6a87438caa8a89d5fa8dd4346a8f6bfa5a91f6a5ba929076da9778d12a97aae3ba98e2d4ba99e9b66a9aa9e77a9b1be05a9b2e513a9d486c3a9ee3bb8a9f1cd81a9f38854a9f84ee5aa7b6eb6aa9c40ebaab1039caad49493ab07ba3cab14564aab2c8ae4ab591c29ab5df748ab93c2b1abac98a6abfb3fc7abff6ed2ac2c8846ac545448ac5b1182ac5cfe7fac6efa47ac72cbc5ac73f1c4accb2ffbacea2063acf459a9acf6beeeacfef1a4ad19b63aad1b452ead641455ad88e1ddadd00db4addecff7ae14f48bae2be5c6ae6afc72aeb24c95af1e4e2baf479b34af75ea94af971f3eafa8a30cafceed34afe99dfbafea0954b00fa7dbb02b62bab045b1f6b05f0240b0b47ccab0d8abf4b0e78e74b0ea9b25b0ef6f88b0f169bab0ff05a9b1097590b1216987b1654180b1738f8fb17ac81fb18d2fa8b1b347eab1bbdb62b1c80c56b1e1729db24a4cc6b24f92c7b25fe132b26be0d8b26ce4aeb29183e4b2de3c06b2f5a4c6b3191d89b327c669b33e7e54b34d6e8eb37252e0b3df5f16b409fbb9b4136c77b4387159b43fd89bb442e86eb4a2cf13b4b51cf0b55f2a16b55fcd31b56aa132b575a8b1b5984e5db59b3cccb5a69e50b5b04daeb5e0183eb5f80430b60cff51b61283a7b622471eb62983e9b6352100b66e5554b67d8246b6809a53b6d94eafb6ec5233b6ed86abb70b7c28b71504f5b721b6cbb74253fab7532d31b75c515eb7625dfeb77b8f5bb7c50611b7da93d7b80231a1b81b0338b820f8aab8a1a9bbb8ae39d5b8f85077b92291b0b936d49fb94c7204b960cd92b98f230bb9e4f3a2ba463102ba5453c8ba58e2adba6b3d03ba7b39cdba8912f6baab8255bacd64e0bad60ecebb186d00bb2e2bb5bb8aabe4bb9038c6bbdd00fabbdd4553bbfde432bc0b7f0cbc17918dbc2cee35bc3881c0bc4f3747bc60f0d6bc73b3b9bc82f035bcb4f46bbcca6c6bbce7b207bd0b0af4bd189bbfbd3e935cbd46f053bd6163c4bd969d75bdbf54c8bdf0e14dbdf7827abe14b14bbe370977be6e957fbeacdde2bed5df9fbedd5235bedf9e2ebef3abb2befa8652bf07cdf1bf0c530bbf12db94bf20f306bf23d431bf360091bf3cf1d3bfd4592cbfdc5b2bbfe26e76c009552bc0256070c03e41d5c0a3786cc0af67a2c0daff0fc0eb5f14c116643dc139e82bc13e7a4dc14be551c1b83333c1d3cbe5c1e554b5c1f847a8c21de44dc22d617ac24095adc2632793c2664173c26729e6c28dc2a9c2c20f4bc366adbbc383b275c3e96519c4094ae8c4116156c418e9cbc459e9d2c478be68c4958bd4c4b91ee9c4c7d076c4d1a436c4e6968bc4fcaccbc514021cc5178523c51e39aec52f99f1c5322905c54360c3c55e93ccc57d7aacc586b173c58b11b4c5b7d181c5bdfd2fc5cf1f6ec5cfe4b0c5d28f65c5dbd5eac5e1d78bc5fc95afc6126ae9c61d2c5fc64dc930c64fe051c66b1fe8c67be3c1c6ac78bcc6adeaa2c6f745b0c6f8d58fc736841ec745bd7bc759fe76c75de556c77d719ec79b793cc7c30ba2c7ce3775c80d4563c83651b9c8378025c85ea149c86b96f5c86df1abc87e02b7c87f161ec8af33f4c8cdc919c8f545a4c8ffaae0c9060fc6c9131e26c929e5aac9309a23c96336cec990096ec996104ec997b0dec9b7a93cc9bf28f0c9ff6ee5ca50644bca74de74ca764d7eca785a10ca911be4ca941436cac2aa58cac80900cb1bdad0cb2e4f10cb30f387cb3f0b23cb6603e0cb6ce308cb705cf2cb7ab82ccb895b27cbbd708dcbc60286cbcc60edcc174c6acc1b2cc8cc2d96cbcc3e665dcc47a567cc535d18cc787088cc9fc9feccb75d69ccb9b434cce262f3cd1e7660cd2179bdcd2219b9cd43df6fcd530cf7cd7f1124cd987ff6cd9f64fccdbec7dfcde41e25ce25b35bce27b415ce2990fdce2a7728ce317604ce38bb4ace4cecacce4cfdbbce510151ce7e77c2ce7e7c38ce84d9ecce8b5500cee03c28cf0d5a45cf271573cf534b92cf5c9c04cf5dad61cf60526dcfc94f0dcfd0ff32cfdc47d3cfeb8498d0267504d0451b1dd058abe2d0a2d2a1d0b0c1c2d0de46b2d0e06196d0e26c2ed0eeda24d0fdb49bd12a7ea7d13d8d05d1629231d1755b04d19b7191d19ea0fcd1b6e1ded1bff6cad1c1c0cbd1dd335cd1fddba6d210901ed216b720d23e5ef0d25ab069d27e650fd281b193d2ab04a8d2b27991d2d1b365d2dd5b96d2e4d208d30ed06cd30f5093d32b91b3d33191ded357277cd375d174d37fd2b6d3907e3ed3a09b35d3a2c13bd3a90e04d3b383cdd3c3f3a9d3d422dbd3d9b85fd3e55479d3ea4635d40945f3d4108a50d4673344d47c95b4d4883f32d4b2c2b9d4cb0b1ad50bc982d510dae4d5137c6ed5154f5fd54d30f0d565338bd5ab2e39d5bb2769d5c59886d5d48735d60a40ebd624918cd62a4ae4d632fd95d6719abdd675d8b8d68ce48ad692f5e7d6f33319d743b0c4d74a94dad7609c16d76734bdd76c8ffed771a7ffd778765bd7d11f5ad8143819d84ea1aad852f4d3d8c4445cd8cfc52ad8e89381d8e9b30bd943e96ad977712fd97e358bd97ee5a7d9d104afd9e0e457d9f9a132da0b9eb1da13bdefda163aafda1daabfda21c7ddda27c34eda452435da56af3fda80f3b0dab0640bdad36006dad72cbcdb02e7b6db343e92db36c0fbdb42dfb6db4bc70edb67a66bdb697179db7f1b18db863ae9db87f4ecdbae0753dbb39ad2dbd12307dbf0d12ddc67a95fdc6b9c8ddc919f8cdc98cd69dcae8496dcdb0c9ddcfc6d91dd0796b6dd0c96fddd1b492ddd29e42cdd4d9c95ddf5553fddfbf2c1de058439de0d5519de1dee1bde254aa6de2a2fbcde2ea1acde30b2bade65006fde7aece7dea73c96dea784b0deaa5360deb12cc2ded7bbd9deed555fdef2d5c4def515a0df48e19adf5832bddf5bc1e9df5f1e72df64b81ddfa47a67dfdb50cce001e6fbe02514cbe02febe3e0489f34e0537ef6e072f073e07b0304e0ae3b2ce0c3988de10a9570e11d6d82e128b596e13b47f3e1525006e1b31197e1b393d4e1d3aa77e1d7aecae1d81379e237d413e242d13ce27b57d7e2920835e2a49f63e2c2598de2e62914e2e98cade2f11a6be3308b00e33ece24e38953cfe39afc66e3d192eee40c9bb3e40e5b4de4236a3be42b0a6ae43506c3e43759bae44dde01e49544c5e4c6623de4d19861e4d7833ee4e1c68be4e2651fe4f4cbaee518aea6e51ca01ee546d4cfe555b2b7e56d6e3fe58836c8e59509e3e5cec756e5d5d07ee61f3fa3e63077dbe633295be6465406e66271fee689c821e697d119e6a1b01de6a59faee6b48516e6daf854e7039055e72d4f34e753cbf5e76f2cdde76f8498e781bf92e7c6ec6ae7d3c58ce7dbdb6de7ebb24be7eed183e815da0ce81baa0ee820a361e8b24d35e8c10407e8c57e13e915e1dee91b21f4e952c363e957878ce999e092e9b820bae9d4d588ea29a6c3ea8c8adfeaa91142eb18a893eb378e8deb4d9c7deb5626eceb8497e1eb87de5aeb8af4c0ec058572ec3e290dec55df28ec561223ec619549ec7a77a8ec89fd5feccb4983ed3153aeed325cb9ed495351ed667c04ed6f6943ed752ccbed8fdf21ed94944ceda85a3dedd223d9ede0f224ee09b325ee268ce8ee276465ee4b7b97ee93c2d1eeac87a7eeb80919eebb0275eed4984beee1a442ef08e2bdef135851ef181fb1ef1c67bbef3ca025ef4db6b4ef68a56def74c102ef8bd936ef96b1f3efac9032efd3f704eff72278f0289d44f029556df03489f5f04b2babf04daa37f0a2464af0ab88bcf0ce5569f0f97433f120e985f12ad58cf14353adf14cfd54f1507f94f19ffb42f1a4263ef1c61cc7f1d0c0e4f1ee0c00f2075c51f23590e8f27557d4f2a5cbb0f2aa1a05f2ad61fcf2d9fdb0f2dd2d67f2e9468ef362ed89f39c88d5f3bf6eedf3d8b5e3f3e339e0f4b7bc3df4cda861f4d8b977f4de64a6f5009915f506d17ff535300bf55a482cf56dd5f6f57638e1f57c108ff5a3c65cf5d9712ff5e25843f5ee9ab8f61f29a6f6326060f6446adff649f29ff6555cd5f65dcf32f67d359ff6855fd1f68b6c9df6b21ab4f6f00b58f710ad9df7176c4ef71ecfa7f7741acdf79e7a66f79fdfd6f7a5df56f7a77aa0f7e4d00ff7f8ad44f80fbccaf8135c73f8422189f86a5804f86e332ff8731387f87dbf69f8ba074df92c6de8f94aaaedf94e541cf976073df97911edf9929325f9b653f6f9c8ff11f9e5916ffa091197fa2fb0b3fa6a2e43fa6e7013fa9323a4fab6202dfabb3339fabe96b0fac9b658faece505fb042e4cfb16cc38fb3b0286fb81464bfb81d512fbe572cefbfb3d76fc09bb91fc11a7aefc13b56bfc2604e9fc274e98fc38ae89fc502017fc54f4eefc58d892fc6154d3fc6fa40ffc8b54b9fca84b3ffcb92252fcec5ca3fd20b76ffd30b1fbfd505066fd609794fd66e068fd71288bfdd81ad4fe1e8794fe3252f2fe5f9d0ffea78e8efec2eb66fec3c5c8fed49c5afedecde3ff1a5274ff3e4597ff499fbbff4e72f7ff8c6d17ff950b73ff9a14a0ffb1abc1ffd9d656';
+  const tem680 = new Set(tit.map(h8_680)); const base680 = BASE680.match(/.{8}/g);
+  igual([base680.length, new Set(base680).size, base680.filter((h) => !tem680.has(h)).length, tit.length >= 2328], [2328, 2328, 0, true], 'os 2.328 títulos do 788fb9e, um por um');
+  igual((me.match(/\/\/ 6\.80 \(AC[0-9.]+(?:, AC[0-9.]+)*\): /g) || []).length, 6, 'os seis comentários');
+});
+provaAsync('6.80 P36 (AC9) — a Linha do tempo traduz «prevencao-serie-nova-corrigida»; os textos novos escapados, sem emoji e sem as palavras proibidas; nenhuma permissão muda', async () => {
+  igual(run("acaoNome('prevencao-serie-nova-corrigida')"), 'Corrigiu o vermífugo na ficha: 1ª dose da série nova');
+  run(`__ple680=PREV_LANCE_ESTADO; PREV_LANCE_ESTADO={'x|verm_dose2_p':{passo:'salvo', ts:Date.now(), frase:'<b>A & B</b>'}};`);
+  try { assert.ok(run("prevLanceEstadoHTML('x', 'verm_dose2_p')").indexOf('&lt;b&gt;A &amp; B&lt;/b&gt;') > 0); } finally { run('PREV_LANCE_ESTADO=__ple680;'); }
+  const NOVAS = ['vermSerieVenceu', 'vermSerieNovaPatch', 'vermFichaForaDaSerie', 'vermSerieNovaFrase', 'prevVermLinha2Acompanha', 'prevValeDigitado', 'pbToqueAnotar', 'pbToqueSalvarAgora',
+    'pbToqueJaSalvou', 'pbVermIncoerente', 'vermSerieNovaCorrigir', 'vermSerieNovaToque', 'vermSerieNovaAudit', 'vermBlocoRascunho', 'vermSerieAntesHTML', 'vermSerieDepoisHTML',
+    'pelPrevAssinatura', 'pelPrevVistoMarcar', 'pelAlertasPrevRedesenhar', 'pelFichaPrevOuvinte', 'hojeOuvinteCadastro', 'hojeTextoMexido', 'vermSerieAntesContaHTML'];
+  const txt = NOVAS.map((n) => String(run('String(' + n + ')'))).join('\n');
+  igual([/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u.test(txt), /\b(cachorro|cão|cães|bicho|dono|donos|funcionári[oa]s?)\b|\banimal/i.test(txt), /Zeluz|Zéluz/.test(txt)], [false, false, false]);
+  igual([run("JSON.stringify(PERM['editar-peludinho'])"), run("JSON.stringify(PERM['prevencao-lancar-na-tela'])")], ['["gestao","supervisor","diretoria","consultora"]', '["gestao","diretoria","supervisor","consultora"]']);
+  igual(NOVAS.filter((n) => /^(ck|pt)/.test(n)), []);
+});
+provaAsync('6.80 P37 (AC10) — as contas do vermífugo usam o dia do aparelho (zHojeISO): em cada fuso do processo, às 19:30 e às 21:30 de Brasília, o «hoje» é o dia local e o «Feito hoje» grava esse dia; nenhuma função nova lê o UTC por conta própria', async () => {
+  for (const [hora, ms] of INST680) {
+    await com680(ROMEO680, ms, null, async () => {
+      igual(run('zHojeISO()'), dia680(ms), hora);
+      painel680('verm_p', 'hoje', 'venc'); await espera657();
+      igual(db680().verm_t, dia680(ms));
+    });
+  }
+  igual([dia680(I1930_680) === '2026-10-11', ['2026-10-11', '2026-10-12'].indexOf(dia680(I2130_680)) >= 0], [true, true]);
+  const txt = ['vermSerieVenceu', 'vermSerieNovaPatch', 'vermFichaForaDaSerie', 'vermSerieNovaFrase', 'prevValeDigitado', 'vermBlocoRascunho', 'vermSerieDepoisHTML', 'vermSerieAntesContaHTML']
+    .filter((n) => run('typeof ' + n) === 'function').map((n) => String(run('String(' + n + ')'))).join('\n');
+  igual(/getUTC|toISOString|Date\.UTC/.test(txt), false);
+});
+provaAsync('6.80 P38 (AC2.5, AC12) — vermDose2Prevista, vermDose2Data e as telas da Fora (prevFaltasDe, prevPendencias, alertaPrevencao, urgenciasGestao) continuam listando a 2ª da série vencida, como a base; a 6.65 R2 P26 (a 2ª no mesmo dia da 1ª na ficha e no «Lance») passa como está', async () => {
+  igual([run(`vermDose2Prevista(${JSON.stringify(ROMEO680)})`), run(`vermDose2Data(${JSON.stringify(ROMEO680)})`)], ['2026-06-13', '2026-06-13']);
+  await com680(ROMEO680, I1930_680, null, async () => {
+    igual(J630(`prevPendencias(pelExtra(__r680), 'antip').venc.map(function(x){ return x.nome; })`), ['Vermífugo — 2ª dose']);
+  });
+  igual(falhas.filter((f) => /^6\.65 R2 P26 /.test(f)), []);
+});
+// ---------------------------------------------------------------- o fechamento dos CONCERNS do QA (12/out/2026)
+provaAsync('6.80 P39 (UX-001 do QA) — a Hoje na Zêluz de outro aparelho não redesenha com uma mensagem mexida (textarea.gest-txt com o texto diferente do de fábrica): espera; tenta de novo quando a Consultora sai do campo e na próxima mudança do cadastro, e redesenha quando nenhum texto está mexido', async () => {
+  await com680(ROMEO680, I1930_680, PAPEIS680[1], async () => {
+    run(`__hj680=0; hojeRedesenhar=function(){ __hj680++; }; __blur680=null;
+      __ta680={value:'Olá (a Bia mexeu)', defaultValue:'Olá', addEventListener:function(ev, fn){ if(ev==='blur') __blur680=fn; }};
+      __ta680b={value:'Oi', defaultValue:'Oi'};
+      __el657['v-hoje']={classList:{contains:function(c){ return c==='active'; }}, contains:function(){ return false; },
+        querySelectorAll:function(s){ return s==='textarea.gest-txt'?[__ta680b, __ta680]:[]; }}; __tm657=[];`);
+    run(`hojeOuvinteCadastro(); __tm657[0].fn();`);
+    igual([run('__hj680'), run('typeof __blur680')], [0, 'function'], 'com o texto mexido, não redesenha (e espera a saída do campo)');
+    run(`__tm657=[]; hojeOuvinteCadastro(); __tm657[0].fn();`);
+    igual(run('__hj680'), 0, 'a mudança seguinte, com o texto ainda mexido, também não');
+    run(`__tm657=[]; __blur680(); __tm657[0].fn();`);
+    igual(run('__hj680'), 0, 'saiu do campo com o texto ainda mexido: continua esperando');
+    run(`__ta680.value=__ta680.defaultValue; __tm657=[]; hojeOuvinteCadastro(); __tm657[0].fn();`);
+    igual(run('__hj680'), 1, 'sem texto mexido, a próxima mudança redesenha');
+    run(`__ta680.value='mexeu de novo'; __ta680.__hoje680Espera=false; __blur680=null; __tm657=[]; hojeOuvinteCadastro(); __tm657[0].fn();
+      __ta680.value=__ta680.defaultValue; __tm657=[]; __blur680(); __tm657[0].fn();`);
+    igual(run('__hj680'), 2, 'saiu do campo com o texto de volta ao de fábrica: redesenha');
+  });
+  const src = fs.readFileSync(APP, 'utf8'), i = src.indexOf('  function hojeOuvinteCadastro('), j = src.indexOf('\n  }\n', i);
+  assert.ok(/if\(hojeTextoMexido\(sec\)\) return;/.test(src.slice(i, j)), 'o ouvinte da Hoje na Zêluz confere o texto mexido');
+});
+provaAsync('6.80 P40 (REQ-001 do QA) — o aviso do caso «antes» diz, antes do toque, o próximo que o botão grava (pela conta) e, com o «Vence em» digitado à mão, que essa data sai; o «Salvar» continua respeitando o à mão e o botão continua gravando a conta (AC3.2, AC4.4)', async () => {
+  for (const pp of PAPEIS680) {
+    await com680(Object.assign({}, ROMEOH680, { verm_p: '2027-01-15', verm_p_manual: true }), I1930_680, pp, async () => {
+      const t = txt680(bloco680());
+      assert.ok(t.indexOf('A 2ª dose de 13/06/2026 é da série anterior: sai quando você salvar. Com o botão, o próximo vermífugo passa a ser 01/03/2027, pela conta; a data digitada à mão (15/01/2027) sai. Corrigir: é a 1ª dose da série nova') >= 0, t);
+      run('vermSerieNovaCorrigir();'); await espera657();
+      igual(pega680(db680(), V680.concat(['verm_p_manual'])), ['2026-10-11', '', '2026-11-01', '2027-03-01', ''], 'o botão grava o que o aviso disse');
+    });
+    await com680(ROMEOH680, I1930_680, pp, async () => {
+      const t = txt680(bloco680());
+      assert.ok(t.indexOf('sai quando você salvar. Com o botão, o próximo vermífugo passa a ser 01/03/2027, pela conta. Corrigir') >= 0 && t.indexOf('digitada à mão') < 0, t);
+    });
+    await com680(Object.assign({}, ROMEOH680, { verm_dose2_dias: 15 }), I1930_680, pp, async () => {
+      assert.ok(txt680(bloco680()).indexOf('o próximo vermífugo passa a ser 23/02/2027, pela conta.') >= 0, '15 dias');
+    });
+  }
+  await com680(Object.assign({}, ROMEOH680, { verm_p: '2027-01-15', verm_p_manual: true }), I1930_680, ['vet', 'Vera Veterinária Teste'], async () => {
+    const t = txt680(bloco680());
+    assert.ok(t.indexOf('sai quando você salvar.') >= 0 && t.indexOf('Com o botão') < 0 && t.indexOf('Corrigir: é a 1ª dose') < 0, 'quem só vê: a frase, sem o botão e sem a frase do botão');
+  });
+  await com680(Object.assign({}, ROMEOH680, { verm_p: '2027-01-15', verm_p_manual: true }), I1930_680, null, async () => {
+    run(`pbSalvar('verm');`); await espera657();
+    igual(pega680(db680(), V680.concat(['verm_p_manual'])), ['2026-10-11', '', '2026-11-01', '2027-01-15', true], 'o «Salvar» mantém o à mão');
+  });
+});
+provaAsync('6.80 P41 (UX-002 do QA) — um toque NOVO no «Salvar» zera a marca «já salvou» daquele bloco: depois de o change ter salvado (o clique perdido), o «Salvar» deliberado logo em seguida grava; o clique do MESMO toque continua ignorado; o duplo toque não grava duas vezes', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'});`); await espera657();
+    igual(esc680().length, 1, 'o change salvou (o clique do toque se perdeu)');
+    toque680(null); run(`pbSet('verm',{verm_nome:'Drontal Plus'});`);
+    relogio658(I1930_680 + 900); toque680('verm'); run(`pbSalvar('verm');`); await espera657();
+    igual([esc680().length, J630('PB_PEND.verm || null'), db680().verm_nome], [2, null, 'Drontal Plus'], 'o «Salvar» deliberado, 0,9 s depois, grava');
+  });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'});`); run(`pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1, 'o clique do mesmo toque (antes de qualquer toque novo) é ignorado');
+    toque680('verm'); run(`pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1, 'o 2º toque (duplo toque) acha o rascunho já gravado: não grava de novo');
+  });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`__pendura657='^daycare/cadastro/'; __pend657=[];`);
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'}); pbSalvar('verm');`); await espera657();
+    toque680('verm'); run(`pbSalvar('verm');`); await espera657();
+    igual(J630('__pend657.length'), 1, 'com a 1ª gravação ainda no ar, o 2º toque não abre outra');
+    run(`__pend657.forEach(function(x){ x.ok(); }); __pend657=[]; __pendura657=null;`); await espera657();
+    igual([esc680().length, db680().verm_nome], [1, 'Milbemax'], 'uma gravação só');
+  });
+});
+// ---------------------------------------------------------------- 6.80 QA — as provas do QA independente (Quinn, 12/out/2026), trazidas no fechamento dos CONCERNS
+// Os títulos «QA680-nn» viraram «6.80 QA nn»; três mudaram com os CONCERNS fechados: a 06 (UX-002: o «Salvar» novo depois do salvar
+// pelo change grava), a 08 (REQ-001: a tela diz, antes do toque, o que o botão grava) e a 10 (o texto de fábrica conferido pelo sha da base).
+console.log('\n6.80 QA — as provas do QA independente (Quinn, 12/out/2026)');
+const norm680 = (a) => a.map((v) => (v === '∅' ? '' : v));
+const fichasQA680 = {
+  A: ROMEO680,                                                                                       // vence hoje (11/10)
+  B: { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-20', verm_2a: '2026-06-10', verm_p: '2026-10-08' },   // vencida em 08/10
+  C: { verm_nome: 'Drontal', verm_doses: '2 doses', verm_dose2_dias: 15, verm_t: '2026-05-23', verm_2a: '2026-06-07', verm_p: '2026-10-05' },  // 15 dias, vencida em 05/10
+  D: { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-23', verm_dose2_t: '2026-01-10', verm_2a: '2026-06-13', verm_p: '2026-10-11' }, // 2ª de outra série antes da 1ª, vencida
+};
+const nQA680 = (F) => (F.verm_dose2_dias === 15 ? 15 : 21);
+// as entradas: [nome, função(dia)] — cada uma grava a dose do dia
+const entradasQA680 = [
+  ['painel-2a-venc-feito-hoje', () => painel680('verm_dose2_p', 'hoje', 'venc')],
+  ['painel-2a-hoje-feito-em', (dia) => painel680('verm_dose2_p', dia, 'hoje')],
+  ['painel-2a-prev-feito-hoje', () => painel680('verm_dose2_p', 'hoje', 'prev')],
+  ['painel-2a-resumo', () => painel680('verm_dose2_p', 'hoje', 'venc', 'resumo')],
+  ['painel-proximo-venc', () => painel680('verm_p', 'hoje', 'venc')],
+  ['painel-proximo-hoje', () => painel680('verm_p', 'hoje', 'hoje')],
+  ['lance-linha-2a', (dia) => lance680('verm_dose2_p', dia)],
+  ['lance-linha-1a', (dia) => lance680('verm_p', dia)],
+  ['ficha-1a-dose', (dia) => run(`pbSet('verm',{verm_t:'${dia}'}); pbSalvar('verm');`)],
+];
+provaAsync('6.80 QA 01 — matriz: 4 fichas de série vencida (vence hoje, vencida 08/10, 15 dias vencida 05/10, 2ª de outra série antes da 1ª) × 9 entradas (4 do chip da 2ª, 2 do chip do próximo, as 2 linhas do «Lance» e a ficha) × 19:30/21:30 × Gestão/Consultora: sempre a série nova pelo dia local, 1 gravação só, sem o intervalo, e em dia+16 o cartão traz só a 2ª da série nova', async () => {
+  let casos = 0;
+  await todos680(async (hora, ms, pp, dia) => {
+    for (const [fk, F] of Object.entries(fichasQA680)) {
+      for (const [en, fn] of entradasQA680) {
+        await com680(F, ms, pp, async () => {
+          fn(dia); await espera657();
+          const d = db680(), n = nQA680(F), quer = quer680(nova680(dia, n));
+          igual(norm680(pega680(d)), quer, [hora, pp[0], fk, en, dia].join(' '));
+          const e = esc680();
+          igual(e.length, 1, 'uma gravação só ' + [fk, en].join(' '));
+          assert.ok(e[0][2].indexOf('verm_dose2_dias') < 0 && e[0][2].indexOf('verm_doses') < 0, 'sem o intervalo e sem o esquema: ' + JSON.stringify(e[0][2]));
+          igual(za680(), [], 'nenhum aviso de recusa ' + [fk, en].join(' '));
+          // AC2.4: no dia-alvo dia+16, o cartão traz «2ª dose — vence em» a 2ª da série nova e nada da série velha
+          const alvo = mais680(dia, 16);
+          igual(J630(`vencItensDe(pelExtra(__r680), '${alvo}', 7, '${alvo}').map(function(x){ return [x.k, x.vence]; })`), [['verm_dose2_p', quer[2]]], 'dia+16 ' + [fk, en].join(' '));
+          casos++;
+        });
+      }
+    }
+  });
+  igual(casos, 2 * 2 * 4 * 9);
+});
+provaAsync('6.80 QA 02 — o «Desfazer» do «Atualizados hoje» volta a série vencida inteira (os 4 campos, a 2ª que não existia continua não existindo), pelo painel e pelo «Lance»', async () => {
+  for (const en of ['painel', 'lance']) {
+    await com680(ROMEO680, I1930_680, null, async () => {
+      run(`PREV_CORR={}; PREV_CORR_DIA='';`);   // o «Atualizados hoje» das provas anteriores (mesmo dia) não entra na conta
+      if (en === 'painel') painel680('verm_dose2_p', 'hoje', 'venc'); else lance680('verm_dose2_p', run('zHojeISO()'));
+      await espera657();
+      const ids = J630('Object.keys(PREV_CORR||{})');
+      igual(ids.length, 1, en + ': uma linha no «Atualizados hoje»');
+      igual(J630(`PREV_CORR[${JSON.stringify(ids[0])}].k`), 'verm_p', 'a linha é do vermífugo (o próximo)');
+      ctx.__qid680 = ids[0];
+      run(`__qd680=null; prevCorrDesfazerGravar(__qid680, {por:'Gestora Teste', motivo:'teste do QA', ts:Date.now()}, 'venc').then(function(r){ __qd680=r; });`);
+      await espera657();
+      igual(J630('__qd680'), { ok: true }, en);
+      igual(pega680(db680()), ['2026-05-23', '∅', '2026-06-13', '2026-10-11'], en + ': a ficha volta como era');
+      igual(aud680('prevencao-desfeita').length, 1);
+    });
+  }
+});
+provaAsync('6.80 QA 03 — a ficha «H» (a versão antiga: 1ª 11/10, 2ª 13/06, próximo 11/10) nas portas: a lista traz só o próximo; o chip do próximo e o «Salvar» da linha do vermífugo no «Lance» (sem mexer) gravam a série certa; a linha da 2ª mostra o próximo pela conta; o chip velho da 2ª no mesmo dia é recusado', async () => {
+  for (const pp of PAPEIS680) {
+    await com680(ROMEOH680, I1930_680, pp, async () => {
+      igual(J630("vencItensDe(pelExtra(__r680), '2026-10-13', 7, '2026-10-11').map(function(x){ return x.k; })"), ['verm_p']);
+      painel680('verm_p', 'hoje', 'hoje'); await espera657();
+      igual(pega680(db680()), ['2026-10-11', '', '2026-11-01', '2027-03-01'], 'chip do próximo ' + pp[0]);
+    });
+    await com680(ROMEOH680, I1930_680, pp, async () => {
+      const h = lanceAbre680(), l2 = linha680(h, 'verm_dose2_p');
+      assert.ok(l2.indexOf('value=""') > 0 && /id="prevP_[^"]*_verm_dose2_p" value="2027-03-01"/.test(l2), 'a linha da 2ª: «Feito em» vazio e o próximo pela conta');
+      run(`prevLancar(__k680, 'verm_p');`); await espera657();
+      igual(pega680(db680()), ['2026-10-11', '', '2026-11-01', '2027-03-01'], 'Lance, «Salvar» sem mexer ' + pp[0]);
+    });
+    await com680(ROMEOH680, I1930_680, pp, async () => {
+      painel680('verm_dose2_p', 'hoje', 'venc'); await espera657();
+      igual(esc680(), [], 'o chip velho da 2ª no dia da 1ª: nada gravado');
+      igual(za680().map((z) => z[1][0]), ['A 2ª dose (11/10/2026) cairia no mesmo dia da 1ª.']);
+    });
+  }
+});
+provaAsync('6.80 QA 04 — a ficha que caiu no D1 (1ª 23/05, «2ª» 11/10, próximo 08/02/2027): nenhuma lista cobra; o «Salvar» sem mexer não grava (a ficha é coerente); o «Lance» mostra a 2ª dada; o conserto pela Consultora grava a série nova uma vez, e um 2º toque não grava de novo', async () => {
+  await com680(ROMEOD1680, I1930_680, PAPEIS680[1], async () => {
+    igual(J630("vencItensDe(pelExtra(__r680), '2026-10-13', 7, '2026-10-11').length"), 0);
+    run(`pbSalvar('verm');`); await espera657();
+    igual(esc680(), [], 'Salvar sem mexer');
+    const l2 = linha680(lanceAbre680(), 'verm_dose2_p');
+    assert.ok(/dada em 11\/10\/2026/.test(txt680(l2)), txt680(l2));
+    run('vermSerieNovaCorrigir();'); run('vermSerieNovaCorrigir();'); await espera657();
+    igual(pega680(db680()), ['2026-10-11', '', '2026-11-01', '2027-03-01']);
+    igual([esc680().length, aud680('prevencao-serie-nova-corrigida').length], [1, 1], 'um toque, uma gravação (o 2º toque não acha mais o aviso)');
+    run(`pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1, 'o Salvar logo depois não grava de novo');
+  });
+});
+provaAsync('6.80 QA 05 — a série COMPLETA (2ª registrada) e vencida: a «2ª» lançada por uma tela velha ou pela linha da 2ª do «Lance» segue a 6.65 P15 (grava a 2ª nova, mudança declarada pelo @dev); o aviso do conserto aparece quando a 2ª real foi no prazo; com a 2ª real adiantada, há uma janela sem aviso (registro)', async () => {
+  const COMPL = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-08', verm_dose2_t: '2026-05-29', verm_2a: '2026-05-29', verm_p: '2026-09-26' };
+  await com680(COMPL, I1930_680, null, async () => {
+    painel680('verm_dose2_p', 'hoje', 'prev'); await espera657();
+    igual(pega680(db680()), ['2026-05-08', '2026-10-11', '2026-10-11', '2027-02-08'], 'P15: a 2ª nova por cima da real');
+    igual(run('vermFichaForaDaSerie(pelExtra(__r680))'), 'depois', 'o aviso do conserto aparece');
+  });
+  await com680(COMPL, I1930_680, null, async () => {
+    lance680('verm_dose2_p', run('zHojeISO()')); await espera657();
+    igual(pega680(db680()), ['2026-05-08', '2026-10-11', '2026-10-11', '2027-02-08'], 'Lance: idem');
+  });
+  // 2ª real adiantada (20/05, prevista 29/05): a série venceu em 17/09; a «2ª» de 20/09 não cai no aviso (20/09 < 08/05+21+120 = 26/09)
+  const ADI = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-08', verm_dose2_t: '2026-05-20', verm_2a: '2026-05-20', verm_p: '2026-09-17' };
+  await com680(ADI, Date.UTC(2026, 8, 20, 15, 0), null, async () => {
+    painel680('verm_dose2_p', 'hoje', 'prev'); await espera657();
+    igual(pega680(db680()), ['2026-05-08', '2026-09-20', '2026-09-20', '2027-01-18']);
+    igual(run('vermFichaForaDaSerie(pelExtra(__r680))'), '', 'REGISTRO: sem aviso nesta janela');
+  });
+});
+provaAsync('6.80 QA 06 — a guarda do toque: o change de OUTRO bloco no mesmo toque salva só o bloco do «Salvar» tocado (o outro fica no rascunho); o «Salvar» que pergunta (atraso) abre UMA pergunta e grava só com a escolha; o toque no botão do conserto derruba a anotação; UX-002: depois do salvar pelo change, um «Salvar» novo (outro toque) dentro de 1,5 s grava', async () => {
+  await com680(Object.assign({}, ROMEO680, { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-09-01', ecto_p: '2026-11-30' }), I1930_680, null, async () => {
+    run(`pbSet('verm',{verm_nome:'Milbemax'});`);
+    toque680('verm');
+    run(`pbSet('ecto',{ecto_nome:'Bravecto 10-20'});`); await espera657();
+    const e = esc680();
+    igual(e.length, 1, 'uma gravação');
+    assert.ok(e[0][2].indexOf('verm_nome') >= 0 && e[0][2].indexOf('ecto_nome') < 0, JSON.stringify(e));
+    igual(J630('PB_PEND.ecto'), { ecto_nome: 'Bravecto 10-20' }, 'o carrapaticida continua no rascunho');
+    run(`pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1, 'o clique do mesmo toque não grava de novo');
+  });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_t:'2026-01-10'});`); run(`pbSalvar('verm');`); await espera657();
+    igual([esc680().length, J630('__ze657.length')], [0, 1], 'uma pergunta, nada gravado');
+    run(`__zeFn680[1].fn();`); await espera657();
+    igual(esc680().length, 1, 'gravou com a escolha');
+  });
+  await com680(ROMEOD1680, I1930_680, null, async () => {
+    toque680('verm');
+    run(`pbToqueAnotar({target:{closest:function(){ return null; }}});`);   // o pointerdown no «Corrigir: é a 1ª dose da série nova» (onclick não é pbSalvar)
+    igual(run('PB_TOQUE_SALVAR'), null);
+  });
+  await com680(ROMEO680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'});`); await espera657();
+    igual(esc680().length, 1, 'o change salvou (o clique se perdeu)');
+    toque680(null); run(`pbSet('verm',{verm_dose2_dias:15});`);
+    relogio658(I1930_680 + 900); toque680('verm'); run(`pbSalvar('verm');`); await espera657();
+    igual([esc680().length, J630('__ze657.map(function(z){ return z[0]; })')], [1, ['Vermífugo continua em atraso — confira a data.']], 'UX-002: o «Salvar» novo, 0,9 s depois, não é engolido (com 15 dias a série fica em atraso: ele pergunta)');
+    run(`__zeFn680[1].fn();`); await espera657();
+    igual([esc680().length, J630('PB_PEND.verm || null')], [2, null], 'UX-002: grava com a escolha');
+  });
+});
+provaAsync('6.80 QA 07 — duplo toque no «Salvar vermífugo» da ficha «H» sem mexer: uma gravação só (a cópia já é a coerente); e com o banco sem responder, o 2º toque também não grava de novo', async () => {
+  await com680(ROMEOH680, I1930_680, null, async () => {
+    run(`pbSalvar('verm'); pbSalvar('verm');`); await espera657();
+    igual(esc680().length, 1);
+  });
+  await com680(ROMEOH680, I1930_680, null, async () => {
+    run(`__pendura657='^daycare/cadastro/';`);
+    run(`pbSalvar('verm'); pbSalvar('verm');`); await espera657();
+    igual(J630('__pend657.length'), 1, 'uma gravação pendurada');
+    run(`__pend657.forEach(function(p){ p.ok(); }); __pendura657=null;`); await espera657();
+    igual(esc680().length, 1);
+  });
+});
+provaAsync('6.80 QA 08 — caso «antes» com o «Vence em» à mão: o «Salvar» respeita o à mão (AC4.4), o botão do conserto o derruba (AC3.2) — REQ-001: a tela, antes do toque, diz o que o botão grava (01/03/2027, pela conta) e que a data digitada à mão sai', async () => {
+  const F = Object.assign({}, ROMEOH680, { verm_p: '2027-01-15', verm_p_manual: true });
+  let salvar, botao, tela;
+  await com680(F, I1930_680, null, async () => {
+    tela = txt680(bloco680());
+    run(`pbSalvar('verm');`); await espera657();
+    salvar = pega680(db680(), V680.concat(['verm_p_manual']));
+  });
+  await com680(F, I1930_680, null, async () => {
+    run('vermSerieNovaCorrigir();'); await espera657();
+    botao = pega680(db680(), V680.concat(['verm_p_manual']));
+  });
+  igual(salvar, ['2026-10-11', '', '2026-11-01', '2027-01-15', true], 'Salvar: o à mão fica');
+  igual(botao, ['2026-10-11', '', '2026-11-01', '2027-03-01', ''], 'botão: o à mão cai');
+  assert.ok(tela.indexOf('sai quando você salvar. Com o botão, o próximo vermífugo passa a ser 01/03/2027, pela conta; a data digitada à mão (15/01/2027) sai. Corrigir: é a 1ª dose da série nova') >= 0, 'REQ-001: ' + tela);
+});
+provaAsync('6.80 QA 09 — a 2ª legítima atrasada (depois da prevista, antes do próximo) continua 2ª em todas as portas e não acende o aviso do conserto; o próximo 4 meses depois dela', async () => {
+  const F = Object.assign({ verm_nome: 'Drontal', verm_doses: '2 doses' }, { verm_t: '2026-09-01', verm_2a: '2026-09-22', verm_p: '2027-01-20' });
+  for (const en of ['painel', 'lance', 'ficha']) {
+    await com680(F, I1930_680, null, async () => {
+      const dia = run('zHojeISO()');
+      if (en === 'painel') painel680('verm_dose2_p', 'hoje', 'prev'); else if (en === 'lance') lance680('verm_dose2_p', dia); else run(`pbSet('verm',{verm_dose2_t:'${dia}'}); pbSalvar('verm');`);
+      await espera657();
+      igual(pega680(db680()), ['2026-09-01', dia, dia, mais680(dia, 120)], en);
+      igual(run('vermFichaForaDaSerie(pelExtra(__r680))'), '', en + ': sem aviso');
+    });
+  }
+});
+provaAsync('6.80 QA 10 — a mensagem pronta da Hoje na Zêluz (antecipar) e de Vencimentos para o Romeo: nenhuma fala da segunda dose; o texto de fábrica do vermífugo e o da 2ª dose (verm2) iguais aos da base', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run('__bkVC680q=VENC_CFG; VENC_CFG={};');
+    try {
+      const m = J630(`vencMensagens({nome:'Romeo', tutor:'Lia Teste', sexo:'M', itens:vencItensDe(pelExtra(__r680), '2026-10-11', 7, '2026-10-11')}, '2026-10-11', '2026-10-11').map(function(x){ return x.tipo+'|'+x.texto; })`);
+      assert.ok(m.length >= 1 && m.every((x) => !/segunda dose|2ª dose/i.test(x)), JSON.stringify(m));
+    } finally { run('VENC_CFG=__bkVC680q;'); }
+  });
+  const novo = fs.readFileSync(APP, 'utf8');
+  const tx = (s) => { const i = s.indexOf('var VENC_TXT_PADRAO='); return (i < 0) ? '' : s.slice(i, s.indexOf('\n  };', i)); };
+  // na base ca69bc8: 6765 caracteres, sha-256 3bffcf8dad829b2c (16 hex)
+  igual([tx(novo).length, require('crypto').createHash('sha256').update(tx(novo)).digest('hex').slice(0, 16)], [6765, '3bffcf8dad829b2c'], 'VENC_TXT_PADRAO letra por letra');
+});
+// ---------------------------------------------------------------- 6.80 QA C — do QA: o efeito dos defeitos plantados que a Fase 0 deixava passar
+console.log('\n6.80 QA C — o efeito dos defeitos que a Fase 0 deixava passar');
+provaAsync('6.80 QA C-q01 — a ficha «H» (próximo no dia da 1ª), chip velho da 2ª no dia da 1ª: recusado (AC1.4), nada gravado', async () => {
+  await com680(ROMEOH680, I1930_680, null, async () => {
+    painel680('verm_dose2_p', 'hoje', 'hoje'); await espera657();
+    igual(esc680(), []);
+  });
+});
+provaAsync('6.80 QA C-q03 — «2 doses» com a 1ª e SEM o próximo gravado: a 2ª no prazo é a 2ª (não vira série nova)', async () => {
+  await com680({ verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-09-20' }, I1930_680, null, async () => {
+    painel680('verm_dose2_p', 'hoje', 'prev'); await espera657();
+    igual(pega680(db680()), ['2026-09-20', '2026-10-11', '2026-10-11', '2027-02-08']);
+  });
+});
+provaAsync('6.80 QA C-q09 — a 2ª no MESMO dia da 1ª (aceita na ficha, 6.65 R2 P26): «Salvar» sem mexer não grava nada', async () => {
+  await com680({ verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-10-01', verm_dose2_t: '2026-10-01', verm_2a: '2026-10-01', verm_p: '2027-01-29' }, I1930_680, null, async () => {
+    run(`pbSalvar('verm');`); await espera657();
+    igual(esc680(), []);
+  });
+});
+provaAsync('6.80 QA C-q15 — «Lance»: a 1ª muda para o dia da 2ª já dada: a 2ª (igual à 1ª nova) continua na linha de baixo (AC6.1)', async () => {
+  await com680({ verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-09-20', verm_dose2_t: '2026-10-09', verm_2a: '2026-10-09', verm_p: '2027-02-06' }, I1930_680, null, async () => {
+    lanceAbre680();
+    run(`__el657['prevS_'+__k680+'_verm_dose2_p']={innerHTML:''}; __el657['prevT_'+__k680+'_verm_p'].value='2026-10-09'; prevRecalcular(__k680, 'verm_p');`);
+    igual(run(`__el657['prevT_'+__k680+'_verm_dose2_p'].value`), '2026-10-09');
+  });
+});
+provaAsync('6.80 QA C-q17 — «Lance» em DOSE ÚNICA: mudar a 1ª não põe «Próximo vermífugo» nem selo na linha da 2ª', async () => {
+  await com680({ verm_nome: 'Drontal', verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-09-29' }, I1930_680, null, async () => {
+    lanceAbre680();
+    run(`__el657['prevP_'+__k680+'_verm_dose2_p']={value:''}; __el657['prevS_'+__k680+'_verm_dose2_p']={innerHTML:''}; __el657['prevT_'+__k680+'_verm_p'].value=zHojeISO(); prevRecalcular(__k680, 'verm_p');`);
+    igual([run(`__el657['prevP_'+__k680+'_verm_dose2_p'].value`), run(`__el657['prevS_'+__k680+'_verm_dose2_p'].innerHTML`)], ['', '']);
+  });
+});
+provaAsync('6.80 QA C-q25 — «Lance», carrapaticida: o «Vale até» escrito à mão (depois do «Feito em») continua valendo (a mudança do D5 é só do vermífugo)', async () => {
+  await com680({ verm_nome: 'Drontal', verm_doses: 'Dose única', verm_t: '2026-09-01', verm_p: '2026-12-30', ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-07-01', ecto_p: '2026-09-29' }, I1930_680, null, async () => {
+    run(`__el657['prevCorrP_ed_'+__k680+'_ecto_p']={value:'Bravecto'};`);
+    lance680('ecto_p', run('zHojeISO()'), '2027-01-15'); await espera657();
+    igual(J630('__za657').length + J630('__ze657').length, 0, 'sem pergunta');
+    igual(db680().ecto_p, '2027-01-15');
+  });
+});
+provaAsync('6.80 QA C-q40 — ficha: a 2ª DIGITADA antes da 1ª fica à vista (o Salvar a recusa) e não vira «da série anterior»', async () => {
+  await com680({ verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-10-01', verm_2a: '2026-10-22', verm_p: '2027-02-19' }, I1930_680, null, async () => {
+    run(`PB_PEND={verm:{verm_dose2_t:'2026-09-20'}};`);
+    const h = bloco680();
+    assert.ok(!/vm-serie-antes/.test(h) && /value="2026-09-20" onchange="pbSet\('verm',\{verm_dose2_t:this\.value\}\)"/.test(h), txt680(h).slice(0, 400));
+  });
+});
+provaAsync('6.80 QA C-q44 — a Veterinária (só vê) na ficha da versão antiga: a frase aparece, o botão do conserto não', async () => {
+  await com680(ROMEOH680, I1930_680, ['vet', 'Vera Veterinária Teste'], async () => {
+    const h = bloco680();
+    assert.ok(/vm-serie-antes/.test(h) && h.indexOf('>Corrigir: é a 1ª dose da série nova</button>') < 0, txt680(h).slice(0, 300));
+  });
+});
+provaAsync('6.80 QA C-q50 — o conserto logo depois (0,5 s) de um «Salvar» feito pelo change no mesmo toque: o conserto grava', async () => {
+  await com680(ROMEOD1680, I1930_680, null, async () => {
+    toque680('verm'); run(`pbSet('verm',{verm_nome:'Milbemax'});`); await espera657();
+    igual(esc680().length, 1);
+    relogio658(I1930_680 + 500); run('vermSerieNovaCorrigir();'); await espera657();
+    igual([esc680().length, pega680(db680())], [2, ['2026-10-11', '', '2026-11-01', '2027-03-01']]);
+  });
+});
+provaAsync('6.80 QA C-q56 — a guarda do toque no «Salvar antiparasitário»: o change do carrapaticida no mesmo toque grava o carrapaticida (não o vermífugo)', async () => {
+  await com680(Object.assign({}, ROMEO680, { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-09-01', ecto_p: '2026-11-30' }), I1930_680, null, async () => {
+    toque680('ecto'); run(`pbSet('ecto',{ecto_nome:'Bravecto 10-20'});`); await espera657();
+    const e = esc680();
+    assert.ok(e.length === 1 && e[0][2].indexOf('ecto_nome') >= 0, JSON.stringify(e));
+  });
+});
+provaAsync('6.80 QA C-q58 — o aviso «Antiparasitários» lê o GRAVADO: um «Vence em» digitado no rascunho do vermífugo (sem salvar) não o põe «em dia»', async () => {
+  const F = { verm_doses: '2 doses', verm_t: '2026-05-20', verm_dose2_t: '2026-06-10', verm_2a: '2026-06-10', verm_p: '2026-10-08', ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-09-01', ecto_p: '2026-11-30' };
+  await com680(F, I1930_680, null, async () => {
+    run(`pbRender=__bk680.pr; __el657['pb-verm']={replaceWith:function(){}}; __el657['pelAlertaPrev_antip']={innerHTML:''};`);
+    run(`PB_PEND={verm:{verm_p:'2027-03-01', verm_p_manual:true}}; pbRender('verm');`);
+    assert.ok(/URGENTE/.test(run("__el657['pelAlertaPrev_antip'].innerHTML")), txt680(run("__el657['pelAlertaPrev_antip'].innerHTML")));
+  });
+});
+provaAsync('6.80 QA C-q60 — a ficha aberta: depois de um redesenho, a mudança de OUTRA ficha não redesenha de novo', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`__el657['pel-ficha']={style:{display:'block'}, contains:function(){ return false; }}; pelPrevVistoMarcar(__r680);`);
+    const muda = (k, o) => { ctx.__mk680 = k; ctx.__mo680 = o; run(`pelCadCache=Object.assign({}, pelCadCache); pelCadCache[__mk680]=Object.assign({}, pelCadCache[__mk680]||{}, __mo680); __telas680=[]; pelFichaPrevOuvinte();`); return telas680().length; };
+    assert.ok(muda(run('__k680'), { verm_nome: 'Milbemax' }) > 0, 'a própria ficha redesenha');
+    igual(muda('outro__x', { verm_nome: 'X' }), 0, 'a outra não');
+  });
+});
+provaAsync('6.80 QA C-q65 — a Hoje na Zêluz se redesenha com o foco num campo FORA dela', async () => {
+  await com680(ROMEO680, I1930_680, null, async () => {
+    run(`__hj680=0; hojeRedesenhar=function(){ __hj680++; }; __el657['v-hoje']={classList:{contains:function(c){ return c==='active'; }}, contains:function(){ return false; }}; __tm657=[];
+      document.activeElement={tagName:'INPUT'}; hojeOuvinteCadastro(); __tm657[0].fn(); delete document.activeElement;`);
+    igual(run('__hj680'), 1);
+  });
+});
+provaAsync('6.80 QA C-q67 — abrir a ficha marca o que foi desenhado (senão a 1ª mudança vinda de outro aparelho se perde)', async () => {
+  const src = fs.readFileSync(APP, 'utf8'), i = src.indexOf('  function abrirPeludinho('), j = src.indexOf('\n  function ', i + 10);
+  assert.ok(i > 0 && /pelPrevVistoMarcar\(p\);/.test(src.slice(i, j)), 'abrirPeludinho chama pelPrevVistoMarcar(p)');
+});
+provaAsync('6.80 QA C-q76/q77 — a série vencida é medida pelo dia DA DOSE: a 2ª dada em 05/10 (antes do vencimento de 08/10), lançada hoje (11/10), é a 2ª — no painel e no «Lance»', async () => {
+  const F = { verm_nome: 'Drontal', verm_doses: '2 doses', verm_t: '2026-05-20', verm_2a: '2026-06-10', verm_p: '2026-10-08' };
+  for (const en of ['painel', 'lance']) {
+    await com680(F, I1930_680, null, async () => {
+      if (en === 'painel') painel680('verm_dose2_p', '2026-10-05', 'prev'); else lance680('verm_dose2_p', '2026-10-05');
+      await espera657();
+      igual(pega680(db680()), ['2026-05-20', '2026-10-05', '2026-10-05', '2027-02-02'], en);
+    });
+  }
+});
+provaAsync('6.80 QA C-q81 — na ficha da versão antiga, o «Salvar antiparasitário» sem mexer não grava nada (o conserto do Salvar sem mexer é só do vermífugo)', async () => {
+  await com680(Object.assign({}, ROMEOH680, { ecto_tipo: 'Comprimido', ecto_prod: 'Bravecto', ecto_t: '2026-09-01', ecto_p: '2026-11-30' }), I1930_680, null, async () => {
+    run(`pbSalvar('ecto');`); await espera657();
+    igual(esc680(), []);
+  });
+});
+}
+{
+// ================================================================== 6.76 — o Time, as senhas fixas, os celulares, a escala e os planos do dia (S12 da revisão, parte 1)
+console.log('\n6.76 — O Time (não salvas, antes → depois, desativar), as senhas fixas no banco, os celulares que perdem a autorização de verdade, a escala e os planos do dia ligados à pessoa');
+// Tudo INVENTADO: as pessoas «Teste», os celulares «dev-teste-…» e as senhas de mentira. Relógio FIXO no sábado, 10/10/2026,
+// 10:00 (Date trocado no sandbox). O banco de mentira é o da 6.57 (ARMA657: conta as gravações, sabe recusar e ficar sem responder),
+// com a régua de senha de verdade (senhasRuntime) e uma sessão que guarda o que o app grava nela.
+const crypto676 = require('crypto');
+const SRC676 = fs.readFileSync(APP, 'utf8');
+const PLSRC676 = fs.readFileSync(path.join(__dirname, '..', 'auaulandia', 'painel-logica.js'), 'utf8');
+const J676 = (c) => JSON.parse(run('JSON.stringify(' + c + ')'));
+const espera676 = async (n) => { for (let i = 0; i < (n || 800); i++) await Promise.resolve(); };
+const T676 = new Date(2026, 9, 10, 10, 0, 0).getTime();
+const pl676 = () => { if (run("typeof plEscalaDoDia!=='function' || typeof plRotaDoDia!=='function'")) vm.runInContext(PLSRC676, ctx, { filename: 'painel-logica.js' }); };
+const EQUIPE676 = [
+  { id: 'p1', nome: 'Ana Teste', role: 'monitor', senha: '4321', entrada: '07:00', saida: '16:00', paginas: ['hoje'], atividades: ['almoco'] },
+  { id: 'p2', nome: 'Bia Teste', role: 'monitor', senha: '4322', entrada: '08:00', saida: '17:00' },
+  { id: 'p3', nome: 'Sara Supervisora Teste', role: 'supervisor', senha: '5511', entrada: '08:00', saida: '17:00' },
+  { id: 'p4', nome: 'Cris Consultora Teste', role: 'consultora', senha: '5512' }
+];
+const ELS676 = ['monitoresStatus', 'monitoresList', 'senhasList', 'senhasFixasCard', 'lockScreen', 'lockNome', 'lockErr', 'lockPwd', 'lockAviso', 'loginPwd', 'loginErr',
+  'pdRoot', 'pdMsgDia', 'pdMsgEscala', 'pdMsgPlano', 'cfgAparelhosWrap', 'loginsBarradosList', 'deviceStatus', 'deviceSemMemoria', 'whoName', 'whoPapel', 'loginScreen', 'inatAviso'];
+const ARMA676 = ARMA657 + `
+  senhasRuntime=__bk657.sr;   // a régua de senha de verdade (a ARMA657 troca por um mapa de mentira)
+  __v676=function(n){ try{ return eval(n); }catch(e){ return undefined; } };   // na base, os nomes novos não existem (as guardas rodam lá também)
+  __bk676={mb:__v676('MON_BANCO'), mba:__v676('MON_BASE'), mp:__v676('MON_PENDENTE'), mo:__v676('MON_OUTRO_SALVOU'), md:__v676('MON_DESATIVADOS'), sfb:__v676('SENHAS_FIXAS_BANCO'),
+    at:__v676('ACESSO_TRAVA'), ar:__v676('APARELHO_REVOGADO'), th:__v676('TIME_HIST'), tr:_appTrancado, sf:__v676('SF_ATUAL'), cfg:__v676('CFG_APARELHOS'), avt:__v676('AVISOS_TIRADOS'),
+    gdi:getDeviceId, dir:devIdResolver, al:aplicarLogin, lo:logout, zc:zCampo, pde:PD_ESCALA, pdp:PD_PLANOS, pdd:PD_DODIA, pda:__v676('PD_AMANHA'), pdx:__v676('PD_EXCLUIDOS'),
+    pdh:__v676('PD_HIST_ESCALA'), pdv:__v676('PD_VERSOES'), pdn:__v676('PD_NOVOS'), pded:PD_EDITANDO, cr:__v676('crypto')};
+  crypto=__cr676;   // o sorteio seguro do navegador (2ª rodada, SEC-007: sem ele, a senha fixa não é gravada)
+  MON_BANCO=null; MON_BASE=null; MON_PENDENTE=false; MON_OUTRO_SALVOU=false; MON_DESATIVADOS=[]; ACESSO_TRAVA=null; APARELHO_REVOGADO=null;
+  SENHAS_FIXAS_BANCO={};   // 3ª rodada (SEC-008): o banco já respondeu «nenhuma trocada» (as provas sem o banco põem null de propósito)
+  TIME_HIST={}; _appTrancado=false; SF_ATUAL=null; CFG_APARELHOS={}; AVISOS_TIRADOS={}; MONITORES=[];
+  PD_ESCALA={}; PD_PLANOS={}; PD_DODIA={}; PD_AMANHA={}; PD_EXCLUIDOS={}; PD_HIST_ESCALA={}; PD_VERSOES={}; PD_NOVOS={}; PD_EDITANDO='';
+  Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RD657(${T676}); return new (Function.prototype.bind.apply(__RD657,[null].concat(a)))(); };
+  Date.now=function(){ return ${T676}; }; Date.prototype=__RD657.prototype; Date.UTC=__RD657.UTC; Date.parse=__RD657.parse;
+  zHojeISO=function(){ return '2026-10-10'; }; hojeISO=zHojeISO;
+  __ss676={}; __login657={nome:'Márcia · Gestora', role:'gestao', avisoSonoro:true, id:'marcia'};
+  sessionStorage={getItem:function(k){ if(Object.prototype.hasOwnProperty.call(__ss676, k)) return __ss676[k]; return (k==='zeluz_login' && __login657)?JSON.stringify(__login657):null; },
+    setItem:function(k, v){ __ss676[k]=String(v); }, removeItem:function(k){ __ss676[k]=null; }};
+  __apl676=[]; aplicarLogin=function(u){ __apl676.push(u&&u.nome); __ss676.zeluz_login=JSON.stringify(u); };
+  __lo676=0; logout=function(){ __lo676++; };
+  __zc676=[]; zCampo=function(t, l, op){ __zc676.push(t); };
+  getDeviceId=function(){ return 'dev-teste-1'; }; devIdResolver=function(){ return Promise.resolve({id:'dev-teste-1'}); };
+  ${JSON.stringify(ELS676)}.forEach(function(k){ __el657[k]={id:k, style:{}, textContent:'', innerHTML:'', value:'', outerHTML:''}; });
+  document.body.dataset.role='gestao';`;
+const SOLTA676 = `crypto=__bk676.cr; MON_BANCO=__bk676.mb; MON_BASE=__bk676.mba; MON_PENDENTE=__bk676.mp; MON_OUTRO_SALVOU=__bk676.mo; MON_DESATIVADOS=__bk676.md; SENHAS_FIXAS_BANCO=__bk676.sfb;
+  ACESSO_TRAVA=__bk676.at; APARELHO_REVOGADO=__bk676.ar; TIME_HIST=__bk676.th; _appTrancado=__bk676.tr; SF_ATUAL=__bk676.sf; CFG_APARELHOS=__bk676.cfg; AVISOS_TIRADOS=__bk676.avt;
+  getDeviceId=__bk676.gdi; devIdResolver=__bk676.dir; aplicarLogin=__bk676.al; logout=__bk676.lo; zCampo=__bk676.zc;
+  PD_ESCALA=__bk676.pde; PD_PLANOS=__bk676.pdp; PD_DODIA=__bk676.pdd; PD_AMANHA=__bk676.pda; PD_EXCLUIDOS=__bk676.pdx; PD_HIST_ESCALA=__bk676.pdh; PD_VERSOES=__bk676.pdv; PD_NOVOS=__bk676.pdn; PD_EDITANDO=__bk676.pded;
+  ` + SOLTA657;
+// o banco de mentira e o ouvinte do Time: a lista vai ao banco e o aparelho a recebe, como no app
+const banco676 = (lista) => run(`__put657('daycare/config/monitores', ${JSON.stringify(lista)}); timeDoBanco(__get657('daycare/config/monitores'));`);
+const papel676 = (role, u) => run(`document.body.dataset.role='${role}'; __ss676.zeluz_login=${JSON.stringify(JSON.stringify(u))};`);
+const st676 = () => run("__el657.monitoresStatus.textContent");
+const lista676 = () => J676("__get657('daycare/config/monitores')");
+const toque676 = async (motivo, senha) => { const r = run(`corrToque('confirmar', {motivo:${JSON.stringify(motivo)}, senha:${JSON.stringify(senha)}})`); await espera676(); const v = await r; await espera676(); return v; };
+const MOT676 = 'a pessoa mudou de função na casa';
+const fixa676 = (senha, extra) => { const sal = crypto676.createHash('md5').update('sal-' + senha).digest('hex'); return Object.assign({ hash: crypto676.createHash('sha256').update(senha + sal).digest('hex'), sal, alg: 'sha256', trocadaEm: T676, trocadaPor: 'Teste' }, extra || {}); };
+ctx.__cr676 = { getRandomValues: (a) => crypto676.randomFillSync(a) };
+const com676 = async (fn) => { run(ARMA676); try { return await fn(); } finally { run(SOLTA676); } };
+const txt676 = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+
+// ---- AC1 — o aviso de «não salvas», a senha que só vale depois de salva, os dois aparelhos, sair sem salvar -----------------------
+provaAsync('6.76 P01* (AC1.1, caminho 1) — nome, senha, papel, entrada, saída e o horário de sábado mudados no Time acendem «Há mudanças não salvas» (base: vazio)', async () => com676(async () => {
+  banco676(EQUIPE676);
+  const campos = [['nome', 'Ana Teste Souza'], ['senha', '9876'], ['role', 'consultora'], ['entrada', '07:30'], ['saida', '16:30'], ['entradaSab', '08:00'], ['saidaSab', '12:00']];
+  for (const [c, v] of campos) {
+    run(`__el657.monitoresStatus.textContent=''; MON_PENDENTE=false; setMon(0, ${JSON.stringify(c)}, ${JSON.stringify(v)});`);
+    igual([c, st676(), run('MON_PENDENTE')], [c, 'Há mudanças não salvas. Toque em "Salvar colaboradores" quando terminar.', true]);
+  }
+}));
+provaAsync('6.76 P02* (AC1.2, caminho 1) — a senha mudada e não salva: a antiga abre na entrada, na tela trancada e no cartaz, com o papel de antes; a nova não (base: o contrário)', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'senha','9876'); setMon(0,'role','consultora'); setMon(0,'nome','Ana Teste Souza');");
+  igual(J676("senhasRuntime()['9876']||null"), null, 'a nova ainda não abre');
+  igual(J676("(function(){ var u=senhasRuntime()['4321']; return u&&{nome:u.nome, role:u.role}; })()"), { nome: 'Ana Teste', role: 'monitor' }, 'a antiga abre, com o papel de antes');
+  igual(J676("corrAssinar('9876', 'ver-por-dia', 'isto')"), { ok: false, nome: '', papel: '', erro: 'Essa senha não é de ninguém cadastrado. Nada foi gravado.' }, 'o cartaz não aceita a nova');
+  assert.ok(/^Essa senha é de Ana Teste, que não pode assinar/.test(run("corrAssinar('4321', 'ver-por-dia', 'isto').erro")), 'o cartaz reconhece a antiga, de Ana Teste');
+  papel676('monitor', { nome: 'Bia Teste', role: 'monitor', monId: 'p2', paginas: [] });
+  run("_appTrancado=true; __el657.lockPwd.value='9876'; destrancarApp();");
+  igual([run('_appTrancado'), run('__el657.lockErr.textContent')], [true, 'Senha incorreta. Tente de novo.'], 'a tela trancada não abre com a nova');
+  run("__el657.lockPwd.value='4321'; destrancarApp();");
+  igual([run('_appTrancado'), J676('__apl676')], [false, ['Ana Teste']], 'a antiga destranca (como Ana Teste, de antes)');
+  run("__el657.loginPwd.value='9876'; doLogin();");
+  igual(run('__el657.loginErr.textContent'), 'Senha incorreta. Tente de novo.', 'a entrada não abre com a nova');
+}));
+provaAsync('6.76 P03 (AC1.2, guarda) — sem mudança pendente, senhasRuntime, orcQuemPelaSenha e corrAssinar dão o resultado da base com MONITORES semeado direto', async () => com676(async () => {
+  run(`MONITORES=${JSON.stringify(EQUIPE676)};`);
+  igual(J676("senhasRuntime()['4321']"), { role: 'monitor', nome: 'Ana Teste', monId: 'p1', entrada: '07:00', saida: '16:00', entradaSab: '', saidaSab: '', dias: [], abertura: false, atividades: ['almoco'], paginas: ['hoje'] });
+  igual(J676("orcQuemPelaSenha('5511')"), { nome: 'Sara Supervisora Teste', role: 'supervisor' });
+  igual(J676("corrAssinar('5511', 'ver-por-dia', 'isto')"), { ok: true, nome: 'Sara Supervisora Teste', papel: 'supervisor', erro: '' });
+  igual(J676("Object.keys(senhasRuntime()).sort()"), ['0902', '1001', '1101', '4321', '4322', '5511', '5512']);
+}));
+provaAsync('6.76 P04* (AC1.3) — outro aparelho salva no meio: a edição fica, com o aviso; a gravação junta (a mudança do outro em outra pessoa fica); o mesmo campo mudado nos dois é perguntado', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(1,'entrada','09:00');");
+  const outro = JSON.parse(JSON.stringify(EQUIPE676)); outro[0].saida = '17:30';
+  banco676(outro);
+  igual([run('MONITORES[1].entrada'), run('MONITORES[0].saida')], ['09:00', '16:00'], 'o que esta tela mudou continua na tela');
+  igual(st676(), 'Outro aparelho salvou o Time agora há pouco. O que você mudou continua aqui; ao salvar, o app junta as duas coisas.');
+  run('timeSalvarAbrir();'); await espera676();
+  igual(J676('CORR_ATUAL.mud.map(function(m){ return [m.rotulo, m.de, m.para]; })'), [['Bia Teste — Entrada (seg a sex)', '08:00', '09:00']], 'o cartaz mostra só o que esta tela mudou');
+  await toque676(MOT676, '0902'); run("corrToque('fechar');");
+  const L = lista676();
+  igual([L[0].saida, L[1].entrada], ['17:30', '09:00'], 'a saída da Ana (do outro aparelho) fica; a entrada da Bia (desta tela) entra');
+  // o mesmo campo nos dois: a pergunta, com os dois valores
+  run("setMon(0,'nome','Ana Local Teste');");
+  const outro2 = lista676(); outro2[0].nome = 'Ana Remota Teste';
+  banco676(outro2);
+  run('__zpq657=[false]; __zp657=[];'); run('timeSalvarAbrir();'); await espera676();
+  const perg = J676('__zp657')[0];
+  igual(perg[0], 'O mesmo campo mudou nos dois aparelhos');
+  assert.ok(perg[1].join(' ').indexOf('Neste aparelho: Ana Local Teste') >= 0 && perg[1].join(' ').indexOf('No outro aparelho: Ana Remota Teste') >= 0, perg[1].join(' | '));
+  igual([st676(), run('CORR_ATUAL')], ['Nada mudou: nenhuma pessoa foi alterada. Nada foi gravado.', null], '«vale o do outro»: nada desta tela fica no nome');
+}));
+provaAsync('6.76 P05* (AC1.4) — sair do Time com mudança pendente pergunta; «Voltar ao Time» fica; «Sair sem salvar» volta ao banco', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'nome','Ana Mudada Teste'); __n676=0; __zpq657=[false]; __zp657=[];");
+  igual(run('timePodeSair(function(){ __n676++; })'), false); await espera676();
+  igual([J676('__zp657')[0][0], run('__n676'), run('MONITORES[0].nome')], ['Há mudanças não salvas no Time. Sair sem salvar?', 0, 'Ana Mudada Teste']);
+  run('__zpq657=[true];'); run('timePodeSair(function(){ __n676++; })'); await espera676();
+  igual([run('__n676'), run('MONITORES[0].nome'), run('MON_PENDENTE')], [1, 'Ana Teste', false], 'sai sem salvar e o que estava no banco volta');
+  igual(run('timePodeSair(function(){})'), true, 'sem mudança, não pergunta');
+  assert.ok(/typeof timePodeSair==='function' && !timePodeSair\(function\(\)\{ _navegarMenu\(a, v\); \}\)\) return;/.test(SRC676), 'o menu passa pela pergunta');
+}));
+
+// ---- AC2 — o cartaz do Salvar, a gravação, o histórico e as regras da senha ---------------------------------------------------------
+provaAsync('6.76 P06* (AC2.1, AC2.2) — o cartaz do Salvar: antes → depois de cada campo, «Senha: trocada» sem dígitos, telas e atividades, a pessoa nova, a escala do renomeado; «Nada mudou»; motivo curto, posto e quem não tem a régua recusados; a Encãotadora barrada na função', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'nome','Ana Teste Souza'); setMon(0,'senha','9876'); setMon(0,'role','consultora'); toggleMonDia(0,'sab'); toggleMonPagina(0,'hoje'); toggleMonPagina(0,'peso'); toggleMonAtividade(0,'almoco');");
+  run("addPessoa(); MONITORES[MONITORES.length-1].nome='Duda Nova Teste'; MONITORES[MONITORES.length-1].senha='6611';");
+  run('timeSalvarAbrir();'); await espera676();
+  igual(run('CORR_ATUAL.passo'), 'conferir', 'vai direto ao antes → depois');
+  const mud = J676('CORR_ATUAL.mud.map(function(m){ return m.rotulo+": "+m.de+" → "+m.para; })');
+  ['Ana Teste Souza — Nome: Ana Teste → Ana Teste Souza', 'Ana Teste Souza — Papel: Encãotador → Consultora de Bem-Estar', 'Ana Teste Souza — Senha: a de antes → trocada',
+    'Ana Teste Souza — Dias que trabalha: todos os dias → Sáb', 'Ana Teste Souza — tela Peso: sem a tela → liberou a tela Peso', 'Ana Teste Souza — tela Hoje na Zêluz: com a tela → tirou a tela Hoje na Zêluz',
+    'Duda Nova Teste — pessoa nova:  → Duda Nova Teste (Encãotador)'].forEach((l) => assert.ok(mud.indexOf(l) >= 0, l + '\n' + mud.join('\n')));
+  assert.ok(mud.some((l) => /atividade .* → tirou a atividade/.test(l)), 'a atividade tirada');
+  const html = run('corrCartazHTML()');
+  assert.ok(html.indexOf('9876') < 0 && html.indexOf('4321') < 0 && html.indexOf('6611') < 0, 'nenhum dígito de senha no cartaz');
+  assert.ok(txt676(html).indexOf('A escala e as rotas dos planos do dia continuam com Ana Teste Souza: elas são ligadas à pessoa, não ao nome.') >= 0, txt676(html));
+  assert.ok(txt676(html).indexOf('Quem assina: a Supervisão, a Gestão ou a Diretoria.') >= 0, 'a régua do Time');
+  await toque676('mudou de função', '0902'); igual(run('CORR_ATUAL.passo'), 'conferir', 'motivo de 3 palavras: fica');
+  await toque676(MOT676, '1001'); assert.ok(/posto/.test(run('CORR_ATUAL.aviso')), 'senha de posto não assina');
+  await toque676(MOT676, '4322'); assert.ok(/não pode assinar/.test(run('CORR_ATUAL.aviso')), 'a Encãotadora não assina');
+  igual(run("__esc657.filter(function(e){ return /monitores/.test(e[1]); }).length"), 0, 'nada gravado até aqui');
+  await toque676(MOT676, '5511'); igual(run('CORR_ATUAL.passo'), 'pronto', 'a Supervisão assina (a régua do Time de hoje)');
+  run("corrToque('fechar');");
+  run('timeSalvarAbrir();'); await espera676();
+  igual([st676(), run('CORR_ATUAL')], ['Nada mudou: nenhuma pessoa foi alterada. Nada foi gravado.', null]);
+  // a função que grava confere a régua de novo
+  run("document.body.dataset.role='monitor'; __au657=[];");
+  const r = await run("salvarMonitores({reg:{papel:'gestao', por:'Gestora Teste'}})");
+  igual([r.ok, r.barrou], [false, true]);
+  assert.ok(J676('__au657').some((a) => a[0] === 'sem-permissao' && /^BARROU salvar o Time/.test(a[1])), 'BARROU na auditoria');
+}));
+provaAsync('6.76 P07* (AC2.3, caminho 3) — a gravação: a lista normalizada e com id para quem não tinha; o histórico depois do ok da lista, sem a senha; o histórico que falha é dito e fica na auditoria; a função sem o cartaz grava como antes (harness 7)', async () => com676(async () => {
+  const semId = JSON.parse(JSON.stringify(EQUIPE676)); delete semId[1].id; delete semId[0].role;
+  banco676(semId);
+  run("setMon(1,'saida','18:00');"); run('timeSalvarAbrir();'); await espera676();
+  await toque676(MOT676, '0902');
+  const L = lista676();
+  assert.ok(L.every((m) => typeof m.id === 'string' && m.id && typeof m.role === 'string' && m.role && typeof m.nome === 'string' && typeof m.senha === 'string'), JSON.stringify(L));
+  igual([L[0].role, L[1].saida, '_idDado' in L[1]], ['monitor', '18:00', false]);
+  const esc = J676('__esc657.map(function(e){ return e[1]; })');
+  const iL = esc.indexOf('daycare/config/monitores'), iH = esc.findIndex((p) => /^daycare\/config\/monitores-historico\//.test(p));
+  assert.ok(iL >= 0 && iH > iL, 'o histórico depois da lista: ' + esc.join(', '));
+  const H = J676("__get657('daycare/config/monitores-historico')"), h = H[Object.keys(H)[0]];
+  igual([h.por, h.motivo, h.acao, h.semCartaz, h.mudancas.length], ['Márcia · Gestora', MOT676, 'salvar', false, 1]);
+  igual(h.mudancas[0].campo, 'saida');
+  // o histórico recusado
+  run("setMon(0,'saida','16:15'); __recusa657='monitores-historico';"); run('timeSalvarAbrir();'); await espera676();
+  await toque676(MOT676, '0902');
+  igual(lista676()[0].saida, '16:15', 'a lista entrou');
+  assert.ok(/^A lista foi salva, mas o histórico desta gravação não entrou: /.test(st676()), st676());
+  assert.ok(J676('__au657').some((a) => a[0] === 'gravacao-FALHOU' && /monitores-historico/.test(a[1])), 'a falha fica na auditoria');
+  // sem o cartaz (o caso do harness 7: um banco que só sabe `set`)
+  run("__recusa657=null; __g676=[]; __dbB676=DB; DB={ref:function(c){ return {set:function(v){ __g676.push({c:c, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); }}; }}; MON_BANCO=null; MON_BASE=null; MONITORES=[{nome:'Sem Papel Um', senha:'4421'}, {nome:'Com Papel', senha:'4423', role:'vet'}]; document.body.dataset.role='gestao';");
+  try {
+    run('salvarMonitores();');
+    igual(J676('__g676[0].c'), 'daycare/config/monitores');
+    igual(J676('__g676[0].v.map(function(m){ return m.role; })'), ['monitor', 'vet']);
+    await espera676();
+    igual(J676("__g676.filter(function(x){ return /monitores-historico/.test(x.c); }).map(function(x){ return x.v.semCartaz; })"), [true], 'o histórico diz que foi gravado sem o cartaz');
+  } finally { run('DB=__dbB676;'); }
+}));
+provaAsync('6.76 P08* (AC2.4) — «Mudanças desta pessoa (N)»: da mais nova para a mais antiga, com quem, o motivo, as telas e as atividades; a senha só como «trocada»', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run(`TIME_HIST={a:{em:${T676 - 86400000}, por:'Gestora Teste', papel:'gestao', motivo:'a primeira mudança da Ana', mudancas:[{id:'p1', nome:'Ana Teste', campo:'paginas', rotulo:'Ana Teste — tela Peso', de:'sem a tela', para:'liberou a tela Peso'}]},
+    b:{em:${T676}, por:'Sara Supervisora Teste', papel:'supervisor', motivo:'a segunda mudança da Ana', mudancas:[{id:'p1', nome:'Ana Teste', campo:'senha', rotulo:'Ana Teste — Senha', de:'a de antes', para:'trocada'}, {id:'p2', nome:'Bia Teste', campo:'entrada', rotulo:'Bia Teste — Entrada (seg a sex)', de:'08:00', para:'09:00'}]}};`);
+  const h = txt676(run("timeHistoricoHTML('p1')"));
+  assert.ok(h.indexOf('Mudanças desta pessoa (2)') >= 0, h);
+  assert.ok(h.indexOf('segunda mudança') < h.indexOf('primeira mudança'), 'a mais nova primeiro');
+  ['Senha: trocada', 'liberou a tela Peso', 'Sara Supervisora Teste (Supervisão)', 'Motivo: a primeira mudança da Ana'].forEach((t) => assert.ok(h.indexOf(t) >= 0, t + ' em ' + h));
+  assert.ok(h.indexOf('09:00') < 0, 'a mudança de outra pessoa não entra');
+  run('renderMonitores();');
+  assert.ok(txt676(run('__el657.monitoresList.innerHTML')).indexOf('Mudanças desta pessoa (2)') >= 0, 'na linha da pessoa');
+}));
+provaAsync('6.76 P09* (AC2.6) — a senha nova pública é recusada com a frase; quem já tem uma continua e ganha o aviso; a senha fixa trocada não serve para a equipe', async () => com676(async () => {
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[0].senha = '1007';
+  banco676(eq);
+  run('renderMonitores();');
+  assert.ok(txt676(run('__el657.monitoresList.innerHTML')).indexOf('Esta senha está no código público: troque quando puder.') >= 0, 'o aviso na linha de quem já tem');
+  run("setMon(1,'senha','1005');"); run('timeSalvarAbrir();'); await espera676();
+  igual([st676(), run('CORR_ATUAL')], ['"Bia Teste": Essa senha está escrita no código público do app: qualquer pessoa pode lê-la. Escolha outra.', null]);
+  run("setMon(1,'senha','4322'); setMon(1,'saida','17:45');"); run('timeSalvarAbrir();'); await espera676();
+  igual(run('CORR_ATUAL.passo'), 'conferir', 'quem já tem a 1007 não trava o Salvar');
+  run('corrFechar();');
+  run(`SENHAS_FIXAS_BANCO={marcia:${JSON.stringify(fixa676('7777'))}}; setMon(1,'senha','7777');`); run('timeSalvarAbrir();'); await espera676();
+  igual(st676(), 'A senha de "Bia Teste" é igual a uma senha fixa da Gestão. Escolha outra.');
+  assert.ok(st676().indexOf('7777') < 0);
+}));
+
+// ---- AC3 — «Desativar» e «Reativar» ------------------------------------------------------------------------------------------------------
+const desativa676 = async (id, quem) => { run("__ztq657=['10/10/2026'];"); run(`timeDesativarAbrir('${id}');`); await espera676(); return toque676('a pessoa saiu da empresa hoje', quem || '0902'); };
+provaAsync('6.76 P10* (AC3.1 a AC3.3, caminho 4) — «Desativar» no lugar de «Remover pessoa» (44 px); a linha nova tem «Tirar esta linha»; o cartaz com a cascata e a data; a pessoa fica com ativo:false e desativado; ninguém desativa a si mesmo', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("addPessoa(); renderMonitores();");
+  const h = run('__el657.monitoresList.innerHTML');
+  assert.ok(h.indexOf('Remover pessoa') < 0 && (h.match(/min-height:44px[^>]*>Desativar</g) || []).length === 4, 'Desativar nas 4 salvas');
+  assert.ok(/>Tirar esta linha</.test(h), 'a linha nova');
+  run("__ztq657=['10/10/2026'];"); run("timeDesativarAbrir('p2');"); await espera676();
+  const cart = txt676(run('corrCartazHTML()'));
+  assert.ok(cart.indexOf('Bia Teste deixa de entrar: a senha dela para de abrir o app e de assinar. Se ela estiver usando o app agora, a tela tranca no aparelho dela (o alarme do remédio continua tocando por cima). As telas, as atividades, os dias, o horário e a escala dela ficam guardados, e a senha dela fica reservada. Nada é apagado.') >= 0, cart);
+  assert.ok(cart.indexOf('Saiu em 10/10/2026.') >= 0 && run('CORR_ATUAL.op.titulo') === 'Desativar Bia Teste');
+  await toque676('a pessoa saiu da empresa hoje', '0902');
+  const b = lista676().filter((m) => m.id === 'p2')[0];
+  igual([lista676().length, b.ativo, b.desativado.em, b.desativado.motivo, b.senha], [4, false, '2026-10-10', 'a pessoa saiu da empresa hoje', '4322'], 'nada sai da lista');
+  const H = J676("__get657('daycare/config/monitores-historico')");
+  igual(Object.keys(H).map((k) => H[k].acao), ['desativar']);
+  // a si mesma
+  papel676('supervisor', { nome: 'Sara Supervisora Teste', role: 'supervisor', monId: 'p3', paginas: [] });
+  run('__za657=[];'); run("timeDesativarAbrir('p3');"); await espera676();
+  igual(J676('__za657.map(function(z){ return [z[0], z[1][0]]; })'), [['VOCÊ NÃO PODE DESATIVAR A SI MESMA', 'Você não pode desativar o seu próprio acesso. Peça a outra pessoa da Gestão.']]);
+}));
+provaAsync('6.76 P11* (AC3.4) — a desativada não entra, não destranca, não assina e sai da escala, de «Quem está em treinamento» e do «Plantão agora»; todo leitor do Time passa pela régua (menos a meuMonId, idêntica)', async () => com676(async () => {
+  pl676();
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[1].ativo = false; eq[1].desativado = { em: '2026-10-10', motivo: 'a pessoa saiu da empresa', registro: {} };
+  banco676(eq);
+  igual([J676("senhasRuntime()['4322']||null"), J676("senhaPerfil('4322')"), J676("orcQuemPelaSenha('4322')"), run("corrAssinar('4322','ver-por-dia','isto').erro")],
+    [null, null, null, 'Essa senha não é de ninguém cadastrado. Nada foi gravado.']);
+  run("_appTrancado=true; __el657.lockPwd.value='4322'; destrancarApp();"); igual(run('_appTrancado'), true, 'não destranca');
+  igual(J676('pdPessoas()'), ['Ana Teste'], 'fora da escala');
+  run("MONITORES=MONITORES.concat([{id:'p2', nome:'Bia Teste', role:'monitor', senha:'4322', ativo:false, paginas:['orcamento'], entrada:'00:00', saida:'23:59'}]);");   // mesmo se alguém a semear de volta
+  igual([J676("senhasRuntime()['4322']||null"), J676("corrPaginasDaPessoa('Bia Teste','4322')"), J676("pdPessoas()"), run("senhaQuem('4322')")], [null, [], ['Ana Teste'], null]);
+  run('TREINAMENTO={};'); assert.ok(run('protoTreinoHTML()').indexOf('Bia Teste') < 0, 'fora do treinamento');
+  assert.ok(run('blocoPlantaoAgoraHTML()').indexOf('Bia Teste') < 0, 'fora do Plantão agora');
+  igual(run("orcAssinaturaRecusa({nome:'Bia Teste', role:'monitor'}, '')"), 'Essa senha é de Bia Teste, que não trabalha no Orçamento. Quem assina: a Consultora de Bem-Estar, a Supervisão, a Gestão ou a Diretoria, ou quem recebeu a tela «Orçamento de hospedagem» no Time.', 'sem a senha, a desativada não empresta as telas dela');
+  // a varredura: toda função que lê MONITORES passa pela régua (monAtivo / a lista do banco já dividida), ou está na lista abaixo com o porquê
+  const PODE = { wireFirebaseListeners: 'o ouvinte (grava pela timeDoBanco)', meuMonId: 'idêntica (AC14): a sessão leva o monId', orcQuemPelaSenha: 'idêntica (6.57 P29): a senhaQuem a cerca',
+    toggleMonPagina: 'a edição da tela (por índice)', toggleMonAtividade: 'a edição da tela', monTodasAtividades: 'a edição da tela', toggleMonPerm: 'a edição da tela', toggleMonDia: 'a edição da tela',
+    renderMonitores: 'a lista em edição (ativos; os desativados vêm de MON_DESATIVADOS)', setMon: 'a edição da tela', addPessoa: 'a edição da tela', removerPessoa: 'a edição da tela',
+    salvarMonitores: 'a gravação', permReaplicarDoTime: 'acha a sessão; a desativada tranca antes (timeTrancarSeDesativado)', protoTreinoVirar: 'o interruptor, por id',
+    timeDoBanco: 'a divisão (a régua)', timeBancoRelido: 'a lista do banco', timeTodos: 'todo mundo (o leitor filtra)', timeListaParaGravar: 'a gravação', timeConferirAntes: 'a lista em edição',
+    timeSalvarAbrir: 'a lista em edição', timeDepoisDeSalvar: 'a gravação', timeSairSemSalvar: 'a lista do banco', timeGravarPessoa: 'a gravação', monitoresValendo: 'a lista que vale (o leitor filtra)' };
+  const linhas = extractMainScript(SRC676).split('\n'); let fn = '(topo)'; const usa = {}, corpoF = {};
+  linhas.forEach((l) => {
+    const m = /^\s{0,4}(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(/.exec(l);
+    if (m) fn = m[1]; else if (/^  [^\s}\/*]/.test(l)) fn = '(topo)';      // uma instrução no nível de cima: não é corpo de função
+    (corpoF[fn] = corpoF[fn] || []).push(l);
+    if (/\bMONITORES\b/.test(l) && !/^\s*(\/\/|\*)/.test(l)) (usa[fn] = usa[fn] || []).push(l);
+  });
+  const sem = Object.keys(usa).filter((f) => f !== '(topo)' && !PODE[f] && !corpoF[f].some((l) => /monAtivo/.test(l)));
+  igual(sem, [], 'leitores do Time sem a régua: ' + sem.join(', '));
+}));
+provaAsync('6.76 P12* (AC3.5, caminho 4) — a sessão aberta da desativada tranca quando o Time muda; a frase; a senha dela não destranca; outra pessoa destranca; nenhum logout (o alarme continua)', async () => com676(async () => {
+  banco676(EQUIPE676);
+  papel676('monitor', { nome: 'Bia Teste', role: 'monitor', monId: 'p2', paginas: [] });
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[1].ativo = false; eq[1].desativado = { em: '2026-10-10', motivo: 'a pessoa saiu da empresa', registro: {} };
+  run(`timeDoBanco(${JSON.stringify(eq)}); permReaplicarDoTime();`);
+  igual([run('_appTrancado'), run('__el657.lockAviso.textContent'), run('__lo676')], [true, 'O acesso de Bia Teste foi desativado pela Gestão em 10/10/2026. Outra pessoa pode entrar com a própria senha.', 0]);
+  assert.ok(run("sessionStorage.getItem('zeluz_login')").indexOf('Bia Teste') >= 0, 'a sessão continua viva por baixo');
+  run("__el657.lockPwd.value='4322'; destrancarApp();"); igual(run('_appTrancado'), true);
+  run("__el657.lockPwd.value='4321'; destrancarApp();");
+  igual([run('_appTrancado'), J676('__apl676'), run('ACESSO_TRAVA'), run('__el657.lockAviso.textContent')], [false, ['Ana Teste'], null, ''], 'outra pessoa entra com a própria senha');
+  assert.ok(/function permReaplicarDoTime\(\)\{[\s\S]{0,300}if\(timeTrancarSeDesativado\(u\)\) return;/.test(SRC676));
+}));
+provaAsync('6.76 P13* (AC3.6) — «Desativados (N)» e «Reativar»: volta com a mesma senha; o desativado vai para desativacoes (nada sobrescrito); o histórico ganha «Reativou»', async () => com676(async () => {
+  banco676(EQUIPE676);
+  await desativa676('p2'); run('corrToque("fechar");');
+  run('renderMonitores();');
+  const h = txt676(run('__el657.monitoresList.innerHTML'));
+  ['Desativados (1)', 'Bia Teste', 'Saiu em 10/10/2026', 'desativado por Márcia · Gestora', 'Motivo: a pessoa saiu da empresa hoje', 'Reativar'].forEach((t) => assert.ok(h.indexOf(t) >= 0, t + ' em ' + h));
+  run("setMon(0,'senha','4322');"); run('timeSalvarAbrir();'); await espera676();
+  igual(st676(), 'A senha de "Ana Teste" é a de uma pessoa desativada e continua reservada para ela. Escolha outra.', 'a senha dela fica reservada');
+  run("timeSairSemSalvar();");
+  run("timeReativarAbrir('p2');"); await espera676();
+  igual(run('CORR_ATUAL.op.acao'), 'reabrir');
+  await toque676('ela voltou a trabalhar aqui', '0902');
+  const b = lista676().filter((m) => m.id === 'p2')[0];
+  igual([b.ativo, b.senha, 'desativado' in b, Object.keys(b.desativacoes).length], [true, '4322', false, 1]);
+  const d = b.desativacoes[Object.keys(b.desativacoes)[0]];
+  igual([d.em, d.motivo, d.reativado.motivo], ['2026-10-10', 'a pessoa saiu da empresa hoje', 'ela voltou a trabalhar aqui']);
+  const H = J676("__get657('daycare/config/monitores-historico')");
+  igual(Object.keys(H).map((k) => H[k].acao).sort(), ['desativar', 'reativar']);
+  igual(J676("(function(){ var u=senhasRuntime()['4322']; return u&&u.nome; })()"), 'Bia Teste', 'a mesma senha volta a abrir');
+}));
+provaAsync('6.76 P14* (AC3.7, caminho 5) — a lista vazia e a ausente: MONITORES vazio, nenhuma senha de fábrica abre; antes do banco, a frase da lista que não chegou; o Salvar recusa a lista sem ninguém ativo (base: as seis de fábrica abrem)', async () => com676(async () => {
+  const FAB = ['1005', '1011', '1007', '1008', '1009', '1010'];
+  run('MON_BANCO=null; MONITORES=[];');
+  run("__el657.loginPwd.value='1005'; doLogin();");
+  igual(run('__el657.loginErr.textContent'), 'A lista da equipe ainda não chegou do banco. Espere uns segundos e tente de novo.');
+  for (const v of [null, [], {}]) {
+    run(`timeDoBanco(${JSON.stringify(v)});`);
+    igual([J676('MONITORES'), FAB.filter((s) => run(`!!senhaPerfil('${s}')`))], [[], []], JSON.stringify(v));
+  }
+  run("__el657.loginPwd.value='1005'; doLogin();"); igual(run('__el657.loginErr.textContent'), 'Senha incorreta. Tente de novo.', 'o banco respondeu: a de fábrica é senha errada');
+  igual(J676("senhaPerfil('1101')&&senhaPerfil('1101').nome"), 'Adriana · Gestão Total', 'as senhas fixas da Gestão entram sem a lista');
+  assert.ok(/\n  MONITORES = \[\];\n/.test(SRC676) && !/MONITORES\s*=\s*MONITORES_DEFAULT/.test(SRC676), 'a lista começa vazia, e a de fábrica nunca volta');
+  run('__esc657=[]; salvarMonitores();');
+  igual([st676(), run('__esc657.length')], ['O Time precisa de pelo menos uma pessoa ativa: uma lista sem ninguém não é gravada.', 0]);
+}));
+// ---- AC4 — as permissões (guarda) ----------------------------------------------------------------------------------------------------------
+prova('6.76 P15 (AC4.1, AC4.2, guarda) — as listas de telas (NAV_PAGINAS_ALL, NAV_PAGINAS_FORA) e a PERM idênticas às da base; a Escala continua fora do Time', () => {
+  const nav = SRC676.slice(SRC676.indexOf('  const NAV_PAGINAS_ALL=['), SRC676.indexOf('  const NAV_PAGINAS_KEYS='));
+  igual([crypto676.createHash('sha256').update(nav).digest('hex').slice(0, 16), crypto676.createHash('sha256').update(run('JSON.stringify(PERM)')).digest('hex').slice(0, 16)], ['92fcf71818c1108d', 'f79140b1c2844dd5']);
+  assert.ok(run("NAV_PAGINAS_KEYS.indexOf('planodia')") < 0 && run('NAV_PAGINAS_FORA').indexOf('Escala e plano do dia (é da Márcia)') >= 0);
+});
+prova('6.76 P16* (AC2.2, AC11) — a régua do Time é a da tela: a assinatura usa a capacidade com os MESMOS três papéis da classe so-master (Gestão, Diretoria, Supervisão), sem capacidade nova', () => {
+  const css = (/body:not\(\[data-role="gestao"\]\):not\(\[data-role="diretoria"\]\):not\(\[data-role="supervisor"\]\) \.so-master\{display:none !important\}/.test(SRC676));
+  const papeis = ['gestao', 'diretoria', 'supervisor', 'consultora', 'monitor', 'vet', 'plantonista', 'aprendiz', 'conferencia'];
+  igual([css, run('TIME_REGUA_CAP'), papeis.filter((p) => run(`timePodeEditar('${p}')`)), papeis.filter((p) => run(`podePapel(TIME_REGUA_CAP,'${p}')`))],
+    [true, 'ver-por-dia', ['gestao', 'diretoria', 'supervisor'], ['gestao', 'diretoria', 'supervisor']]);
+});
+
+// ---- AC5 — as senhas fixas -------------------------------------------------------------------------------------------------------------
+prova('6.76 P17* (AC5.3) — zSha256Hex igual ao crypto do Node em 1.000 textos (com acento, vazio, 55, 56, 64 e 65 letras, emoji e metade de par solta) e nos vetores da norma', () => {
+  const al = 'abcxyz0129 çãéêíóôúÀÉ€😀Zêluz';
+  const textos = ['', 'abc', 'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq', 'a'.repeat(55), 'a'.repeat(56), 'a'.repeat(64), 'a'.repeat(65), 'ç'.repeat(40), '\uD83D', 'x\uDC00y'];
+  let s = 676; const rnd = () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; };
+  while (textos.length < 1000) { let t = ''; const n = Math.floor(rnd() * 140); for (let i = 0; i < n; i++) t += al[Math.floor(rnd() * al.length)]; textos.push(t); }
+  ctx.__tx676 = textos;
+  const meu = J676('__tx676.map(function(t){ return zSha256Hex(t); })');
+  const dif = textos.filter((t, i) => meu[i] !== crypto676.createHash('sha256').update(t).digest('hex'));
+  igual([dif.length, meu[1], meu[0], meu[2]], [0, 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    '248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1']);
+});
+provaAsync('6.76 P18* (AC5.1, AC5.2) — o cartão «Senhas fixas» e «Trocar a minha senha»: a de agora conferida, as duas novas iguais, 4 a 6 dígitos, nenhuma em uso, nenhuma pública; a gravação {hash, sal}; o histórico sem hash nem senha', async () => com676(async () => {
+  banco676(EQUIPE676);
+  const card = run('senhasFixasCardHTML()'), tc = txt676(card);
+  ['Adriana (Diretoria) senha do código', 'Márcia (Gestão) senha do código', 'Trocar a minha senha', 'Esqueceu? Definir uma senha provisória', 'Trocar a senha do posto'].forEach((t) => assert.ok(tc.indexOf(t) >= 0, t + ' em ' + tc));
+  assert.ok(tc.indexOf('Márcia (Gestão) senha do código Trocar a minha senha') >= 0 && tc.indexOf('Adriana (Diretoria) senha do código Esqueceu?') >= 0, 'cada botão na linha certa');
+  igual((card.match(/min-height:44px/g) || []).length, 3, 'os três botões com 44 px');
+  run("senhaTrocarAbrir('marcia');");
+  const ten = async (d) => { const r = await run('sfToque("confirmar", ' + JSON.stringify(d) + ')'); return [r && r.ok, run('SF_ATUAL&&SF_ATUAL.aviso')]; };
+  igual(await ten({ atual: '1111', nova: '2468', nova2: '2468' }), [false, 'A senha de agora não confere. Nada foi gravado.']);
+  igual(await ten({ atual: '0902', nova: '2468', nova2: '2469' }), [false, 'As duas senhas novas não são iguais: digite a mesma senha nas duas. Nada foi gravado.']);
+  igual(await ten({ atual: '0902', nova: '123', nova2: '123' }), [false, 'A senha nova precisa ter de 4 a 6 números. Nada foi gravado.']);
+  igual(await ten({ atual: '0902', nova: '4321', nova2: '4321' }), [false, 'Essa senha já está em uso (por alguém da equipe, por outra senha fixa ou é a senha de agora). Escolha outra. Nada foi gravado.']);
+  igual(await ten({ atual: '0902', nova: '1009', nova2: '1009' }), [false, 'Essa senha está escrita no código público do app: qualquer pessoa pode lê-la. Escolha outra.']);
+  igual(run("__esc657.filter(function(e){ return /senhas-fixas/.test(e[1]+' '+JSON.stringify(e[2]||'')); }).length"), 0, 'nada gravado até aqui');
+  igual((await ten({ atual: '0902', nova: '2468', nova2: '2468' }))[0], true);
+  igual([run('SF_ATUAL.passo'), run('SF_ATUAL.frase')], ['pronto', 'Senha trocada. A partir de agora, só a nova abre o app para Márcia.']);
+  const g = J676("__get657('daycare/config/senhas-fixas/marcia')");
+  igual([g.alg, g.provisoria, g.hash === crypto676.createHash('sha256').update('2468' + g.sal).digest('hex'), g.sal.length, typeof g.trocadaEm, g.trocadaPor, g.registro.por], ['sha256', false, true, 32, 'number', 'Márcia · Gestora', 'Márcia · Gestora']);
+  const H = J676("__get657('daycare/config/senhas-fixas-historico')"), h = H[Object.keys(H)[0]];
+  igual([h.id, h.acao, 'hash' in h, 'sal' in h, JSON.stringify(H).indexOf('2468'), JSON.stringify(g).indexOf('2468')], ['marcia', 'trocou', false, false, -1, -1]);
+  // fechamento dos CONCERNS do re-gate 3 (SEC-010): o registro vai por transação (só se o servidor ainda tem o que o cartaz
+  // conferiu), e o histórico depois do ok do registro — antes, os dois iam numa escrita só
+  igual(J676("__esc657.filter(function(e){ return /senhas-fixas/.test(e[1]+' '+JSON.stringify(e[2]||'')); }).map(function(e){ return e[0]+' '+e[1].replace(/\\/h[0-9a-z-]+$/, '/{chave}'); })"),
+    ['transaction daycare/config/senhas-fixas/marcia', 'set daycare/config/senhas-fixas-historico/{chave}'], 'o registro por transação; o histórico depois');
+  assert.ok(txt676(run('senhasFixasCardHTML()')).indexOf('Márcia (Gestão) trocada em 10/10/2026 por Márcia · Gestora') >= 0);
+}));
+provaAsync('6.76 P19* (AC5.3, caminho 7) — depois da troca, a senha do código da Adriana não abre na entrada, na tela trancada, no cartaz nem em «Autorizar este aparelho»; a nova abre como Diretoria', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run(`SENHAS_FIXAS_BANCO={adriana:${JSON.stringify(fixa676('8642'))}}; __put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', por:'Gestora Teste', ts:1});`);
+  igual([J676("senhaPerfil('1101')"), J676("senhasRuntime()['1101']||null"), run("senhaPerfil('8642').souAdriana"), run("senhaPerfil('8642').role")], [null, null, true, 'gestao']);
+  run("__el657.loginPwd.value='1101'; doLogin();"); igual(run('__el657.loginErr.textContent'), 'Senha incorreta. Tente de novo.');
+  papel676('monitor', { nome: 'Ana Teste', role: 'monitor', monId: 'p1', paginas: [] });
+  run("_appTrancado=true; __el657.lockPwd.value='1101'; destrancarApp();"); igual(run('_appTrancado'), true, 'a do código não destranca');
+  run("__el657.lockPwd.value='8642'; destrancarApp();"); igual([run('_appTrancado'), J676('__apl676')], [false, ['Adriana · Gestão Total']], 'a nova destranca, como a Adriana');
+  igual(run("corrAssinar('1101','gestao-role','isto').ok"), false); igual(J676("corrAssinar('8642','gestao-role','isto')"), { ok: true, nome: 'Adriana · Gestão Total', papel: 'gestao', erro: '' });
+  run("__el657.loginPwd.value='1101'; __ztq657=['iPhone Teste Novo']; autorizarAparelho();"); await espera676();
+  igual(run('__el657.loginErr.textContent'), 'Digite a senha da GESTÃO no campo acima e toque em Autorizar.');
+  run("__el657.loginPwd.value='8642'; __ztq657=['iPhone Teste Novo'];"); await run('autorizarAparelho()'); await espera676();
+  igual(J676("__get657('auaulandia/aparelhos/dev-teste-1').nome"), 'iPhone Teste Novo', '«Autorizar este aparelho» com a nova');
+  // a nova entra pela porta de sempre, e o corpo vira Diretoria
+  run('__apl676=[]; __el657.loginPwd.value="8642"; doLogin();'); await espera676();
+  igual(J676('__apl676'), ['Adriana · Gestão Total']);
+  igual(run("JSON.parse(sessionStorage.getItem('zeluz_login')).souAdriana"), true);
+}));
+provaAsync('6.76 P20* (AC5.4) — sem resposta do banco: a cópia do aparelho (só hash e sal) confere; num aparelho sem cópia, a do código abre e a sessão tranca quando o banco mostra a troca', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run(`SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:JSON.stringify({adriana:${JSON.stringify(fixa676('8642'))}})};`);
+  igual([J676("senhaPerfil('1101')"), run("senhaPerfil('8642').nome")], [null, 'Adriana · Gestão Total'], 'a cópia do aparelho vale enquanto o banco não responde');
+  run('__ls657={};');
+  igual(J676("senhaMarcarSemConferir(senhaPerfil('1101'), '1101')"), { role: 'gestao', nome: 'Adriana · Gestão Total', avisoSonoro: true, souAdriana: true, id: 'adriana', fixaSemConferir: 'adriana' }, 'sem cópia: abre, marcada');
+  papel676('gestao', { role: 'gestao', nome: 'Adriana · Gestão Total', avisoSonoro: true, souAdriana: true, id: 'adriana', fixaSemConferir: 'adriana' });
+  run(`senhasFixasDoBanco({adriana:${JSON.stringify(fixa676('8642'))}});`);
+  igual([run('_appTrancado'), run('__el657.lockAviso.textContent')], [true, 'A senha de Adriana foi trocada. Entre com a senha nova.']);
+  const copia = run("__ls657.zeluz_senhas_fixas");
+  igual(Object.keys(JSON.parse(copia).adriana).sort(), ['hash', 'provisoria', 'sal', 'trocadaEm'], 'a cópia guarda só o hash, o sal, a data e a marca');
+  assert.ok(copia.indexOf('8642') < 0);
+}));
+provaAsync('6.76 P21* (AC5.5) — a senha do posto pela Gestão: o aviso, a 1001 para de abrir, a nova abre e pede o nome de quem está usando; o posto não assina', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("senhaPostoAbrir();");
+  assert.ok(txt676(run('sfCartazHTML()')).indexOf('Todas as plantonistas que entram pelo posto passam a usar a senha nova, e a 1001 para de abrir. Avise a equipe antes de trocar.') >= 0);
+  await run('sfToque("confirmar", {motivo:"a senha do posto vazou na casa", assina:"1001", nova:"3579", nova2:"3579"})');
+  assert.ok(/posto/.test(run('SF_ATUAL.aviso')), 'a senha do posto não assina: ' + run('SF_ATUAL.aviso'));
+  await run('sfToque("confirmar", {motivo:"vazou", assina:"0902", nova:"3579", nova2:"3579"})');
+  assert.ok(/4 palavras/.test(run('SF_ATUAL.aviso')), 'motivo curto');
+  await run('sfToque("confirmar", {motivo:"a senha do posto vazou na casa", assina:"0902", nova:"3579", nova2:"3579"})');
+  igual(run('SF_ATUAL.passo'), 'pronto');
+  const H = J676("__get657('daycare/config/senhas-fixas-historico')"), h = H[Object.keys(H)[0]];
+  igual([h.id, h.acao, h.motivo, h.por], ['plantonista', 'posto', 'a senha do posto vazou na casa', 'Márcia · Gestora']);
+  run(`SENHAS_FIXAS_BANCO=__get657('daycare/config/senhas-fixas'); __put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', ts:1});`);
+  igual([J676("senhaPerfil('1001')"), run("senhaPerfil('3579').nome")], [null, 'Plantonista']);
+  run('__el657.loginPwd.value="3579"; doLogin();'); await espera676();
+  igual(J676('__zc676'), ['Quem está usando este aparelho agora?'], 'quem entra pelo posto escreve o próprio nome');
+}));
+provaAsync('6.76 P22* (AC5.6) — a senha provisória pela outra pessoa (nunca a própria); na entrada com ela, «Trocar a minha senha» antes de qualquer tela; sem trocar, não entra', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run(`__put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', ts:1});`);
+  run('__za657=[];'); run("senhaProvisoriaAbrir('marcia');");
+  igual(J676('__za657.map(function(z){ return z[0]; })'), ['USE «TROCAR A MINHA SENHA»'], 'a Márcia não define a provisória dela');
+  papel676('gestao', { role: 'gestao', nome: 'Adriana · Gestão Total', souAdriana: true, id: 'adriana' });
+  run("senhaProvisoriaAbrir('marcia');");
+  await run('sfToque("confirmar", {motivo:"a Márcia esqueceu a senha nova", assina:"0902", nova:"1357", nova2:"1357"})');
+  assert.ok(/para você mesma/.test(run('SF_ATUAL.aviso')), 'quem assina não pode ser a dona: ' + run('SF_ATUAL.aviso'));
+  await run('sfToque("confirmar", {motivo:"a Márcia esqueceu a senha nova", assina:"1101", nova:"1357", nova2:"1357"})');
+  igual([run('SF_ATUAL.passo'), J676("__get657('daycare/config/senhas-fixas/marcia').provisoria")], ['pronto', true]);
+  run("sfToque('fechar'); SENHAS_FIXAS_BANCO=__get657('daycare/config/senhas-fixas'); __apl676=[];");
+  run('__el657.loginPwd.value="1357"; doLogin();'); await espera676();
+  igual([run('SF_ATUAL&&SF_ATUAL.op.forcado'), J676('__apl676'), txt676(run('sfCartazHTML()')).indexOf('Esta senha é provisória: troque agora para continuar.') >= 0], [true, [], true], 'o «Trocar a minha senha» vem antes de entrar');
+  run("sfToque('cancelar');");
+  igual([J676('__apl676'), run('__el657.loginErr.textContent')], [[], 'Sem trocar a senha provisória, este acesso não entra.']);
+  run('__el657.loginPwd.value="1357"; doLogin();'); await espera676();
+  await run('sfToque("confirmar", {nova:"2580", nova2:"2580"})');
+  igual([run('SF_ATUAL.passo'), J676("__get657('daycare/config/senhas-fixas/marcia').provisoria")], ['pronto', false]);
+  run("sfToque('fechar');");
+  igual(J676('__apl676'), ['Márcia · Gestora'], 'trocou: entra');
+}));
+provaAsync('6.76 P23* (AC5.7, AC2.5, AC12.2) — varredura: nenhum registro, histórico, rastro, auditoria, falha, sessão ou cópia guarda os dígitos das senhas digitadas; o relatório diz «a senha não aparece aqui»', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run(`__put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', ts:1});`);
+  run("setMon(0,'senha','9876');"); run('timeSalvarAbrir();'); await espera676(); await toque676(MOT676, '0902'); run("corrToque('fechar');");
+  run("senhaTrocarAbrir('marcia');"); await run('sfToque("confirmar", {atual:"0902", nova:"2468", nova2:"2468"})'); run("sfToque('fechar');");
+  run("senhaPostoAbrir();"); await run('sfToque("confirmar", {motivo:"a senha do posto vazou na casa", assina:"2468", nova:"3579", nova2:"3579"})'); run("sfToque('fechar');");
+  run("__recusa657='senhas-fixas'; senhaPostoAbrir();"); await run('sfToque("confirmar", {motivo:"a senha do posto vazou de novo", assina:"2468", nova:"3591", nova2:"3591"})'); run("sfToque('fechar'); __recusa657=null;");
+  const tudo = J676("(function(){ var c=JSON.parse(JSON.stringify(__db657)); if(c.daycare&&c.daycare.config) delete c.daycare.config.monitores; return c; })()");
+  // 2ª rodada (TEST-001): os campos hash e sal (sorteados) e as chaves geradas pelo app podem conter os 4 dígitos por acaso
+  // (~1,2% das rodadas): a varredura olha só os valores, sem eles.
+  const valores676 = (o) => { const out = []; (function w(v, k) { if (k === 'hash' || k === 'sal') return; if (v && typeof v === 'object') { Object.keys(v).forEach((kk) => w(v[kk], kk)); return; }
+    if (typeof v === 'string' && /^h\d+-[0-9a-z]+$/.test(v)) return; if (v !== null && v !== undefined) out.push(String(v)); })(o, ''); return out.join(' | '); };
+  const cop676 = J676('__ls657'); Object.keys(cop676).forEach((k) => { try { cop676[k] = JSON.parse(cop676[k]); } catch (e) { /* texto puro */ } });
+  const fontes = { banco: valores676(tudo), auditoria: valores676(J676('__au657')), sessao: valores676(J676('__ss676')), copia: valores676(cop676) };
+  const vazou = [];
+  ['9876', '2468', '3579', '3591'].forEach((s) => Object.keys(fontes).forEach((f) => { if (fontes[f].indexOf(s) >= 0) vazou.push(s + ' em ' + f); }));
+  igual(vazou, []);
+  run('SENHAS_FIXAS_BANCO=__get657("daycare/config/senhas-fixas"); renderSenhas();');
+  const rel = txt676(run('__el657.senhasList.innerHTML'));
+  assert.ok(rel.indexOf('trocada em 10/10/2026 por Márcia · Gestora — a senha não aparece aqui') >= 0 && rel.indexOf('2468') < 0 && rel.indexOf('3579') < 0, rel);
+}));
+
+// ---- AC6 — os celulares ---------------------------------------------------------------------------------------------------------------
+const APS676 = { 'dev-teste-1': { nome: 'Celular da Recepção', por: 'Gestora Teste', ts: 100, visto: { ts: 900, ua: 'Android · Chrome', quem: 'Ana Teste' } }, 'dev-teste-2': { nome: 'Tablet da Casa', por: 'Gestora Teste', ts: 200 } };
+const aps676 = () => run(`__put657('auaulandia/aparelhos', ${JSON.stringify(APS676)}); CFG_APARELHOS=__get657('auaulandia/aparelhos');`);
+provaAsync('6.76 P24* (AC6.1, AC6.2) — «Renomear» e «Tirar a autorização» só para a Gestão e a Diretoria (44 px); Renomear grava o nome e guarda o anterior', async () => com676(async () => {
+  aps676();
+  const hg = run("cfgAparelhosHTML(CFG_APARELHOS)");
+  igual([(hg.match(/min-height:44px[^>]*>Renomear</g) || []).length, (hg.match(/min-height:44px[^>]*>Tirar a autorização</g) || []).length], [2, 2]);
+  run("document.body.dataset.role='supervisor';"); assert.ok(!/Renomear|Tirar a autorização/.test(run("cfgAparelhosHTML(CFG_APARELHOS)")), 'a Supervisão vê sem botão');
+  run("document.body.dataset.role='gestao';");
+  run("cfgAparelhoRenomearAbrir('dev-teste-2');"); await espera676();
+  await run("corrToque('continuar', {valores:['Tablet da Recepção']})"); await toque676('o tablet mudou de lugar na casa', '0902');
+  const a = J676("__get657('auaulandia/aparelhos/dev-teste-2')");
+  igual([a.nome, Object.keys(a.nomes_anteriores).length, a.nomes_anteriores[Object.keys(a.nomes_anteriores)[0]].nome, a.ts], ['Tablet da Recepção', 1, 'Tablet da Casa', 200]);
+  assert.ok(J676('__au657').some((x) => x[0] === 'aparelho-renomeado' && x[1] === 'Tablet da Casa → Tablet da Recepção'));
+}));
+provaAsync('6.76 P25* (AC6.3, AC6.4, caminho 9) — tirar a autorização marca revogado (nenhum remove); deviceAutorizado recusa; o registro só com o batimento não está liberado; a lista de barrados volta a mostrar as tentativas; «Autorização retirada (N)» (base: o apagado volta autorizado)', async () => com676(async () => {
+  aps676();
+  run("cfgAparelhoTirarAbrir('dev-teste-1');"); await espera676();
+  assert.ok(txt676(run('corrCartazHTML()')).indexOf('O celular Celular da Recepção deixa de abrir o app para qualquer pessoa.') >= 0);
+  await toque676('o celular foi perdido na rua', '0902');
+  const a = J676("__get657('auaulandia/aparelhos/dev-teste-1')");
+  igual([a.nome, a.ts, !!a.visto, a.revogado.motivo, a.revogado.registro.por], ['Celular da Recepção', 100, true, 'o celular foi perdido na rua', 'Márcia · Gestora']);
+  igual(run("__esc657.filter(function(e){ return /^remove/.test(e[0]); }).length"), 0, 'nunca remove');
+  const ok = await new Promise((r) => { ctx.__cb676 = r; run('deviceAutorizado(function(a){ __cb676(a); })'); });
+  igual(ok, false, 'o celular retirado não está autorizado');
+  igual([run("aparelhoLiberado({nome:'x'})"), run("aparelhoLiberado({ts:1})"), run("aparelhoLiberado({nome:'x', revogado:{motivo:'y'}})"), run("aparelhoLiberado({visto:{ts:1}})"), run('aparelhoLiberado(null)')], [true, true, false, false, false]);
+  // o registro apagado à mão volta só com o batimento — e não abre
+  run("getDeviceId=function(){ return 'dev-teste-2'; }; devIdResolver=function(){ return Promise.resolve({id:'dev-teste-2'}); };");
+  run(`__put657('auaulandia/aparelhos/dev-teste-2', null); batimentoGravar('relogio');`); await espera676();
+  igual(J676("Object.keys(__get657('auaulandia/aparelhos/dev-teste-2'))"), ['visto']);
+  const ok2 = await new Promise((r) => { ctx.__cb676 = r; run('deviceAutorizado(function(a){ __cb676(a); })'); });
+  igual(ok2, false, 'só o batimento não autoriza');
+  // a lista de barrados mostra a tentativa do celular retirado; a de configurações, «Autorização retirada (1)» e «Sem autorização (1)»
+  run(`__put657('daycare/auditoria/2026-10-10', {x1:{acao:'login-barrado', aparelho:'dev-teste-1', quem:'Ana Teste', ts:${T676}, hora:'10:00'}});`);
+  run('renderLoginsBarrados();'); await espera676();
+  assert.ok(txt676(run('__el657.loginsBarradosList.innerHTML')).indexOf('Ana Teste não conseguiu entrar') >= 0, 'a tentativa volta a aparecer');
+  run("CFG_APARELHOS=__get657('auaulandia/aparelhos');");
+  const hc = txt676(run('cfgAparelhosHTML(CFG_APARELHOS)'));
+  assert.ok(hc.indexOf('Autorização retirada (1)') >= 0 && hc.indexOf('Devolver a autorização') >= 0 && hc.indexOf('Sem autorização (1)') >= 0, hc);
+  igual(J676("cfgAparelhosLista(CFG_APARELHOS).map(function(a){ return [a.id, a.liberado, !!a.revogado]; })").sort(), [['dev-teste-1', false, true], ['dev-teste-2', false, false]]);
+}));
+provaAsync('6.76 P26* (AC6.5, caminho 10) — o celular em uso tranca com a frase quando o registro ganha revogado; nenhuma senha destranca nele; a sessão não é encerrada', async () => com676(async () => {
+  banco676(EQUIPE676);
+  papel676('monitor', { nome: 'Ana Teste', role: 'monitor', monId: 'p1', paginas: [] });
+  run("aparelhoRevogadoMudou({motivo:'o celular foi perdido na rua', registro:{quando:'10/10/2026 às 10:00', por:'Márcia · Gestora'}});");
+  igual([run('_appTrancado'), run('__el657.lockAviso.textContent'), run('__lo676')], [true, 'A autorização deste celular foi retirada em 10/10/2026 às 10:00 por Márcia · Gestora. Chame a Gestão. Sair desta conta desliga o alarme do remédio neste celular.', 0]);
+  for (const s of ['4321', '0902', '1101']) {
+    run(`__el657.lockPwd.value='${s}'; destrancarApp();`);
+    igual([run('_appTrancado'), run('__el657.lockErr.textContent')], [true, 'A autorização deste celular foi retirada: nenhuma senha destranca aqui. Chame a Gestão.'], s);
+  }
+  assert.ok(/DB\.ref\('auaulandia\/aparelhos\/'\+id\+'\/revogado'\)\.on\('value'/.test(SRC676), 'o ouvinte pequeno no próprio registro');
+  run('aparelhoRevogadoMudou(null);'); run("__el657.lockPwd.value='4321'; destrancarApp();");
+  igual(run('_appTrancado'), false, 'devolvida a autorização, a senha volta a destrancar');
+}));
+provaAsync('6.76 P27* (AC6.6) — «Devolver a autorização» guarda a retirada em revogacoes; «Autorizar este aparelho» num celular retirado faz o mesmo, sem regravar o registro por cima, e o nome novo vale como renomear', async () => com676(async () => {
+  aps676();
+  run("__put657('auaulandia/aparelhos/dev-teste-1/revogado', {motivo:'o celular foi perdido na rua', registro:{por:'Gestora Teste'}}); CFG_APARELHOS=__get657('auaulandia/aparelhos');");
+  run("cfgAparelhoDevolverAbrir('dev-teste-1');"); await espera676();
+  await toque676('o celular foi achado na loja', '0902');
+  let a = J676("__get657('auaulandia/aparelhos/dev-teste-1')");
+  const rv = a.revogacoes[Object.keys(a.revogacoes)[0]];
+  igual(['revogado' in a, rv.motivo, rv.devolvido.motivo, a.nome], [false, 'o celular foi perdido na rua', 'o celular foi achado na loja', 'Celular da Recepção']);
+  const ok = await new Promise((r) => { ctx.__cb676 = r; run('deviceAutorizado(function(a){ __cb676(a); })'); });
+  igual(ok, true);
+  // «Autorizar este aparelho» na tela de entrada, num celular retirado
+  run("__put657('auaulandia/aparelhos/dev-teste-1/revogado', {motivo:'perdido de novo na rua', registro:{por:'Gestora Teste'}}); __esc657=[];");
+  run("__el657.loginPwd.value='0902'; __ztq657=['iPhone da Recepção'];"); await run('autorizarAparelho()'); await espera676();
+  a = J676("__get657('auaulandia/aparelhos/dev-teste-1')");
+  igual(['revogado' in a, Object.keys(a.revogacoes).length, a.nome, !!a.visto, Object.keys(a.nomes_anteriores || {}).length], [false, 2, 'iPhone da Recepção', true, 1]);
+  igual(J676("__esc657.filter(function(e){ return /aparelhos\\/dev-teste-1$/.test(e[1]); }).map(function(e){ return e[0]; })"), ['update'], 'nenhum set por cima do registro');
+}));
+provaAsync('6.76 P28* (AC6.7) — «Avisos tirados (N)» e «Pôr de volta»: o aviso vai para o histórico e sai do topo', async () => com676(async () => {
+  run(`__put657('auaulandia/avisos-barrados-dispensados', {apX:{quem:'Leticya Teste', dispensado_em:${T676 - 3600000}, dispensado_por:'Gestora Teste'}});`);
+  run('renderLoginsBarrados();'); await espera676();
+  const h = txt676(run('__el657.loginsBarradosList.innerHTML'));
+  assert.ok(h.indexOf('Avisos tirados (1)') >= 0 && h.indexOf('Leticya Teste') >= 0 && h.indexOf('Pôr de volta') >= 0, h);
+  run("avisoBarradoPorDeVoltaAbrir('apX');"); await espera676();
+  await toque676('o celular dela ainda não abre', '0902');
+  igual(J676("__get657('auaulandia/avisos-barrados-dispensados/apX')"), null);
+  const H = J676("__get657('auaulandia/avisos-barrados-historico/apX')");
+  const x = H[Object.keys(H)[0]];
+  igual([x.quem, x.dispensado_por, x.reposto.motivo], ['Leticya Teste', 'Gestora Teste', 'o celular dela ainda não abre']);
+}));
+
+// ---- AC7 a AC10 — a escala e os planos ligados à pessoa ---------------------------------------------------------------------------------
+const ESC676 = { 'Ana Teste': { id: 'p1', entrada: '07:00', almoco: '12:00-13:00', saida: '16:00' }, 'Bia Teste': { id: 'p2', entrada: '08:00', almoco: '12:00-13:00', saida: '17:00' } };
+const PLANOS676 = { 'plano-1': { id: 'plano-1', nome: 'Plano 1', motivo: 'dia completo', definidoPor: 'Márcia', ts: 1, porMonitor: { 'Ana Teste': [{ hora: '07:30', atividade: 'check-in de corpo e pertences' }], 'Bia Teste': [{ hora: '11:00', atividade: 'Enriquecimento Ambiental' }] }, ids: { 'Ana Teste': 'p1', 'Bia Teste': 'p2' } },
+  'plano-2': { id: 'plano-2', nome: 'Plano 2', motivo: 'um a menos', definidoPor: 'Márcia', ts: 1, porMonitor: { 'Ana Teste': [{ hora: '08:00', atividade: 'check-in' }] } } };
+const pd676 = (extra) => run(`__put657('daycare/config/escala', ${JSON.stringify(ESC676)}); __put657('daycare/config/planos', ${JSON.stringify(PLANOS676)});
+  __put657('daycare/plano-do-dia/2026-10-10', {plano:'plano-1', nome:'Plano 1', motivo:'', definidoPor:'Márcia', ts:1});
+  PD_ESCALA=__get657('daycare/config/escala'); PD_PLANOS=__get657('daycare/config/planos'); PD_DODIA=__get657('daycare/plano-do-dia/2026-10-10'); PD_AMANHA={}; ${extra || ''}`);
+const campos676 = () => { J676('pdPessoasLista().map(function(p){ return p.cid; })').forEach((c) => ['pdE-', 'pdA-', 'pdS-', 'pdSE-', 'pdSA-', 'pdSS-', 'pdAt-'].forEach((p) => run(`__el657['${p}${c}']={value:''};`))); };
+const cid676 = (id) => J676(`pdPessoasLista().filter(function(p){ return p.id==='${id}'; })[0].cid`);
+const val676 = (id, campo, v) => run(`__el657['${campo}${cid676(id)}'].value=${JSON.stringify(v)};`);
+const preenche676 = () => { campos676(); run(`pdPessoasLista().forEach(function(p){ var e=pdAchaPessoa(PD_ESCALA, p)||{}, s=e.sabado||{}; __el657['pdE-'+p.cid].value=e.entrada||''; __el657['pdA-'+p.cid].value=e.almoco||''; __el657['pdS-'+p.cid].value=e.saida||'';
+  __el657['pdSE-'+p.cid].value=s.entrada||''; __el657['pdSA-'+p.cid].value=s.almoco||''; __el657['pdSS-'+p.cid].value=s.saida||''; }); __el657.pdNome={value:'Plano 1'}; __el657.pdMotivo={value:'dia completo'};
+  pdPessoasLista().forEach(function(p){ var l=pdRotaDaPessoa(PD_PLANOS['plano-1'], p); __el657['pdAt-'+p.cid].value=(l||[]).map(function(a){ return a.hora+' '+a.atividade; }).join('\\n'); });`); };
+provaAsync('6.76 P29* (AC7.1, caminho 11) — Ana renomeada no Time: o «Meu dia» dela continua com a entrada, o almoço, a saída e as atividades; a escala mostra a linha com o nome novo e os valores dela', async () => com676(async () => {
+  pl676();
+  const rota = J676(`plRotaDoDia('Ana Teste Souza', ${JSON.stringify(ESC676)}, ${JSON.stringify(PLANOS676['plano-1'])}, 'p1', '2026-10-09')`);
+  igual([rota.entrada, rota.almoco, rota.saida, rota.atividades.length, rota.avisos], ['07:00', '12:00-13:00', '16:00', 1, []]);
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[0].nome = 'Ana Teste Souza'; banco676(eq); pd676();
+  run('pdRender("2026-10-10");');
+  const h = run('__el657.pdRoot.innerHTML');
+  const c = cid676('p1');
+  assert.ok(h.indexOf('>Ana Teste Souza<') >= 0 && new RegExp('id="pdE-' + c + '" value="07:00"').test(h), 'a linha da escala com o nome novo e a entrada dela');
+}));
+provaAsync('6.76 P30* (AC7.1, a migração) — salvar a troca de nome no Time leva a escala e as rotas (também as antigas, sem id) para o nome novo, com o id dentro; nada se perde', async () => com676(async () => {
+  pl676();
+  banco676(EQUIPE676);
+  run(`__put657('daycare/config/escala', {'Ana Teste':{entrada:'07:00', almoco:'12:00-13:00', saida:'16:00'}, 'Bia Teste':{id:'p2', entrada:'08:00'}}); __put657('daycare/config/planos', ${JSON.stringify(PLANOS676)});`);
+  run("setMon(0,'nome','Ana Teste Souza');"); run('timeSalvarAbrir();'); await espera676(); await toque676(MOT676, '0902'); await espera676();
+  const esc = J676("__get657('daycare/config/escala')"), pl = J676("__get657('daycare/config/planos')");
+  igual([Object.keys(esc).sort(), esc['Ana Teste Souza'], esc['Bia Teste'].entrada], [['Ana Teste Souza', 'Bia Teste'], { entrada: '07:00', almoco: '12:00-13:00', saida: '16:00', id: 'p1' }, '08:00']);
+  igual([Object.keys(pl['plano-1'].porMonitor).sort(), pl['plano-1'].ids['Ana Teste Souza'], Object.keys(pl['plano-2'].porMonitor), pl['plano-2'].ids], [['Ana Teste Souza', 'Bia Teste'], 'p1', ['Ana Teste Souza'], { 'Ana Teste Souza': 'p1' }]);
+  const rota = J676(`plRotaDoDia('Ana Teste Souza', __get657('daycare/config/escala'), __get657('daycare/config/planos')['plano-2'], 'p1', '2026-10-09')`);
+  igual([rota.entrada, rota.atividades.length, rota.avisos], ['07:00', 1, []]);
+}));
+provaAsync('6.76 P31* (AC7.2, caminho 12) — Salvar a escala e o plano não apaga quem não está na tela (desativada ou de outro papel)', async () => com676(async () => {
+  pl676();
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[1].ativo = false; banco676(eq); pd676();
+  preenche676(); val676('p1', 'pdE-', '07:15');
+  run('__zpq657=[true];'); await run('pdSalvarEscala()'); await espera676();
+  const esc = J676("__get657('daycare/config/escala')");
+  igual([esc['Ana Teste'].entrada, esc['Bia Teste']], ['07:15', ESC676['Bia Teste']], 'a escala da Bia (desativada) fica');
+  run("__el657['pdAt-'+pdPessoasLista()[0].cid].value='07:30 check-in de corpo e pertences\\n09:00 agility'; __zpq657=[true];");
+  await run("pdSalvarPlano('plano-1')"); await espera676();
+  const p = J676("__get657('daycare/config/planos/plano-1')");
+  igual([p.porMonitor['Bia Teste'], p.ids['Bia Teste'], p.porMonitor['Ana Teste'].length], [PLANOS676['plano-1'].porMonitor['Bia Teste'], 'p2', 2], 'a rota da Bia fica');
+}));
+provaAsync('6.76 P32 (AC7.3, guarda) — plRotaDoDia com três parâmetros: o resultado da base nos casos do harness', async () => com676(async () => {
+  pl676();
+  const escala = { 'Octávio': { entrada: '07:00', almoco: '13:00-14:00', saida: '16:00' }, 'Wandela': { entrada: '07:00', almoco: '12:00-13:00', saida: '16:00' } };
+  const plano = { id: 'plano-2', nome: 'Plano 2 — um a menos', motivo: 'Wandela de folga', definidoPor: 'Márcia', ts: 1, porMonitor: { 'Octávio': [{ hora: '15:00', atividade: '2º horário de almoço' }, { hora: '07:30', atividade: 'check-in de corpo e pertences' }, { hora: '11:00', atividade: 'guardar os pertences' }], 'Giulia': [{ hora: '11:00', atividade: 'Enriquecimento Ambiental' }] } };
+  ctx.__e676 = escala; ctx.__p676 = plano;
+  const r = (n) => { const x = J676(`plRotaDoDia(${JSON.stringify(n)}, __e676, __p676)`); return [x.entrada, x.almoco, x.saida, x.atividades.map((a) => a.hora).join(','), x.avisos, x.plano]; };
+  igual(r('Octávio'), ['07:00', '13:00-14:00', '16:00', '07:30,11:00,15:00', [], { id: 'plano-2', nome: 'Plano 2 — um a menos', motivo: 'Wandela de folga', definidoPor: 'Márcia' }]);
+  igual(r('Fulano').slice(0, 5), ['', '', '', '', ['Seu horário ainda não está na escala — fale com a Márcia.', 'Você não está no plano de hoje — fale com a Márcia.']]);
+  igual(r('octavio').slice(0, 5), ['07:00', '13:00-14:00', '16:00', '07:30,11:00,15:00', []]);
+  igual(J676("plRotaDoDia('Bia Teste', {'Bia Teste':{entrada:'08:00'}}, {}).avisos"), ['Você não está no plano de hoje — fale com a Márcia.']);
+}));
+provaAsync('6.76 P33* (AC8.1) — Salvar a escala: a pergunta com o antes → depois («sai da escala»); «Voltar» não grava; o rastro por pessoa; o histórico com antes e depois; «Nada mudou»', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676); pd676(); preenche676();
+  val676('p1', 'pdE-', '08:00'); val676('p2', 'pdE-', ''); val676('p2', 'pdA-', ''); val676('p2', 'pdS-', '');
+  run('__zpq657=[false]; __zp657=[];'); await run('pdSalvarEscala()'); await espera676();
+  const perg = J676('__zp657')[0];
+  igual(perg[0], 'Salvar a escala?');
+  assert.ok(perg[1].indexOf('Ana Teste: entrada 07:00 → 08:00') >= 0 && perg[1].indexOf('Bia Teste sai da escala') >= 0, perg[1].join(' | '));
+  igual(run("__esc657.filter(function(e){ return /config\\/escala/.test(e[1]); }).length"), 0, '«Voltar» não grava');
+  run('__zpq657=[true]; __au657=[];'); await run('pdSalvarEscala()'); await espera676();
+  const esc = J676("__get657('daycare/config/escala')");
+  igual([Object.keys(esc), esc['Ana Teste'].entrada, esc['Ana Teste'].id], [['Ana Teste'], '08:00', 'p1']);
+  const au = J676('__au657').filter((a) => a[0] === 'escala')[0];
+  assert.ok(au && au[1].indexOf('Ana Teste: entrada 07:00 → 08:00') >= 0, JSON.stringify(au));
+  const H = J676("__get657('daycare/config/escala-historico')"), h = H[Object.keys(H)[0]];
+  igual([Object.keys(h.antes).sort(), Object.keys(h.depois), h.por, h.mudancas.indexOf('Bia Teste sai da escala') >= 0], [['Ana Teste', 'Bia Teste'], ['Ana Teste'], 'Márcia · Gestora', true]);
+  run("PD_ESCALA=__get657('daycare/config/escala');"); await run('pdSalvarEscala()'); await espera676();
+  igual(run("__el657.pdMsgEscala.innerHTML").indexOf('Nada mudou: a escala está igual à do banco. Nada foi gravado.') >= 0, true);
+}));
+provaAsync('6.76 P34* (AC8.2, AC8.3) — o sábado (em branco vale a semana), a folga, as férias e o outro horário no dia; «Tirar» sem senha, com rastro e no histórico; dia passado recusado', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676); pd676();
+  const E = { id: 'p1', entrada: '07:00', almoco: '12:00-13:00', saida: '16:00', sabado: { entrada: '08:00', almoco: '', saida: '12:00' } };
+  ctx.__E676 = E;
+  igual([J676("plEscalaDoDia(__E676, '2026-10-10')").tipo, J676("plEscalaDoDia(__E676, '2026-10-10')").entrada, J676("plEscalaDoDia(__E676, '2026-10-12')").entrada, J676("plEscalaDoDia({entrada:'07:00'}, '2026-10-10')").entrada], ['sabado', '08:00', '07:00', '07:00']);
+  const c = cid676('p1');
+  run(`__el657['pdXmsg-${c}']={innerHTML:''};`);
+  let r = await run(`pdExcecaoGuardar('${c}', {de:'2026-10-09', ate:'', tipo:'folga', motivo:''})`);
+  igual(r.ok, false, 'dia passado');
+  r = await run(`pdExcecaoGuardar('${c}', {de:'2026-10-12', ate:'2026-10-14', tipo:'ferias', motivo:'férias combinadas em agosto'})`); await espera676();
+  r = await run(`pdExcecaoGuardar('${c}', {de:'2026-10-15', ate:'', tipo:'folga', motivo:''})`); await espera676();
+  r = await run(`pdExcecaoGuardar('${c}', {de:'2026-10-16', ate:'', tipo:'horario', entrada:'10:00', almoco:'13:00-14:00', saida:'19:00', motivo:''})`); await espera676();
+  const esc = J676("__get657('daycare/config/escala')"), ex = esc['Ana Teste'].excecoes;
+  igual(Object.keys(ex).map((k) => ex[k].tipo).sort(), ['ferias', 'folga', 'horario']);
+  const nota = (d) => J676(`plRotaDoDia('Ana Teste', __get657('daycare/config/escala'), __get657('daycare/config/planos')['plano-1'], 'p1', '${d}')`);
+  igual([nota('2026-10-13').nota, nota('2026-10-13').entrada, nota('2026-10-13').avisos], ['Você está de férias até 14/10/2026.', '', []]);
+  igual([nota('2026-10-15').nota, nota('2026-10-16').entrada, nota('2026-10-16').saida, nota('2026-10-17').entrada], ['Hoje é a sua folga.', '10:00', '19:00', '08:00'.replace('08:00', '07:00')]);
+  assert.ok(J676('__au657').filter((a) => a[0] === 'escala-excecao').length === 3);
+  // o «Meu dia» de sábado usa a linha de sábado
+  run("__put657('daycare/config/escala/Ana Teste/sabado', {entrada:'08:00', almoco:'', saida:'12:00'});");
+  igual(nota('2026-10-10').entrada, '08:00');
+  // «Tirar»
+  run("PD_ESCALA=__get657('daycare/config/escala');");
+  const kF = Object.keys(ex).filter((k) => ex[k].tipo === 'folga')[0];
+  r = await run(`pdExcecaoTirar('${c}', '${kF}', true)`); await espera676();
+  igual([r.ok, kF in (J676("__get657('daycare/config/escala')")['Ana Teste'].excecoes || {}), nota('2026-10-15').nota], [true, false, '']);
+  assert.ok(J676('__au657').some((a) => a[0] === 'escala-excecao-tirada' && /tirou folga/.test(a[1])), 'o rastro de tirar');
+  const H = J676("__get657('daycare/config/escala-historico')");
+  igual(Object.keys(H).length, 4, 'três mudanças e a retirada no histórico da escala');
+  run('pdRender("2026-10-10");');
+  const hh = txt676(run('__el657.pdRoot.innerHTML'));
+  assert.ok(hh.indexOf('Férias de 12/10/2026 a 14/10/2026 (férias combinadas em agosto)') >= 0 && hh.indexOf('Mudar só um dia ou um período') >= 0 && hh.indexOf('Mudanças da escala (4)') >= 0, hh);
+}));
+provaAsync('6.76 P35* (AC8.4) — «No Time: …» ao lado e a marca «diferente do Time»; nada é copiado de um para o outro', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676); pd676("PD_ESCALA['Ana Teste'].entrada='08:00';");
+  run('pdRender("2026-10-10");');
+  const h = txt676(run('__el657.pdRoot.innerHTML'));
+  assert.ok(h.indexOf('Ana Teste No Time: 07:00–16:00 diferente do Time') >= 0, h);
+  assert.ok(h.indexOf('Bia Teste No Time: 08:00–17:00 entrada') >= 0, 'a Bia, igual ao Time, sem a marca');
+  preenche676(); val676('p2', 'pdS-', '17:30'); run('__zpq657=[true];'); await run('pdSalvarEscala()'); await espera676();
+  igual([run("__esc657.filter(function(e){ return /config\\/monitores/.test(e[1]); }).length"), run('MONITORES[1].saida')], [0, '17:00'], 'o Time não muda');
+}));
+provaAsync('6.76 P36* (AC9.1, AC9.2, caminho 13) — «Duplicar» só na tela; excluir com motivo e senha, recusado para o plano de hoje, o de amanhã e o único; planos-excluidos numa escrita só; «Restaurar» (e o id já usado)', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676); pd676("PD_AMANHA={plano:'plano-2', nome:'Plano 2'};");
+  run("pdDuplicarPlano('plano-1');");
+  igual([J676("Object.keys(PD_PLANOS)"), run("PD_PLANOS['plano-3'].nome"), run("PD_NOVOS['plano-3']"), run('__esc657.length')], [['plano-1', 'plano-2', 'plano-3'], 'Cópia de Plano 1', true, 0]);
+  run("pdExcluirPlanoAbrir('plano-1');"); await espera676();
+  igual(run("__el657.pdMsgPlano.innerHTML").indexOf('Este é o plano de hoje. Escolha outro plano para o dia antes de excluir.') >= 0, true);
+  run("pdExcluirPlanoAbrir('plano-2');"); await espera676();
+  igual(run("__el657.pdMsgPlano.innerHTML").indexOf('Este é o plano de amanhã. Escolha outro plano para o dia antes de excluir.') >= 0, true);
+  igual(run('CORR_ATUAL'), null);
+  run("PD_AMANHA={}; delete PD_PLANOS['plano-3']; delete PD_NOVOS['plano-3'];"); run("pdExcluirPlanoAbrir('plano-2');"); await espera676();
+  igual(run('CORR_ATUAL.op.acao'), 'anular');
+  await toque676('o plano dois não serve mais', '4321'); assert.ok(/não pode assinar/.test(run('CORR_ATUAL.aviso')), 'a Encãotadora não exclui');
+  await toque676('o plano dois não serve mais', '0902'); igual(run('CORR_ATUAL.passo'), 'pronto');
+  igual(J676("__esc657.filter(function(e){ return /^daycare\\/config$/.test(e[1]); }).map(function(e){ return e[0]+' '+e[2].join(','); })"), ['update planos-excluidos/plano-2,planos/plano-2'], 'numa escrita só');
+  igual([J676("__get657('daycare/config/planos/plano-2')"), run("__get657('daycare/config/planos-excluidos/plano-2').excluido.motivo")], [null, 'o plano dois não serve mais']);
+  run("PD_PLANOS={'plano-1':PD_PLANOS['plano-1']};"); run("pdExcluirPlanoAbrir('plano-1');");
+  igual(run("__el657.pdMsgPlano.innerHTML").indexOf('Este é o plano de hoje') >= 0, true);
+  run("PD_DODIA={}; pdExcluirPlanoAbrir('plano-1');"); await espera676();
+  igual(run("__el657.pdMsgPlano.innerHTML").indexOf('Este é o único plano. Monte outro antes de excluir este.') >= 0, true);
+  // restaurar; e o id já usado volta com um id novo e o mesmo nome
+  run("PD_EXCLUIDOS=__get657('daycare/config/planos-excluidos'); __put657('daycare/config/planos/plano-2', {id:'plano-2', nome:'Plano 2 novo', definidoPor:'M', porMonitor:{}});");
+  run("pdRestaurarPlanoAbrir('plano-2');"); await espera676(); await toque676('o plano dois voltou a valer', '0902');
+  const pl = J676("__get657('daycare/config/planos')");
+  igual([Object.keys(pl).sort(), pl['plano-3'].nome, J676("__get657('daycare/config/planos-excluidos/plano-2')"), Object.keys(pl['plano-3'].exclusoes).length], [['plano-1', 'plano-2', 'plano-3'], 'Plano 2', null, 1]);
+}));
+provaAsync('6.76 P37* (AC9.3, AC9.4) — as versões guardadas antes de cada Salvar; «Começar por esta versão» sem gravar; a pergunta e o rastro do que mudou', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676); pd676(); preenche676();
+  run("__el657['pdAt-'+pdPessoasLista()[0].cid].value='07:30 check-in de corpo e pertences\\n09:00 agility'; __zpq657=[true]; __zp657=[]; __au657=[];");
+  await run("pdSalvarPlano('plano-1')"); await espera676();
+  assert.ok(J676('__zp657')[0][1].indexOf('Plano 1: Ana Teste ganhou 09:00 agility') >= 0, JSON.stringify(J676('__zp657')));
+  assert.ok(J676('__au657').some((a) => a[0] === 'plano-do-dia' && /Plano 1: Ana Teste ganhou 09:00 agility/.test(a[1])));
+  const H = J676("__get657('daycare/config/planos-historico/plano-1')"), v = H[Object.keys(H)[0]];
+  igual([v.versao.porMonitor['Ana Teste'].length, v.por, J676("__get657('daycare/config/planos/plano-1')").porMonitor['Ana Teste'].length], [1, 'Márcia · Gestora', 2]);
+  run("PD_VERSOES['plano-1']=__get657('daycare/config/planos-historico/plano-1'); __esc657=[];");
+  run(`pdVersaoUsar('plano-1', '${Object.keys(H)[0]}');`);
+  igual([run("PD_PLANOS['plano-1'].porMonitor['Ana Teste'].length"), run('__esc657.length')], [1, 0], 'preenche o editor, sem gravar');
+  run('pdRender("2026-10-10");'); assert.ok(txt676(run('__el657.pdRoot.innerHTML')).indexOf('Versões anteriores (1)') >= 0);
+}));
+provaAsync('6.76 P38* (AC10.1, AC10.2, caminho 14) — hoje e amanhã; o motivo do dia sem mudar o do plano; o nome do plano guardado; anteriores na troca; dia passado fora', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676); pd676();
+  run('pdRender("2026-10-10");');
+  const h = txt676(run('__el657.pdRoot.innerHTML'));
+  assert.ok(h.indexOf('Hoje (10/10/2026): Plano 1, definido por Márcia') >= 0 && h.indexOf('Amanhã (11/10/2026): ainda não escolhido') >= 0, h);
+  igual((run('__el657.pdRoot.innerHTML').match(/min-height:44px[^>]*>Nenhum plano neste dia</g) || []).length, 2);
+  run("__el657['pdMD-2026-10-11']={value:'Márcia de folga amanhã'}; __zpq657=[true];");
+  await run("pdEscolherPlanoDia('plano-2', '2026-10-11')"); await espera676();
+  const d = J676("__get657('daycare/plano-do-dia/2026-10-11')");
+  igual([d.plano, d.nome, d.motivo, d.definidoPor, J676("__get657('daycare/config/planos/plano-2').motivo")], ['plano-2', 'Plano 2', 'Márcia de folga amanhã', 'Márcia · Gestora', 'um a menos']);
+  run("__el657['pdMD-2026-10-11']={value:''}; __zpq657=[true]; __au657=[];");
+  await run("pdEscolherPlanoDia('plano-1', '2026-10-11')"); await espera676();
+  const d2 = J676("__get657('daycare/plano-do-dia/2026-10-11')"), an = d2.anteriores[Object.keys(d2.anteriores)[0]];
+  igual([d2.plano, an.plano, an.motivo], ['plano-1', 'plano-2', 'Márcia de folga amanhã']);
+  assert.ok(J676('__au657').some((a) => a[0] === 'plano-do-dia' && a[1] === 'o dia 2026-10-11 passou do Plano 2 para o Plano 1'));
+  run('__zpq657=[true];');
+  igual([(await run("pdEscolherPlanoDia('plano-2', '2026-10-09')")).ok, J676("__get657('daycare/plano-do-dia/2026-10-09')"), run("__el657.pdMsgDia.innerHTML").indexOf('Dia passado não se escolhe aqui.') >= 0], [false, null, true], 'dia passado não se escolhe');
+}));
+provaAsync('6.76 P39* (AC10.3, AC9.5, caminho 15) — «Nenhum plano neste dia» com 4 palavras: o «Meu dia» e o Dashboard da Adriana com a frase; o Dashboard mostra o nome do plano excluído', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676); pd676();
+  let r = await run("pdNenhumPlanoAbrir('2026-10-10', 'sem plano hoje')"); igual(r.ok, false, '3 palavras');
+  r = await run("pdNenhumPlanoAbrir('2026-10-10', 'feriado municipal da cidade toda')"); await espera676();
+  const d = J676("__get657('daycare/plano-do-dia/2026-10-10')");
+  igual([d.nenhum, d.motivo, 'plano' in d, Object.keys(d.anteriores).length], [true, 'feriado municipal da cidade toda', false, 1]);
+  const rota = J676("plRotaDoDia('Ana Teste', __get657('daycare/config/escala'), {nenhum:true, motivo:'feriado municipal da cidade toda'}, 'p1', '2026-10-12')");
+  igual([rota.nota, rota.avisos], ['Hoje não há plano do dia: feriado municipal da cidade toda.', []]);
+  assert.ok(txt676(run('pmCardMeuDia(' + JSON.stringify(rota) + ')')).indexOf('Hoje não há plano do dia: feriado municipal da cidade toda.') >= 0);
+  assert.ok(txt676(run("pmCardPlano({plano:{}, atividades:[], avisos:[]}, {nenhum:true, motivo:'feriado municipal da cidade toda'})")).indexOf('Hoje não há plano do dia. feriado municipal da cidade toda') >= 0);
+  igual([run("pdirPlanoLinha({planoDia:{ok:true, v:{nenhum:true, motivo:'feriado municipal da cidade toda'}}, planosCfg:{ok:true, v:{}}})"),
+    run("pdirPlanoLinha({planoDia:{ok:true, v:{plano:'plano-9', nome:'Plano 9', definidoPor:'Márcia'}}, planosCfg:{ok:true, v:{}}})"),
+    run("pdirPlanoLinha({planoDia:{ok:false}, planosCfg:{ok:true, v:{}}})")], ['sem plano hoje: feriado municipal da cidade toda', 'o plano de hoje é Plano 9, definido por Márcia', 'o plano do dia ainda lendo']);
+  assert.ok(/monitor:pdirPlanoLinha\(d\)/.test(SRC676), 'o Dashboard da Adriana usa a linha');
+}));
+
+// ---- AC11, AC12 — quem assina e a Linha do tempo ------------------------------------------------------------------------------------------
+provaAsync('6.76 P40* (AC11, AC12) — o posto e o nome digitado não assinam; as ações novas e as sete antigas em português na Linha do tempo', async () => com676(async () => {
+  banco676(EQUIPE676);
+  ['1001', 'Plantonista', 'Ana Teste'].forEach((s) => igual(run(`corrAssinar(${JSON.stringify(s)}, 'ver-por-dia', 'isto').ok`), false, s));
+  const N = ['time-salvo', 'time-desativou', 'time-reativou', 'senha-fixa-trocada', 'senha-fixa-provisoria', 'senha-posto-trocada', 'aparelho-renomeado', 'aparelho-autorizacao-retirada',
+    'aparelho-autorizacao-devolvida', 'aviso-barrado-reposto', 'escala-excecao', 'plano-excluido', 'plano-restaurado', 'plano-do-dia-nenhum',
+    'escala', 'plano-do-dia', 'aparelho-liberado', 'aviso-barrado-dispensado', 'login-barrado', 'login-pessoa', 'aparelho-sem-memoria'];
+  igual(N.filter((a) => !run(`ACAO_LABEL[${JSON.stringify(a)}]`)), []);
+  igual(run("acaoRotulo({acao:'login-barrado', detalhe:'aparelho não autorizado'})"), 'Entrada barrada (celular não autorizado) — aparelho não autorizado');
+  assert.ok(/\nObject\.assign\(ACAO_LABEL, \{|\n  Object\.assign\(ACAO_LABEL, \{/.test(SRC676), 'num Object.assign próprio');
+}));
+provaAsync('6.76 P42* (AC3.5, AC6.5, S12-P4) — com a tela trancada pela pessoa desativada ou pelo celular retirado, a sessão continua viva e o alarme do remédio continua abrindo; «Dei o remédio» pede a senha, como sempre', async () => com676(async () => {
+  banco676(EQUIPE676);
+  papel676('monitor', { nome: 'Bia Teste', role: 'monitor', monId: 'p2', paginas: [] });
+  run(`__bk676m={mo:mostrarDespertadorMed, lh:medLogHoje, eh:ehHojeAua, ad:medAdiadoDeOutroDia, mt:MED_AGENDA_TODOS, nt:despMedNaTela, sz:despMedSnooze, dr:medDespRedesenhar, bs:bipMedLoopStop, at:despMedAtual, ai:despMedAtualDoseId};
+    __alarme676=[]; mostrarDespertadorMed=function(it, d, dia){ __alarme676.push(it.key+'@'+d); despMedNaTela=it.key+'__'+d; despMedAtual=it; despMedAtualDoseId=d; };
+    medLogHoje=function(){ return Promise.resolve({}); }; ehHojeAua=function(){ return true; }; medAdiadoDeOutroDia=function(){ return false; }; medDespRedesenhar=function(){}; bipMedLoopStop=function(){};
+    despMedSnooze={}; MED_AGENDA_TODOS=[{key:'remedio_teste__ana', itemId:'it1', horario:'09:30', hospNome:'Tonico', nome:'Remédio Teste', q:1, u:'comp'}];`);
+  try {
+    const desperta = async () => { run('despMedNaTela=null; __alarme676=[]; checarDespertadorMed();'); await espera676(); return J676('__alarme676'); };
+    const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[1].ativo = false; eq[1].desativado = { em: '2026-10-10', motivo: 'a pessoa saiu da empresa', registro: {} };
+    run(`timeDoBanco(${JSON.stringify(eq)}); permReaplicarDoTime();`);
+    igual([run('_appTrancado'), run("JSON.parse(sessionStorage.getItem('zeluz_login')).nome"), run('document.body.dataset.role'), run('papelRecebeAlarmeMed()')], [true, 'Bia Teste', 'monitor', true]);
+    igual(await desperta(), ['remedio_teste__ana@' + run("magDoseId('it1','09:30')")], 'trancada pela desativação: o alarme abre');
+    run('confirmarDoseDespertador();');
+    igual(run('__el657.lockErr.textContent'), 'Digite sua senha para registrar o remédio.');
+    run("aparelhoRevogadoMudou({motivo:'o celular foi perdido na rua', registro:{quando:'10/10/2026 às 10:00', por:'Márcia · Gestora'}});");
+    igual([run('_appTrancado'), run('ACESSO_TRAVA.tipo'), (await desperta()).length], [true, 'aparelho', 1], 'trancada pelo celular retirado: o alarme abre');
+    igual(run('__lo676'), 0, 'nenhum logout');
+  } finally { run(`mostrarDespertadorMed=__bk676m.mo; medLogHoje=__bk676m.lh; ehHojeAua=__bk676m.eh; medAdiadoDeOutroDia=__bk676m.ad; MED_AGENDA_TODOS=__bk676m.mt; despMedNaTela=__bk676m.nt;
+    despMedSnooze=__bk676m.sz; medDespRedesenhar=__bk676m.dr; bipMedLoopStop=__bk676m.bs; despMedAtual=__bk676m.at; despMedAtualDoseId=__bk676m.ai;`); }
+}));
+// ---- AC14, AC15 — a área protegida e as funções fixadas ------------------------------------------------------------------------------------
+provaAsync('6.76 P43* (AC2.1, AC2.3) — salvar pelo cartaz: um «salvo» só, o do cartaz (sem o alertão «PERMISSÕES SALVAS» por cima); o lembrete do celular autorizado vem no antes → depois quando há senha nova ou pessoa nova; sem o cartaz, o alertão de antes continua', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(1,'saida','18:30');"); run('timeSalvarAbrir();'); await espera676();
+  const LEMB = 'Lembrete: toda a equipe só entra em celular autorizado.';
+  assert.ok(txt676(run('corrCartazHTML()')).indexOf(LEMB) < 0, 'sem senha nova nem pessoa nova: sem o lembrete');
+  run("corrToque('fechar');");
+  run("setMon(1,'senha','7788');"); run('timeSalvarAbrir();'); await espera676();
+  assert.ok(txt676(run('corrCartazHTML()')).indexOf(LEMB) >= 0, 'senha trocada: o lembrete no cartaz');
+  run('__za657=[];'); await toque676(MOT676, '0902');
+  igual(run('CORR_ATUAL.passo'), 'pronto', 'salvo pelo cartaz');
+  igual(J676("__za657.map(function(z){ return z[0]; })"), [], 'nenhum alertão por cima do cartaz');
+  run("corrToque('fechar');");
+  run("addPessoa(); MONITORES[MONITORES.length-1].nome='Duda Nova Teste'; MONITORES[MONITORES.length-1].senha='6611';"); run('timeSalvarAbrir();'); await espera676();
+  assert.ok(txt676(run('corrCartazHTML()')).indexOf(LEMB) >= 0, 'pessoa nova: o lembrete no cartaz');
+  run("corrToque('fechar'); MONITORES.pop(); MON_PENDENTE=false;");
+  // sem o cartaz (tela velha, console): o alertão de antes, com o mesmo texto
+  run("__za657=[]; setMon(0,'saida','16:30');"); await run('salvarMonitores()'); await espera676();
+  igual(J676("__za657.map(function(z){ return z[0]; })"), ['✅ PERMISSÕES SALVAS'], 'sem o cartaz: o alertão de antes');
+}));
+// ---- 2ª rodada (gate do QA, 11/out/2026): as provas do QA (Quinn) trazidas para a Fase 0 — QA676-01 a 20 passavam no código da
+// 1ª rodada; QA676-A1 a A9 afirmam o comportamento certo de cada achado (SEC-001 a SEC-005, REL-002 a REL-004) e falhavam nele.
+// Adaptações: o prefixo «6.76 » no nome; a QA676-03 devolve o sorteio do sandbox no fim; a QA676-09 traz o texto da base.
+const semLogin676 = () => run('__login657=null; __ss676.zeluz_login=null; _appTrancado=false; __apl676=[];');
+const aut676 = () => run("__put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', por:'Gestora Teste', ts:1});");
+const entra676 = async (s) => { run(`__el657.loginErr.textContent=''; __el657.loginPwd.value=${JSON.stringify(s)}; doLogin();`); await espera676(); return { apl: J676('__apl676'), err: run('__el657.loginErr.textContent') }; };
+const destranca676 = (s) => { run(`_appTrancado=true; __el657.lockErr.textContent=''; __el657.lockPwd.value=${JSON.stringify(s)}; destrancarApp();`); return { tr: run('_appTrancado'), err: run('__el657.lockErr.textContent') }; };
+const assina676 = (s, cap) => J676(`corrAssinar(${JSON.stringify(s)}, ${JSON.stringify(cap || 'ver-por-dia')}, 'isto')`);
+
+provaAsync('6.76 QA676-01 (AC1.2) — a senha digitada no Time e não salva não abre em porta nenhuma: pessoa NOVA com senha, senha trocada de quem já existe e papel trocado para Supervisão; entrada, tela trancada, cartaz, senhaQuem e corrPaginasDaPessoa', async () => com676(async () => {
+  banco676(EQUIPE676); aut676();
+  run("addPessoa(); var __i=MONITORES.length-1; setMon(__i,'nome','Nova Teste'); setMon(__i,'senha','6060'); setMon(__i,'role','supervisor');");
+  run("setMon(1,'senha','7171'); setMon(1,'role','supervisor');");
+  igual(run('MON_PENDENTE'), true);
+  for (const s of ['6060', '7171']) {
+    igual(J676(`senhaPerfil('${s}')`), null, 'senhaPerfil ' + s);
+    igual(J676(`senhaQuem('${s}')`), null, 'senhaQuem ' + s);
+    igual(assina676(s).ok, false, 'cartaz ' + s);
+    igual(J676(`corrPaginasDaPessoa('Nova Teste', '${s}')`), [], 'corrPaginasDaPessoa ' + s);
+    igual(destranca676(s).tr, true, 'tela trancada ' + s);
+  }
+  // a Bia, de antes, continua monitora com a senha de antes (não ganha a Supervisão na assinatura)
+  igual(J676("senhaQuem('4322')"), { nome: 'Bia Teste', role: 'monitor' });
+  igual(assina676('4322').ok, false, 'a Bia (ainda monitora no banco) não assina o Time');
+  semLogin676();
+  for (const s of ['6060', '7171']) { const r = await entra676(s); igual([r.apl, r.err], [[], 'Senha incorreta. Tente de novo.'], 'entrada ' + s); }
+  const r4 = await entra676('4322'); igual(r4.apl, ['Bia Teste'], 'a senha do banco continua abrindo');
+  // salvo o Time, a nova passa a valer
+  run("__login657={nome:'Márcia · Gestora', role:'gestao', avisoSonoro:true, id:'marcia'}; __ss676.zeluz_login=JSON.stringify(__login657); document.body.dataset.role='gestao';");
+  run('timeSalvarAbrir();'); await espera676(); await toque676(MOT676, '0902'); run("corrToque('fechar');");
+  igual([run("senhaPerfil('6060').nome"), run("senhaPerfil('7171').role"), J676("senhaPerfil('4322')")], ['Nova Teste', 'supervisor', null]);
+}));
+
+provaAsync('6.76 QA676-02 (AC3.7, S12-P9) — as senhas de fábrica e a 5829 não abrem com a lista vazia, ausente ou ainda não chegada, em nenhuma porta; antes do banco, a frase da lista que não chegou', async () => com676(async () => {
+  aut676();
+  const FAB = ['1005', '1007', '1008', '1009', '1010', '1011', '5829'];
+  for (const [rot, cod] of [['não chegou', 'MON_BANCO=null; MONITORES=[];'], ['vazia', 'timeDoBanco([]);'], ['ausente', 'timeDoBanco(null);'], ['objeto vazio', 'timeDoBanco({});']]) {
+    run(cod);
+    for (const s of FAB) {
+      igual([rot, s, J676(`senhaPerfil('${s}')`), J676(`senhaQuem('${s}')`), assina676(s, 'gestao-role').ok], [rot, s, null, null, false]);
+      igual([rot, s, destranca676(s).tr], [rot, s, true]);
+    }
+    semLogin676();
+    const r = await entra676('1005');
+    igual([rot, r.apl, r.err], [rot, [], rot === 'não chegou' ? 'A lista da equipe ainda não chegou do banco. Espere uns segundos e tente de novo.' : 'Senha incorreta. Tente de novo.']);
+  }
+  // as senhas fixas da Gestão continuam entrando sem a lista da equipe
+  run('MON_BANCO=null; MONITORES=[];'); semLogin676();
+  igual((await entra676('0902')).apl, ['Márcia · Gestora']);
+}));
+
+provaAsync('6.76 QA676-03 (AC5.2) — o sal: 16 bytes do crypto.getRandomValues quando o navegador tem; dois sais nunca iguais em 2.000 sorteios; a troca da mesma senha duas vezes dá sal e hash diferentes', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run('__gr676=0; crypto={getRandomValues:function(a){ __gr676++; for(var i=0;i<a.length;i++) a[i]=Math.floor(Math.random()*256); return a; }};');
+  try {
+    const sais = J676('(function(){ var o=[]; for(var i=0;i<2000;i++) o.push(zSalNovo()); return o; })()');
+    igual([run('__gr676'), new Set(sais).size, sais.every((s) => /^[0-9a-f]{32}$/.test(s))], [2000, 2000, true], 'o sorteio do navegador, 16 bytes em hexadecimal');
+    run("senhaTrocarAbrir('marcia');"); await run('sfToque("confirmar", {atual:"0902", nova:"2468", nova2:"2468"})'); run("sfToque('fechar');");
+    const g1 = J676("__get657('daycare/config/senhas-fixas/marcia')");
+    run("SENHAS_FIXAS_BANCO=__get657('daycare/config/senhas-fixas');");
+    run("senhaTrocarAbrir('marcia');"); await run('sfToque("confirmar", {atual:"2468", nova:"1357", nova2:"1357"})'); run("sfToque('fechar');");
+    run("SENHAS_FIXAS_BANCO=__get657('daycare/config/senhas-fixas');");
+    run("senhaTrocarAbrir('marcia');"); await run('sfToque("confirmar", {atual:"1357", nova:"2468", nova2:"2468"})'); run("sfToque('fechar');");
+    const g3 = J676("__get657('daycare/config/senhas-fixas/marcia')");
+    assert.ok(g1.sal !== g3.sal && g1.hash !== g3.hash, 'a mesma senha, trocada de novo, ganha outro sal e outro hash');
+    igual([g3.alg, crypto676.createHash('sha256').update('2468' + g3.sal).digest('hex') === g3.hash, Object.keys(g3).indexOf('senha')], ['sha256', true, -1]);
+  } finally { run('crypto=__cr676;'); }
+}));
+
+prova('6.76 QA676-04 (AC5.3) — a conta SHA-256 do app é a do Node em 5.000 pares «PIN + sal» do jeito que o app grava (4 a 6 dígitos + 32 hexadecimais) e a conferência só aceita o hash exato (sem espaço, sem maiúscula, sem outro sal)', () => {
+  let dif = 0;
+  for (let i = 0; i < 5000; i++) {
+    const pin = String(Math.floor(Math.random() * 10 ** (4 + (i % 3)))).padStart(4 + (i % 3), '0');
+    const sal = crypto676.randomBytes(16).toString('hex');
+    if (run(`zSha256Hex(${JSON.stringify(pin + sal)})`) !== crypto676.createHash('sha256').update(pin + sal).digest('hex')) dif++;
+  }
+  igual(dif, 0);
+  const sal = 'ab'.repeat(16), h = crypto676.createHash('sha256').update('8642' + sal).digest('hex');
+  ctx.__g676 = { hash: h, sal };
+  igual([run("senhaGuardadaConfere('8642', __g676)"), run("senhaGuardadaConfere(' 8642 ', __g676)"), run("senhaGuardadaConfere('8643', __g676)"),
+    run("senhaGuardadaConfere('8642', {hash:__g676.hash.toUpperCase(), sal:__g676.sal})"), run("senhaGuardadaConfere('8642', {hash:__g676.hash, sal:'cd'+__g676.sal.slice(2)})"),
+    run("senhaGuardadaConfere('8642', {hash:__g676.hash})"), run("senhaGuardadaConfere('', __g676)"), run("senhaGuardadaConfere('8642'+__g676.sal, {hash:__g676.hash, sal:''})")],
+    [true, true, false, false, false, false, false, false]);
+});
+
+provaAsync('6.76 QA676-05 (AC5.3, AC5.4) — trocada a senha, a do código não abre em porta nenhuma, nem pela cópia do aparelho sem o banco; o banco que diz «nenhuma trocada» (o caminho do Claude) devolve a do código', async () => com676(async () => {
+  banco676(EQUIPE676); aut676();
+  const F = JSON.stringify({ adriana: fixa676('8642'), marcia: fixa676('2468'), plantonista: fixa676('3579') });
+  for (const [rot, cod] of [['banco', `SENHAS_FIXAS_BANCO=${F}; __ls657={};`], ['cópia, sem banco', `SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:JSON.stringify(${F})};`]]) {
+    run(cod);
+    for (const s of ['1101', '0902', '1001']) {
+      igual([rot, s, J676(`senhaPerfil('${s}')`), J676(`senhaQuem('${s}')`), assina676(s, 'gestao-role').ok, destranca676(s).tr], [rot, s, null, null, false, true]);
+      semLogin676(); const r = await entra676(s); igual([rot, s, r.apl], [rot, s, []]);
+      run(`__el657.loginPwd.value='${s}'; __ztq657=['Celular Novo Teste']; __el657.loginErr.textContent='';`); await run('autorizarAparelho()'); await espera676();
+      igual([rot, s, run('__el657.loginErr.textContent')], [rot, s, 'Digite a senha da GESTÃO no campo acima e toque em Autorizar.']);
+    }
+    igual([rot, run("senhaPerfil('8642').souAdriana"), run("senhaPerfil('2468').nome"), run("senhaPerfil('3579').nome")], [rot, true, 'Márcia · Gestora', 'Plantonista']);
+  }
+  // o banco respondeu sem nenhuma senha trocada (o registro tirado pelo Claude): a do código volta, a cópia velha não vale mais
+  run(`senhasFixasDoBanco({});`);
+  igual([run("senhaPerfil('1101').souAdriana"), J676("senhaPerfil('8642')"), run("__ls657.zeluz_senhas_fixas")], [true, null, '{}']);
+}));
+
+provaAsync('6.76 QA676-06 (AC6.3, AC6.4, AC6.6) — o celular retirado: o batimento depois da retirada não desfaz o «revogado»; «Liberar este celular» num retirado vai para o cartaz de devolver (nada gravado sem motivo e senha); a senha da equipe não autoriza de novo; a Gestão autoriza guardando a retirada', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("__put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', por:'Gestora Teste', ts:1, revogado:{motivo:'o celular foi perdido na rua', registro:{por:'Márcia · Gestora', quando:'10/10/2026 às 09:00'}}});");
+  run("batimentoGravar('relogio');"); await espera676();
+  const a = J676("__get657('auaulandia/aparelhos/dev-teste-1')");
+  igual([!!a.revogado, a.revogado.motivo, a.nome, !!a.visto], [true, 'o celular foi perdido na rua', 'Celular Teste', true], 'o batimento grava só o visto');
+  const ok = await new Promise((r) => { ctx.__cb676 = r; run('deviceAutorizado(function(x){ __cb676(x); })'); });
+  igual(ok, false);
+  run('__esc657=[]; CFG_APARELHOS=__get657("auaulandia/aparelhos"); __ztq657=["Celular Teste Novo"];');
+  await run("liberarAparelhoDaLista('dev-teste-1', 'Ana Teste')"); await espera676();
+  igual([run("__esc657.filter(function(e){ return /aparelhos/.test(e[1]); }).length"), run('CORR_ATUAL&&CORR_ATUAL.op.acao'), !!J676("__get657('auaulandia/aparelhos/dev-teste-1/revogado')")], [0, 'reabrir', true], 'vai para o cartaz de devolver');
+  run("corrToque('cancelar');");
+  semLogin676();
+  run("__el657.loginPwd.value='4321'; __ztq657=['Celular Teste Novo']; __el657.loginErr.textContent='';"); await run('autorizarAparelho()'); await espera676();
+  igual([run('__el657.loginErr.textContent'), !!J676("__get657('auaulandia/aparelhos/dev-teste-1/revogado')")], ['Digite a senha da GESTÃO no campo acima e toque em Autorizar.', true]);
+  run("__el657.loginPwd.value='0902'; __ztq657=['Celular Teste Novo'];"); await run('autorizarAparelho()'); await espera676();
+  const b = J676("__get657('auaulandia/aparelhos/dev-teste-1')");
+  igual([b.revogado || null, Object.keys(b.revogacoes || {}).length, b.nome, Object.keys(b.nomes_anteriores || {}).length, !!b.visto], [null, 1, 'Celular Teste Novo', 1, true]);
+}));
+
+provaAsync('6.76 QA676-07 (AC3.4) — a desativada não assina por NENHUM caminho dos cartazes (Correção do Day Care, hospedagem, orçamento) nem dá as telas dela; a senha dela fica reservada (o Time recusa dá-la a outra pessoa, e o Reativar avisa quando outra pessoa já a usa)', async () => com676(async () => {
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[2].ativo = false; eq[2].desativado = { em: '2026-10-10', motivo: 'saiu da casa nesta semana' };
+  banco676(eq);
+  igual([run("enganoAssinar('5511', 'gestao').ok"), run("enganoAssinar('5511', 'recepcao').ok"), run("hospAssinarPorSenha('5511').ok"), J676("senhaQuem('5511')"), J676("corrPaginasDaPessoa('Sara Supervisora Teste', '5511')")],
+    [false, false, false, null, []]);
+  run("setMon(1,'senha','5511');");
+  run('timeSalvarAbrir();'); await espera676();
+  igual([run('CORR_ATUAL'), st676()], [null, 'A senha de "Bia Teste" é a de uma pessoa desativada e continua reservada para ela. Escolha outra.']);
+  // outra pessoa tomou a senha (no banco, por fora): o Reativar avisa e não abre o cartaz
+  run('timeSairSemSalvar();');
+  const eq2 = JSON.parse(JSON.stringify(eq)); eq2[1].senha = '5511'; banco676(eq2);
+  run('__za657=[];'); await run(`timeReativarAbrir('p3')`); await espera676();
+  igual([J676('__za657.map(function(z){ return z[0]; })'), run('CORR_ATUAL')], [['A SENHA DELA ESTÁ EM USO'], null]);
+}));
+
+provaAsync('6.76 QA676-08 (AC3.5, AC6.5, S12-P4) — quem perde o acesso tem a tela trancada SEM logout; a frase do celular retirado avisa que sair desliga o alarme; a Supervisão desativada também tranca; a desativada não destranca e outra pessoa destranca trocando de pessoa', async () => com676(async () => {
+  banco676(EQUIPE676);
+  papel676('supervisor', { nome: 'Sara Supervisora Teste', role: 'supervisor', monId: 'p3', paginas: [] });
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[2].ativo = false; eq[2].desativado = { em: '2026-10-10', motivo: 'saiu da casa nesta semana' };
+  banco676(eq); run('permReaplicarDoTime();');
+  igual([run('_appTrancado'), run('__lo676'), run('__el657.lockAviso.textContent')], [true, 0, 'O acesso de Sara Supervisora Teste foi desativado pela Gestão em 10/10/2026. Outra pessoa pode entrar com a própria senha.']);
+  igual(destranca676('5511'), { tr: true, err: 'Senha incorreta. Tente de novo.' });
+  run('__apl676=[];'); igual(destranca676('4321').tr, false); igual(J676('__apl676'), ['Ana Teste'], 'troca de pessoa');
+  run('aparelhoRevogadoMudou({motivo:"o celular foi perdido", registro:{quando:"10/10/2026 às 10:00", por:"Márcia · Gestora"}});');
+  igual([run('_appTrancado'), run('__lo676'), /Sair desta conta desliga o alarme do remédio neste celular\.$/.test(run('__el657.lockAviso.textContent'))], [true, 0, true]);
+}));
+
+provaAsync('6.76 QA676-09 (AC14, componente da 6.57) — para quem não usa os acréscimos da 6.76, a assinatura é a mesma de antes: senhaQuem dá o mesmo que o orcQuemPelaSenha em 600 senhas sorteadas (sem senha trocada, sem desativada, sem mudança pendente); corrComCampos e o passo inicial do corrAbrir iguais aos da base sem op.mudancas', async () => com676(async () => {
+  const roles = ['monitor', 'consultora', 'vet', 'conferencia', 'supervisor', 'plantonista', 'aprendiz'];
+  const eq = []; for (let i = 0; i < 40; i++) eq.push({ id: 'q' + i, nome: 'Pessoa ' + i + ' Teste', role: roles[i % roles.length], senha: String(2000 + i * 37) });
+  banco676(eq);
+  run('SENHAS_FIXAS_BANCO={};');
+  let dif = 0; const amostra = [];
+  for (let i = 0; i < 600; i++) {
+    const s = (i % 3 === 0) ? eq[i % eq.length].senha : (i % 3 === 1 ? ['1101', '0902', '1001', '1005', ''][i % 5] : String(1000 + Math.floor(Math.random() * 9000)));
+    const a = JSON.stringify(J676(`senhaQuem(${JSON.stringify(s)})`)), b = JSON.stringify(J676(`orcQuemPelaSenha(${JSON.stringify(s)})`));
+    if (a !== b) { dif++; if (amostra.length < 3) amostra.push([s, a, b]); }
+  }
+  igual([dif, amostra], [0, []]);
+  // o texto do corrComCampos da base 910b143 (linha 66336), letra por letra
+  const BASE_CCC676 = "  function corrComCampos(op){ op=op||{}; return op.acao==='corrigir' || (op.acao==='reabrir' && Array.isArray(op.campos) && op.campos.length>0); }\n";
+  vm.runInContext(BASE_CCC676.replace('function corrComCampos(', 'function __corrComCamposBase676('), ctx);
+  const ops = [{}, { acao: 'corrigir' }, { acao: 'anular' }, { acao: 'reabrir' }, { acao: 'reabrir', campos: [] }, { acao: 'reabrir', campos: [{ c: 'x' }] }, { acao: 'corrigir', campos: [{ c: 'x' }] }, null];
+  igual(ops.map((o) => run(`corrComCampos(${JSON.stringify(o)})`)), ops.map((o) => run(`__corrComCamposBase676(${JSON.stringify(o)})`)));
+  run("corrAbrir({acao:'corrigir', oque:'x', tela:'T', campos:[{c:'a', rotulo:'A', valor:'1'}], capacidade:'gestao-role', gravar:function(){ return Promise.resolve({ok:true}); }});");
+  igual([run('CORR_ATUAL.passo'), J676('CORR_ATUAL.mud')], ['campos', []]); run("corrToque('cancelar');");
+}));
+
+provaAsync('6.76 QA676-10 (AC9.2, AC10) — o plano escolhido para AMANHÃ não se exclui; «Nenhum plano» amanhã não mexe no de hoje; o plano novo (não salvo) não se escolhe para um dia; escolher o mesmo plano com o mesmo motivo é «Nada mudou» (nada gravado)', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676);
+  run(`__put657('daycare/config/planos', {'plano-1':{id:'plano-1', nome:'Plano 1', porMonitor:{}}, 'plano-2':{id:'plano-2', nome:'Plano 2', porMonitor:{}}, 'plano-3':{id:'plano-3', nome:'Plano 3', porMonitor:{}}});
+    __put657('daycare/plano-do-dia/2026-10-10', {plano:'plano-1', nome:'Plano 1', motivo:'', definidoPor:'Márcia', ts:1});
+    PD_PLANOS=__get657('daycare/config/planos'); PD_DODIA=__get657('daycare/plano-do-dia/2026-10-10'); PD_AMANHA={}; PD_EXCLUIDOS={};`);
+  run("__zpq657=[true]; __el657['pdMD-2026-10-11']={value:''};"); await run("pdEscolherPlanoDia('plano-2', '2026-10-11')"); await espera676();
+  run("pdExcluirPlanoAbrir('plano-2');"); await espera676();
+  igual([run('CORR_ATUAL'), run("__el657.pdMsgPlano.innerHTML").indexOf('Este é o plano de amanhã.') >= 0], [null, true]);
+  // pela função que grava (outro aparelho escolheu amanhã depois que a tela abriu): recusa também
+  run("PD_AMANHA={};"); const r = await run(`pdExcluirPlanoGravar('plano-2', {motivo:'teste do qa no banco', por:'Márcia · Gestora'})`);
+  igual([r.ok, r.erro], [false, 'Este é o plano de amanhã. Escolha outro plano para o dia antes de excluir.']);
+  run("PD_AMANHA=__get657('daycare/plano-do-dia/2026-10-11'); __esc657=[];"); await run("pdNenhumPlanoAbrir('2026-10-11', 'a casa fecha amanhã para dedetização')"); await espera676();
+  igual([J676("__get657('daycare/plano-do-dia/2026-10-10').plano"), J676("__get657('daycare/plano-do-dia/2026-10-11').nenhum"), Object.keys(J676("__get657('daycare/plano-do-dia/2026-10-11').anteriores")).length], ['plano-1', true, 1]);
+  run('pdNovoPlano();'); const novo = run('PD_EDITANDO');
+  run('__esc657=[];'); await run(`pdEscolherPlanoDia('${novo}', '2026-10-10')`); await espera676();
+  igual([run('__esc657.length'), run("__el657.pdMsgDia.innerHTML").indexOf('Salve o plano antes de escolhê-lo para um dia.') >= 0], [0, true]);
+  run("__el657['pdMD-2026-10-10']={value:''}; __esc657=[];"); await run("pdEscolherPlanoDia('plano-1', '2026-10-10')"); await espera676();
+  igual(run('__esc657.length'), 0, 'o mesmo plano, o mesmo motivo: nada gravado');
+}));
+
+provaAsync('6.76 QA676-11 (AC5.2, AC12.2) — o histórico das senhas fixas não carrega NENHUM pedaço do hash (8+ letras) nem o sal, em campo nenhum; o registro da 6.57 dentro da senha guardada também não', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("senhaTrocarAbrir('marcia');"); await run('sfToque("confirmar", {atual:"0902", nova:"2468", nova2:"2468"})'); run("sfToque('fechar');");
+  run("senhaPostoAbrir();"); await run('sfToque("confirmar", {motivo:"a senha do posto vazou na casa", assina:"2468", nova:"3579", nova2:"3579"})'); run("sfToque('fechar');");
+  const SF = J676("__get657('daycare/config/senhas-fixas')"), H = JSON.stringify(J676("__get657('daycare/config/senhas-fixas-historico')"));
+  const pedacos = [];
+  Object.keys(SF).forEach((id) => { const g = SF[id]; for (let i = 0; i + 8 <= g.hash.length; i++) pedacos.push(g.hash.slice(i, i + 8)); pedacos.push(g.sal); assert.ok(JSON.stringify(g.registro || {}).indexOf(g.hash.slice(0, 8)) < 0, 'o registro dentro da senha guardada'); });
+  const achou = pedacos.filter((p) => H.indexOf(p) >= 0);
+  igual(achou.length, 0, 'pedaços do hash/sal no histórico: ' + achou.slice(0, 3).join(', '));
+}));
+
+provaAsync('6.76 QA676-12 (AC5.5, AC11, «BARROU») — a função que grava a senha fixa confere de novo o papel de quem assinou: com a assinatura de uma Encãotadora ou da Supervisão, nada é gravado (posto e provisória)', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run('__esc657=[];');
+  for (const [modo, papel] of [['posto', 'monitor'], ['provisoria', 'supervisor'], ['posto', 'supervisor']]) {
+    const r = await run(`senhaFixaGravar('${modo}', '${modo === 'posto' ? 'plantonista' : 'adriana'}', {hash:'ab', sal:'cd'}, {nome:'Quem Teste', papel:'${papel}'}, 'um motivo de teste qualquer')`);
+    igual([modo, papel, !!(r && r.ok)], [modo, papel, false]);
+  }
+  igual(run("__esc657.filter(function(e){ return /senhas-fixas/.test(e[1]) || /^daycare\\/config$/.test(e[1]); }).length"), 0, 'nada gravado');
+}));
+
+provaAsync('6.76 QA676-13 (AC5.6) — a senha provisória também na TELA TRANCADA: «Trocar a minha senha» antes de destrancar; «Agora não» não destranca; trocada, destranca como a dona', async () => com676(async () => {
+  banco676(EQUIPE676);
+  papel676('gestao', { role: 'gestao', nome: 'Adriana · Gestão Total', souAdriana: true, id: 'adriana' });
+  run("senhaProvisoriaAbrir('marcia');"); await run('sfToque("confirmar", {motivo:"a Márcia esqueceu a senha nova", assina:"1101", nova:"1357", nova2:"1357"})'); run("sfToque('fechar');");
+  run("SENHAS_FIXAS_BANCO=__get657('daycare/config/senhas-fixas');");
+  papel676('monitor', { nome: 'Ana Teste', role: 'monitor', monId: 'p1', paginas: [] });
+  run("__apl676=[]; _appTrancado=true; __el657.lockPwd.value='1357'; destrancarApp();"); await espera676();
+  igual([run('_appTrancado'), run('!!(SF_ATUAL&&SF_ATUAL.op.forcado)'), J676('__apl676')], [true, true, []], 'a troca vem antes de destrancar');
+  run("sfToque('cancelar');");
+  igual([run('_appTrancado'), J676('__apl676'), run('__el657.lockErr.textContent')], [true, [], 'Sem trocar a senha provisória, este acesso não entra.']);
+  run("__el657.lockPwd.value='1357'; destrancarApp();"); await espera676();
+  await run('sfToque("confirmar", {nova:"2580", nova2:"2580"})'); run("sfToque('fechar');"); await espera676();
+  igual([run('_appTrancado'), J676('__apl676'), J676("__get657('daycare/config/senhas-fixas/marcia').provisoria")], [false, ['Márcia · Gestora'], false]);
+}));
+
+provaAsync('6.76 QA676-14 (AC6.5) — retirada a autorização, o celular perde também a marca local de autorizado: sem resposta do banco, ele não abre pela marca antiga', async () => com676(async () => {
+  banco676(EQUIPE676);
+  papel676('monitor', { nome: 'Ana Teste', role: 'monitor', monId: 'p1', paginas: [] });
+  run("__ls657.zeluz_device_ok='1';");
+  run('aparelhoRevogadoMudou({motivo:"o celular foi perdido", registro:{quando:"10/10/2026 às 10:00", por:"Márcia · Gestora"}});');
+  igual([run("__ls657.zeluz_device_ok===undefined"), run('deviceLocalOk()')], [true, false]);
+}));
+
+provaAsync('6.76 QA676-15 (AC6.6, regra 6) — duas retiradas e duas voltas pela tela de entrada: as duas retiradas ficam em «revogacoes» (nada sobrescrito)', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("__put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', por:'Gestora Teste', ts:1});");
+  for (const k of [1, 2]) {
+    run(`__put657('auaulandia/aparelhos/dev-teste-1/revogado', {motivo:'retirada número ${k} do teste', registro:{por:'Márcia · Gestora'}});`);
+    run(`__login657=null; __ss676.zeluz_login=null; __el657.loginPwd.value='0902'; __ztq657=['Celular Teste ${k}']; __el657.loginErr.textContent='';`);
+    await run('autorizarAparelho()'); await espera676();
+  }
+  const a = J676("__get657('auaulandia/aparelhos/dev-teste-1')");
+  igual([a.revogado || null, Object.keys(a.revogacoes || {}).length, Object.keys(a.revogacoes || {}).map((x) => a.revogacoes[x].motivo).sort()], [null, 2, ['retirada número 1 do teste', 'retirada número 2 do teste']]);
+}));
+
+provaAsync('6.76 QA676-16 (AC7.1, «nada se perde») — renomear a Ana para um nome que já tem escala de OUTRA pessoa (outro id): a escala da outra pessoa não é apagada nem trocada, e a da Ana continua achada pelo id', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676);
+  run("__put657('daycare/config/escala', {'Ana Teste':{id:'p1', entrada:'07:00', almoco:'12:00-13:00', saida:'16:00'}, 'Lia Teste':{id:'p9', entrada:'06:00', almoco:'11:00-12:00', saida:'15:00'}});");
+  run("setMon(0,'nome','Lia Teste');"); run('timeSalvarAbrir();'); await espera676(); await toque676(MOT676, '0902'); await espera676(); run("corrToque('fechar');");
+  const esc = J676("__get657('daycare/config/escala')");
+  const lia = Object.keys(esc).map((k) => esc[k]).filter((e) => e.id === 'p9')[0] || {}, ana = Object.keys(esc).map((k) => esc[k]).filter((e) => e.id === 'p1')[0] || {};
+  igual([lia.entrada, ana.entrada], ['06:00', '07:00'], JSON.stringify(esc));
+  igual(J676("plRotaDoDia('Lia Teste', __get657('daycare/config/escala'), {}, 'p1', '2026-10-09').entrada"), '07:00', 'a Ana, renomeada, acha a escala dela pelo id');
+}));
+
+provaAsync('6.76 QA676-17 (AC8.3, AC7.2) — «Salvar a escala» não apaga a folga, as férias e o outro horário já guardados (nem de quem está na tela)', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676);
+  run("__put657('daycare/config/escala', {'Ana Teste':{id:'p1', entrada:'07:00', almoco:'12:00-13:00', saida:'16:00', excecoes:{h1:{de:'2026-10-12', ate:'2026-10-14', tipo:'ferias', motivo:'', por:'Márcia'}}}, 'Bia Teste':{id:'p2', entrada:'08:00', almoco:'12:00-13:00', saida:'17:00'}}); PD_ESCALA=__get657('daycare/config/escala'); PD_PLANOS={}; PD_DODIA={};");
+  J676('pdPessoasLista().map(function(p){ return p.cid; })').forEach((c) => ['pdE-', 'pdA-', 'pdS-', 'pdSE-', 'pdSA-', 'pdSS-'].forEach((p) => run(`__el657['${p}${c}']={value:''};`)));
+  run("pdPessoasLista().forEach(function(p){ var e=pdAchaPessoa(PD_ESCALA, p)||{}; __el657['pdE-'+p.cid].value=e.entrada||''; __el657['pdA-'+p.cid].value=e.almoco||''; __el657['pdS-'+p.cid].value=e.saida||''; });");
+  run("__el657['pdE-'+pdPessoasLista().filter(function(p){ return p.id==='p1'; })[0].cid].value='07:15'; __zpq657=[true];");
+  await run('pdSalvarEscala()'); await espera676();
+  const e = J676("__get657('daycare/config/escala')")['Ana Teste'];
+  igual([e.entrada, Object.keys(e.excecoes || {}).length], ['07:15', 1]);
+  igual(J676("plRotaDoDia('Ana Teste', __get657('daycare/config/escala'), {}, 'p1', '2026-10-13').nota"), 'Você está de férias até 14/10/2026.');
+}));
+
+provaAsync('6.76 QA676-18 (AC7.3) — xarás: duas pessoas com o mesmo nome e ids diferentes; a escala e a rota de uma nunca viram as da outra (na tela da escala e no «Meu dia»)', async () => com676(async () => {
+  pl676();
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq.push({ id: 'p7', nome: 'Ana Teste', role: 'monitor', senha: '4777' }); banco676(eq);
+  const esc = { 'Ana Teste': { id: 'p7', entrada: '10:00', almoco: '14:00-15:00', saida: '19:00' } };
+  const plano = { id: 'plano-1', nome: 'Plano 1', porMonitor: { 'Ana Teste': [{ hora: '10:30', atividade: 'agility' }] }, ids: { 'Ana Teste': 'p7' } };
+  ctx.__esc676q = esc; ctx.__pl676q = plano;
+  const r = J676("plRotaDoDia('Ana Teste', __esc676q, __pl676q, 'p1', '2026-10-09')");
+  igual([r.entrada, r.atividades.length], ['', 0], 'a Ana p1 não pega a escala nem a rota da Ana p7');
+  igual([J676("pdAchaPessoa(__esc676q, {id:'p1', nome:'Ana Teste'})"), run("pdAchaPessoa(__esc676q, {id:'p7', nome:'Ana Teste'}).entrada")], [null, '10:00']);
+}));
+
+provaAsync('6.76 QA676-19 (AC10.2, AC9.2, regra 6) — duas trocas seguidas do plano de um dia guardam AS DUAS anteriores; excluir de novo um id já excluído guarda os dois planos excluídos', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676);
+  run(`__put657('daycare/config/planos', {'plano-1':{id:'plano-1', nome:'Plano 1', porMonitor:{}}, 'plano-2':{id:'plano-2', nome:'Plano 2', porMonitor:{}}, 'plano-3':{id:'plano-3', nome:'Plano 3', porMonitor:{}}});
+    PD_PLANOS=__get657('daycare/config/planos'); PD_DODIA={}; PD_AMANHA={}; PD_EXCLUIDOS={};`);
+  for (const id of ['plano-1', 'plano-2', 'plano-3']) { run("__zpq657=[true]; __el657['pdMD-2026-10-11']={value:''};"); await run(`pdEscolherPlanoDia('${id}', '2026-10-11')`); await espera676(); }
+  const d = J676("__get657('daycare/plano-do-dia/2026-10-11')");
+  igual([d.plano, Object.keys(d.anteriores || {}).map((k) => d.anteriores[k].plano).sort()], ['plano-3', ['plano-1', 'plano-2']]);
+  // o plano-2 excluído, um plano novo que ganha o id plano-2 (restaurado com outro id antes), excluído de novo: os dois guardados
+  run("__put657('daycare/config/planos-excluidos/plano-2', {id:'plano-2', nome:'Plano 2 antigo', porMonitor:{}, idOriginal:'plano-2', excluido:{motivo:'o primeiro plano dois saiu', registro:{}}});");
+  run("__put657('daycare/plano-do-dia/2026-10-11', {plano:'plano-3', nome:'Plano 3'}); PD_AMANHA=__get657('daycare/plano-do-dia/2026-10-11');");
+  const r = await run("pdExcluirPlanoGravar('plano-2', {motivo:'o segundo plano dois saiu', por:'Márcia · Gestora'})");
+  const X = J676("__get657('daycare/config/planos-excluidos')");
+  igual([r.ok, Object.keys(X).length, Object.keys(X).map((k) => X[k].nome).sort()], [true, 2, ['Plano 2', 'Plano 2 antigo']]);
+}));
+
+provaAsync('6.76 QA676-20 (AC3.2, AC11, «BARROU») — as funções que gravam o desativar e o reativar conferem de novo o papel de quem assinou: com a assinatura de uma Encãotadora ou de uma Consultora, nada é gravado', async () => com676(async () => {
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[3].ativo = false; eq[3].desativado = { em: '2026-10-09', motivo: 'saiu da casa nesta semana' }; banco676(eq);
+  run('__esc657=[];');
+  const r1 = await run("timeDesativarGravar('p2', '2026-10-10', {motivo:'teste do qa sem papel', por:'Ana Teste', papel:'monitor'})");
+  const r2 = await run("timeReativarGravar('p4', {motivo:'teste do qa sem papel', por:'Cris Consultora Teste', papel:'consultora'})");
+  igual([!!(r1 && r1.ok), !!(r2 && r2.ok), run("__esc657.filter(function(e){ return /config\\/monitores/.test(e[1]); }).length")], [false, false, 0]);
+}));
+
+const semLoginA676 = () => run('__login657=null; __ss676.zeluz_login=null; _appTrancado=false; __apl676=[]; ACESSO_TRAVA=null;');
+const autA676 = () => run("__put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', por:'Gestora Teste', ts:1});");
+
+provaAsync('6.76 QA676-A1 (AC5.4, banco lento) — a senha do código da Adriana digitada antes de o banco responder; o banco responde mostrando a troca enquanto o celular ainda é conferido: a sessão NÃO pode terminar aberta como Adriana', async () => com676(async () => {
+  banco676(EQUIPE676); autA676(); semLoginA676();
+  run(`SENHAS_FIXAS_BANCO=null; __ls657={}; __put657('daycare/config/senhas-fixas', {adriana:${JSON.stringify(fixa676('8642'))}});`);
+  // o toque em «Entrar» (a conta da senha é feita aqui) e, antes da resposta do celular, o ouvinte de daycare/config/senhas-fixas
+  run("__el657.loginPwd.value='1101'; doLogin(); senhasFixasDoBanco(__get657('daycare/config/senhas-fixas'));");
+  await espera676();
+  const entrou = J676('__apl676'), tr = run('_appTrancado');
+  assert.ok(entrou.length === 0 || tr === true, 'entrou como ' + JSON.stringify(entrou) + ', tela ' + (tr ? 'trancada' : 'ABERTA') + '; sessão: ' + run("__ss676.zeluz_login"));
+}));
+
+provaAsync('6.76 QA676-A2 (AC3.5, corrida) — a Ana toca «Entrar» e, enquanto o celular é conferido, o Time chega do banco com ela desativada: a sessão NÃO pode terminar aberta como Ana', async () => com676(async () => {
+  banco676(EQUIPE676); autA676(); semLoginA676();
+  const desat = JSON.parse(JSON.stringify(EQUIPE676)); desat[0].ativo = false; desat[0].desativado = { em: '2026-10-10', motivo: 'saiu da casa hoje cedo' };
+  run(`__el657.loginPwd.value='4321'; doLogin(); __put657('daycare/config/monitores', ${JSON.stringify(desat)}); timeDoBanco(__get657('daycare/config/monitores')); permReaplicarDoTime();`);
+  await espera676();
+  const entrou = J676('__apl676'), tr = run('_appTrancado');
+  assert.ok(entrou.length === 0 || tr === true, 'entrou como ' + JSON.stringify(entrou) + ', tela ' + (tr ? 'trancada' : 'ABERTA'));
+}));
+
+provaAsync('6.76 QA676-A3 (AC1.3, AC2.6) — a junção de dois aparelhos não pode gravar duas pessoas com a mesma senha: este aparelho dá 7777 à Ana, o outro já salvou 7777 para a Bia', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'senha','7777');");
+  const outro = JSON.parse(JSON.stringify(EQUIPE676)); outro[1].senha = '7777'; banco676(outro);
+  run('timeSalvarAbrir();'); await espera676();
+  if (run('!!CORR_ATUAL')) { await toque676(MOT676, '0902'); run("corrToque('fechar');"); }
+  const L = lista676(), s = L.filter((m) => m.ativo !== false).map((m) => m.senha);
+  assert.ok(new Set(s).size === s.length, 'gravado com senha repetida: ' + JSON.stringify(L.map((m) => [m.nome, m.senha])) + '; quem entra com 7777: ' + run("(senhaPerfil('7777')||{}).nome"));
+}));
+
+provaAsync('6.76 QA676-A4 (S12-P9, versão antiga) — um aparelho com a versão antiga grava a lista de fábrica (a dele quando a do banco faltou): as senhas de fábrica continuam sem abrir', async () => com676(async () => {
+  autA676();
+  banco676(J676('MONITORES_DEFAULT'));
+  const abre = ['1005', '1007', '1008', '1009', '1010', '1011'].filter((s) => J676(`senhaPerfil('${s}')`));
+  igual(abre, [], 'abrem: ' + abre.map((s) => s + ' como ' + run(`senhaPerfil('${s}').nome`)).join(', '));
+}));
+
+provaAsync('6.76 QA676-A5 (AC5.6) — a senha provisória ainda não trocada não assina cartaz nem autoriza celular: senão, quem a definiu assina como a dona antes de ela trocar', async () => com676(async () => {
+  banco676(EQUIPE676); autA676();
+  papel676('gestao', { role: 'gestao', nome: 'Adriana · Gestão Total', souAdriana: true, id: 'adriana' });
+  run("senhaProvisoriaAbrir('marcia');");
+  await run('sfToque("confirmar", {motivo:"a Márcia esqueceu a senha nova", assina:"1101", nova:"1357", nova2:"1357"})'); run("sfToque('fechar');");
+  run("SENHAS_FIXAS_BANCO=__get657('daycare/config/senhas-fixas');");
+  const ass = J676("corrAssinar('1357', 'gestao-role', 'isto')");
+  semLoginA676(); run("__el657.loginPwd.value='1357'; __ztq657=['Celular Novo Teste']; __el657.loginErr.textContent='';"); await run('autorizarAparelho()'); await espera676();
+  const nome = J676("__get657('auaulandia/aparelhos/dev-teste-1').nome");
+  igual([ass.ok, nome], [false, 'Celular Teste'], 'a provisória assinou como ' + ass.nome + ' e autorizou o celular «' + nome + '»');
+}));
+
+provaAsync('6.76 QA676-A6 (AC7.1) — a escala antiga (sem id) que não acompanhou a troca de nome por falha do banco: a tela manda «salve o Time de novo», e salvar de novo tem de levar a escala para o nome novo', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676);
+  run("__put657('daycare/config/escala', {'Ana Teste':{entrada:'07:00', almoco:'12:00-13:00', saida:'16:00'}});");
+  run("setMon(0,'nome','Ana Teste Souza'); __recusa657='^daycare/config$';"); run('timeSalvarAbrir();'); await espera676(); await toque676(MOT676, '0902'); await espera676(); run("corrToque('fechar');");
+  const aviso = st676();
+  assert.ok(/salve o Time de novo/.test(aviso), 'o aviso da falha: ' + aviso);
+  run('__recusa657=null;'); run('timeSalvarAbrir();'); await espera676();
+  if (run('!!CORR_ATUAL')) { await toque676(MOT676, '0902'); await espera676(); run("corrToque('fechar');"); }
+  const esc = J676("__get657('daycare/config/escala')");
+  const rota = J676("plRotaDoDia('Ana Teste Souza', __get657('daycare/config/escala'), {}, 'p1', '2026-10-09')");
+  igual([Object.keys(esc), rota.entrada], [['Ana Teste Souza'], '07:00'], 'depois de «salvar de novo»: ' + st676());
+}));
+
+provaAsync('6.76 QA676-A7 (AC10.2, «nada se perde») — a escolha do dia guarda a anterior que está no BANCO: o outro aparelho marcou o Plano 2 para amanhã depois que esta tela abriu', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676);
+  run(`__put657('daycare/config/planos', {'plano-1':{id:'plano-1', nome:'Plano 1', porMonitor:{}}, 'plano-2':{id:'plano-2', nome:'Plano 2', porMonitor:{}}, 'plano-3':{id:'plano-3', nome:'Plano 3', porMonitor:{}}});
+    PD_PLANOS=__get657('daycare/config/planos'); PD_DODIA={}; PD_AMANHA={};`);
+  run("__put657('daycare/plano-do-dia/2026-10-11', {plano:'plano-2', nome:'Plano 2', motivo:'Bia de folga amanhã', definidoPor:'Márcia', ts:5});");   // o outro aparelho
+  run("__zpq657=[true]; __el657['pdMD-2026-10-11']={value:''}; __au657=[];"); await run("pdEscolherPlanoDia('plano-3', '2026-10-11')"); await espera676();
+  const d = J676("__get657('daycare/plano-do-dia/2026-10-11')"), an = d.anteriores ? Object.keys(d.anteriores).map((k) => d.anteriores[k].plano) : [];
+  igual([d.plano, an], ['plano-3', ['plano-2']], 'a escolha do outro aparelho sumiu; o rastro diz: ' + JSON.stringify(J676('__au657').filter((a) => a[0] === 'plano-do-dia').map((a) => a[1])));
+}));
+
+provaAsync('6.76 QA676-A8 (AC7.2, AC8.1) — dois aparelhos na escala: o outro mudou a Bia depois que esta tela abriu; aqui só a Ana muda — a mudança da Bia fica', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676);
+  const ESC = { 'Ana Teste': { id: 'p1', entrada: '07:00', almoco: '12:00-13:00', saida: '16:00' }, 'Bia Teste': { id: 'p2', entrada: '08:00', almoco: '12:00-13:00', saida: '17:00' } };
+  run(`__put657('daycare/config/escala', ${JSON.stringify(ESC)}); PD_ESCALA=__get657('daycare/config/escala'); PD_PLANOS={}; PD_DODIA={};`);
+  // a tela desenhada com o que estava no banco
+  J676('pdPessoasLista().map(function(p){ return p.cid; })').forEach((c) => ['pdE-', 'pdA-', 'pdS-', 'pdSE-', 'pdSA-', 'pdSS-'].forEach((p) => run(`__el657['${p}${c}']={value:''};`)));
+  run("pdPessoasLista().forEach(function(p){ var e=pdAchaPessoa(PD_ESCALA, p)||{}; __el657['pdE-'+p.cid].value=e.entrada||''; __el657['pdA-'+p.cid].value=e.almoco||''; __el657['pdS-'+p.cid].value=e.saida||''; });");
+  run("__put657('daycare/config/escala/Bia Teste/entrada', '09:00');");   // o outro aparelho
+  run("__el657['pdE-'+pdPessoasLista().filter(function(p){ return p.id==='p1'; })[0].cid].value='07:30'; __zpq657=[true]; __zp657=[];");
+  await run('pdSalvarEscala()'); await espera676();
+  const esc = J676("__get657('daycare/config/escala')");
+  igual([esc['Ana Teste'].entrada, esc['Bia Teste'].entrada], ['07:30', '09:00'], 'a pergunta mostrou: ' + JSON.stringify((J676('__zp657')[0] || [])[1]));
+}));
+
+provaAsync('6.76 QA676-A9 (AC5.4, tela trancada sem banco) — a tela trancada (aparelho sem a cópia, banco ainda sem responder) destranca com a senha do código da Adriana: a sessão precisa ficar marcada e trancar quando o banco mostrar a troca', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run(`SENHAS_FIXAS_BANCO=null; __ls657={}; ACESSO_TRAVA=null;`);
+  papel676('monitor', { nome: 'Ana Teste', role: 'monitor', monId: 'p1', paginas: [] });
+  run("__apl676=[]; _appTrancado=true; __el657.lockPwd.value='1101'; destrancarApp();");
+  const abriu = J676('__apl676');
+  run(`senhasFixasDoBanco({adriana:${JSON.stringify(fixa676('8642'))}});`);
+  const tr = run('_appTrancado'), u = J676("JSON.parse(sessionStorage.getItem('zeluz_login'))");
+  assert.ok(!(abriu.length && !tr), 'destrancou como ' + JSON.stringify(abriu) + ' e, com o banco mostrando a troca, a tela ficou ' + (tr ? 'trancada' : 'ABERTA') + '; sessão: ' + JSON.stringify(u));
+}));
+
+
+// ---- 2ª rodada: o que o QA pediu e as provas dele não cobriam ---------------------------------------------------------------------------
+provaAsync('6.76 P44* (SEC-007, 2ª rodada) — sem o sorteio seguro do navegador (crypto.getRandomValues), o sal não sai do Math.random: zSalNovo devolve vazio e «Trocar a minha senha» não grava nada, com a frase', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run('__esc657=[]; crypto=undefined;');
+  try {
+    igual(run('zSalNovo()'), '', 'sem o sorteio, sem sal');
+    run("senhaTrocarAbrir('marcia');"); const r = await run('sfToque("confirmar", {atual:"0902", nova:"2468", nova2:"2468"})');
+    igual([!!(r && r.ok), run('SF_ATUAL.passo'), /não sorteia o código da senha com segurança: nada foi gravado/.test(run('SF_ATUAL.aviso'))], [false, 'campos', true]);
+    igual(run("__esc657.filter(function(e){ return /senhas-fixas/.test(e[1]) || /^daycare\\/config$/.test(e[1]); }).length"), 0, 'nada gravado');
+    run("sfToque('cancelar');");
+    run('crypto={getRandomValues:function(){ throw new Error("sem sorteio"); }};');
+    igual(run('zSalNovo()'), '', 'o sorteio que falha também não cai no Math.random');
+  } finally { run('crypto=__cr676;'); }
+}));
+provaAsync('6.76 P45* (SEC-006, 2ª rodada) — o registro das senhas fixas fora do formato (lixo gravado por fora) não conta como troca: a senha do código vale e a dona não fica trancada fora; a cópia do aparelho guarda só o registro bom; a sessão marcada não tranca por causa do lixo', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run(`__ls657={}; senhasFixasDoBanco({adriana:{hash:'zz', sal:'qualquer'}, marcia:{hash:'${'a'.repeat(64)}'}, plantonista:${JSON.stringify(fixa676('3579'))}});`);
+  igual([run("senhaPerfil('1101').nome"), run("senhaPerfil('0902').nome"), J676("senhaPerfil('1001')"), run("senhaPerfil('3579').nome")], ['Adriana · Gestão Total', 'Márcia · Gestora', null, 'Plantonista']);
+  igual(Object.keys(JSON.parse(run('__ls657.zeluz_senhas_fixas'))), ['plantonista'], 'a cópia só guarda o registro no formato');
+  igual(run("senhasFixasTrocadasHTML().indexOf('Adriana')"), -1, 'o relatório não diz «trocada» por causa do lixo');
+  papel676('gestao', Object.assign({}, J676("SENHAS['1101']"), { fixaSemConferir: 'adriana' }));
+  run(`_appTrancado=false; ACESSO_TRAVA=null; senhasFixasDoBanco({adriana:{hash:'zz', sal:'qualquer'}});`);
+  igual([run('_appTrancado'), run('__lo676')], [false, 0], 'a sessão aberta pela senha do código não tranca por um registro que não abre com senha nenhuma');
+}));
+provaAsync('6.76 P46* (SEC-005, 2ª rodada) — a linha igual à de fábrica (o mesmo nome e a mesma senha) não abre, não destranca nem assina, e o Time pede para trocar; a linha com outro nome e uma senha pública continua (AC2.6), com o aviso de sempre', async () => com676(async () => {
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)).concat([{ id: 'm1', nome: 'Monitor 1', senha: '1005', role: 'monitor', entrada: '06:50', saida: '15:50', abertura: true }, { id: 'p8', nome: 'Duda Teste', senha: '1007', role: 'monitor' }]);
+  banco676(eq); aut676();
+  igual([J676("senhaPerfil('1005')"), J676("senhaQuem('1005')"), assina676('1005').ok, destranca676('1005').tr], [null, null, false, true]);
+  igual([run("senhaPerfil('1007').nome"), run("senhaQuem('1007').nome")], ['Duda Teste', 'Duda Teste']);
+  const lm = txt676(run("timeLinhaExtraHTML(MONITORES.filter(function(m){ return m.id==='m1'; })[0])"));
+  assert.ok(lm.indexOf('igual à de fábrica') >= 0 && lm.indexOf('não abre o app nem assina') >= 0, lm);
+  semLogin676(); const r = await entra676('1005'); igual([r.apl, r.err], [[], 'Senha incorreta. Tente de novo.']);
+}));
+provaAsync('6.76 P47* (REL-001, 2ª rodada) — guardar e tirar uma exceção redesenham a escala sem perder o que foi digitado e ainda não salvo em outra linha', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676); pd676(); preenche676();
+  const cA = cid676('p1'), cB = cid676('p2');
+  // a tela de verdade: o campo guarda o valor desenhado (defaultValue); o redesenho volta todo campo ao desenhado
+  run(`Object.keys(__el657).forEach(function(k){ var e=__el657[k]; if(/^pd(E|A|S|SE|SA|SS|At)-/.test(k) && e){ e.id=k; e.defaultValue=e.value; } });
+    __el657.pdRoot.querySelectorAll=function(){ return Object.keys(__el657).filter(function(k){ return /^pd(E|A|S|SE|SA|SS|At)-/.test(k); }).map(function(k){ return __el657[k]; }); };
+    __pdR676=pdRender; pdRender=function(d){ __pdR676(d); Object.keys(__el657).forEach(function(k){ var e=__el657[k]; if(/^pd(E|A|S|SE|SA|SS|At)-/.test(k) && e && typeof e.defaultValue==='string') e.value=e.defaultValue; }); };`);
+  try {
+    run(`__el657['pdE-${cB}'].value='07:45';`);
+    const r = await run(`pdExcecaoGuardar('${cA}', {de:'2026-10-12', ate:'', tipo:'folga', entrada:'', almoco:'', saida:'', motivo:''})`); await espera676();
+    igual([!!(r && r.ok), run(`__el657['pdE-${cB}'].value`)], [true, '07:45'], 'o 07:45 da Bia ficou');
+    const k = Object.keys(J676("__get657('daycare/config/escala')['Ana Teste'].excecoes"))[0];
+    run(`__el657['pdE-${cB}'].value='07:50';`);
+    await run(`pdExcecaoTirar('${cA}', '${k}', true)`); await espera676();
+    igual(run(`__el657['pdE-${cB}'].value`), '07:50', 'e depois de tirar a exceção também');
+  } finally { run('pdRender=__pdR676;'); }
+}));
+provaAsync('6.76 P48* (REL-002, 2ª rodada) — dois aparelhos no mesmo plano: o outro mudou a rota da Bia depois que esta tela abriu; aqui só a da Ana muda — a da Bia fica e a pergunta não fala da Bia; o nome do plano mudado só lá também fica', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676);
+  const P1 = { id: 'plano-1', nome: 'Plano 1', motivo: '', porMonitor: { 'Ana Teste': [{ hora: '07:30', atividade: 'check-in' }], 'Bia Teste': [{ hora: '08:00', atividade: 'banho de sol' }] }, ids: { 'Ana Teste': 'p1', 'Bia Teste': 'p2' } };
+  run(`__put657('daycare/config/planos', {'plano-1':${JSON.stringify(P1)}}); PD_PLANOS=__get657('daycare/config/planos'); PD_DODIA={}; PD_AMANHA={}; PD_ESCALA={}; PD_NOVOS={}; PD_EDITANDO='plano-1';`);
+  run(`__el657.pdNome={value:'Plano 1'}; __el657.pdMotivo={value:''};`);
+  J676('pdPessoasLista().map(function(p){ return [p.id, p.cid]; })').forEach(([id, c]) => run(`__el657['pdAt-${c}']={value:${JSON.stringify(id === 'p1' ? '07:30 check-in\n09:00 agility' : (id === 'p2' ? '08:00 banho de sol' : ''))}};`));
+  run("__put657('daycare/config/planos/plano-1/porMonitor/Bia Teste', [{hora:'08:30', atividade:'banho de sol'}]); __put657('daycare/config/planos/plano-1/nome', 'Plano 1 — dia completo');");   // o outro aparelho
+  run('__zpq657=[true]; __zp657=[];'); await run("pdSalvarPlano('plano-1')"); await espera676();
+  const P = J676("__get657('daycare/config/planos/plano-1')"), perg = (J676('__zp657')[0] || [null, []])[1];
+  igual([P.porMonitor['Ana Teste'].length, P.porMonitor['Bia Teste'][0].hora, P.nome], [2, '08:30', 'Plano 1 — dia completo'], JSON.stringify(perg));
+  assert.ok(!perg.some((l) => /Bia Teste/.test(l)), 'a pergunta não fala da Bia: ' + JSON.stringify(perg));
+}));
+provaAsync('6.76 P49* (OBS-001, 2ª rodada) — o nome de quem foi desativado não entra pelo posto Plantonista (o cartaz diz por quê); o nome de uma pessoa ativa entra', async () => com676(async () => {
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[1].ativo = false; eq[1].desativado = { em: '2026-10-10', motivo: 'saiu da casa nesta semana' }; banco676(eq);
+  aut676(); semLogin676();
+  run("__zcOp676=null; zCampo=function(t, l, op){ __zc676.push(t); __zcOp676=op; }; __za657=[];");
+  run("__el657.loginPwd.value='1001'; doLogin();"); await espera676();
+  igual(run('!!(__zcOp676 && typeof __zcOp676.fn==="function")'), true, 'o posto pede o nome');
+  run("__zcOp676.fn('Bia Teste');"); await espera676();
+  igual([J676('__apl676'), J676('__za657.map(function(z){ return z[0]; })')], [[], ['ESSE NOME NÃO ENTRA PELO POSTO']]);
+  run("__zcOp676.fn('Ana Teste');"); await espera676();
+  igual(J676('__apl676'), ['Plantonista']);
+}));
+provaAsync('6.76 P50* (DOC-001, 2ª rodada) — no celular retirado, a tela trancada esconde o campo de senha e o «Entrar» e troca o texto da troca de pessoa pela frase de que nenhuma senha destranca; devolvida a autorização, tudo volta', async () => com676(async () => {
+  banco676(EQUIPE676); papel676('monitor', { nome: 'Ana Teste', role: 'monitor', monId: 'p1', paginas: [] });
+  run(`__lsub676={innerHTML:'Digite sua senha para continuar.'}; __lbt676={style:{}}; __el657.lockPwd.style={}; __qs676=document.querySelector;
+    document.querySelector=function(q){ return q==='#lockScreen .lock-sub'?__lsub676:(q==='#lockScreen .lock-btn'?__lbt676:__qs676(q)); }; LOCK_SUB_ORIGINAL=null;`);
+  try {
+    run('aparelhoRevogadoMudou({motivo:"o celular foi perdido", registro:{quando:"10/10/2026 às 10:00", por:"Márcia · Gestora"}});');
+    igual([run('__el657.lockPwd.style.display'), run('__lbt676.style.display'), run('__lsub676.innerHTML'), run('_appTrancado')], ['none', 'none', 'Nenhuma senha destranca este celular: a autorização dele foi retirada. Chame a Gestão.', true]);
+    run('aparelhoRevogadoMudou(null);');
+    igual([run('__el657.lockPwd.style.display'), run('__lbt676.style.display'), run('__lsub676.innerHTML')], ['', '', 'Digite sua senha para continuar.']);
+  } finally { run('document.querySelector=__qs676;'); }
+}));
+provaAsync('6.76 P51* (SEC-001, SEC-003, 2ª rodada) — logo depois de entrar (o aplicarLogin de verdade), a sessão aberta pela senha do código de quem trocou e a da pessoa desativada trancam na hora, sem logout; a entrada normal não tranca', async () => com676(async () => {
+  banco676(EQUIPE676);
+  // o aplicarLogin de verdade no sandbox (como a prova 6.47 C1): o corpo da página sem removeAttribute, e o que vem depois da
+  // conferência (menus, painéis) pode falhar aqui sem importar para esta prova
+  run(`__rmA676=document.body.removeAttribute; document.body.removeAttribute=function(){}; __al676=function(u){ try{ __bk676.al(u); }catch(e){ __alErr676=String(e&&e.message||e); } };`);
+  try {
+  run(`SENHAS_FIXAS_BANCO={plantonista:${JSON.stringify(fixa676('3579'))}}; _appTrancado=false; ACESSO_TRAVA=null;`);
+  run("__al676(Object.assign({}, SENHAS['1001'], {fixaSemConferir:'plantonista', pessoa:'Lia Teste'}));");
+  igual([run('_appTrancado'), run('ACESSO_TRAVA&&ACESSO_TRAVA.tipo'), run('__lo676')], [true, 'senha-trocada', 0], 'a senha do código do posto trocada enquanto a pessoa escrevia o nome');
+  run('_appTrancado=false; ACESSO_TRAVA=null;');
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[0].ativo = false; eq[0].desativado = { em: '2026-10-10', motivo: 'saiu da casa hoje cedo' }; banco676(eq);
+  run("__al676({nome:'Ana Teste', role:'monitor', monId:'p1', paginas:['hoje']});");
+  igual([run('_appTrancado'), run('ACESSO_TRAVA&&ACESSO_TRAVA.tipo'), run('__lo676')], [true, 'desativado', 0], 'a pessoa desativada no meio da entrada');
+  run('_appTrancado=false; ACESSO_TRAVA=null;');
+  run("__al676({nome:'Bia Teste', role:'monitor', monId:'p2', paginas:[]});");
+  igual(run('_appTrancado'), false, 'a entrada normal');
+  } finally { run('document.body.removeAttribute=__rmA676;'); }
+}));
+provaAsync('6.76 P52* (SEC-002, 2ª rodada) — a lista juntada com o outro aparelho é conferida antes do cartaz (nenhum cartaz, a frase sem dígitos) e de novo na função que grava: a senha repetida, a pública e a reservada de uma desativada vindas do outro aparelho', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'senha','7777');");
+  const o1 = JSON.parse(JSON.stringify(EQUIPE676)); o1[1].senha = '7777'; banco676(o1);
+  run('timeSalvarAbrir();'); await espera676();
+  igual([run('CORR_ATUAL'), st676()], [null, '"Ana Teste" e "Bia Teste" ficariam com a mesma senha (uma das duas mudou em outro aparelho). Cada pessoa precisa de uma senha única: escolha outra. Nada foi gravado.']);
+  run('__esc657=[];');
+  const r = await run(`salvarMonitores({reg:{papel:'gestao', por:'Márcia · Gestora', motivo:${JSON.stringify(MOT676)}}, lista:JSON.parse(JSON.stringify(MON_BANCO)).map(function(m){ if(m.id==='p1') m.senha='7777'; return m; }), mudancas:[]})`);
+  igual([r.ok, run("__esc657.filter(function(e){ return /config\\/monitores/.test(e[1]); }).length")], [false, 0], 'a função que grava confere a lista que vai ao banco');
+  run('timeSairSemSalvar();'); banco676(EQUIPE676);
+  run("setMon(0,'saida','16:30');");
+  const o2 = JSON.parse(JSON.stringify(EQUIPE676)); o2[1].senha = '1009'; banco676(o2);   // o aparelho com a versão antiga deu à Bia uma senha pública
+  run('timeSalvarAbrir();'); await espera676();
+  igual([run('CORR_ATUAL'), st676()], [null, '"Bia Teste": ' + run('SENHA_PUBLICA_FRASE')]);
+  const o3 = JSON.parse(JSON.stringify(EQUIPE676)); o3[3].ativo = false; o3[3].desativado = { em: '2026-10-09', motivo: 'saiu da casa nesta semana' }; o3[1].senha = '5512'; banco676(o3);
+  run('timeSalvarAbrir();'); await espera676();
+  igual([run('CORR_ATUAL'), st676()], [null, 'A senha de "Bia Teste" é a de uma pessoa desativada e continua reservada para ela. Escolha outra.']);
+}));
+provaAsync('6.76 P53* (SEC-004, 2ª rodada) — a senha provisória ainda não trocada: senhaQuem não a reconhece; o cartaz e «Autorizar este aparelho» dizem «troque a senha provisória antes»; trocada, a nova assina', async () => com676(async () => {
+  banco676(EQUIPE676); aut676();
+  papel676('gestao', { role: 'gestao', nome: 'Adriana · Gestão Total', souAdriana: true, id: 'adriana' });
+  run("senhaProvisoriaAbrir('marcia');");
+  await run('sfToque("confirmar", {motivo:"a Márcia esqueceu a senha nova", assina:"1101", nova:"1357", nova2:"1357"})'); run("sfToque('fechar');");
+  run("SENHAS_FIXAS_BANCO=__get657('daycare/config/senhas-fixas');");
+  const ass = J676("corrAssinar('1357', 'gestao-role', 'isto')");
+  igual([J676("senhaQuem('1357')"), ass.ok, ass.erro], [null, false, run('SENHA_PROVISORIA_FRASE')]);
+  assert.ok(/troque a senha provisória antes/.test(ass.erro), ass.erro);
+  semLogin676(); run("__el657.loginPwd.value='1357'; __ztq657=['Celular Novo Teste']; __el657.loginErr.textContent='';"); await run('autorizarAparelho()'); await espera676();
+  igual(run('__el657.loginErr.textContent'), run('SENHA_PROVISORIA_FRASE'));
+  run(`__put657('daycare/config/senhas-fixas/marcia', ${JSON.stringify(fixa676('2580'))}); SENHAS_FIXAS_BANCO=__get657('daycare/config/senhas-fixas');`);
+  igual(run("corrAssinar('2580', 'gestao-role', 'isto').ok"), true, 'trocada, a nova assina');
+}));
+provaAsync('6.76 P54* (REL-003, 2ª rodada) — «Nenhum plano neste dia» também lê o dia no banco antes de gravar: a escolha que o outro aparelho fez depois que a tela abriu vai para as anteriores e para o rastro', async () => com676(async () => {
+  pl676(); banco676(EQUIPE676);
+  run(`__put657('daycare/config/planos', {'plano-1':{id:'plano-1', nome:'Plano 1', porMonitor:{}}, 'plano-2':{id:'plano-2', nome:'Plano 2', porMonitor:{}}}); PD_PLANOS=__get657('daycare/config/planos'); PD_DODIA={}; PD_AMANHA={};`);
+  run("__put657('daycare/plano-do-dia/2026-10-11', {plano:'plano-2', nome:'Plano 2', motivo:'', definidoPor:'Márcia', ts:5}); __au657=[];");
+  await run("pdNenhumPlanoAbrir('2026-10-11', 'a casa fecha amanhã para dedetização')"); await espera676();
+  const d = J676("__get657('daycare/plano-do-dia/2026-10-11')");
+  igual([d.nenhum, Object.keys(d.anteriores || {}).map((k) => d.anteriores[k].plano)], [true, ['plano-2']]);
+  assert.ok(J676('__au657').some((a) => a[0] === 'plano-do-dia-nenhum' && /passou do Plano 2 para nenhum plano/.test(a[1])), JSON.stringify(J676('__au657')));
+}));
+provaAsync('6.76 P55* (AC2.6, 2ª rodada) — a senha repetida na PRÓPRIA tela tem a frase de sempre, antes da junção com o outro aparelho (a conferência da tela vem primeiro); nada é gravado e nenhum cartaz abre', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'senha','4322'); __esc657=[];"); run('timeSalvarAbrir();'); await espera676();
+  igual([run('CORR_ATUAL'), st676(), run("__esc657.filter(function(e){ return /config\\/monitores/.test(e[1]); }).length")], [null, 'Há senhas repetidas entre os colaboradores. Cada um precisa de uma senha única.', 0]);
+}));
+// ---- 3ª rodada — as 12 provas do re-gate do QA (qa676r2/achados-r2.js: R-01, R-04, R-11 e R-12, que falhavam; qa676r2/ataque-r2.js: as 8 que passavam)
+// trazidas como o QA escreveu; a única mudança é o prefixo «6.76 » no nome (a regra do bloco: o filtro SO e a P41 contam as provas do bloco pelo prefixo).
+const semLoginRa = () => run('__login657=null; __ss676.zeluz_login=null; _appTrancado=false; __apl676=[]; ACESSO_TRAVA=null; APARELHO_REVOGADO=null;');
+const sessaoRa = () => J676("JSON.parse(sessionStorage.getItem('zeluz_login')||'null')");
+const FIXA_Aa = () => JSON.stringify({ adriana: fixa676('8642') });
+const alRa = () => run("if(typeof document.body.removeAttribute!=='function') document.body.removeAttribute=function(k){ try{ delete document.body.dataset[k.replace(/^data-/,'')]; }catch(e){} }; aplicarLogin=function(u){ __apl676.push(u&&u.nome); try{ __bk676.al(u); }catch(e){ __alErr=String(e&&e.message||e); } };");
+const semLoginR = () => run('__login657=null; __ss676.zeluz_login=null; _appTrancado=false; __apl676=[]; ACESSO_TRAVA=null; APARELHO_REVOGADO=null;');
+const sessaoR = () => J676("JSON.parse(sessionStorage.getItem('zeluz_login')||'null')");
+const FIXA_A = () => JSON.stringify({ adriana: fixa676('8642') });
+const alR = () => run("if(typeof document.body.removeAttribute!=='function') document.body.removeAttribute=function(k){ try{ delete document.body.dataset[k.replace(/^data-/,'')]; }catch(e){} }; aplicarLogin=function(u){ __apl676.push(u&&u.nome); try{ __bk676.al(u); }catch(e){ __alErr=String(e&&e.message||e); } };");
+provaAsync('6.76 QA676R-01 (SEC-001, «celular novo», AC5.3) — «Autorizar este aparelho» com a 1101 num celular sem a cópia: o banco mostra a troca antes de a autorização ser gravada → o celular NÃO fica autorizado pela senha do código de quem trocou', async () => com676(async () => {
+  banco676(EQUIPE676); semLoginRa();
+  run(`SENHAS_FIXAS_BANCO=null; __ls657={}; __put657('daycare/config/senhas-fixas', ${FIXA_Aa()}); __put657('auaulandia/aparelhos/dev-teste-1', null);`);
+  run("__el657.loginPwd.value='1101'; __el657.loginErr.textContent=''; __ztq657=['Celular Novo Teste']; __pAut=autorizarAparelho(); senhasFixasDoBanco(__get657('daycare/config/senhas-fixas'));");
+  await run('__pAut'); await espera676();
+  const reg = J676("__get657('auaulandia/aparelhos/dev-teste-1')");
+  igual(reg, null, 'o celular foi autorizado pela 1101 trocada: ' + JSON.stringify(reg) + ' | ' + run('__el657.loginErr.textContent'));
+}));
+provaAsync('6.76 QA676R-02 (SEC-001, «posto») — a 1001 trocada digitada antes de o banco responder; o banco mostra a troca enquanto a pessoa escreve o nome: ao entrar, a tela tranca', async () => com676(async () => {
+  banco676(EQUIPE676); semLoginR();
+  run(`SENHAS_FIXAS_BANCO=null; __ls657={}; __put657('daycare/config/senhas-fixas', {plantonista:${JSON.stringify(fixa676('7531'))}}); __put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', ts:1});`);
+  run("__zcR=null; zCampo=function(t, l, op){ __zcR=op; }; __alErr='';"); alR();
+  run("__el657.loginPwd.value='1001'; doLogin();"); await espera676();
+  assert.ok(run('!!__zcR'), 'o posto pede o nome');
+  run("senhasFixasDoBanco(__get657('daycare/config/senhas-fixas'));");
+  run("__zcR.fn('Lia Plantonista Teste');"); await espera676();
+  const s = sessaoR();
+  assert.ok(!s || run('_appTrancado') === true, 'entrou pelo posto com a 1001 trocada e a tela ficou aberta: ' + JSON.stringify(s) + ' | erro do aplicarLogin no sandbox: ' + run('__alErr'));
+}));
+provaAsync('6.76 QA676R-03 (SEC-001, tela trancada) — a 1101 trocada na tela trancada sem banco e sem cópia: marca a sessão; quando o banco responde, tranca; e recarregar a página (aplicarLogin com a cópia já gravada) tranca na hora', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run('SENHAS_FIXAS_BANCO=null; __ls657={}; ACESSO_TRAVA=null;');
+  papel676('monitor', { nome: 'Ana Teste', role: 'monitor', monId: 'p1', paginas: [] });
+  run("__apl676=[]; _appTrancado=true; __el657.lockPwd.value='1101'; destrancarApp();");
+  igual([run('_appTrancado'), sessaoR().fixaSemConferir], [false, 'adriana'], 'sem o banco, abre marcada (AC5.4)');
+  run(`senhasFixasDoBanco(${FIXA_A()});`);
+  igual(run('_appTrancado'), true, 'o banco mostrou a troca: tranca');
+  // recarregar: a sessão marcada volta e a cópia do aparelho já tem a troca → tranca na entrada
+  run('_appTrancado=false; ACESSO_TRAVA=null; SENHAS_FIXAS_BANCO=null;');
+  run("__alErr='';"); alR(); run('aplicarLogin(JSON.parse(sessionStorage.getItem("zeluz_login")));');
+  igual(run('__alErr'), '', 'o aplicarLogin de verdade rodou no sandbox');
+  igual(run('_appTrancado'), true, 'aplicarLogin com a cópia mostrando a troca tranca na hora');
+}));
+provaAsync('6.76 QA676R-04 (SEC-002, cartaz aberto) — enquanto o cartaz do «Salvar colaboradores» está aberto, outro aparelho DESATIVA a Bia: ao assinar, a desativação não pode ser desfeita', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'entrada','07:30');");
+  run('timeSalvarAbrir();'); await espera676();
+  assert.ok(run('!!CORR_ATUAL'), 'o cartaz abriu');
+  const outro = lista676(); outro[1].ativo = false; outro[1].desativado = { em: '2026-10-10', motivo: 'saiu da casa hoje cedo', registro: { por: 'Adriana · Gestão Total' } };
+  banco676(outro);   // o ouvinte do Time, com a mudança pendente na tela
+  await toque676(MOT676, '0902'); run("corrToque('fechar');");
+  const L = lista676(), bia = L.filter((m) => m.id === 'p2')[0];
+  igual([L[0].entrada, bia.ativo, !!bia.desativado], ['07:30', false, true], 'a Bia voltou a ficar ativa: ' + JSON.stringify(bia));
+}));
+provaAsync('6.76 QA676R-05 (SEC-002, cartaz aberto) — enquanto o cartaz está aberto, outro aparelho dá a senha 7777 à Bia; este aparelho deu 7777 à Ana: ao assinar, nada de duas pessoas com a mesma senha', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'senha','7777');");
+  run('timeSalvarAbrir();'); await espera676();
+  const outro = lista676(); outro[1].senha = '7777'; banco676(outro);
+  if (run('!!CORR_ATUAL')) { await toque676(MOT676, '0902'); run("corrToque('fechar');"); }
+  const s = lista676().filter((m) => m.ativo !== false).map((m) => m.senha);
+  assert.ok(new Set(s).size === s.length, 'senha repetida no banco: ' + JSON.stringify(lista676().map((m) => [m.nome, m.senha])));
+}));
+provaAsync('6.76 QA676R-06 (SEC-002, três aparelhos) — este aparelho muda a entrada da Ana; o 2º troca a senha da Bia e salva; o 3º muda a saída da Cris e salva; este salva: as três mudanças ficam, e as regras valem na lista final', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'entrada','06:45');");
+  const b2 = JSON.parse(JSON.stringify(EQUIPE676)); b2[1].senha = '4390'; banco676(b2);
+  const b3 = JSON.parse(JSON.stringify(b2)); b3[3].saida = '18:30'; banco676(b3);
+  run('timeSalvarAbrir();'); await espera676(); await toque676(MOT676, '0902'); run("corrToque('fechar');");
+  const L = lista676();
+  igual([L[0].entrada, L[1].senha, L[3].saida], ['06:45', '4390', '18:30']);
+  // e o 2º aparelho de novo, com a senha da Ana (a desta tela) para a Sara: recusado no que vai ao banco
+  run("setMon(2,'entrada','09:00');");
+  const b4 = lista676(); b4[2].senha = '4321'; banco676(b4);   // fica igual à da Ana
+  run('timeSalvarAbrir();'); await espera676();
+  igual([run('CORR_ATUAL'), /mesma senha/.test(st676())], [null, true], st676());
+}));
+provaAsync('6.76 QA676R-07 (SEC-004) — a senha provisória ainda não trocada não assina em NENHUMA porta: cartaz da 6.57, Correção do Day Care, hospedagem, chamado da Recepção, orçamento (senhaQuem), posto e provisória (assinatura do cartão), «Autorizar este aparelho»; e a entrada e a tela trancada continuam pedindo a troca', async () => com676(async () => {
+  banco676(EQUIPE676);
+  papel676('gestao', { role: 'gestao', nome: 'Adriana · Gestão Total', souAdriana: true, id: 'adriana' });
+  run("senhaProvisoriaAbrir('marcia');"); await run('sfToque("confirmar", {motivo:"a Márcia esqueceu a senha nova", assina:"1101", nova:"1357", nova2:"1357"})'); run("sfToque('fechar');");
+  run("SENHAS_FIXAS_BANCO=__get657('daycare/config/senhas-fixas');");
+  igual(J676("__get657('daycare/config/senhas-fixas/marcia').provisoria"), true);
+  const portas = [run("corrAssinar('1357', 'gestao-role', 'isto').ok"), run("corrAssinar('1357', 'ver-por-dia', 'isto').ok"), run("enganoAssinar('1357', 'gestao').ok"), run("enganoAssinar('1357', 'recepcao').ok"),
+    run("hospAssinarPorSenha('1357').ok"), J676("senhaQuem('1357')")];
+  igual(portas, [false, false, false, false, false, null]);
+  run('__esc657=[];'); run("senhaPostoAbrir();"); await run('sfToque("confirmar", {motivo:"a senha do posto vazou na casa", assina:"1357", nova:"9753", nova2:"9753"})');
+  igual([run('SF_ATUAL.passo'), run("__esc657.filter(function(e){ return /senhas-fixas|^daycare\\/config$/.test(e[1]); }).length")], ['campos', 0], 'a provisória não assina a troca do posto'); run("sfToque('cancelar');");
+  semLoginR(); run("__put657('auaulandia/aparelhos/dev-teste-1', null); __el657.loginPwd.value='1357'; __ztq657=['Celular X']; __el657.loginErr.textContent='';"); await run('autorizarAparelho()'); await espera676();
+  igual(J676("__get657('auaulandia/aparelhos/dev-teste-1')"), null, 'a provisória não autoriza celular');
+  run("__put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', ts:1});");
+  run('__el657.loginPwd.value="1357"; doLogin();'); await espera676();
+  igual([run('!!(SF_ATUAL&&SF_ATUAL.op.forcado)'), J676('__apl676')], [true, []], 'a entrada pede a troca'); run("sfToque('cancelar');");
+}));
+prova('6.76 QA676R-08 (SEC-006) — o registro MALFORMADO nunca abre com outra senha além da do código (no app e no servidor), em 12 formas de lixo, inclusive o hash certo do PIN em maiúsculas; o registro BEM-FORMADO recusa a do código', () => {
+  const salOk = 'ab'.repeat(16), hOk = crypto676.createHash('sha256').update('8642' + salOk).digest('hex');
+  const L = require(path.join(__dirname, '..', 'servidor-senha', 'logica.js'));
+  const FIX = { '1111': { id: 'adriana', role: 'gestao', nome: 'Adriana · Gestão Total', souAdriana: true } };
+  const lixos = [{ hash: hOk.toUpperCase(), sal: salOk }, { hash: hOk, sal: salOk.toUpperCase() }, { hash: hOk.slice(0, 63), sal: salOk }, { hash: hOk + '0', sal: salOk }, { hash: ' ' + hOk, sal: salOk },
+    { hash: hOk, sal: salOk.slice(0, 30) }, { hash: hOk, sal: '' }, { hash: hOk }, { sal: salOk }, 'texto', [hOk, salOk], { hash: 12345, sal: 678 }];
+  const res = lixos.map((g) => {
+    ctx.__gR = { adriana: g }; run('SENHAS_FIXAS_BANCO=__gR;');
+    const app = [run("!!senhaPerfil('8642')"), run("(senhaPerfil('1101')||{}).souAdriana===true")];
+    const T1 = L.montarTabela(FIX, [], { adriana: g }, '8642'), T2 = L.montarTabela(FIX, [], { adriana: g }, '1111');
+    return app.concat([!!T1['8642'], !!T2['1111']]);
+  });
+  igual(res, lixos.map(() => [false, true, false, true]), 'lixo: só a do código abre (app, app, servidor, servidor)');
+  ctx.__gR = { adriana: { hash: hOk, sal: salOk } }; run('SENHAS_FIXAS_BANCO=__gR;');
+  igual([run("!!senhaPerfil('8642')"), J676("senhaPerfil('1101')"), !!L.montarTabela(FIX, [], { adriana: { hash: hOk, sal: salOk } }, '8642')['8642'], !!L.montarTabela(FIX, [], { adriana: { hash: hOk, sal: salOk } }, '1111')['1111']], [true, null, true, false], 'bem-formado');
+  run('SENHAS_FIXAS_BANCO=null;');
+});
+prova('6.76 QA676R-09 (SEC-006, o limite da escolha) — um registro BEM-FORMADO com um PIN que ninguém conhece (64 e 32 hexadecimais sorteados) ainda tranca a dona fora: a do código é recusada e nenhum PIN abre (documenta o que o Risco 15 e o LEIA-ME precisam dizer)', () => {
+  ctx.__gR = { adriana: { hash: crypto676.randomBytes(32).toString('hex'), sal: crypto676.randomBytes(16).toString('hex') } }; run('SENHAS_FIXAS_BANCO=__gR;');
+  let abre = 0; for (let p = 0; p < 10000; p += 37) { if (run(`!!senhaPerfil('${String(p).padStart(4, '0')}')`)) abre++; }
+  igual([J676("senhaPerfil('1101')"), abre], [null, 0]);
+  run('SENHAS_FIXAS_BANCO=null;');
+});
+provaAsync('6.76 QA676R-10 (funções não fixadas que mudaram) — aplicarLogin, entrarComoPessoa e trancarApp nas outras telas: a sessão normal (Gestão, monitora, posto com nome de pessoa ativa) entra sem trancar e sem rastro de trava; a trava de 5 minutos mostra o campo de senha e o «Entrar»; o nome da desativada no posto é recusado e o de outra pessoa entra', async () => com676(async () => {
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[3].ativo = false; eq[3].desativado = { em: '2026-10-09', motivo: 'saiu da casa nesta semana' }; banco676(eq);
+  run("SENHAS_FIXAS_BANCO={}; __au657=[]; __alErr='';"); alR();
+  for (const u of [{ role: 'gestao', nome: 'Márcia · Gestora', id: 'marcia' }, { nome: 'Ana Teste', role: 'monitor', monId: 'p1', paginas: [] }, { role: 'plantonista', nome: 'Plantonista', id: 'plantonista', pessoa: 'Bia Teste' }]) {
+    run(`_appTrancado=false; ACESSO_TRAVA=null; aplicarLogin(${JSON.stringify(u)});`);
+    igual([u.nome, run('_appTrancado'), run('__alErr')], [u.nome, false, '']);
+  }
+  igual(J676("__au657.filter(function(a){ return a[0]==='acesso-trancado'; }).length"), 0);
+  // a trava de 5 minutos (inatividade): o campo e o «Entrar» à vista (a tela do celular retirado não vazou)
+  run("__el657.lockPwd={id:'lockPwd', style:{display:''}, value:''}; _appTrancado=false; ACESSO_TRAVA=null; APARELHO_REVOGADO=null; trancarApp();");
+  igual([run('_appTrancado'), run('__el657.lockPwd.style.display'), run('__el657.lockAviso.textContent')], [true, '', '']);
+  // o posto: o nome da desativada recusado; outro nome entra
+  semLoginR(); run("__zcR=null; zCampo=function(t, l, op){ __zcR=op; }; __za657=[]; aplicarLogin=function(u){ __apl676.push(u&&u.nome); };");
+  run("entrarComoPessoa({role:'plantonista', nome:'Plantonista', id:'plantonista'});"); run("__zcR.fn('Cris Consultora Teste');");
+  igual([J676('__apl676'), J676('__za657.map(function(z){ return z[0]; })')], [[], ['ESSE NOME NÃO ENTRA PELO POSTO']]);
+  run("__zcR.fn('Lia Plantonista Teste');");
+  igual(J676('__apl676'), ['Plantonista']);
+}));
+provaAsync('6.76 QA676R-11 (SEC-001, efeito que fica) — sem banco e sem a cópia, a sessão aberta pela 1101 (marcada) não pode TROCAR a senha da Adriana com a 1101 como «senha de agora»: a troca ficaria gravada por cima da senha nova dela quando o banco voltasse', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run(`SENHAS_FIXAS_BANCO=null; __ls657={}; __put657('daycare/config/senhas-fixas', ${FIXA_Aa()});`);
+  papel676('gestao', { role: 'gestao', nome: 'Adriana · Gestão Total', souAdriana: true, id: 'adriana', fixaSemConferir: 'adriana' });
+  run('__esc657=[];'); run("senhaTrocarAbrir('adriana');"); await run('sfToque("confirmar", {atual:"1101", nova:"5577", nova2:"5577"})');
+  const g = J676("__get657('daycare/config/senhas-fixas/adriana')");
+  const trocou = run("__esc657.filter(function(e){ return /^daycare\\/config$/.test(e[1]); }).length");
+  igual([trocou, crypto676.createHash('sha256').update('5577' + g.sal).digest('hex') === g.hash], [0, false], 'a 1101 trocou a senha da Adriana sem o banco: ' + run('SF_ATUAL&&SF_ATUAL.passo'));
+}));
+provaAsync('6.76 QA676R-12 (SEC-001, efeito que fica) — sem banco e sem a cópia, a 1101 de quem já trocou não assina um cartaz (a gravação fica na fila e entra quando o banco voltar, assinada como a Adriana)', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run(`SENHAS_FIXAS_BANCO=null; __ls657={}; __put657('daycare/config/senhas-fixas', ${FIXA_Aa()});`);
+  const a = J676("corrAssinar('1101', 'gestao-role', 'isto')");
+  igual(a.ok, false, 'a 1101 assinou como ' + a.nome + ' sem o banco ter respondido');
+}));
+// ---- 3ª rodada — as provas do @dev para as correções do re-gate (SEC-008, SEC-009, DOC-002)
+const FIXA_A676 = () => JSON.stringify({ adriana: fixa676('8642') });
+const semBanco676 = () => run('SENHAS_FIXAS_BANCO=null; __ls657={};');
+const escCfg676 = () => run("__esc657.filter(function(e){ return /^daycare\\/config$|senhas-fixas/.test(e[1]); }).length");
+const escMon676 = () => run("__esc657.filter(function(e){ return /^daycare\\/config\\/monitores$/.test(e[1]); }).length");
+const SEM_BANCO676 = 'Sem conexão com o banco: não dá para conferir a senha agora. Tente de novo com internet. Nada foi gravado.';
+
+prova('6.76 P56* (SEC-008, 3ª rodada) — a régua: a senha do CÓDIGO das três identidades fixas só vale para gravar quando o aparelho sabe se ela foi trocada (o banco respondeu ou há a cópia); a senha de uma pessoa do Time não depende disso; a cópia ilegível não conta; o LEIA-ME diz o limite do registro bem-formado (DOC-002)', () => {
+  run(ARMA676);
+  try {
+    const estados = [['sem banco, sem cópia', 'SENHAS_FIXAS_BANCO=null; __ls657={};'], ['banco «nenhuma»', 'SENHAS_FIXAS_BANCO={}; __ls657={};'],
+      ['cópia «nenhuma», sem banco', "SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:'{}'};"], ['cópia ilegível', "SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:'{lixo'};"],
+      ['cópia em lista', "SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:'[]'};"]];
+    const res = estados.map(([rot, cod]) => { run(cod); return [rot, run("senhaCodigoSemConferir('1101')"), run("senhaCodigoSemConferir('0902')"), run("senhaCodigoSemConferir(' 1001 ')"), run("senhaCodigoSemConferir('4321')"), run("senhaCodigoSemConferir('')")]; });
+    igual(res, [['sem banco, sem cópia', true, true, true, false, false], ['banco «nenhuma»', false, false, false, false, false], ['cópia «nenhuma», sem banco', false, false, false, false, false],
+      ['cópia ilegível', true, true, true, false, false], ['cópia em lista', true, true, true, false, false]]);
+    igual(run('SENHA_SEM_BANCO_FRASE'), SEM_BANCO676);
+  } finally { run(SOLTA676); }
+  const leia = fs.readFileSync(path.join(__dirname, '..', 'servidor-senha', 'LEIA-ME.md'), 'utf8').replace(/\*/g, '');
+  assert.ok(/registro bem-formado/i.test(leia) && /ninguém conhece/.test(leia) && /senha provisória/.test(leia), 'o LEIA-ME diz o limite do registro bem-formado e a saída');
+});
+
+provaAsync('6.76 P57* (SEC-008, 3ª rodada) — sem o banco e sem a cópia, a senha do código não grava por NENHUMA porta: cartaz da 6.57, Correção, hospedagem, chamado da Recepção, orçamento (senhaQuem, o cancelamento e a mudança de datas de verdade, com a frase de sem conexão), «Autorizar este aparelho» (1101 e 0902), «Trocar a minha senha», senha do posto e provisória (também assinadas por uma Gestora do Time) e a função que grava a senha fixa; a frase é a mesma; a senha de uma pessoa do Time continua assinando; a entrada e a tela trancada continuam abrindo, marcadas (AC5.4)', async () => com676(async () => {
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq.push({ id: 'p5', nome: 'Gabi Gestora Teste', role: 'gestao', senha: '6611' }); banco676(eq);
+  papel676('gestao', { role: 'gestao', nome: 'Gabi Gestora Teste', monId: 'p5', paginas: [] });
+  semBanco676(); run('__esc657=[];');
+  const portas = ['1101', '0902'].map((s) => [run(`corrAssinar('${s}', 'gestao-role', 'isto').erro`), run(`corrAssinar('${s}', 'ver-por-dia', 'isto', {tela:'hoje'}).erro`), run(`enganoAssinar('${s}', 'gestao').ok`),
+    run(`enganoAssinar('${s}', 'recepcao').ok`), run(`hospAssinarPorSenha('${s}').ok`), J676(`senhaQuem('${s}')`)]);
+  igual(portas, [[SEM_BANCO676, SEM_BANCO676, false, false, false, null], [SEM_BANCO676, SEM_BANCO676, false, false, false, null]]);
+  // o orçamento de verdade (o cancelamento): a senha do código não é de ninguém aqui — nada é gravado
+  run("ORC_LISTA_CACHE['orc-teste-1']={pets:[{nome:'Nala'}], entrada:'2026-10-12', saida:'2026-10-14'}; __zpq657=[true]; __ztq657=['a viagem da família foi desmarcada', '1101']; __al657=[]; __za657=[];");
+  await run("orcCancelar('orc-teste-1')"); await espera676();
+  // fechamento dos CONCERNS (UX-001): a frase de sem conexão, pelo zAlertao (nenhum alert novo); antes, «Essa senha não é de ninguém cadastrado»
+  igual([J676('__al657'), J676("__za657.map(function(z){ return [z[0], z[1]]; })"), run("__esc657.filter(function(e){ return /orcamento|hospedagem|financeiro/i.test(e[1]); }).length")],
+    [[], [['SEM CONEXÃO COM O BANCO', [SEM_BANCO676, 'A reserva NÃO foi cancelada.']]], 0]);
+  // e a mudança das datas da reserva (orcSalvarEdicao)
+  run("ORC_EDITANDO='orc-teste-1'; ORC_EDIT_ANTES={entrada:'2026-10-12', saida:'2026-10-14', total_cent:30000}; ORC_CALC={entrada:'2026-10-13', saida:'2026-10-15', total:30000, pets:[{sel:{nome:'Nala'}}]}; __zpq657=[true]; __ztq657=['a tutora antecipou a viagem', '1101']; __al657=[]; __za657=[];");
+  await run('orcSalvarEdicao()'); await espera676();
+  igual([J676('__al657'), J676("__za657.map(function(z){ return [z[0], z[1]]; })"), run("__esc657.filter(function(e){ return /orcamento|hospedagem|financeiro/i.test(e[1]); }).length")],
+    [[], [['SEM CONEXÃO COM O BANCO', [SEM_BANCO676, 'A reserva NÃO foi alterada.']]], 0]);
+  run('ORC_EDITANDO=null; ORC_EDIT_ANTES=null; ORC_CALC=null;');
+  // «Autorizar este aparelho»
+  for (const s of ['1101', '0902']) {
+    semLoginR(); run(`__put657('auaulandia/aparelhos/dev-teste-1', null); __el657.loginPwd.value='${s}'; __el657.loginErr.textContent=''; __ztq657=['Celular Novo Teste'];`);
+    await run('autorizarAparelho()'); await espera676();
+    igual([s, J676("__get657('auaulandia/aparelhos/dev-teste-1')"), run('__el657.loginErr.textContent'), J676('__ztq657')], [s, null, SEM_BANCO676, ['Celular Novo Teste']], 'nem pede o nome do celular');
+  }
+  // «Trocar a minha senha» (a 1101 como a senha de agora), a do posto e a provisória — com a 1101 e com a senha de uma Gestora do Time
+  papel676('gestao', { role: 'gestao', nome: 'Adriana · Gestão Total', souAdriana: true, id: 'adriana' });
+  run("senhaTrocarAbrir('adriana');"); await run('sfToque("confirmar", {atual:"1101", nova:"5577", nova2:"5577"})');
+  igual([run('SF_ATUAL.passo'), run('SF_ATUAL.aviso')], ['campos', SEM_BANCO676]); run("sfToque('cancelar');");
+  for (const ass of ['1101', '6611']) {
+    run("senhaPostoAbrir();"); await run(`sfToque("confirmar", {motivo:"a senha do posto vazou na casa", assina:"${ass}", nova:"9753", nova2:"9753"})`);
+    igual([ass, run('SF_ATUAL.passo'), run('SF_ATUAL.aviso')], [ass, 'campos', SEM_BANCO676]); run("sfToque('cancelar');");
+    run("senhaProvisoriaAbrir('marcia');"); await run(`sfToque("confirmar", {motivo:"a Márcia esqueceu a senha nova", assina:"${ass}", nova:"1357", nova2:"1357"})`);
+    igual([ass, run('SF_ATUAL.passo'), run('SF_ATUAL.aviso')], [ass, 'campos', SEM_BANCO676]); run("sfToque('cancelar');");
+  }
+  const g = await run("senhaFixaGravar('provisoria', 'marcia', {hash:'ab'.repeat(32), sal:'cd'.repeat(16)}, {nome:'Gabi Gestora Teste', papel:'gestao'}, 'a Márcia esqueceu a senha nova')");
+  igual([g, escCfg676()], [{ ok: false, erro: SEM_BANCO676 }, 0], 'a função que grava confere de novo');
+  igual(run("__esc657.filter(function(e){ return /aparelhos/.test(e[1]); }).length"), 0, 'nenhum celular gravado');
+  // a senha de uma pessoa do Time continua assinando (a régua é só da senha do código)
+  igual(J676("corrAssinar('6611', 'gestao-role', 'isto')"), { ok: true, nome: 'Gabi Gestora Teste', papel: 'gestao', erro: '' });
+  // a entrada e a tela trancada: abrem, com a sessão marcada (AC5.4)
+  semLoginR(); run("__put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', ts:1});");
+  const e = await entra676('1101');
+  igual([e.apl, sessaoR().fixaSemConferir], [['Adriana · Gestão Total'], 'adriana']);
+  papel676('monitor', { nome: 'Ana Teste', role: 'monitor', monId: 'p1', paginas: [] }); run('__apl676=[];');
+  igual([destranca676('0902').tr, sessaoR().fixaSemConferir], [false, 'marcia']);
+}));
+
+provaAsync('6.76 P58 (SEC-008, 3ª rodada, guarda) — com o banco OU com a cópia, a senha do código de quem não trocou assina, autoriza o celular (por Adriana) e serve de senha de agora; com a cópia mostrando a troca, não', async () => com676(async () => {
+  banco676(EQUIPE676);
+  for (const [rot, cod] of [['banco', 'SENHAS_FIXAS_BANCO={}; __ls657={};'], ['cópia', "SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:'{}'};"]]) {
+    run(cod);
+    igual([rot, run("corrAssinar('1101', 'gestao-role', 'isto').ok"), J676("senhaQuem('0902')")], [rot, true, { nome: 'Márcia · Gestora', role: 'gestao' }]);
+    semLoginR(); run("__put657('auaulandia/aparelhos/dev-teste-1', null); __el657.loginPwd.value='1101'; __el657.loginErr.textContent=''; __ztq657=['Celular Novo Teste'];");
+    await run('autorizarAparelho()'); await espera676();
+    const a = J676("__get657('auaulandia/aparelhos/dev-teste-1')");
+    igual([rot, a && a.nome, a && a.por], [rot, 'Celular Novo Teste', 'Adriana · Gestão Total']);
+  }
+  run("SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:JSON.stringify(" + FIXA_A676() + ")};");
+  igual([run("corrAssinar('1101', 'gestao-role', 'isto').ok"), run("corrAssinar('8642', 'gestao-role', 'isto').ok")], [false, true], 'pela cópia: a do código de quem trocou não assina; a nova assina');
+  run("SENHAS_FIXAS_BANCO={}; __ls657={}; __esc657=[];");
+  papel676('gestao', { role: 'gestao', nome: 'Adriana · Gestão Total', souAdriana: true, id: 'adriana' });
+  run("senhaTrocarAbrir('adriana');"); await run('sfToque("confirmar", {atual:"1101", nova:"5577", nova2:"5577"})');
+  igual([run('SF_ATUAL.passo'), escCfg676() > 0], ['pronto', true], 'com o banco, a 1101 de quem não trocou é a senha de agora'); run("sfToque('fechar');");
+}));
+
+provaAsync('6.76 P59* (SEC-008, 3ª rodada) — «Autorizar este aparelho» confere a senha de novo DEPOIS da leitura do celular: com a cópia antiga (sem a troca), o banco mostra a 1101 trocada enquanto o registro do celular é lido → nada é gravado e a tela diz por quê; o mesmo quando a Gestora do Time é desativada nesse meio-tempo, quando chega uma provisória com aquele PIN e quando o ouvinte ainda não respondeu mas o banco já tem a troca (a leitura das senhas fixas vai junto com a do celular); a provisória é recusada antes de pedir o nome', async () => com676(async () => {
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq.push({ id: 'p5', nome: 'Gabi Gestora Teste', role: 'gestao', senha: '6611' });
+  const eqSemGabi = JSON.parse(JSON.stringify(eq)); eqSemGabi[4].ativo = false; eqSemGabi[4].desativado = { em: '2026-10-10', motivo: 'saiu da casa hoje cedo' };
+  const FRASE = 'Digite a senha da GESTÃO no campo acima e toque em Autorizar.';
+  run("__dbR676=DB.ref;");
+  try {
+    const PROV = 'Essa é uma senha provisória: troque a senha provisória antes (entre no app com ela, e o app pede a troca). Nada foi gravado.';
+    // a 3ª: um registro gravado por fora (a provisória com o PIN da 1101) que chega no meio — a régua da provisória também vale depois da leitura
+    // a 4ª: o banco já tem a troca, e o ouvinte ainda não respondeu — a leitura das senhas fixas, junto com a do celular, descobre a troca
+    // (na 1ª, a leitura das senhas fixas volta mais velha que o ouvinte: a resposta mais nova não é trocada pela mais velha)
+    for (const [rot, senha, noMeio, frase, antes] of [['a 1101 trocada (o ouvinte traz a troca no meio)', '1101', `senhasFixasDoBanco(${FIXA_A676()});`, FRASE, ''],
+      ['a Gestora desativada', '6611', `__put657('daycare/config/monitores', ${JSON.stringify(eqSemGabi)}); timeDoBanco(__get657('daycare/config/monitores'));`, FRASE, ''],
+      ['a provisória que chegou no meio', '1101', `senhasFixasDoBanco(${JSON.stringify({ adriana: fixa676('1101', { provisoria: true }) })});`, PROV, ''],
+      ['a 1101 trocada (o ouvinte calado, a leitura descobre)', '1101', '', FRASE, `__put657('daycare/config/senhas-fixas', ${FIXA_A676()});`]]) {
+      banco676(eq); semLoginR(); run("__put657('daycare/config/senhas-fixas', null);"); if (antes) run(antes);
+      run(`SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:'{}'}; __put657('auaulandia/aparelhos/dev-teste-1', null); __el657.loginPwd.value='${senha}'; __el657.loginErr.textContent=''; __ztq657=['Celular Novo Teste'];`);
+      run("__lerAp676=null; DB={ref:function(p){ var r=__dbR676(p); if(/^auaulandia\\/aparelhos\\//.test(p)) r.once=function(){ return new Promise(function(ok){ __lerAp676=function(){ ok({val:function(){ return __get657(p); }}); }; }); }; return r; }};");
+      run('__pAut676=autorizarAparelho();'); await espera676();
+      igual([rot, run('typeof __lerAp676'), J676('__ztq657')], [rot, 'function', []], 'o nome foi dado e a leitura do celular está esperando');
+      if (noMeio) run(noMeio); run('__lerAp676();'); await run('__pAut676'); await espera676();
+      igual([rot, J676("__get657('auaulandia/aparelhos/dev-teste-1')"), run('__el657.loginErr.textContent')], [rot, null, frase]);
+      run('DB={ref:__dbR676};');
+    }
+    // a provisória ainda não trocada, com o banco respondido: recusada ANTES de pedir o nome do celular (a conta depois da leitura é a 2ª barreira)
+    semLoginR(); run(`SENHAS_FIXAS_BANCO=${JSON.stringify({ adriana: fixa676('1357', { provisoria: true }) })}; __ls657={}; __put657('auaulandia/aparelhos/dev-teste-1', null); __el657.loginPwd.value='1357'; __el657.loginErr.textContent=''; __ztq657=['Celular Novo Teste'];`);
+    await run('autorizarAparelho()'); await espera676();
+    igual([J676("__get657('auaulandia/aparelhos/dev-teste-1')"), run('__el657.loginErr.textContent'), J676('__ztq657')], [null, PROV, ['Celular Novo Teste']], 'a provisória nem pede o nome');
+  } finally { run('DB={ref:__dbR676};'); }
+}));
+
+provaAsync('6.76 P60* (SEC-009, 3ª rodada, dois aparelhos) — com o cartaz aberto, o outro aparelho troca a senha da Bia, as telas da Sara e desativa a Cris: ao assinar, a mudança desta tela (a entrada da Ana) entra e NADA do outro é desfeito; o histórico registra só o que esta gravação mudou (a saída da Sara, mudada igual nos dois, não entra)', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'entrada','07:30'); setMon(2,'saida','17:30');"); run('timeSalvarAbrir();'); await espera676();
+  assert.ok(run('!!CORR_ATUAL'), 'o cartaz abriu');
+  const outro = lista676(); outro[1].senha = '4390'; outro[2].paginas = ['hoje', 'ficha']; outro[2].saida = '17:30'; outro[3].ativo = false; outro[3].desativado = { em: '2026-10-10', motivo: 'saiu da casa hoje cedo' };
+  banco676(outro); run('__esc657=[];');
+  await toque676(MOT676, '0902');
+  igual(run('CORR_ATUAL.passo'), 'pronto'); run("corrToque('fechar');");
+  const L = lista676();
+  igual([L[0].entrada, L[1].senha, L[2].paginas, L[2].saida, L[3].ativo, !!L[3].desativado], ['07:30', '4390', ['hoje', 'ficha'], '17:30', false, true]);
+  igual(run("__esc657.filter(function(e){ return e[0]==='transaction' && e[1]==='daycare/config/monitores'; }).length"), 1, 'uma gravação, pela transação');
+  const H = J676("__get657('daycare/config/monitores-historico')"), h = H[Object.keys(H)[0]];
+  igual(h.mudancas.map((m) => [m.nome, m.campo, m.de, m.para]), [['Ana Teste', 'entrada', '07:00', '07:30']]);
+  igual([J676('MON_BANCO').map((m) => m.ativo !== false), run('MON_PENDENTE'), st676()], [[true, true, true, false], false, '✅ Colaboradores salvos! Já valem em todos os aparelhos.']);
+}));
+
+provaAsync('6.76 P61* (SEC-009, 3ª rodada) — o MESMO campo mudado no outro aparelho com o cartaz aberto: a gravação para, nada vai ao banco, o cartaz e a tela dizem o que mudou (a senha, nunca com os dígitos); no Salvar seguinte, o app pergunta qual vale e grava a escolha', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'entrada','07:30'); setMon(1,'senha','4391');"); run('timeSalvarAbrir();'); await espera676();
+  const outro = lista676(); outro[0].entrada = '06:45'; outro[1].senha = '4392'; banco676(outro); run('__esc657=[];');
+  await toque676(MOT676, '0902');
+  const frase = 'Enquanto o cartaz estava aberto, outro aparelho mudou o mesmo campo que você mudou: Ana Teste — Entrada (seg a sex) (neste aparelho: 07:30; no outro: 06:45); Bia Teste — Senha (neste aparelho: trocada; no outro: trocada). Nada foi gravado. Toque em «Salvar colaboradores» de novo para escolher qual vale.';
+  igual([run('CORR_ATUAL.passo'), escMon676(), st676()], ['falhou', 0, frase]);
+  const cart = txt676(run('corrCartazHTML()'));
+  assert.ok(cart.indexOf(frase) >= 0 && !/439[12]/.test(cart) && !/439[12]/.test(st676()), cart);
+  igual([lista676()[0].entrada, lista676()[1].senha], ['06:45', '4392'], 'o banco ficou com o do outro aparelho');
+  run("corrToque('fechar'); __zpq657=[true, false]; __zp657=[];"); run('timeSalvarAbrir();'); await espera676();
+  igual(J676('__zp657').map((p) => p[0]), ['O mesmo campo mudou nos dois aparelhos', 'O mesmo campo mudou nos dois aparelhos']);
+  await toque676(MOT676, '0902'); igual(run('CORR_ATUAL.passo'), 'pronto'); run("corrToque('fechar');");
+  igual([lista676()[0].entrada, lista676()[1].senha], ['07:30', '4392'], 'a entrada deste aparelho; a senha do outro');
+}));
+
+provaAsync('6.76 P62* (SEC-009, 3ª rodada, três aparelhos) — com o cartaz aberto, o 2º aparelho desativa a Bia e o 3º muda a saída da Cris: ao assinar, as três mudanças ficam; e, se o 2º der à Sara a senha que esta tela deu à Ana, a gravação para (nenhuma senha repetida no banco)', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'entrada','06:50');"); run('timeSalvarAbrir();'); await espera676();
+  const b2 = lista676(); b2[1].ativo = false; b2[1].desativado = { em: '2026-10-10', motivo: 'saiu da casa hoje cedo' }; banco676(b2);
+  const b3 = lista676(); b3[3].saida = '18:30'; banco676(b3);
+  await toque676(MOT676, '0902'); igual(run('CORR_ATUAL.passo'), 'pronto'); run("corrToque('fechar');");
+  const L = lista676();
+  igual([L[0].entrada, L[1].ativo, !!L[1].desativado, L[3].saida], ['06:50', false, true, '18:30']);
+  // a senha nova da Ana, dada à Sara no 2º aparelho enquanto o cartaz estava aberto
+  run("setMon(0,'senha','4777');"); run('timeSalvarAbrir();'); await espera676();
+  const b4 = lista676(); b4[2].senha = '4777'; banco676(b4); run('__esc657=[];');
+  await toque676(MOT676, '0902');
+  igual([run('CORR_ATUAL.passo'), escMon676()], ['falhou', 0]);
+  assert.ok(/ficariam com a mesma senha/.test(st676()) && !/4777/.test(st676()), st676());
+  const s = lista676().filter((m) => m.ativo !== false).map((m) => m.senha);
+  igual(new Set(s).size, s.length, 'nenhuma senha repetida no banco');
+}));
+
+provaAsync('6.76 P63* (SEC-009, 3ª rodada) — a transação roda de novo quando o servidor mudou entre a conta local e a gravação (o que o Firebase faz): vale a conta com a lista do servidor, e o histórico diz o que ESSA conta mudou; a gravação sem o cartaz também passa pela transação; num banco sem transação, grava como antes', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'entrada','07:15');"); run('timeSalvarAbrir();'); await espera676();
+  // o servidor: a Bia desativada por outro aparelho DEPOIS que este aparelho fez a conta com a lista que tinha
+  run("__dbT676=DB.ref; DB={ref:function(p){ var r=__dbT676(p); if(p==='daycare/config/monitores') r.transaction=function(fn){ var antes=JSON.parse(JSON.stringify(__get657(p))); fn(antes); var srv=JSON.parse(JSON.stringify(__get657(p))); srv[1].ativo=false; srv[1].desativado={em:'2026-10-10', motivo:'saiu da casa hoje cedo'}; __put657(p, srv); var n=fn(JSON.parse(JSON.stringify(srv))); if(n===undefined) return Promise.resolve({committed:false}); __put657(p, n); __esc657.push(['transaction', p]); return Promise.resolve({committed:true}); }; return r; }};");
+  try {
+    await toque676(MOT676, '0902'); igual(run('CORR_ATUAL.passo'), 'pronto'); run("corrToque('fechar');");
+    const L = lista676();
+    igual([L[0].entrada, L[1].ativo, !!L[1].desativado], ['07:15', false, true]);
+    const H = J676("__get657('daycare/config/monitores-historico')"), h = H[Object.keys(H).sort().pop()];
+    igual(h.mudancas.map((m) => [m.nome, m.campo]), [['Ana Teste', 'entrada']]);
+    // sem o cartaz (salvarMonitores()): a mesma transação
+    run("setMon(0,'saida','16:20');"); await run('salvarMonitores()'); await espera676();
+    const L2 = lista676();
+    igual([L2[0].saida, L2[1].ativo], ['16:20', false]);
+  } finally { run('DB={ref:__dbT676};'); }
+  // um banco sem transação (o do harness 7): set, como antes
+  run("__g676=[]; __dbB676=DB; DB={ref:function(c){ return {set:function(v){ __g676.push({c:c, v:JSON.parse(JSON.stringify(v))}); return Promise.resolve(); }}; }}; setMon(0,'saida','16:25');");
+  try { run('salvarMonitores();'); igual([J676('__g676[0].c'), J676('__g676[0].v[0].saida')], ['daycare/config/monitores', '16:25']); } finally { run('DB=__dbB676;'); }
+}));
+
+provaAsync('6.76 P64* (SEC-009, 3ª rodada) — desativar e reativar (timeGravarPessoa) pela transação: o que outro aparelho salvou depois de esta tela carregar fica; a conta roda de novo com a lista do servidor; a reativação confere a senha guardada na lista de AGORA (dada a outra pessoa em outro aparelho → nada é gravado); num banco sem transação, lê e grava como antes', async () => com676(async () => {
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[3].ativo = false; eq[3].desativado = { em: '2026-10-09', motivo: 'saiu da casa nesta semana' }; banco676(eq);
+  // outro aparelho muda a entrada da Ana depois que esta tela carregou (o ouvinte ainda não trouxe)
+  const o = lista676(); o[0].entrada = '06:40'; run(`__put657('daycare/config/monitores', ${JSON.stringify(o)});`);
+  await desativa676('p2');
+  igual(run('CORR_ATUAL.passo'), 'pronto'); run("corrToque('fechar');");
+  let L = lista676();
+  igual([L[0].entrada, L[1].ativo, !!L[1].desativado], ['06:40', false, true]);
+  // a conta de novo com a lista do servidor (a transação que roda duas vezes)
+  run("__dbT676=DB.ref; DB={ref:function(p){ var r=__dbT676(p); if(p==='daycare/config/monitores') r.transaction=function(fn){ fn(JSON.parse(JSON.stringify(__get657(p)))); var srv=JSON.parse(JSON.stringify(__get657(p))); srv[2].saida='17:40'; __put657(p, srv); var n=fn(JSON.parse(JSON.stringify(srv))); if(n===undefined) return Promise.resolve({committed:false}); __put657(p, n); __esc657.push(['transaction', p]); return Promise.resolve({committed:true}); }; return r; }};");
+  try {
+    const r = await run("timeReativarGravar('p2', {motivo:'a pessoa voltou para a casa', por:'Márcia · Gestora', papel:'gestao'})");
+    igual(r.ok, true); L = lista676();
+    igual([L[1].ativo, L[2].saida, L[0].entrada], [true, '17:40', '06:40']);
+  } finally { run('DB={ref:__dbT676};'); }
+  // a senha guardada da Cris dada à Ana em outro aparelho: a reativação não grava
+  const o2 = lista676(); o2[0].senha = '5512'; run(`__put657('daycare/config/monitores', ${JSON.stringify(o2)});`); run('__esc657=[];');
+  const r2 = await run("timeReativarGravar('p4', {motivo:'a pessoa voltou para a casa', por:'Márcia · Gestora', papel:'gestao'})");
+  igual([r2.ok, r2.erro, escMon676()], [false, 'A senha guardada de Cris Consultora Teste passou a ser usada por outra pessoa (mudou em outro aparelho). Nada foi gravado.', 0]);
+  // um banco sem transação: once + set, como antes
+  run("__dbS676=DB.ref; DB={ref:function(p){ var r=__dbS676(p); delete r.transaction; return r; }};");
+  try {
+    const r3 = await run("timeDesativarGravar('p3', '2026-10-10', {motivo:'a pessoa saiu da empresa hoje', por:'Márcia · Gestora', papel:'gestao'})");
+    igual([r3.ok, lista676()[2].ativo], [true, false]);
+  } finally { run('DB={ref:__dbS676};'); }
+}));
+// ---- Fechamento dos CONCERNS do re-gate 3 (TEST-002) — as provas do QA (qa676r3/ataque-r3.js: R3-01 a R3-11; achados-r3.js: A1, o SEC-010,
+// que falhava; obs-r3.js: O1, o registro do OBS-003) trazidas como o QA escreveu; a única mudança é o nome, «6.76 QA re-gate 3 · …»
+// (o filtro SO e a P41 contam as provas do bloco pelo prefixo «6.76 »).
+const semLoginR3 = () => run('__login657=null; __ss676.zeluz_login=null; _appTrancado=false; __apl676=[]; ACESSO_TRAVA=null; APARELHO_REVOGADO=null;');
+const SEMB_R3 = 'Sem conexão com o banco: não dá para conferir a senha agora. Tente de novo com internet. Nada foi gravado.';
+const PROV_R3 = 'Essa é uma senha provisória: troque a senha provisória antes (entre no app com ela, e o app pede a troca). Nada foi gravado.';
+const GESTAO_R3 = 'Digite a senha da GESTÃO no campo acima e toque em Autorizar.';
+const EQ_R3 = () => { const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq.push({ id: 'p5', nome: 'Gabi Gestora Teste', role: 'gestao', senha: '6611' }); return eq; };
+const confereR3 = (senha, g) => !!g && crypto676.createHash('sha256').update(senha + g.sal).digest('hex') === g.hash;
+const escR3 = (re) => run(`__esc657.filter(function(e){ return ${re}.test(e[1]); }).length`);
+const ADRIANA_R3 = { role: 'gestao', nome: 'Adriana · Gestão Total', souAdriana: true, id: 'adriana' };
+// o banco de mentira com a transação do Firebase de verdade: a 1ª conta com o que o aparelho tem em cache (null, se nada),
+// e, se o servidor tem outra coisa, a conta roda de novo com o valor do servidor (compare-and-set)
+const txFielR3 = (cache) => run(`__dbF_R3=DB.ref; DB={ref:function(p){ var r=__dbF_R3(p); if(p==='daycare/config/monitores') r.transaction=function(fn){
+    var v0=fn(${cache}); if(v0===undefined) return Promise.resolve({committed:false});
+    var srv=__get657(p); if(JSON.stringify(srv)===JSON.stringify(v0===null?null:v0) && ${cache}!==null){ __put657(p, v0); __esc657.push(['transaction', p]); return Promise.resolve({committed:true}); }
+    var n=fn(JSON.parse(JSON.stringify(srv))); if(n===undefined) return Promise.resolve({committed:false});
+    __put657(p, n); __esc657.push(['transaction', p]); return Promise.resolve({committed:true}); }; return r; }};`);
+const txSoltaR3 = () => run('if(typeof __dbF_R3==="function") DB={ref:__dbF_R3};');
+
+// ---------------------------------------------------------------- SEC-008
+const semLoginR3a = () => run('__login657=null; __ss676.zeluz_login=null; _appTrancado=false; __apl676=[]; ACESSO_TRAVA=null; APARELHO_REVOGADO=null;');
+const confereR3a = (senha, g) => !!g && crypto676.createHash('sha256').update(senha + g.sal).digest('hex') === g.hash;
+provaAsync('6.76 QA re-gate 3 · QA676R3-01 (SEC-008, cópias estranhas) — sem o banco, a cópia ilegível, em lista, em texto, em número, «true», «null» e vazia NÃO contam como cópia: a senha do código não grava por nenhuma porta (cartaz, Correção, hospedagem, senhaQuem, «Autorizar este aparelho» sem pedir o nome, «Trocar a minha senha», posto assinado pela Gestora do Time, a função que grava); a frase é a de sem banco', async () => com676(async () => {
+  banco676(EQ_R3());
+  const copias = ['{lixo', '[]', '[{"adriana":{}}]', '"texto"', '123', 'true', 'null', ''];
+  const res = [];
+  for (const c of copias) {
+    run(`SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:${JSON.stringify(c)}}; __esc657=[]; CORR_ATUAL=null; SF_ATUAL=null;`);
+    papel676('gestao', { role: 'gestao', nome: 'Gabi Gestora Teste', monId: 'p5', paginas: [] });
+    const portas = [run("corrAssinar('1101', 'gestao-role', 'isto').erro"), run("corrAssinar('0902', 'ver-por-dia', 'isto', {tela:'hoje'}).erro"),
+      run("enganoAssinar('1101', 'gestao').ok"), run("hospAssinarPorSenha('0902').ok"), J676("senhaQuem('1101')")];
+    semLoginR3(); run("__put657('auaulandia/aparelhos/dev-teste-1', null); __el657.loginPwd.value='1101'; __el657.loginErr.textContent=''; __ztq657=['Celular Estranho Teste'];");
+    await run('autorizarAparelho()'); await espera676();
+    const aut = [J676("__get657('auaulandia/aparelhos/dev-teste-1')"), run('__el657.loginErr.textContent'), J676('__ztq657').length];
+    papel676('gestao', ADRIANA_R3);
+    run("senhaTrocarAbrir('adriana');"); await run('sfToque("confirmar", {atual:"1101", nova:"5577", nova2:"5577"})');
+    const pr = run('SF_ATUAL && SF_ATUAL.aviso'); run("sfToque('cancelar');");
+    run('senhaPostoAbrir();'); await run('sfToque("confirmar", {motivo:"a senha do posto vazou na casa", assina:"6611", nova:"9753", nova2:"9753"})');
+    const po = run('SF_ATUAL && SF_ATUAL.aviso'); run("sfToque('cancelar');");
+    const g = await run("senhaFixaGravar('propria', 'adriana', {hash:'ab'.repeat(32), sal:'cd'.repeat(16)}, {nome:'Adriana · Gestão Total', papel:'diretoria'}, '')");
+    res.push([c, portas, aut, pr, po, g.erro, escR3('/senhas-fixas|^daycare\\/config$|aparelhos/')]);
+  }
+  const certo = copias.map((c) => [c, [SEMB_R3, SEMB_R3, false, false, null], [null, SEMB_R3, 1], SEMB_R3, SEMB_R3, SEMB_R3, 0]);
+  igual(res, certo);
+}));
+provaAsync('6.76 QA re-gate 3 · QA676R3-02 (SEC-008, o banco responde no meio do cartaz) — sem banco e sem cópia, o cartaz do Time abre; o banco mostra a 1101 trocada antes da assinatura: a 1101 não assina e nada vai ao banco; a senha nova (8642) assina como a Adriana; e, com o banco respondendo «nenhuma trocada» no meio, a 1101 assina (guarda)', async () => com676(async () => {
+  banco676(EQ_R3());
+  run("SENHAS_FIXAS_BANCO=null; __ls657={}; setMon(0,'entrada','07:20');"); run('timeSalvarAbrir();'); await espera676();
+  assert.ok(run('!!CORR_ATUAL'), 'o cartaz abriu');
+  run(`__put657('daycare/config/senhas-fixas', {adriana:${JSON.stringify(fixa676('8642'))}}); senhasFixasDoBanco(__get657('daycare/config/senhas-fixas')); __esc657=[];`);
+  await toque676(MOT676, '1101');
+  const r1 = [run('CORR_ATUAL.passo'), run('CORR_ATUAL.aviso'), escR3('/monitores$/')];
+  await toque676(MOT676, '8642');
+  const r2 = [run('CORR_ATUAL.passo'), lista676()[0].entrada];
+  const H = J676("__get657('daycare/config/monitores-historico')"), h = H[Object.keys(H).sort().pop()];
+  run("corrToque('fechar');");
+  igual([r1[0], r1[2], r2, h.por], ['conferir', 0, ['pronto', '07:20'], 'Adriana · Gestão Total']);
+  assert.ok(r1[1] && r1[1] !== SEMB_R3 && !/1101|8642/.test(r1[1]), 'a 1101 recusada pela troca (não pela falta de banco): ' + r1[1]);
+  // o banco respondendo «nenhuma trocada» no meio: a 1101 vale (a dona nunca fica trancada fora)
+  run("SENHAS_FIXAS_BANCO=null; __ls657={}; __put657('daycare/config/senhas-fixas', null); setMon(0,'saida','16:10');"); run('timeSalvarAbrir();'); await espera676();
+  run('senhasFixasDoBanco(null);');
+  await toque676(MOT676, '1101');
+  igual([run('CORR_ATUAL.passo'), lista676()[0].saida], ['pronto', '16:10']); run("corrToque('fechar');");
+}));
+provaAsync('6.76 QA re-gate 3 · QA676R3-03 (SEC-008, a provisória pela cópia) — sem o banco, com a cópia mostrando a provisória da Adriana: a provisória não assina (cartaz, orçamento), não autoriza (sem pedir o nome) e a 1101 também não (a cópia diz que ela trocou); a entrada com a provisória pede a troca antes de qualquer tela', async () => com676(async () => {
+  banco676(EQ_R3());
+  const cop = JSON.stringify({ adriana: Object.assign(fixa676('1357'), { provisoria: true }) });
+  run(`SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:${JSON.stringify(cop)}}; __esc657=[];`);
+  const a = [run("corrAssinar('1357', 'gestao-role', 'isto').ok"), J676("senhaQuem('1357')"), run("corrAssinar('1101', 'gestao-role', 'isto').ok"), J676("senhaQuem('1101')")];
+  const aut = [];
+  for (const s of ['1357', '1101']) {
+    semLoginR3(); run(`__put657('auaulandia/aparelhos/dev-teste-1', null); __ls657.zeluz_senhas_fixas=${JSON.stringify(cop)}; __el657.loginPwd.value='${s}'; __el657.loginErr.textContent=''; __ztq657=['Celular Teste Prov'];`);
+    await run('autorizarAparelho()'); await espera676();
+    aut.push([s, J676("__get657('auaulandia/aparelhos/dev-teste-1')"), run('__el657.loginErr.textContent'), J676('__ztq657').length]);
+  }
+  igual([a, aut], [[false, null, false, null], [['1357', null, PROV_R3, 1], ['1101', null, GESTAO_R3, 1]]]);
+  semLoginR3(); run(`__put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', ts:1}); __ls657.zeluz_senhas_fixas=${JSON.stringify(cop)}; __ls657.zeluz_device_ok='1'; SF_ATUAL=null;`);
+  await entra676('1357');
+  igual([J676('__apl676'), run('SF_ATUAL && SF_ATUAL.op.forcado')], [[], true], 'a provisória não entra sem trocar');
+  run("sfToque('cancelar');");
+}));
+provaAsync('6.76 QA re-gate 3 · QA676R3-04 (SEC-008, aparelhoSenhaRecusa) — a conta depois da leitura: a Gestora do Time que vira monitora em outro aparelho enquanto dá o nome ao celular não autoriza; a função chamada direto (console) com a senha de uma monitora, sem senha ou com a 1101 sem banco e sem cópia não grava nada', async () => com676(async () => {
+  const eq = EQ_R3(); banco676(eq);
+  const eqMon = JSON.parse(JSON.stringify(eq)); eqMon[4].role = 'monitor';
+  run("__dbR_R3=DB.ref;");
+  try {
+    semLoginR3(); run("SENHAS_FIXAS_BANCO={}; __ls657={}; __put657('auaulandia/aparelhos/dev-teste-1', null); __el657.loginPwd.value='6611'; __el657.loginErr.textContent=''; __ztq657=['Celular Rebaixado Teste'];");
+    run("__ler_R3=null; DB={ref:function(p){ var r=__dbR_R3(p); if(/^auaulandia\\/aparelhos\\//.test(p)) r.once=function(){ return new Promise(function(ok){ __ler_R3=function(){ ok({val:function(){ return __get657(p); }}); }; }); }; return r; }};");
+    run('__pA_R3=autorizarAparelho();'); await espera676();
+    igual(run('typeof __ler_R3'), 'function', 'a leitura do celular está esperando');
+    run(`__put657('daycare/config/monitores', ${JSON.stringify(eqMon)}); timeDoBanco(__get657('daycare/config/monitores'));`);
+    run('__ler_R3();'); await run('__pA_R3'); await espera676();
+    const r1 = [J676("__get657('auaulandia/aparelhos/dev-teste-1')"), run('__el657.loginErr.textContent')];
+    run('DB={ref:__dbR_R3};'); banco676(eq);
+    const d = [];
+    for (const [rot, cod, senha] of [['monitora', 'SENHAS_FIXAS_BANCO={}; __ls657={};', '4321'], ['sem senha', 'SENHAS_FIXAS_BANCO={}; __ls657={};', ''],
+      ['1101 sem banco (a leitura das senhas fixas falha)', 'SENHAS_FIXAS_BANCO=null; __ls657={}; DB={ref:function(p){ var r=__dbR_R3(p); if(/senhas-fixas/.test(p)) r.once=function(){ return Promise.reject(new Error("PERMISSION_DENIED")); }; return r; }};', '1101'],
+      ['undefined', 'SENHAS_FIXAS_BANCO={}; __ls657={};', null]]) {
+      run('DB={ref:__dbR_R3}; ' + cod + " __put657('auaulandia/aparelhos/dev-teste-2', null);");
+      const r = await run(`aparelhoAutorizarJunto('dev-teste-2', {nome:'Console Teste', por:'Ninguém', ts:1, ua:'x'}, {nome:'Gabi Gestora Teste', role:'gestao'}, ${senha === null ? 'undefined' : JSON.stringify(senha)})`);
+      d.push([rot, !!(r && r.recusa), J676("__get657('auaulandia/aparelhos/dev-teste-2')")]);
+    }
+    igual([r1, d], [[null, GESTAO_R3], [['monitora', true, null], ['sem senha', true, null], ['1101 sem banco (a leitura das senhas fixas falha)', true, null], ['undefined', true, null]]]);
+  } finally { run('DB={ref:__dbR_R3};'); }
+}));
+
+// ---------------------------------------------------------------- SEC-009
+provaAsync('6.76 QA re-gate 3 · QA676R3-05 (SEC-009, a internet cai no meio da transação) — a transação recusada pela queda da conexão e a que volta sem confirmar: nada vai ao banco, a mudança desta tela continua na tela (pendente) e a tela diz por quê; o Salvar seguinte grava uma vez, com um histórico só', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'entrada','07:25');"); run('timeSalvarAbrir();'); await espera676();
+  run("__dbQ_R3=DB.ref; DB={ref:function(p){ var r=__dbQ_R3(p); if(p==='daycare/config/monitores') r.transaction=function(){ return Promise.reject(new Error('Error: disconnect')); }; return r; }};");
+  let r1, r2;
+  try {
+    await toque676(MOT676, '0902');
+    r1 = [run('CORR_ATUAL.passo'), lista676()[0].entrada, run('MON_PENDENTE'), run('MONITORES[0].entrada'), J676("__get657('daycare/config/monitores-historico')")];
+    run("corrToque('fechar');");
+    run("DB={ref:function(p){ var r=__dbQ_R3(p); if(p==='daycare/config/monitores') r.transaction=function(fn){ fn(JSON.parse(JSON.stringify(__get657(p)))); return Promise.resolve({committed:false}); }; return r; }};");   // a conta rodou, e o servidor não confirmou (a transação substituída)
+    run('timeSalvarAbrir();'); await espera676(); await toque676(MOT676, '0902');
+    r2 = [run('CORR_ATUAL.passo'), st676(), lista676()[0].entrada, run('MON_PENDENTE'), J676("__get657('daycare/config/monitores-historico')")];
+    run("corrToque('fechar');");
+  } finally { run('DB={ref:__dbQ_R3};'); }
+  igual([r1[0], r1[1], r1[2], r1[3], r1[4]], ['falhou', '07:00', true, '07:25', null], 'a queda: nada gravado, a edição fica');
+  igual([r2[0], r2[1], r2[2], r2[3], r2[4]], ['falhou', 'O banco não confirmou a gravação. Nada foi gravado.', '07:00', true, null], 'sem confirmar: nada gravado, a edição fica');
+  run('timeSalvarAbrir();'); await espera676(); await toque676(MOT676, '0902');
+  const H = J676("__get657('daycare/config/monitores-historico')") || {};
+  igual([run('CORR_ATUAL.passo'), lista676()[0].entrada, Object.keys(H).length, run('MON_PENDENTE')], ['pronto', '07:25', 1, false]); run("corrToque('fechar');");
+}));
+provaAsync('6.76 QA re-gate 3 · QA676R3-06 (SEC-009, a transação do Firebase de verdade) — sem a lista em cache, a 1ª conta roda com null e a 2ª com a lista do servidor (onde outro aparelho desativou a Bia): o Salvar grava a mudança desta tela e a Bia continua desativada; «Desativar» e «Reativar» (timeGravarPessoa) também passam, sem apagar a lista', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'entrada','07:35');"); run('timeSalvarAbrir();'); await espera676();
+  const outro = lista676(); outro[1].ativo = false; outro[1].desativado = { em: '2026-10-10', motivo: 'saiu da casa hoje cedo' };
+  run(`__put657('daycare/config/monitores', ${JSON.stringify(outro)});`);   // o servidor (o ouvinte deste aparelho ainda não trouxe)
+  txFielR3('null');
+  let a, b, c;
+  try {
+    await toque676(MOT676, '0902');
+    const L = lista676();
+    a = [run('CORR_ATUAL.passo'), L.length, L[0].entrada, L[1].ativo, !!L[1].desativado];
+    run("corrToque('fechar');");
+    const rd = await run("timeDesativarGravar('p3', '2026-10-10', {motivo:'a pessoa saiu da empresa hoje', por:'Márcia · Gestora', papel:'gestao'})");
+    b = [rd.ok, lista676().length, lista676()[2].ativo];
+    const rr = await run("timeReativarGravar('p2', {motivo:'a pessoa voltou para a casa', por:'Márcia · Gestora', papel:'gestao'})");
+    c = [rr.ok, lista676().length, lista676()[1].ativo];
+  } finally { txSoltaR3(); }
+  igual([a, b, c], [['pronto', 4, '07:35', false, true], [true, 4, false], [true, 4, true]]);
+}));
+provaAsync('6.76 QA re-gate 3 · QA676R3-07 (SEC-009, três aparelhos com dois cartazes abertos) — este aparelho muda a entrada da Ana; o 2º, com o cartaz aberto sobre a mesma lista, muda a saída da Ana e grava; o 3º desativa a Bia: ao assinar aqui, as três ficam e o histórico daqui diz só a entrada; depois, o mesmo campo (a entrada da Ana) mudado no 2º com o cartaz daqui aberto: a gravação daqui para e nada vai ao banco', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'entrada','07:40');"); run('timeSalvarAbrir();'); await espera676();
+  // o 2º aparelho: a mesma lista de partida, a saída da Ana mudada, gravada pela mesma transação
+  run("__B0_R3=timeCopia(MON_BANCO); __L2_R3=timeCopia(__B0_R3); __L2_R3[0].saida='16:45';");
+  const g2 = await run('timeGravarNaHora(__L2_R3, __B0_R3)');
+  run('timeDoBanco(__get657("daycare/config/monitores"));');
+  // o 3º aparelho: desativa a Bia
+  const o3 = lista676(); o3[1].ativo = false; o3[1].desativado = { em: '2026-10-10', motivo: 'saiu da casa hoje cedo' }; banco676(o3);
+  run('__esc657=[];'); await toque676(MOT676, '0902');
+  const L = lista676(), H = J676("__get657('daycare/config/monitores-historico')"), h = H[Object.keys(H).sort().pop()];
+  igual([!!(g2 && g2.lista), run('CORR_ATUAL.passo'), L[0].entrada, L[0].saida, L[1].ativo, h.mudancas.map((m) => [m.nome, m.campo])],
+    [true, 'pronto', '07:40', '16:45', false, [['Ana Teste', 'entrada']]]);
+  run("corrToque('fechar');");
+  run("setMon(0,'entrada','06:10');"); run('timeSalvarAbrir();'); await espera676();
+  run("__B1_R3=timeCopia(MON_BANCO); __L3_R3=timeCopia(__B1_R3); __L3_R3[0].entrada='06:20';");
+  await run('timeGravarNaHora(__L3_R3, __B1_R3)');
+  run('__esc657=[];'); await toque676(MOT676, '0902');
+  igual([run('CORR_ATUAL.passo'), escR3('/monitores$/'), lista676()[0].entrada, /neste aparelho: 06:10; no outro: 06:20/.test(st676())], ['falhou', 0, '06:20', true], st676());
+  run("corrToque('fechar');");
+}));
+provaAsync('6.76 QA re-gate 3 · QA676R3-08 (SEC-009, desativar × assinar) — (a) o cartaz daqui muda a entrada da Bia e outro aparelho a desativa: a Bia continua desativada e a senha dela não abre; (b) outro aparelho desativa a Gabi (a Gestora que vai assinar aqui) com o cartaz aberto: a senha dela não assina e nada vai ao banco; (c) o cartaz «Desativar a Bia» aberto e o outro aparelho a desativa antes: nada é regravado por cima da desativação do outro; (d) o cartaz «Reativar a Cris» aberto e o outro aparelho a reativa antes: nada é regravado', async () => com676(async () => {
+  const eq = EQ_R3(); eq[3].ativo = false; eq[3].desativado = { em: '2026-10-09', motivo: 'saiu da casa nesta semana' };
+  banco676(eq);
+  // (a)
+  run("setMon(1,'entrada','08:15');"); run('timeSalvarAbrir();'); await espera676();
+  const oa = lista676(); oa[1].ativo = false; oa[1].desativado = { em: '2026-10-10', motivo: 'saiu da casa hoje cedo' }; banco676(oa);
+  await toque676(MOT676, '0902');
+  const La = lista676(), ra = [run('CORR_ATUAL.passo'), La[1].ativo, !!La[1].desativado, La[1].entrada, J676("senhasRuntime()['4322']||null"), run("corrAssinar('4322', 'ver-por-dia', 'isto').ok")];
+  run("corrToque('fechar');");
+  // (b)
+  run("setMon(0,'saida','16:05');"); run('timeSalvarAbrir();'); await espera676();
+  const ob = lista676(); ob[4].ativo = false; ob[4].desativado = { em: '2026-10-10', motivo: 'saiu da casa hoje cedo' }; banco676(ob);
+  run('__esc657=[];'); await toque676(MOT676, '6611');
+  const rb = [run('CORR_ATUAL.passo'), escR3('/monitores$/'), lista676()[0].saida];
+  run("corrToque('cancelar'); CORR_ATUAL=null; MON_PENDENTE=false;"); banco676(lista676());
+  // (c)
+  const eq2 = JSON.parse(JSON.stringify(lista676())); eq2[4].ativo = true; delete eq2[4].desativado; banco676(eq2);
+  run("__ztq657=['10/10/2026']; timeDesativarAbrir('p3');"); await espera676();
+  const oc = lista676(); oc[2].ativo = false; oc[2].desativado = { em: '2026-10-08', motivo: 'o outro aparelho desativou antes' }; run(`__put657('daycare/config/monitores', ${JSON.stringify(oc)});`);
+  run('__esc657=[];'); await toque676('a pessoa saiu da empresa hoje', '0902');
+  const rc = [run('CORR_ATUAL.passo'), escR3('/monitores$/'), lista676()[2].desativado.motivo];
+  run("corrToque('fechar'); CORR_ATUAL=null;");
+  // (d)
+  banco676(lista676());
+  run("timeReativarAbrir('p4');"); await espera676();
+  const od = lista676(); od[3].ativo = true; od[3].desativacoes = { k1: { em: '2026-10-09', reativado: { motivo: 'o outro aparelho reativou antes' } } }; delete od[3].desativado; run(`__put657('daycare/config/monitores', ${JSON.stringify(od)});`);
+  run('__esc657=[];'); await toque676('a pessoa voltou para a casa', '0902');
+  const rd = [run('CORR_ATUAL.passo'), escR3('/monitores$/'), Object.keys(lista676()[3].desativacoes || {}).length];
+  run("corrToque('fechar');");
+  igual([ra, rb, rc, rd], [['pronto', false, true, '08:15', null, false], ['conferir', 0, '16:00'], ['falhou', 0, 'o outro aparelho desativou antes'], ['falhou', 0, 1]]);
+}));
+provaAsync('6.76 QA re-gate 3 · QA676R3-09 (SEC-009, reativar com a senha mudada no outro aparelho durante a transação) — a 1ª conta passa; entre ela e a gravação, o servidor dá à Ana a senha guardada da Cris: a conta roda de novo e a reativação não grava (nenhuma senha repetida entre ativos)', async () => com676(async () => {
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq[3].ativo = false; eq[3].desativado = { em: '2026-10-09', motivo: 'saiu da casa nesta semana' }; banco676(eq);
+  run("__dbP_R3=DB.ref; DB={ref:function(p){ var r=__dbP_R3(p); if(p==='daycare/config/monitores') r.transaction=function(fn){ fn(JSON.parse(JSON.stringify(__get657(p)))); var srv=JSON.parse(JSON.stringify(__get657(p))); srv[0].senha='5512'; __put657(p, srv); var n=fn(JSON.parse(JSON.stringify(srv))); if(n===undefined) return Promise.resolve({committed:false}); __put657(p, n); __esc657.push(['transaction', p]); return Promise.resolve({committed:true}); }; return r; }};");
+  let r;
+  try { run('__esc657=[];'); r = await run("timeReativarGravar('p4', {motivo:'a pessoa voltou para a casa', por:'Márcia · Gestora', papel:'gestao'})"); }
+  finally { run('DB={ref:__dbP_R3};'); }
+  const s = lista676().filter((m) => m.ativo !== false).map((m) => m.senha);
+  igual([r.ok, escR3('/monitores$/'), new Set(s).size === s.length, lista676()[3].ativo], [false, 0, true, false], JSON.stringify(r));
+}));
+provaAsync('6.76 QA re-gate 3 · QA676R3-10 (SEC-009, o histórico só com o que cada gravação mudou) — o outro aparelho já gravou a MESMA entrada que esta tela mudou: a gravação daqui não registra a entrada como mudança sua (o histórico do outro registra); e a tela volta ao estado salvo', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("setMon(0,'entrada','07:45');"); run('timeSalvarAbrir();'); await espera676();
+  run("__B0b_R3=timeCopia(MON_BANCO); __L4_R3=timeCopia(__B0b_R3); __L4_R3[0].entrada='07:45';");
+  await run('timeGravarNaHora(__L4_R3, __B0b_R3)');
+  run('timeDoBanco(__get657("daycare/config/monitores")); __esc657=[];');
+  await toque676(MOT676, '0902');
+  const H = J676("__get657('daycare/config/monitores-historico')") || {};
+  const meus = Object.keys(H).map((k) => H[k]).filter((h) => h.registro && h.registro.por);
+  igual([run('CORR_ATUAL.passo'), lista676()[0].entrada, meus.reduce((n, h) => n + h.mudancas.filter((m) => m.campo === 'entrada').length, 0), run('MON_PENDENTE')], ['pronto', '07:45', 0, false]);
+  run("corrToque('fechar');");
+}));
+provaAsync('6.76 QA re-gate 3 · QA676R3-11 (SEC-009, a internet cai no meio de «Desativar») — a transação recusada pela queda: nada vai ao banco, a Bia continua ativa na tela e no banco, e o cartaz diz que nada foi gravado', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("__dbD_R3=DB.ref; DB={ref:function(p){ var r=__dbD_R3(p); if(p==='daycare/config/monitores') r.transaction=function(){ return Promise.reject(new Error('Error: disconnect')); }; return r; }};");
+  let r;
+  try { run('__esc657=[];'); await desativa676('p2'); r = [run('CORR_ATUAL.passo'), escR3('/monitores/'), lista676()[1].ativo !== false, run("MONITORES.some(function(m){ return m.id==='p2'; })")]; run("corrToque('fechar');"); }
+  finally { run('DB={ref:__dbD_R3};'); }
+  igual(r, ['falhou', 0, true, true]);
+}));
+provaAsync('6.76 QA re-gate 3 · QA676R3-A1 (SEC-010, a cópia antiga) — o aparelho com a cópia de ANTES da troca («nenhuma trocada») e o banco calado; no servidor, a Adriana já trocou (8642), a Márcia já trocou (2468) e o posto já trocou (3579). Na tela trancada do tablet (sessão de uma monitora), a 1101 abre como a Adriana (marcada, AC5.4); nessa sessão, «Trocar a minha senha» com a 1101, a senha do posto e a provisória da Márcia assinadas pela 1101 ficam na fila; quando a internet volta, NENHUMA delas pode passar por cima da senha mais nova do servidor', async () => com676(async () => {
+  banco676(EQUIPE676);
+  const srv = { adriana: fixa676('8642'), marcia: fixa676('2468'), plantonista: fixa676('3579') };
+  run(`__put657('daycare/config/senhas-fixas', ${JSON.stringify(srv)}); SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:'{}'}; __esc657=[]; __pendura657='^daycare\\\\/config$';`);
+  // o tablet da Recepção com a sessão da Ana (monitora), a tela trancada; sem internet, alguém digita a 1101 (pública) na tela trancada
+  papel676('monitor', { nome: 'Ana Teste', role: 'monitor', monId: 'p1', paginas: [] }); run('__apl676=[];');
+  const dt = destranca676('1101');
+  const sess = J676("JSON.parse(sessionStorage.getItem('zeluz_login')||'null')");
+  assert.ok(!dt.tr && sess && sess.souAdriana && sess.fixaSemConferir === 'adriana', 'a tela trancada abriu como a Adriana, marcada: ' + JSON.stringify([dt, sess]));
+  papel676('gestao', sess);
+  const avisos = [];
+  run("senhaTrocarAbrir('adriana'); __p1=sfToque('confirmar', {atual:'1101', nova:'5577', nova2:'5577'});"); await espera676();
+  avisos.push(run('SF_ATUAL && (SF_ATUAL.aviso || SF_ATUAL.passo)')); run('SF_ATUAL=null;');
+  run("senhaPostoAbrir(); __p2=sfToque('confirmar', {motivo:'a senha do posto vazou na casa', assina:'1101', nova:'9753', nova2:'9753'});"); await espera676();
+  avisos.push(run('SF_ATUAL && (SF_ATUAL.aviso || SF_ATUAL.passo)')); run('SF_ATUAL=null;');
+  run("senhaProvisoriaAbrir('marcia'); __p3=sfToque('confirmar', {motivo:'a Márcia esqueceu a senha nova', assina:'1101', nova:'1468', nova2:'1468'});"); await espera676();
+  avisos.push(run('SF_ATUAL && (SF_ATUAL.aviso || SF_ATUAL.passo)')); run('SF_ATUAL=null;');
+  const naFila = run('__pend657.length');
+  run('__pendura657=null; __pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await espera676();   // a internet volta: a fila vai ao servidor
+  const g = J676("__get657('daycare/config/senhas-fixas')");
+  const res = [['adriana', confereR3a('8642', g.adriana), confereR3a('5577', g.adriana)], ['plantonista', confereR3a('3579', g.plantonista), confereR3a('9753', g.plantonista)],
+    ['marcia', confereR3a('2468', g.marcia), confereR3a('1468', g.marcia)]];
+  igual(res, [['adriana', true, false], ['plantonista', true, false], ['marcia', true, false]],
+    'na fila: ' + naFila + ' | cartazes: ' + JSON.stringify(avisos) + ' | a senha nova do servidor foi trocada pela 1101 do aparelho com a cópia antiga');
+}));
+provaAsync('6.76 QA re-gate 3 · QA676R3-O1 (registro, fora das ACs) — a sessão aberta pela 1101 com o banco já respondido «nenhuma trocada» (sem marca) e a sessão aberta antes da troca: quando o banco mostra a troca, elas continuam abertas (só a sessão marcada tranca)', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("SENHAS_FIXAS_BANCO={}; __ls657={zeluz_senhas_fixas:'{}'};");
+  papel676('monitor', { nome: 'Ana Teste', role: 'monitor', monId: 'p1', paginas: [] }); run('__apl676=[];');
+  const dt = destranca676('1101');
+  const s1 = J676("JSON.parse(sessionStorage.getItem('zeluz_login')||'null')");
+  run(`senhasFixasDoBanco({adriana:${JSON.stringify(fixa676('8642'))}});`);
+  const r = [dt.tr, s1 && s1.souAdriana, s1 && (s1.fixaSemConferir || null), run('_appTrancado'), J676("(usuarioAtual()||{}).nome")];
+  console.log('QA|O1|' + JSON.stringify(r));
+  igual(r, [false, true, null, false, 'Adriana · Gestão Total'], 'registro do comportamento de hoje');
+}));
+// ---- Fechamento dos CONCERNS do re-gate 3 — as provas do @dev (SEC-010; a UX-001 está na P57)
+const MUDOU_M676 = 'A senha de Márcia mudou em outro aparelho enquanto este cartaz estava aberto. Nada foi gravado: abra o cartaz de novo.';
+provaAsync('6.76 P65* (SEC-010, fechamento dos CONCERNS) — para TROCAR uma senha fixa, a cópia do aparelho não basta: com a cópia de antes da troca (ou mesmo a de depois) e o banco calado, «Trocar a minha senha» (com a 1101 ou com a senha certa), a do posto e a provisória (assinadas pela 1101 ou por uma Gestora do Time) e a função que grava recusam com a frase de sem conexão, sem gravar; a provisória na entrada espera o banco; a cópia continua valendo para assinar um cartaz (a escolha 7); com o banco respondido, as mesmas trocas passam', async () => com676(async () => {
+  const eq = JSON.parse(JSON.stringify(EQUIPE676)); eq.push({ id: 'p5', nome: 'Gabi Gestora Teste', role: 'gestao', senha: '6611' }); banco676(eq);
+  const tenta = async () => {
+    const r = [];
+    papel676('gestao', { role: 'gestao', nome: 'Adriana · Gestão Total', souAdriana: true, id: 'adriana' });
+    for (const atual of ['1101', '8642']) { run("SF_ATUAL=null; senhaTrocarAbrir('adriana');"); await run(`sfToque("confirmar", {atual:"${atual}", nova:"5577", nova2:"5577"})`); r.push(['propria ' + atual, run('SF_ATUAL.passo'), run('SF_ATUAL.aviso')]); run("sfToque('cancelar');"); }
+    for (const ass of ['1101', '6611']) {
+      run('senhaPostoAbrir();'); await run(`sfToque("confirmar", {motivo:"a senha do posto vazou na casa", assina:"${ass}", nova:"9753", nova2:"9753"})`); r.push(['posto ' + ass, run('SF_ATUAL.passo'), run('SF_ATUAL.aviso')]); run("sfToque('cancelar');");
+      run("senhaProvisoriaAbrir('marcia');"); await run(`sfToque("confirmar", {motivo:"a Márcia esqueceu a senha nova", assina:"${ass}", nova:"1468", nova2:"1468"})`); r.push(['provisoria ' + ass, run('SF_ATUAL.passo'), run('SF_ATUAL.aviso')]); run("sfToque('cancelar');");
+    }
+    const g = await run("senhaFixaGravar('propria', 'adriana', {hash:'ab'.repeat(32), sal:'cd'.repeat(16)}, {nome:'Adriana · Gestão Total', papel:'diretoria'}, '')");
+    r.push(['funcao', g.ok, g.erro]);
+    return r;
+  };
+  const recusado = (fase) => [['propria 1101', 'campos', SEM_BANCO676], ['propria 8642', 'campos', SEM_BANCO676], ['posto 1101', 'campos', SEM_BANCO676], ['provisoria 1101', 'campos', SEM_BANCO676],
+    ['posto 6611', 'campos', SEM_BANCO676], ['provisoria 6611', 'campos', SEM_BANCO676], ['funcao', false, SEM_BANCO676]].map((x) => [fase].concat(x));
+  // a cópia de ANTES da troca («nenhuma trocada») e a cópia de DEPOIS (a Adriana com a 8642): as duas, sem o banco
+  for (const [fase, copia] of [['cópia antiga', '{}'], ['cópia nova', JSON.stringify({ adriana: fixa676('8642') })]]) {
+    run(`__put657('daycare/config/senhas-fixas', null); SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:${JSON.stringify(copia)}}; __esc657=[];`);
+    igual((await tenta()).map((x) => [fase].concat(x)), recusado(fase));
+    igual(run("__esc657.filter(function(e){ return /senhas-fixas|^daycare\\/config$/.test(e[1]); }).length"), 0, fase + ': nada gravado');
+  }
+  // a cópia continua valendo para assinar um cartaz (a escolha 7 da 3ª rodada; a frase de sem banco é só para o que troca senha fixa)
+  run("SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:'{}'};");
+  igual([run("corrAssinar('0902', 'gestao-role', 'isto').ok"), run("corrAssinar('6611', 'gestao-role', 'isto').ok")], [true, true]);
+  // a provisória na entrada, com a cópia mostrando a provisória e o banco calado: a troca espera o banco (não entra sem trocar)
+  run(`SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:${JSON.stringify(JSON.stringify({ marcia: fixa676('1357', { provisoria: true }) }))}, zeluz_device_ok:'1'}; __put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', ts:1}); SF_ATUAL=null;`);
+  semLoginR(); await entra676('1357');
+  igual([run('!!(SF_ATUAL && SF_ATUAL.op.forcado)'), J676('__apl676')], [true, []], 'a entrada pede a troca');
+  await run('sfToque("confirmar", {nova:"2580", nova2:"2580"})');
+  igual([run('SF_ATUAL.passo'), run('SF_ATUAL.aviso'), J676('__apl676')], ['campos', SEM_BANCO676, []], 'sem o banco, a troca da provisória espera');
+  run("sfToque('cancelar');");
+  // com o banco respondido, as mesmas trocas passam (a régua não trava o uso normal)
+  run("SENHAS_FIXAS_BANCO={}; __ls657={}; __esc657=[]; SF_ATUAL=null;");
+  papel676('gestao', { role: 'gestao', nome: 'Adriana · Gestão Total', souAdriana: true, id: 'adriana' });
+  run("senhaTrocarAbrir('adriana');"); await run('sfToque("confirmar", {atual:"1101", nova:"5577", nova2:"5577"})');
+  igual(run('SF_ATUAL.passo'), 'pronto'); run("sfToque('fechar');");
+  run("senhaPostoAbrir();"); await run('sfToque("confirmar", {motivo:"a senha do posto vazou na casa", assina:"6611", nova:"9753", nova2:"9753"})');
+  igual(run('SF_ATUAL.passo'), 'pronto'); run("sfToque('fechar');");
+}));
+
+provaAsync('6.76 P66* (SEC-010, fechamento dos CONCERNS) — a senha fixa vai por transação: se outro aparelho trocou a senha depois de o cartaz conferir (a conta roda de novo com o registro do servidor, como no Firebase, ou o banco já tem a troca que o ouvinte ainda não trouxe), nada é gravado e o cartaz diz por quê; o histórico vai depois do ok do registro, e, se ele não é confirmado, a troca vale e o cartaz diz isso', async () => com676(async () => {
+  banco676(EQUIPE676);
+  const R1 = fixa676('2468'), R2 = fixa676('3690');
+  // (a) o servidor muda entre a conta do aparelho e a gravação: a transação roda de novo com o registro do servidor e para
+  run(`__put657('daycare/config/senhas-fixas', {marcia:${JSON.stringify(R1)}}); SENHAS_FIXAS_BANCO=__get657('daycare/config/senhas-fixas'); __ls657={}; __esc657=[];`);
+  papel676('gestao', { role: 'gestao', nome: 'Márcia · Gestora', id: 'marcia' });
+  run(`__dbX676=DB.ref; DB={ref:function(p){ var r=__dbX676(p); if(p==='daycare/config/senhas-fixas/marcia') r.transaction=function(fn){ var v0=fn(JSON.parse(JSON.stringify(__get657(p)))); __put657(p, ${JSON.stringify(R2)}); var n=fn(JSON.parse(JSON.stringify(__get657(p)))); if(n===undefined) return Promise.resolve({committed:false}); __put657(p, n); __esc657.push(['transaction', p]); return Promise.resolve({committed:true}); }; return r; }};`);
+  try {
+    run("senhaTrocarAbrir('marcia');"); await run('sfToque("confirmar", {atual:"2468", nova:"5577", nova2:"5577"})');
+    const a = [run('SF_ATUAL.passo'), run('SF_ATUAL.frase'), J676("__get657('daycare/config/senhas-fixas/marcia')").hash === R2.hash, J676("__get657('daycare/config/senhas-fixas-historico')")];
+    igual(a, ['falhou', MUDOU_M676, true, null]);
+    assert.ok(txt676(run('sfCartazHTML()')).indexOf(MUDOU_M676) >= 0, 'o cartaz diz por quê');
+    run("sfToque('fechar');");
+  } finally { run('DB={ref:__dbX676};'); }
+  // (b) o banco já tem a troca e o ouvinte ainda não trouxe: o cartaz confere com a senha do código (0902); a transação vê a troca e para
+  run(`__put657('daycare/config/senhas-fixas', {marcia:${JSON.stringify(R2)}}); SENHAS_FIXAS_BANCO={}; __esc657=[]; SF_ATUAL=null;`);
+  run("senhaTrocarAbrir('marcia');"); await run('sfToque("confirmar", {atual:"0902", nova:"5577", nova2:"5577"})');
+  igual([run('SF_ATUAL.passo'), run('SF_ATUAL.frase'), J676("__get657('daycare/config/senhas-fixas/marcia')").hash === R2.hash, run("__esc657.filter(function(e){ return /senhas-fixas-historico/.test(e[1]); }).length")], ['falhou', MUDOU_M676, true, 0]);
+  run("sfToque('fechar');");
+  // (c) o registro entra e o histórico é recusado: a troca vale, a falha fica na auditoria e o cartaz diz que o histórico não foi confirmado
+  run(`__put657('daycare/config/senhas-fixas', {marcia:${JSON.stringify(R1)}}); SENHAS_FIXAS_BANCO=__get657('daycare/config/senhas-fixas'); __esc657=[]; __au657=[]; SF_ATUAL=null; __recusa657='senhas-fixas-historico';`);
+  run("senhaTrocarAbrir('marcia');"); await run('sfToque("confirmar", {atual:"2468", nova:"5577", nova2:"5577"})');
+  const g = J676("__get657('daycare/config/senhas-fixas/marcia')");
+  igual([run('SF_ATUAL.passo'), run('SF_ATUAL.frase'), g.hash === crypto676.createHash('sha256').update('5577' + g.sal).digest('hex')],
+    ['pronto', 'Senha trocada. A partir de agora, só a nova abre o app para Márcia. O registro desta troca no histórico das senhas fixas ainda não foi confirmado pelo banco.', true]);
+  assert.ok(J676('__au657').some((x) => x[0] === 'gravacao-FALHOU' && /senhas-fixas-historico/.test(x[1])), 'a falha do histórico fica na auditoria');
+  run("sfToque('fechar'); __recusa657=null;");
+}));
+// ---- Passada AUD-001 — as provas da confirmação do QA (qa676r4/ataque-r4.js: QA676R4-01 a 05; a 02 é o AUD-001, que falhava) trazidas
+// como o QA escreveu; a única mudança é o nome, «6.76 QA confirmação · …» (o filtro SO e a P41 contam as provas do bloco pelo prefixo «6.76 »).
+const SEMB_R4 = 'Sem conexão com o banco: não dá para conferir a senha agora. Tente de novo com internet. Nada foi gravado.';
+const confereR4 = (senha, g) => !!g && crypto676.createHash('sha256').update(senha + g.sal).digest('hex') === g.hash;
+const histR4 = () => J676("__get657('daycare/config/senhas-fixas-historico')") || {};
+// a transação do Firebase sem internet: a 1ª conta roda NA HORA com o que o aparelho tem em cache; a ida ao servidor fica
+// esperando __voltaR4(); na volta, se o servidor tem outra coisa, a conta roda de novo com o valor do servidor (compare-and-set)
+const txOfflineR4 = () => run(`__dbO_R4=DB.ref; __filaR4=[]; __voltaR4=function(){ var f=__filaR4.splice(0); f.forEach(function(x){ x(); }); };
+  DB={ref:function(p){ var r=__dbO_R4(p); if(/^daycare\\/config\\/senhas-fixas\\//.test(p)){ r.transaction=function(fn){
+    var k=p.split('/').pop(), cache=(SENHAS_FIXAS_BANCO && typeof SENHAS_FIXAS_BANCO==='object' && SENHAS_FIXAS_BANCO[k]!==undefined)?JSON.parse(JSON.stringify(SENHAS_FIXAS_BANCO[k])):null;
+    var v0=fn(cache); if(v0===undefined) return Promise.resolve({committed:false});
+    return new Promise(function(ok){ __filaR4.push(function(){ var srv=__get657(p), n=v0;
+      if(JSON.stringify(srv)!==JSON.stringify(cache)){ n=fn(srv===null?null:JSON.parse(JSON.stringify(srv))); if(n===undefined){ ok({committed:false}); return; } }
+      __put657(p, n); __esc657.push(['transaction', p]); ok({committed:true}); }); }); }; }
+    if(/^daycare\\/config\\/senhas-fixas-historico\\//.test(p)){ var s0=r.set; r.set=function(v){ return new Promise(function(ok, nao){ __filaR4.push(function(){ s0(v).then(ok, nao); }); }); }; }
+    return r; }};`);
+const txSoltaR4 = () => run('if(typeof __dbO_R4==="function") DB={ref:__dbO_R4};');
+const prazoR4 = () => run('var __t=__tm657.filter(function(t){ return t.ms===CORR_PRAZO; }); __tm657=__tm657.filter(function(t){ return t.ms!==CORR_PRAZO; }); __t.forEach(function(t){ t.fn(); });');
+provaAsync('6.76 QA confirmação · QA676R4-01 (SEC-010, o banco respondeu e a internet caiu depois) — o aparelho viu «nenhuma trocada»; sem internet, outro aparelho troca a da Adriana, a da Márcia e a do posto; aqui, a 1101 na tela trancada abre como a Adriana e «Trocar a minha senha», o posto e a provisória da Márcia ficam na fila; na volta, a transação roda com o servidor: NADA passa por cima, nada vai ao histórico, e o cartaz não diz «trocada»', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("SENHAS_FIXAS_BANCO={}; __ls657={zeluz_senhas_fixas:'{}'}; __put657('daycare/config/senhas-fixas', null); __esc657=[]; __au657=[];");
+  // sem internet: o outro aparelho troca as três no servidor
+  const srv = { adriana: fixa676('8642'), marcia: fixa676('2468'), plantonista: fixa676('3579') };
+  run(`__put657('daycare/config/senhas-fixas', ${JSON.stringify(srv)});`);
+  papel676('monitor', { nome: 'Ana Teste', role: 'monitor', monId: 'p1', paginas: [] }); run('__apl676=[];');
+  const dt = destranca676('1101');
+  const sess = J676("JSON.parse(sessionStorage.getItem('zeluz_login')||'null')");
+  assert.ok(!dt.tr && sess && sess.souAdriana, 'a 1101 abriu como a Adriana (o aparelho viu «nenhuma trocada»)');
+  papel676('gestao', sess);
+  txOfflineR4();
+  const ps = [];
+  try {
+    run("SF_ATUAL=null; senhaTrocarAbrir('adriana'); __q1=sfToque('confirmar', {atual:'1101', nova:'5577', nova2:'5577'});"); await espera676(); ps.push(run('__q1')); run('__S1=SF_ATUAL; SF_ATUAL=null;');
+    run("senhaPostoAbrir(); __q2=sfToque('confirmar', {motivo:'a senha do posto vazou na casa', assina:'1101', nova:'9753', nova2:'9753'});"); await espera676(); ps.push(run('__q2')); run('__S2=SF_ATUAL; SF_ATUAL=null;');
+    run("senhaProvisoriaAbrir('marcia'); __q3=sfToque('confirmar', {motivo:'a Márcia esqueceu a senha nova', assina:'1101', nova:'1468', nova2:'1468'});"); await espera676(); ps.push(run('__q3')); run('__S3=SF_ATUAL; SF_ATUAL=null;');
+    const naFila = run('__filaR4.length');
+    run('__voltaR4();'); await espera676(); for (const p of ps) await p; await espera676();
+    const g = J676("__get657('daycare/config/senhas-fixas')");
+    const res = [naFila, confereR4('8642', g.adriana), confereR4('5577', g.adriana), confereR4('3579', g.plantonista), confereR4('2468', g.marcia), !!g.marcia.provisoria,
+      Object.keys(histR4()).length, run("__au657.filter(function(a){ return /^senha-/.test(a[0]); }).length"), [run('__S1.passo'), run('__S2.passo'), run('__S3.passo')]];
+    igual(res, [3, true, false, true, true, false, 0, 0, ['falhou', 'falhou', 'falhou']], JSON.stringify([run('__S1.frase'), run('__S2.frase')]));
+  } finally { txSoltaR4(); }
+}));
+provaAsync('6.76 QA confirmação · QA676R4-02 (o histórico depois do registro) — a própria Márcia troca a senha dela sem internet (o banco já tinha respondido nesta sessão); o cartaz passa do prazo («o banco ainda não confirmou»); a internet volta e a troca ENTRA: o histórico das senhas fixas e a auditoria precisam registrar essa troca (antes, iam na mesma escrita)', async () => com676(async () => {
+  banco676(EQUIPE676);
+  const R1 = fixa676('2468');
+  run(`__put657('daycare/config/senhas-fixas', {marcia:${JSON.stringify(R1)}}); SENHAS_FIXAS_BANCO=__get657('daycare/config/senhas-fixas'); __ls657={}; __esc657=[]; __au657=[]; __tm657=[];`);
+  papel676('gestao', { role: 'gestao', nome: 'Márcia · Gestora', id: 'marcia' });
+  txOfflineR4();
+  try {
+    run("SF_ATUAL=null; senhaTrocarAbrir('marcia'); __q4=sfToque('confirmar', {atual:'2468', nova:'5577', nova2:'5577'});"); await espera676();
+    prazoR4(); await espera676(); await run('__q4');
+    const cartaz = run('SF_ATUAL && SF_ATUAL.passo');
+    run('__voltaR4();'); await espera676(); run('__voltaR4();'); await espera676(); await espera676();
+    const g = J676("__get657('daycare/config/senhas-fixas/marcia')"), H = histR4();
+    const res = [cartaz, confereR4('5577', g), !!(g && g.registro && g.registro.por), Object.keys(H).length, run("__au657.filter(function(a){ return a[0]==='senha-fixa-trocada'; }).length")];
+    igual(res, ['semResposta', true, true, 1, 1], 'a troca entrou depois do prazo; histórico: ' + Object.keys(H).length + '; auditoria: ' + res[4]);
+  } finally { txSoltaR4(); }
+}));
+provaAsync('6.76 QA confirmação · QA676R4-03 (a transação do Firebase com null primeiro) — o nó das senhas fixas vazio no banco (nenhuma trocada): a 1ª conta roda com null e grava; com o banco já tendo a troca que o cache não tem, a 2ª conta (com o servidor) para', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("SENHAS_FIXAS_BANCO={}; __ls657={}; __put657('daycare/config/senhas-fixas', null); __esc657=[];");
+  papel676('gestao', { role: 'gestao', nome: 'Adriana · Gestão Total', souAdriana: true, id: 'adriana' });
+  txOfflineR4();
+  try {
+    run("SF_ATUAL=null; senhaTrocarAbrir('adriana'); __q5=sfToque('confirmar', {atual:'1101', nova:'5577', nova2:'5577'});"); await espera676(); run('__voltaR4();'); await espera676(); run('__voltaR4();'); await espera676(); await run('__q5'); await espera676();
+    const a = [run('SF_ATUAL.passo'), confereR4('5577', J676("__get657('daycare/config/senhas-fixas/adriana')")), Object.keys(histR4()).length];
+    run("sfToque('fechar'); SF_ATUAL=null;");
+    // a Márcia: o servidor já tem a troca (2468) e este aparelho acha que não
+    run(`__put657('daycare/config/senhas-fixas/marcia', ${JSON.stringify(fixa676('2468'))}); __esc657=[];`);
+    papel676('gestao', { role: 'gestao', nome: 'Márcia · Gestora', id: 'marcia' });
+    run("senhaTrocarAbrir('marcia'); __q6=sfToque('confirmar', {atual:'0902', nova:'7788', nova2:'7788'});"); await espera676(); run('__voltaR4();'); await espera676(); await run('__q6');
+    const b = [run('SF_ATUAL.passo'), confereR4('2468', J676("__get657('daycare/config/senhas-fixas/marcia')")), Object.keys(histR4()).length];
+    igual([a, b], [['pronto', true, 1], ['falhou', true, 1]]);
+  } finally { txSoltaR4(); }
+}));
+provaAsync('6.76 QA confirmação · QA676R4-04 (a provisória na entrada sem banco) — a troca obrigatória espera o banco; quando o banco responde com o cartaz aberto, a mesma troca passa e a pessoa entra; enquanto isso, outra pessoa destranca o aparelho com a própria senha (ninguém fica trancado fora sem saída)', async () => com676(async () => {
+  banco676(EQUIPE676);
+  const prov = fixa676('1357', { provisoria: true });
+  run(`SENHAS_FIXAS_BANCO=null; __ls657={zeluz_senhas_fixas:${JSON.stringify(JSON.stringify({ marcia: prov }))}, zeluz_device_ok:'1'}; __put657('auaulandia/aparelhos/dev-teste-1', {nome:'Celular Teste', ts:1}); __put657('daycare/config/senhas-fixas', {marcia:${JSON.stringify(prov)}}); SF_ATUAL=null;`);
+  run('__login657=null; __ss676.zeluz_login=null; _appTrancado=false; __apl676=[]; ACESSO_TRAVA=null; APARELHO_REVOGADO=null;');
+  await entra676('1357');
+  const a = [run('!!(SF_ATUAL && SF_ATUAL.op.forcado)'), J676('__apl676')];
+  await run('sfToque("confirmar", {nova:"2580", nova2:"2580"})');
+  const b = [run('SF_ATUAL.passo'), run('SF_ATUAL.aviso')];
+  // outra pessoa usa o aparelho enquanto isso: a tela trancada com a senha da Ana
+  const dAna = destranca676('4321');
+  // o banco responde com o cartaz da troca ainda aberto
+  run("senhasFixasDoBanco(__get657('daycare/config/senhas-fixas'));");
+  await run('sfToque("confirmar", {nova:"2580", nova2:"2580"})'); await espera676();
+  const c = [run('SF_ATUAL ? SF_ATUAL.passo : null'), confereR4('2580', J676("__get657('daycare/config/senhas-fixas/marcia')")), !!J676("__get657('daycare/config/senhas-fixas/marcia')").provisoria];
+  run("if(SF_ATUAL) sfToque('fechar');"); await espera676();
+  igual([a, b, dAna.tr, c, J676('__apl676').indexOf('Ana Teste') >= 0], [[true, []], ['campos', SEMB_R4], false, ['pronto', true, false], true]);
+}));
+provaAsync('6.76 QA confirmação · QA676R4-05 (UX-001) — o cancelamento do orçamento com a 1101 sem banco e sem cópia: o aviso é «SEM CONEXÃO COM O BANCO» e nada é gravado; com o banco mostrando a troca, a 1101 continua «não é de ninguém» (a senha está errada de verdade)', async () => com676(async () => {
+  banco676(EQUIPE676);
+  run("SENHAS_FIXAS_BANCO=null; __ls657={}; ORC_LISTA_CACHE['orc-teste-1']={pets:[{nome:'Nala'}], entrada:'2026-10-12', saida:'2026-10-14'}; __zpq657=[true]; __ztq657=['a viagem da família foi desmarcada', '1101']; __al657=[]; __za657=[]; __esc657=[];");
+  await run("orcCancelar('orc-teste-1')"); await espera676();
+  const a = [J676('__za657').map((z) => z[0]), J676('__al657'), run("__esc657.filter(function(e){ return /orcamento|hospedagem|financeiro/i.test(e[1]); }).length")];
+  run(`SENHAS_FIXAS_BANCO={adriana:${JSON.stringify(fixa676('8642'))}}; __zpq657=[true]; __ztq657=['a viagem da família foi desmarcada', '1101']; __al657=[]; __za657=[];`);
+  await run("orcCancelar('orc-teste-1')"); await espera676();
+  const b = [J676('__za657').length, J676('__al657').length === 1 && /não é de ninguém cadastrado/.test(J676('__al657')[0])];
+  igual([a, b], [[['SEM CONEXÃO COM O BANCO'], [], 0], [0, true]]);
+}));
+// ---- Passada AUD-001 — a prova do @dev: a troca de senha fixa que entra depois do prazo do cartaz
+provaAsync('6.76 P67* (AUD-001) — a troca de senha fixa que passa do prazo do cartaz («O banco ainda não confirmou») e entra quando a internet volta grava o histórico e a auditoria do mesmo jeito: com o cartaz aberto, ele vira «O banco confirmou agora…»; fechado, um cartaz novo avisa; o histórico recusado depois do registro vai para a auditoria e para o aviso; a troca parada pelo outro aparelho no meio não grava nada', async () => com676(async () => {
+  banco676(EQUIPE676);
+  const R1 = fixa676('2468'), R2 = fixa676('3690');
+  // a transação sem internet: a conta roda na hora com o que o aparelho tem; a ida ao servidor espera __volta67(); na volta,
+  // se o servidor tem outra coisa, a conta roda de novo com o valor do servidor (como no Firebase)
+  const segura = () => run(`__db67=DB.ref; __fila67=[]; __volta67=function(){ var f=__fila67.splice(0); f.forEach(function(x){ x(); }); };
+    DB={ref:function(p){ var r=__db67(p); if(p==='daycare/config/senhas-fixas/marcia') r.transaction=function(fn){ var c=JSON.parse(JSON.stringify(SENHAS_FIXAS_BANCO.marcia||null)), v0=fn(c);
+      if(v0===undefined) return Promise.resolve({committed:false});
+      return new Promise(function(ok){ __fila67.push(function(){ var srv=__get657(p), n=v0; if(JSON.stringify(srv)!==JSON.stringify(c)){ n=fn(srv); if(n===undefined){ ok({committed:false}); return; } }
+        __put657(p, n); __esc657.push(['transaction', p]); ok({committed:true}); }); }); }; return r; }};`);
+  const solta = () => run('if(typeof __db67==="function") DB={ref:__db67};');
+  const prazo = () => run('var __t=__tm657.filter(function(t){ return t.ms===CORR_PRAZO; }); __tm657=__tm657.filter(function(t){ return t.ms!==CORR_PRAZO; }); __t.forEach(function(t){ t.fn(); });');
+  const inicio = () => run(`__put657('daycare/config/senhas-fixas', {marcia:${JSON.stringify(R1)}}); __put657('daycare/config/senhas-fixas-historico', null); SENHAS_FIXAS_BANCO=__get657('daycare/config/senhas-fixas'); __ls657={}; __esc657=[]; __au657=[]; __za657=[]; __tm657=[]; SF_ATUAL=null;`);
+  const nH = () => Object.keys(J676("__get657('daycare/config/senhas-fixas-historico')") || {}).length;
+  const nA = () => run("__au657.filter(function(a){ return a[0]==='senha-fixa-trocada'; }).length");
+  const conf = (s) => { const g = J676("__get657('daycare/config/senhas-fixas/marcia')"); return !!g && crypto676.createHash('sha256').update(s + g.sal).digest('hex') === g.hash; };
+  papel676('gestao', { role: 'gestao', nome: 'Márcia · Gestora', id: 'marcia' });
+  const OK = 'O banco confirmou agora a troca que tinha passado do prazo. Senha trocada. A partir de agora, só a nova abre o app para Márcia.';
+  try {
+    // (a) o cartaz continua aberto: ele vira «pronto», com a frase da troca que entrou depois
+    inicio(); segura();
+    run("senhaTrocarAbrir('marcia'); __p67=sfToque('confirmar', {atual:'2468', nova:'5577', nova2:'5577'});"); await espera676(); prazo(); await espera676(); await run('__p67');
+    const a0 = [run('SF_ATUAL.passo'), nH(), nA(), conf('2468')];
+    run('__volta67();'); await espera676(); await espera676();
+    igual([a0, [run('SF_ATUAL.passo'), run('SF_ATUAL.frase'), conf('5577'), nH(), nA(), run("!!senhaFixaPelaGuardada('5577')")]],
+      [['semResposta', 0, 0, true], ['pronto', OK, true, 1, 1, true]]);
+    const H = J676("__get657('daycare/config/senhas-fixas-historico')"), h = H[Object.keys(H)[0]];
+    igual([h.id, h.acao, h.por, 'hash' in h], ['marcia', 'trocou', 'Márcia · Gestora', false]);
+    run("sfToque('fechar');"); solta();
+    // (b) o cartaz já foi fechado: um cartaz novo avisa que a troca entrou
+    inicio(); segura();
+    run("senhaTrocarAbrir('marcia'); __p67=sfToque('confirmar', {atual:'2468', nova:'5577', nova2:'5577'});"); await espera676(); prazo(); await espera676(); await run('__p67');
+    run("sfToque('fechar');"); run('__volta67();'); await espera676(); await espera676();
+    igual([run('SF_ATUAL'), J676("__za657.map(function(z){ return [z[0], z[1]]; })"), nH(), nA(), conf('5577')], [null, [['A TROCA DE SENHA ENTROU', [OK]]], 1, 1, true]);
+    solta();
+    // (c) a troca entra depois do prazo e o histórico é recusado: a troca vale, a falha vai para a auditoria e para o aviso
+    inicio(); segura(); run("__recusa657='senhas-fixas-historico';");
+    run("senhaTrocarAbrir('marcia'); __p67=sfToque('confirmar', {atual:'2468', nova:'5577', nova2:'5577'});"); await espera676(); prazo(); await espera676(); await run('__p67');
+    run('__volta67();'); await espera676(); await espera676();
+    igual([run('SF_ATUAL.passo'), run('SF_ATUAL.frase'), conf('5577'), nA(), run("__au657.filter(function(a){ return a[0]==='gravacao-FALHOU' && /senhas-fixas-historico/.test(a[1]); }).length")],
+      ['pronto', OK + ' O registro desta troca no histórico das senhas fixas ainda não foi confirmado pelo banco.', true, 1, 1]);
+    run("sfToque('fechar'); __recusa657=null;"); solta();
+    // (d) enquanto esperava a internet, outro aparelho trocou a senha: na volta, a conta com o servidor para — nada gravado
+    inicio(); segura();
+    run("senhaTrocarAbrir('marcia'); __p67=sfToque('confirmar', {atual:'2468', nova:'5577', nova2:'5577'});"); await espera676(); prazo(); await espera676(); await run('__p67');
+    run(`__put657('daycare/config/senhas-fixas/marcia', ${JSON.stringify(R2)}); __volta67();`); await espera676(); await espera676();
+    igual([run('SF_ATUAL.passo'), run('SF_ATUAL.frase'), J676("__get657('daycare/config/senhas-fixas/marcia')").hash === R2.hash, nH(), nA()],
+      ['falhou', 'A senha de Márcia mudou em outro aparelho enquanto este cartaz estava aberto. Nada foi gravado: abra o cartaz de novo.', true, 0, 0]);
+    run("sfToque('fechar');");
+  } finally { solta(); run('__recusa657=null;'); }
+}));
+provaAsync('6.76 × publicadas · todas as portas — na junção, as 63 portas das stories publicadas (6.58, 6.59, 6.63, 6.66, 6.68, 6.70 e 6.71) abrem o cartaz da 6.57, também as que montam o op antes de abrir, e as 83 portas do cartaz são exatamente estas; todas assinam pela mesma régua (corrConfirmar → corrAssinar), e as que pedem a senha de outro jeito passam por corrAssinar ou senhaQuem; em toda capacidade da PERM, com e sem a tela concedida e o «quem registrou»: a senha certa assina; a pessoa errada (sem o papel, sem a tela e sem ter registrado), a provisória ainda não trocada, a senha do código sem o banco e sem a cópia e a de quem foi desativado são recusadas, cada uma com a sua frase; numa porta da Gestão, no cartaz de verdade, só a Gestão e a Diretoria assinam: quem tem a capacidade, a tela concedida ou registrou é recusado, sem gravar nada', async () => com676(async () => {
+  // ---- o estático: quem chama a régua
+  const L = SRC676.split('\n'); let fn = '(topo)'; const chama = {};
+  L.forEach((l) => {
+    const m = /^\s*(?:async\s+)?function\s+([\w$]+)\s*\(/.exec(l); if (m) fn = m[1];
+    ['corrAssinar', 'senhaQuem', 'orcQuemPelaSenha'].forEach((n) => { if (new RegExp('\\b' + n + '\\(').test(l) && !new RegExp('function ' + n + '\\(').test(l)) (chama[n] = chama[n] || new Set()).add(fn); });
+  });
+  igual([[...chama.corrAssinar].sort(), [...chama.senhaQuem].sort(), [...chama.orcQuemPelaSenha].sort()],
+    [['corrConfirmar', 'enganoAssinar', 'hospAssinarPorSenha', 'sfConfirmar'], ['corrAssinar', 'orcCancelar', 'orcSalvarEdicao'], ['corrAssinar', 'senhaQuem']], 'a régua tem só estas portas');
+  assert.ok(run('String(corrAssinar)').indexOf("q=(typeof senhaQuem==='function')?senhaQuem(s):((typeof orcQuemPelaSenha==='function')?orcQuemPelaSenha(s):null)") >= 0, 'na corrAssinar, o orcQuemPelaSenha só sem a senhaQuem');
+  // ---- as portas do cartaz: toda função do app cujo texto chama o corrAbrir, em qualquer forma — corrAbrir({…}), corrAbrir(op),
+  // return corrAbrir(op).then(…) —, lida no app recém-carregado (sem os dublês das provas), sem os comentários.
+  // (Fechamento dos CONCERNS do QA da junção, TEST-J01: a busca antiga, corrAbrir\(\{, não via a porta que monta o op antes, e a
+  // lista tinha 41 das 63 portas publicadas.)
+  const ctxP = vm.createContext(makeSandbox());
+  vm.runInContext(extractMainScript(SRC676), ctxP, { filename: 'index.html#script', timeout: 15000 });
+  const fontes = JSON.parse(vm.runInContext("(function(){ var o={}; Object.getOwnPropertyNames(globalThis).forEach(function(k){ try{ var f=globalThis[k]; if(typeof f==='function' && k!=='corrAbrir'){ var t=String(f); if(t.indexOf('corrAbrir(')>=0) o[k]=t; } }catch(e){} }); return JSON.stringify(o); })()", ctxP));
+  const semComentario = (t) => t.replace(/\/\*[\s\S]*?\*\//g, ' ').split('\n').map((l) => l.replace(/^\s*\/\/.*$/, '')).join('\n');
+  const abre = new Set(Object.keys(fontes).filter((n) => /\bcorrAbrir\(/.test(semComentario(fontes[n]))));
+  // as 63 das stories publicadas: as 41 da lista da junção, as 18 novas no 788fb9e e as 4 da 6.59 e da 6.66
+  const PUB41 = ['medDoseAnularAbrir', 'medDoseReabrirAbrir', 'medDoseCorrigirAbrir', 'medAgendaAnularAbrir', 'medAgendaVoltouAbrir', 'dashMedAnularAbrir', 'dashMedReabrirAbrir', 'dashMedCorrigirAbrir',
+    'vetConsultaCorrigir', 'vetConsultaAnular', 'vetInstrRetirar', 'vetInstrReabrir', 'vetReavalReabrir', 'vetObsEditar', 'vetObsRetirar', 'vetObsReabrir', 'vetCienteDesfazer',
+    'hospDatasAbrir', 'hospReabrirExcluidaAbrir', 'hospBaixaDesfazerAbrir', 'hospAntecipadaDesfazerAbrir', 'hospMesmoDesfazerAbrir', 'avisoRetirarAbrir', 'avisoReabrirAbrir',
+    'acertoDesfazerPagamentoAbrir', 'acertoLoteDesfazerAbrir', 'acertoValorAbrir', 'acertoNoiteCorrigirAbrir', 'acertoDiaLancarAbrir', 'plantTrocarAbrir',
+    'prevCorrDesfazerAbrir', 'prevCorrLimparAbrir', 'algFichaDesfazerAbrir', 'desfazerRenovacao', 'mmDesfazer', 'planoAnularAtualAbrir', 'planoAnularLinhaAbrir', 'planoReabrirLinhaAbrir',
+    'orcVoltarPendenteAbrir', 'orcAnularAbrir', 'orcTirarDaPlanilhaAbrir'];
+  const NOVAS18 = ['orcVoltaAbrir', 'acertoValorVoltarAbrir', 'acertoNoiteVoltarAbrir', 'acertoSemPlantaoAbrir', 'acertoSemPlantaoReabrirAbrir', 'acertoTabelaAbrir', 'acertoTabelaVoltarAbrir',
+    'plantTirarAbrir', 'planoReabrirAtual', 'escovaDesfazerTresMesesAbrir', 'iaRevRestaurarAbrir', 'algPesqDesmarcarAbrir', 'algRespApagarAbrir', 'algRespPassarAbrir',
+    'pendTirarMedAbrir', 'pendReabrirAbrir', 'pendCorrigirAbrir', 'pendDesfazerResolucaoAbrir'];
+  const DA659E666 = ['pesoCorrAbrir', 'vetRemoverReavaliacao', 'avisoEntradaCorrigirAbrir', 'avisoTipoTrocarAbrir'];
+  const PUB63 = PUB41.concat(NOVAS18, DA659E666);
+  // as outras 20 portas do cartaz: 11 da 6.60 e da 6.61 (antes da 6.76) e 9 da 6.76
+  const DA660E661 = ['repEstornarAbrir', 'repLoteEstornarAbrir', 'repEstornoDesfazerAbrir', 'repDevolucaoDesfazerAbrir', 'repCorrigirAbrir', 'trocaCancelar', 'trocaReabrirAbrir',
+    'vagasRetirarAbrir', 'vagasDesautorizarAvulso', 'vagasDesautorizarFechar', 'vagasReabrirAbrir'];
+  const DA676 = ['pdExcluirPlanoAbrir', 'pdRestaurarPlanoAbrir', 'timeSalvarAbrir', 'timeDesativarAbrir', 'timeReativarAbrir', 'cfgAparelhoRenomearAbrir', 'cfgAparelhoTirarAbrir',
+    'cfgAparelhoDevolverAbrir', 'avisoBarradoPorDeVoltaAbrir'];
+  igual([PUB63.length, new Set(PUB63).size], [63, 63]);
+  igual(PUB63.filter((n) => !abre.has(n)), [], 'as 63 portas das stories publicadas abrem o cartaz da 6.57');
+  igual([...abre].sort(), PUB63.concat(DA660E661, DA676).sort(), 'as 83 portas do cartaz (uma porta nova, ou uma que deixou de abrir o cartaz, aparece aqui)');
+  const cc = run('String(corrConfirmar)');
+  assert.ok(cc.indexOf("corrAssinar(senha, corrNivelSenha(op), CORR_OQUE_ASSINA[op.acao]||'isto', {tela:gestao?'':op.telaConcedida, nome:gestao?'':op.assinaNome})") >= 0, 'o cartaz assina só pela corrAssinar');
+  igual((cc.match(/corrAssinar\(/g) || []).length, 1, 'uma chamada só');
+  // ---- o dinâmico: uma pessoa ativa de cada papel e a desativada. Só a Monitor tem a tela «hoje» concedida, e ela é quem registrou.
+  const PAPEIS = ['gestao', 'diretoria', 'consultora', 'supervisor', 'monitor', 'vet', 'plantonista', 'aprendiz'];
+  const eq = PAPEIS.map((r, i) => ({ id: 'x' + i, nome: 'Pessoa ' + r.charAt(0).toUpperCase() + r.slice(1) + ' Teste', role: r, senha: String(6201 + i) }));
+  const MON = eq.find((p) => p.role === 'monitor'); MON.paginas = ['hoje'];
+  eq.push({ id: 'xd', nome: 'Dora Desativada Teste', role: 'gestao', senha: '6299', ativo: false, desativado: { em: '2026-10-09', motivo: 'saiu da casa nesta semana' } });
+  banco676(eq);
+  const ativos = eq.filter((p) => p.ativo !== false);
+  const caps = J676('Object.keys(PERM)'), perm = J676('PERM'), prov = JSON.stringify(x676Prov());
+  igual(caps.filter((c) => PAPEIS.every((r) => perm[c].includes(r))), [], 'toda capacidade deixa alguém de fora (a pessoa errada existe)');
+  const VARIANTES = [['{}', null, null], ["{tela:'hoje'}", 'hoje', null], [`{nome:${JSON.stringify(MON.nome)}}`, null, MON.nome]];
+  const res = [], erradas = [];
+  let nErradas = 0, nPelaTela = 0, nPeloNome = 0;
+  for (const cap of caps) {
+    const certa = eq.find((p) => p.role === perm[cap][0]);
+    for (const [op, tela, nome] of VARIANTES) {
+      run('SENHAS_FIXAS_BANCO={}; __ls657={};');
+      const a = run(`corrAssinar('${certa.senha}', '${cap}', 'isto', ${op}).ok`);
+      run(`SENHAS_FIXAS_BANCO={marcia:${prov}};`); const b = run(`corrAssinar('1357', '${cap}', 'isto', ${op}).erro`);
+      run('SENHAS_FIXAS_BANCO=null; __ls657={};'); const c = run(`corrAssinar('0902', '${cap}', 'isto', ${op}).erro`);
+      run('SENHAS_FIXAS_BANCO={};'); const d = run(`corrAssinar('6299', '${cap}', 'isto', ${op}).erro`);
+      res.push([cap, op, a, b, c, d]);
+      // a pessoa errada: cada pessoa ativa sem o papel da capacidade; só assina pela tela concedida ou por ter registrado
+      const quemPode = run(`corrQuemPode('${cap}', ${tela ? JSON.stringify(tela) : 'undefined'})`);
+      for (const p of ativos) {
+        if (perm[cap].includes(p.role)) continue;
+        const pela = (tela && (p.paginas || []).includes(tela)) ? 'tela' : ((nome && p.nome === nome) ? 'nome' : '');
+        const r = J676(`corrAssinar('${p.senha}', '${cap}', 'isto', ${op})`);
+        const frase = `Essa senha é de ${p.nome}, que não pode assinar isto. Quem assina: ${quemPode}${nome ? (', ou ' + nome + ', que registrou') : ''}. Nada foi gravado.`;
+        const ok = pela ? (r.ok === true && r.nome === p.nome) : (r.ok === false && r.erro === frase);
+        if (pela === 'tela') nPelaTela++; else if (pela === 'nome') nPeloNome++; else nErradas++;
+        if (!ok) erradas.push([cap, op, p.role, pela, r]);
+      }
+    }
+  }
+  igual(res.filter((x) => !(x[2] === true && x[3] === X676_PROV && x[4] === X676_SEMB && x[5] === X676_NINGUEM)), [], 'em ' + res.length + ' combinações');
+  igual(res.length, caps.length * 3);
+  igual(erradas, [], 'a pessoa errada é recusada (' + nErradas + ' tentativas), a tela concedida (' + nPelaTela + ') e quem registrou (' + nPeloNome + ') assinam');
+  assert.ok(nErradas >= caps.length * 3 && nPelaTela >= 1 && nPeloNome >= 1, JSON.stringify([nErradas, nPelaTela, nPeloNome]));
+  // ---- a porta da Gestão, no cartaz de verdade: a capacidade, a tela concedida e o «quem registrou» do op não assinam
+  const nEsc = () => J676("__esc657.filter(function(e){ return !/RECUSADO/.test(e[0]); }).length");
+  const oq = run("CORR_OQUE_ASSINA['anular']||'isto'"), quemGestao = run("corrQuemPode('gestao-role', '')");
+  const cartaz = async (op, senha) => {
+    run('SENHAS_FIXAS_BANCO={}; __ls657={}; __gx676=[]; if(CORR_ATUAL) corrFechar();');
+    const e0 = nEsc();
+    run(`__px676=corrAbrir(Object.assign({acao:'anular', titulo:'A varredura', oque:'a varredura das portas', tela:'A varredura', original:{caminho:'x676/varredura', id:'v'},
+      gravar:function(reg){ __gx676.push(reg.por); return Promise.resolve({ok:true}); }}, ${JSON.stringify(op)}));`);
+    await espera676();
+    const aberto = run('CORR_ATUAL?CORR_ATUAL.passo:null');
+    await toque676('a varredura das portas confere', senha);
+    const r = { aberto, passo: run('CORR_ATUAL?CORR_ATUAL.passo:null'), aviso: String(run('CORR_ATUAL?CORR_ATUAL.aviso:""') || ''), gravou: J676('__gx676'), escreveu: nEsc() - e0 };
+    run('if(CORR_ATUAL) corrFechar();');
+    return r;
+  };
+  const portaGestao = [];
+  let nGestao = 0;
+  for (const cap of caps) {
+    const op = { nivel: 'gestao', capacidade: cap, telaConcedida: 'hoje', assinaNome: MON.nome };
+    for (const p of eq) {
+      const r = await cartaz(op, p.senha); nGestao++;
+      const deve = p.ativo !== false && (p.role === 'gestao' || p.role === 'diretoria');
+      const ok = r.aberto === 'conferir' && (deve ? (r.passo === 'pronto' && JSON.stringify(r.gravou) === JSON.stringify([p.nome]))
+        : (r.passo === 'conferir' && r.gravou.length === 0 && r.escreveu === 0
+          && r.aviso === ((p.ativo === false) ? X676_NINGUEM : `Essa senha é de ${p.nome}, que não pode assinar ${oq}. Quem assina: ${quemGestao}. Nada foi gravado.`)));
+      if (!ok) portaGestao.push([cap, p.role, p.ativo === false ? 'desativada' : '', r]);
+    }
+  }
+  igual(portaGestao, [], 'na porta da Gestão (' + nGestao + ' tentativas no cartaz)');
+  igual(nGestao, caps.length * eq.length);
+}));
+// ================= QA676J (Quinn) — a junção com as publicadas: os ataques do QA
+const QJ_EQ = () => JSON.parse(JSON.stringify(EQUIPE676)).concat([
+  { id: 'g1', nome: 'Gabi Gestora Teste', role: 'gestao', senha: '7301' },
+  { id: 'd1', nome: 'Rita Diretora Teste', role: 'diretoria', senha: '7302' },
+  { id: 't1', nome: 'Tina Tela Teste', role: 'monitor', senha: '7303', paginas: ['orcamento', 'alergia', 'pendencias', 'hoje'] },
+  { id: 'x1', nome: 'Dora Desativada Teste', role: 'gestao', senha: '7399', ativo: false, desativado: { em: '2026-10-09', motivo: 'saiu da casa nesta semana', registro: {} } }]);
+const QJ_PROV = 'Essa é uma senha provisória: troque a senha provisória antes (entre no app com ela, e o app pede a troca). Nada foi gravado.';
+const QJ_SEMB = 'Sem conexão com o banco: não dá para conferir a senha agora. Tente de novo com internet. Nada foi gravado.';
+const QJ_NING = 'Essa senha não é de ninguém cadastrado. Nada foi gravado.';
+// as formas de op das portas publicadas (tiradas das portas reais da junção): o que o cartaz usa para assinar
+const QJ_FORMAS = {
+  F1_gestao: { nivel: 'gestao' },                                                                        // medDoseAnular, planoAnular*, planoReabrirAtual, pendTirarMed…
+  F2_gestaoRole: { nivel: 'gestao', capacidade: 'gestao-role' },                                         // acerto*, plant*
+  F3_gestaoCap: { nivel: 'gestao', capacidade: 'assinar-orcamento' },                                    // orcAnularAbrir
+  F4_gestaoCapTela: { nivel: 'gestao', capacidade: 'assinar-orcamento', telaConcedida: 'orcamento' },    // orcVoltaAbrir('anulado'), orcVoltarPendente de outro dia
+  F5_propriaTela: { nivel: 'propria', capacidade: 'assinar-orcamento', telaConcedida: 'orcamento' },     // orcTirarDaPlanilha, orcVolta
+  F6_propriaIA: { nivel: 'propria', capacidade: 'revisar-ia', telaConcedida: 'alergia' },                // algPesq*, algResp*
+  F7_gestaoTelaNome: { nivel: 'gestao', capacidade: 'pendencias-prevencao', telaConcedida: 'pendencias', assinaNome: 'Tina Tela Teste' },   // a Gestão ignora a tela e o nome
+  F8_propriaNome: { nivel: 'propria', capacidade: 'editar-peludinho', assinaNome: 'Bia Teste' }          // escovaDesfazerTresMeses (quem registrou)
+};
+// quem assina cada forma (a régua da 6.57 + 6.76); os outros são recusados
+const QJ_OK = { F1_gestao: ['g', 'r', 'm'], F2_gestaoRole: ['g', 'r', 'm'], F3_gestaoCap: ['g', 'r', 'm'], F4_gestaoCapTela: ['g', 'r', 'm'], F5_propriaTela: ['g', 'r', 'm', 'c', 's', 't'],
+  F6_propriaIA: ['g', 'r', 'm', 'c', 's', 't'], F7_gestaoTelaNome: ['g', 'r', 'm'], F8_propriaNome: ['g', 'r', 'm', 'c', 's', 'b'] };
+const QJ_QUEM = { g: '7301', r: '7302', m: '0902', c: '5512', s: '5511', t: '7303', b: '4322', a: '4321', d: '7399', p1001: '1001', w: '0000' };
+async function qjCartaz(forma, senha, prep) {
+  run(`SENHAS_FIXAS_BANCO={}; __ls657={}; __gj=[]; if(CORR_ATUAL) corrFechar();`);
+  if (prep) run(prep);
+  const e0 = J676("__esc657.filter(function(e){ return !/RECUSADO/.test(e[0]); }).length");
+  run(`__pj=corrAbrir(Object.assign({acao:'anular', titulo:'Prova do QA', oque:'a prova do QA', tela:'Prova do QA', original:{caminho:'qa676j/x', id:'x'},
+    gravar:function(reg){ __gj.push(reg.por); return Promise.resolve({ok:true}); }}, ${JSON.stringify(forma)}));`);
+  await espera676();
+  const p0 = run('CORR_ATUAL?CORR_ATUAL.passo:null');
+  await toque676('a prova do QA confere', senha);
+  const r = { p0, passo: run('CORR_ATUAL?CORR_ATUAL.passo:null'), aviso: String(run('CORR_ATUAL?CORR_ATUAL.aviso:""') || ''), gravou: J676('__gj'),
+    escreveu: J676("__esc657.filter(function(e){ return !/RECUSADO/.test(e[0]); }).length") - e0 };
+  run('SENHAS_FIXAS_BANCO={}; if(CORR_ATUAL) corrFechar();');
+  return r;
+}
+provaAsync('6.76 × publicadas · QA676J-01 (estático) — todas as portas do cartaz da 6.57 na junção: as 83 funções que chamam o corrAbrir são estas (63 das 7 publicadas, das quais a varredura lista 41: faltam 18 novas no 788fb9e e 4 da 6.59 e da 6.66); o cartaz é o único caminho de assinatura (corrConfirmar → corrAssinar); nenhuma função das publicadas tem régua de senha própria', async () => com676(async () => {
+  const L = SRC676.split('\n'); let fn = '(topo)'; const abre = new Set(), regua = new Set();
+  const RE = /senhasRuntime\(|\.senha\s*[=!]==?|[=!]==?\s*[\w$.\[\]'"]*\.senha\b|senhaFixaPelaGuardada|senhaQuem\(|corrAssinar\(|orcQuemPelaSenha\(|aparelhoSenha|zSha256Hex\(/;
+  L.forEach((l) => { const m = /^\s*(?:async\s+)?function\s+([\w$]+)\s*\(/.exec(l); if (m) fn = m[1];
+    if (/\bcorrAbrir\(/.test(l) && !/function corrAbrir\(/.test(l) && !/^\s*\/\//.test(l)) abre.add(fn);
+    if (RE.test(l.replace(/\/\/.*$/, '').replace(/\/\*.*?\*\//g, ''))) regua.add(fn); });
+  const PUB41 = ['medDoseAnularAbrir', 'medDoseReabrirAbrir', 'medDoseCorrigirAbrir', 'medAgendaAnularAbrir', 'medAgendaVoltouAbrir', 'dashMedAnularAbrir', 'dashMedReabrirAbrir', 'dashMedCorrigirAbrir',
+    'vetConsultaCorrigir', 'vetConsultaAnular', 'vetInstrRetirar', 'vetInstrReabrir', 'vetReavalReabrir', 'vetObsEditar', 'vetObsRetirar', 'vetObsReabrir', 'vetCienteDesfazer',
+    'hospDatasAbrir', 'hospReabrirExcluidaAbrir', 'hospBaixaDesfazerAbrir', 'hospAntecipadaDesfazerAbrir', 'hospMesmoDesfazerAbrir', 'avisoRetirarAbrir', 'avisoReabrirAbrir',
+    'acertoDesfazerPagamentoAbrir', 'acertoLoteDesfazerAbrir', 'acertoValorAbrir', 'acertoNoiteCorrigirAbrir', 'acertoDiaLancarAbrir', 'plantTrocarAbrir',
+    'prevCorrDesfazerAbrir', 'prevCorrLimparAbrir', 'algFichaDesfazerAbrir', 'desfazerRenovacao', 'mmDesfazer', 'planoAnularAtualAbrir', 'planoAnularLinhaAbrir', 'planoReabrirLinhaAbrir',
+    'orcVoltarPendenteAbrir', 'orcAnularAbrir', 'orcTirarDaPlanilhaAbrir'];
+  const FORA18 = ['orcVoltaAbrir', 'acertoValorVoltarAbrir', 'acertoNoiteVoltarAbrir', 'acertoSemPlantaoAbrir', 'acertoSemPlantaoReabrirAbrir', 'acertoTabelaAbrir', 'acertoTabelaVoltarAbrir',
+    'plantTirarAbrir', 'planoReabrirAtual', 'escovaDesfazerTresMesesAbrir', 'iaRevRestaurarAbrir', 'algPesqDesmarcarAbrir', 'algRespApagarAbrir', 'algRespPassarAbrir',
+    'pendTirarMedAbrir', 'pendReabrirAbrir', 'pendCorrigirAbrir', 'pendDesfazerResolucaoAbrir'];
+  // as outras 15: 11 da 6.60 e da 6.61, e 4 da 6.59 (pesoCorrAbrir, vetRemoverReavaliacao) e da 6.66 (avisoEntradaCorrigirAbrir, avisoTipoTrocarAbrir), que a varredura também não lista
+  const OUTRAS15 = ['repEstornarAbrir', 'repLoteEstornarAbrir', 'repEstornoDesfazerAbrir', 'repDevolucaoDesfazerAbrir', 'repCorrigirAbrir', 'trocaCancelar', 'vagasRetirarAbrir',
+    'vagasDesautorizarAvulso', 'vagasDesautorizarFechar', 'vagasReabrirAbrir', 'trocaReabrirAbrir', 'avisoEntradaCorrigirAbrir', 'avisoTipoTrocarAbrir', 'vetRemoverReavaliacao', 'pesoCorrAbrir'];
+  const DA676 = ['pdExcluirPlanoAbrir', 'pdRestaurarPlanoAbrir', 'timeSalvarAbrir', 'timeDesativarAbrir', 'timeReativarAbrir', 'cfgAparelhoRenomearAbrir', 'cfgAparelhoTirarAbrir',
+    'cfgAparelhoDevolverAbrir', 'avisoBarradoPorDeVoltaAbrir'];
+  igual([...abre].sort(), PUB41.concat(FORA18, OUTRAS15, DA676).sort(), 'as portas do cartaz na junção (83)');
+  // o cartaz: a assinatura só pelo corrAssinar, sempre (nenhum campo do op pula a senha)
+  const cc = run('String(corrConfirmar)');
+  igual([(cc.match(/corrAssinar\(/g) || []).length, /op\.(semSenha|pulaSenha|senhaOk|assinado)\b/.test(cc), cc.indexOf('if(!ass.ok){') > 0 && cc.indexOf('if(!ass.ok){') < cc.indexOf('op.gravar')], [1, false, true]);
+  // a régua de senha: só as funções de antes, as da 6.76 e as duas do orçamento (nenhuma das publicadas)
+  // (as 25 de hoje: 9 de antes, 14 da 6.76 e as 2 do orçamento; nenhuma só das publicadas — conferido por fora, função a função)
+  igual([...regua].filter((n) => n !== '(topo)').sort(), ["aparelhoAutorizarJunto", "aparelhoSenhaRecusa", "corrAssinar", "corrConfirmar", "corrPaginasDaPessoa", "destrancarApp", "doLogin",
+    "enganoAssinar", "hospAssinarPorSenha", "orcCancelar", "orcQuemPelaSenha", "orcSalvarEdicao", "renderSenhas", "senhaFixaPelaGuardada", "senhaGuardadaConfere", "senhaPerfil",
+    "senhaProvisoriaAinda", "senhaQuem", "senhasRuntime", "sfConfirmar", "timeIdDado", "timeReativarAbrir", "timeReativarGravar", "timeSenhasRecusa", "zSha256Hex"], 'quem tem régua de senha');
+}));
+provaAsync('6.76 × publicadas · QA676J-02 (as formas das portas publicadas, no cartaz de verdade) — em 8 formas de op, 13 senhas: só quem a forma deixa assina (e grava uma vez); a provisória, a do código sem banco, a desativada, a do posto, a errada, a capacidade e a tela concedida numa porta que pede a Gestão, e o «quem registrou» numa porta da Gestão são recusados, cada um com a sua frase, sem gravar nada', async () => com676(async () => {
+  banco676(QJ_EQ());
+  const prov = JSON.stringify({ marcia: x676Prov() });
+  const res = [], erros = [];
+  for (const nome of Object.keys(QJ_FORMAS)) {
+    const forma = QJ_FORMAS[nome];
+    for (const k of Object.keys(QJ_QUEM)) {
+      const r = await qjCartaz(forma, QJ_QUEM[k]);
+      const deve = QJ_OK[nome].includes(k);
+      const ok = deve ? (r.passo === 'pronto' && r.gravou.length === 1 && r.escreveu >= 0)
+        : (r.passo === 'conferir' && r.gravou.length === 0 && r.escreveu === 0 && r.aviso.length > 0
+          && (k !== 'd' || r.aviso === QJ_NING) && (k !== 'w' || r.aviso === QJ_NING) && (k !== 'p1001' || /posto/.test(r.aviso))
+          && (!['c', 's', 't', 'b', 'a'].includes(k) || /não pode assinar|Quem assina/.test(r.aviso)));
+      res.push([nome, k, r.passo]); if (!ok) erros.push([nome, k, deve, r]);
+    }
+    const a = await qjCartaz(forma, '1357', `SENHAS_FIXAS_BANCO=${prov};`);
+    const b = await qjCartaz(forma, '0902', "SENHAS_FIXAS_BANCO=null; __ls657={};");
+    if (!(a.passo === 'conferir' && a.aviso === QJ_PROV && !a.gravou.length && !a.escreveu)) erros.push([nome, 'provisória', a]);
+    if (!(b.passo === 'conferir' && b.aviso === QJ_SEMB && !b.gravou.length && !b.escreveu)) erros.push([nome, 'código sem banco', b]);
+  }
+  igual(erros, [], 'em ' + res.length + ' tentativas e 16 da provisória e do código sem banco');
+  igual(res.length, 8 * 11);
+}));
+async function qjSessao(quem) {
+  // quem = {id, nome, role, senha}; abre o cartaz de uma porta que ela PODE assinar; outro aparelho a desativa; o que acontece
+  banco676(QJ_EQ());
+  papel676(quem.role, { nome: quem.nome, role: quem.role, monId: quem.id, paginas: [] });
+  run("SENHAS_FIXAS_BANCO={}; __ls657={}; __gj=[]; if(CORR_ATUAL) corrFechar();");
+  const ABRE = `__pj=corrAbrir({acao:'anular', titulo:'Prova do QA', oque:'a prova do QA', tela:'Prova do QA', original:{caminho:'qa676j/x', id:'x'}, nivel:'propria', capacidade:'assinar-orcamento', telaConcedida:'orcamento',
+    gravar:function(reg){ __gj.push(reg.por); return Promise.resolve({ok:true}); }});`;
+  run(ABRE); await espera676();
+  const aberto = run('CORR_ATUAL.passo');
+  const eq = QJ_EQ().map((p) => (p.id === quem.id ? Object.assign({}, p, { ativo: false, desativado: { em: '2026-10-10', motivo: 'saiu da casa hoje cedo', registro: {} } }) : p));
+  run(`__put657('daycare/config/monitores', ${JSON.stringify(eq)}); timeDoBanco(__get657('daycare/config/monitores')); permReaplicarDoTime();`); await espera676();
+  const trancou = run('_appTrancado'), aviso = String(run('__el657.lockAviso.textContent') || '');
+  const e0 = J676("__esc657.filter(function(e){ return !/RECUSADO/.test(e[0]); }).length");
+  if (!run('CORR_ATUAL')) { run(ABRE); await espera676(); }
+  await toque676('a prova do QA confere', quem.senha);
+  const cartaz = [run('CORR_ATUAL.passo'), run('CORR_ATUAL.aviso'), J676('__gj'), J676("__esc657.filter(function(e){ return !/RECUSADO/.test(e[0]); }).length") - e0];
+  // mesmo se alguém semear de volta a linha dela (desativada) na lista da tela, com a sessão dela ainda aberta (como a 6.76 P11)
+  run(`MONITORES=(MONITORES||[]).concat([${JSON.stringify(eq.find((p) => p.id === quem.id))}]);`);
+  await toque676('a prova do QA confere', quem.senha);
+  cartaz.push(run('CORR_ATUAL.passo'), run('CORR_ATUAL.aviso'), J676('__gj'));
+  const caps = J676('Object.keys(PERM)'), assina = [];
+  for (const cap of caps) for (const op of ['{}', "{tela:'orcamento'}", `{nome:${JSON.stringify(quem.nome)}}`]) assina.push([cap, op, run(`corrAssinar('${quem.senha}', '${cap}', 'isto', ${op}).erro`)]);
+  assina.push(['senhaQuem', '', J676(`senhaQuem('${quem.senha}')`) === null ? QJ_NING : 'senhaQuem achou']);
+  run(`MONITORES=MONITORES.filter(function(m){ return m.id!==${JSON.stringify(quem.id)}; });`);
+  await toque676('a prova do QA confere', '0902');
+  const marcia = [run('CORR_ATUAL?CORR_ATUAL.passo:null'), J676('__gj')];
+  run('if(CORR_ATUAL) corrFechar();');
+  return { aberto, trancou, aviso, cartaz, naoAssina: assina.filter((x) => x[2] !== QJ_NING), combinacoes: assina.length, marcia, lo: run('__lo676') };
+}
+provaAsync('6.76 × publicadas · QA676J-03 (a sessão aberta antes da desativação) — a Sara (Supervisão, papel que o Time dá) entra e abre o cartaz de uma porta que ela pode assinar; outro aparelho a desativa; a tela tranca, sem logout; a senha dela no cartaz que já estava aberto é recusada («não é de ninguém»), sem gravar, também com a linha dela semeada de volta na lista da tela; em toda capacidade da PERM, a senha dela não assina; a Márcia assina o mesmo cartaz', async () => com676(async () => {
+  const r = await qjSessao({ id: 'p3', nome: 'Sara Supervisora Teste', role: 'supervisor', senha: '5511' });
+  igual(r, { aberto: 'conferir', trancou: true, aviso: 'O acesso de Sara Supervisora Teste foi desativado pela Gestão em 10/10/2026. Outra pessoa pode entrar com a própria senha.',
+    cartaz: ['conferir', QJ_NING, [], 0, 'conferir', QJ_NING, []], naoAssina: [], combinacoes: r.combinacoes, marcia: ['pronto', ['Márcia · Gestora']], lo: 0 });
+  assert.ok(r.combinacoes >= 39 * 3 + 1);
+}));
+provaAsync('6.76 × publicadas · QA676J-A1 (ACHADO, fora da junção: a 6.76 aprovada tem o mesmo texto) — a pessoa do Time com o papel Gestão ou Diretoria, desativada com a sessão aberta: a tela também tranca (AC3.5; a cascata do «Desativar» promete). Antes da correção (SEC-J01): permReaplicarDoTime saía antes da trava para gestao/diretoria; a assinatura ela já não conseguia', async () => com676(async () => {
+  const g = await qjSessao({ id: 'g1', nome: 'Gabi Gestora Teste', role: 'gestao', senha: '7301' });
+  const d = await qjSessao({ id: 'd1', nome: 'Rita Diretora Teste', role: 'diretoria', senha: '7302' });
+  console.log('      ' + JSON.stringify({ gestao: [g.trancou, g.cartaz, g.naoAssina.length], diretoria: [d.trancou, d.cartaz, d.naoAssina.length] }));
+  igual([g.cartaz, g.naoAssina, d.cartaz, d.naoAssina], [['conferir', QJ_NING, [], 0, 'conferir', QJ_NING, []], [], ['conferir', QJ_NING, [], 0, 'conferir', QJ_NING, []], []], 'a assinatura já é recusada');
+  igual([g.trancou, d.trancou], [true, true], 'a sessão da Gestão/Diretoria do Time desativada tranca');
+}));
+provaAsync('6.76 P68* (AC3.5, SEC-J01 da junção) — a pessoa do Time com o papel Gestão ou Diretoria, desativada com o app aberto, tem a tela trancada quando o Time muda, pelo id e pelo nome e papel (cadastro antigo, sem id), sem logout; a Márcia, que entrou pela senha fixa do sistema, não tranca nem com uma linha desativada de mesmo nome e papel no Time; a Gestão e a Diretoria do Time que continuam ativas não trancam e não ganham restrição de telas', async () => com676(async () => {
+  const base = () => JSON.parse(JSON.stringify(EQUIPE676)).concat([
+    { id: 'g1', nome: 'Gabi Gestora Teste', role: 'gestao', senha: '7301', paginas: ['hoje'] },
+    { id: 'd1', nome: 'Rita Diretora Teste', role: 'diretoria', senha: '7302', paginas: ['hoje'] }]);
+  const DESAT = { em: '2026-10-10', motivo: 'saiu da casa hoje cedo', registro: {} };
+  const desativa = (eq, id) => eq.map((p) => (p.id === id ? Object.assign({}, p, { ativo: false, desativado: DESAT }) : p));
+  const frase = (nome) => 'O acesso de ' + nome + ' foi desativado pela Gestão em 10/10/2026. Outra pessoa pode entrar com a própria senha.';
+  const caso = (u, eq) => {
+    banco676(base()); papel676(u.role, u);
+    run("_appTrancado=false; ACESSO_TRAVA=null; __el657.lockAviso.textContent=''; __ch68=[];");
+    run(`__put657('daycare/config/monitores', ${JSON.stringify(eq)}); timeDoBanco(__get657('daycare/config/monitores')); permReaplicarDoTime();`);
+    return [run('_appTrancado'), String(run('__el657.lockAviso.textContent') || ''), J676('__ch68'), J676("JSON.parse(sessionStorage.getItem('zeluz_login')).paginas||null")];
+  };
+  run('__bk68=aplicarPaginasPessoa; __ch68=[]; aplicarPaginasPessoa=function(u){ __ch68.push(JSON.stringify(u.paginas)); };');
+  try {
+    const semIdRita = desativa(base(), 'd1').map((p) => { if (p.id === 'd1') { const q = Object.assign({}, p); delete q.id; return q; } return p; });
+    // uma linha só de mesmo nome e papel (com duas, a busca pelo nome já não adivinha, e a prova não pegaria nada)
+    const marciaNoTime = desativa(base(), 'p2').concat([{ id: 'm9', nome: 'Márcia · Gestora', role: 'gestao', senha: '7310', ativo: false, desativado: DESAT }]);
+    const r = {
+      gestaoPeloId: caso({ nome: 'Gabi Gestora Teste', role: 'gestao', monId: 'g1', paginas: [] }, desativa(base(), 'g1')),
+      diretoriaPeloId: caso({ nome: 'Rita Diretora Teste', role: 'diretoria', monId: 'd1', paginas: [] }, desativa(base(), 'd1')),
+      diretoriaPeloNome: caso({ nome: 'Rita Diretora Teste', role: 'diretoria', paginas: [] }, semIdRita),
+      marciaSenhaFixa: caso({ nome: 'Márcia · Gestora', role: 'gestao', avisoSonoro: true, id: 'marcia' }, marciaNoTime),
+      gestaoAtiva: caso({ nome: 'Gabi Gestora Teste', role: 'gestao', monId: 'g1', paginas: [] }, desativa(base(), 'p2')),
+      diretoriaAtiva: caso({ nome: 'Rita Diretora Teste', role: 'diretoria', monId: 'd1', paginas: [] }, desativa(base(), 'p2'))
+    };
+    igual(r, {
+      gestaoPeloId: [true, frase('Gabi Gestora Teste'), [], []],
+      diretoriaPeloId: [true, frase('Rita Diretora Teste'), [], []],
+      diretoriaPeloNome: [true, frase('Rita Diretora Teste'), [], []],
+      marciaSenhaFixa: [false, '', [], null],
+      gestaoAtiva: [false, '', [], []],
+      diretoriaAtiva: [false, '', [], []]
+    });
+    igual(run('__lo676'), 0, 'nenhum logout');
+    assert.ok(/function permReaplicarDoTime\(\)\{\s*var u=[^\n]*\n\s*if\(!u\) return;\n[^\n]*\n\s*if\(timeTrancarSeDesativado\(u\)\) return;[^\n]*\n\s*if\(u\.role==='gestao' \|\| u\.role==='diretoria'\) return;/.test(SRC676), 'a trava antes do return da Gestão e da Diretoria');
+  } finally { run('aplicarPaginasPessoa=__bk68;'); }
+}));
+provaAsync('6.76 P41 (AC14, AC15, guarda) — a área protegida, o #v-daycare, as declarações ck*/pt*, a PERM, as funções fixadas da 6.65 P22, a tgAvisar, a meuMonId, a tgCarregarCfg e o orcQuemPelaSenha idênticos; nenhuma função nova ck*/pt*; nenhuma prova antiga saiu do arquivo nem falhou', async () => {
+  const ctxN = vm.createContext(makeSandbox());
+  vm.runInContext(extractMainScript(SRC676), ctxN, { filename: 'index.html#script', timeout: 15000 });
+  const runN = (c) => vm.runInContext(c, ctxN);
+  const h = (s) => crypto676.createHash('sha256').update(s).digest('hex').slice(0, 16);
+  const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN('JSON.stringify(PERM)'))], [155, '5bac486c669007ec', 'f79140b1c2844dd5']);
+  const i = SRC676.indexOf('id="v-daycare"'), j = SRC676.indexOf('id="v-', i + 10);
+  igual([h(SRC676.slice(i, j)), h(SRC676.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
+  const corpo = (n) => { const m = new RegExp('\\n  (async )?function ' + n + '\\(').exec(SRC676); const k = m.index + 1; const fl = SRC676.indexOf('\n', k), linha = SRC676.slice(k, fl); const ab = (linha.match(/\{/g) || []).length, fe = (linha.match(/\}/g) || []).length;
+    if (ab > 0 && ab === fe && /\}\s*(\/\*.*\*\/|\/\/.*)?$/.test(linha)) return linha; return SRC676.slice(k, SRC676.indexOf('\n  }\n', k) + 4); };
+  // Junção com as publicadas (12/out/2026): `setPelExtra` antes '4c9fb384e1db3830' (o texto do 910b143), depois 'd85c659857273ded' (o texto
+  // publicado no 788fb9e, com a 6.63 2ª rodada, REL-004: a cópia do aparelho recebe só o patch, por cima da cópia de agora). A 6.76 não
+  // toca a função; a guarda continua presa ao texto publicado.
+  const FIX = { tgAvisar: '43b8ccf7bf832745', meuMonId: '08754fcc5cb7db39', tgCarregarCfg: 'e7a594d92581c5e0', orcQuemPelaSenha: 'bdf49db971b9b315', setPelExtra: 'd85c659857273ded',
+    pelExtra: '1259ae90995612ba', podePapel: 'bda16af05f35229e', canEditPel: '9527760b674f02cf', urgenciasGestao: '1698a686561edb3c', motivoQuatroPalavras: 'a7175e01c364fd3c', corrRegistro: '9e904eb748c99df8', corrRastro: 'a99d29234e1320d4' };
+  const agora = {}; Object.keys(FIX).forEach((n) => { agora[n] = h(corpo(n)); });
+  igual(agora, FIX, 'as funções que não mudam');
+  const me = fs.readFileSync(__filename, 'utf8'), corte = me.indexOf("console.log('\\n6.76 — O Time");
+  assert.ok((me.slice(0, corte).match(/\n(?:prova|provaAsync)\('/g) || []).length >= 1849, 'as provas de antes continuam no arquivo (1.849 declaradas na base)');
+  igual(falhas.filter((f) => !/^6\.76 /.test(f)), [], 'nenhuma prova antiga falhou');
+});
+}
+// ================================================================== 6.76 × publicadas (a junção com a 788fb9e): as portas do cartaz
+// A porta já aberta (CORR_ATUAL na tela): a senha provisória ainda não trocada, a senha do código sem o banco e sem a cópia e a senha
+// de quem foi desativado são recusadas, cada uma com a sua frase e sem gravar nada; depois, a senha certa assina. R = o run do palco.
+const X676_PROV = 'Essa é uma senha provisória: troque a senha provisória antes (entre no app com ela, e o app pede a troca). Nada foi gravado.';
+const X676_SEMB = 'Sem conexão com o banco: não dá para conferir a senha agora. Tente de novo com internet. Nada foi gravado.';
+const X676_NINGUEM = 'Essa senha não é de ninguém cadastrado. Nada foi gravado.';
+function x676Prov() { const c = require('crypto'), sal = 'ab'.repeat(16); return { hash: c.createHash('sha256').update('1357' + sal).digest('hex'), sal: sal, alg: 'sha256', trocadaEm: 1, trocadaPor: 'Teste', provisoria: true }; }
+const X676_DORA = "{id:'x676dora', nome:'Dora Desativada Teste', senha:'s-dora676', role:'gestao', ativo:false, desativado:{em:'2026-10-09', motivo:'saiu da casa nesta semana'}}";
+// fecha: a porta que fecha o cartaz sozinha depois de gravar (o «Desfazer a última renovação» da 6.71 redesenha a ficha)
+function x676Esperado(fecha) { return { provisoria: ['conferir', X676_PROV], codigoSemBanco: ['conferir', X676_SEMB], desativada: ['conferir', X676_NINGUEM], nadaGravado: true, certa: fecha ? null : 'pronto', gravou: true }; }
+async function x676Portas(R, esp, motivo, certa) {
+  const passo = () => R('CORR_ATUAL?CORR_ATUAL.passo:null'), aviso = () => String(R('CORR_ATUAL?CORR_ATUAL.aviso:""') || '');
+  const toca = async (s) => { await R(`corrToque('confirmar', {motivo:${JSON.stringify(motivo)}, senha:${JSON.stringify(s)}})`); await esp(); };
+  const nEsc = () => R("(typeof __esc657!=='undefined' && __esc657)?__esc657.filter(function(e){ return !/RECUSADO/.test(e[0]); }).length:0");
+  R("__x676={sfb:SENHAS_FIXAS_BANCO, mo:MONITORES, ls:(typeof __ls657!=='undefined' && __ls657)?__ls657.zeluz_senhas_fixas:undefined};");
+  const e0 = nEsc(), out = {};
+  try {
+    R(`SENHAS_FIXAS_BANCO={marcia:${JSON.stringify(x676Prov())}};`); await toca('1357'); out.provisoria = [passo(), aviso()];
+    R("SENHAS_FIXAS_BANCO=null; if(typeof __ls657!=='undefined' && __ls657) delete __ls657.zeluz_senhas_fixas;"); await toca('0902'); out.codigoSemBanco = [passo(), aviso()];
+    R(`SENHAS_FIXAS_BANCO=__x676.sfb; MONITORES=(MONITORES||[]).concat([${X676_DORA}]);`); await toca('s-dora676'); out.desativada = [passo(), aviso()];
+    R('MONITORES=__x676.mo;');
+    out.nadaGravado = nEsc() === e0;
+    await toca(certa); out.certa = passo(); out.gravou = nEsc() > e0;
+  } finally { R("SENHAS_FIXAS_BANCO=__x676.sfb; MONITORES=__x676.mo; if(__x676.ls!==undefined && typeof __ls657!=='undefined' && __ls657) __ls657.zeluz_senhas_fixas=__x676.ls;"); }
+  return out;
+}
+// As portas do orçamento que pedem a senha pelo zTexto (orcSalvarEdicao e orcCancelar, juntadas em 3 vias na publicação): preparar()
+// põe a reserva de novo antes de cada tentativa; devolve, para cada senha, [os alert, os títulos dos cartazes, se gravou].
+async function x676Orc(R, esp, preparar, chamada, motivo, certa) {
+  const nEsc = () => R("__esc657.filter(function(e){ return !/RECUSADO/.test(e[0]); }).length");
+  const tenta = async (senha) => {
+    preparar(); R(`__al657=[]; __za657=[]; __zpq657=[true]; __ztq657=[${JSON.stringify(motivo)}, ${JSON.stringify(senha)}];`);
+    const e0 = nEsc(); await R(chamada); await esp();
+    return [JSON.parse(R('JSON.stringify(__al657)')), JSON.parse(R('JSON.stringify(__za657.map(function(z){ return z[0]; }))')), nEsc() > e0];
+  };
+  R("__x676={sfb:SENHAS_FIXAS_BANCO, mo:MONITORES};");
+  const out = {};
+  try {
+    R(`SENHAS_FIXAS_BANCO={marcia:${JSON.stringify(x676Prov())}};`); out.provisoria = await tenta('1357');
+    R("SENHAS_FIXAS_BANCO=null; if(typeof __ls657!=='undefined' && __ls657) delete __ls657.zeluz_senhas_fixas;"); out.codigoSemBanco = await tenta('0902');
+    R(`SENHAS_FIXAS_BANCO=__x676.sfb; MONITORES=(MONITORES||[]).concat([${X676_DORA}]);`); out.desativada = await tenta('s-dora676');
+    R('MONITORES=__x676.mo;');
+    out.certa = await tenta(certa);
+  } finally { R('SENHAS_FIXAS_BANCO=__x676.sfb; MONITORES=__x676.mo;'); }
+  return out;
+}
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));

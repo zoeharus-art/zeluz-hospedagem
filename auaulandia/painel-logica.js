@@ -375,17 +375,72 @@ function plAchaPorNome(obj, nome) {
   return null;
 }
 
+/* Story 6.76 (AC7) — a escala e a rota ligadas à PESSOA, não ao nome. A chave continua o nome (os
+   aparelhos que ainda não atualizaram leem pelo nome), mas a busca é pelo id do Time: na escala, o
+   `id` mora dentro da entrada; no plano, no mapa `ids` ({nome: id}). Sem id (o registro antigo),
+   vale o nome — e um nome que pertence a OUTRA pessoa (outro id) não é dela. */
+function plChavePorPessoa(obj, nome, monId, ids) {
+  var o = plObj(obj), ks = Object.keys(o), i, v, idV, alvo = plNorm(nome);
+  var idDe = function (k) { if (ids) return String(plObj(ids)[k] || ''); v = o[k]; return (v && typeof v === 'object' && !plEhLista(v)) ? String(v.id || '') : ''; };
+  if (monId) for (i = 0; i < ks.length; i++) if (idDe(ks[i]) && idDe(ks[i]) === String(monId)) return ks[i];
+  for (i = 0; i < ks.length; i++) {
+    if (plNorm(ks[i]) !== alvo) continue;
+    idV = idDe(ks[i]);
+    if (!monId || !idV || idV === String(monId)) return ks[i];
+  }
+  return null;
+}
+function plAchaPessoa(obj, nome, monId, ids) { var k = plChavePorPessoa(obj, nome, monId, ids); return k === null ? null : plObj(obj)[k]; }
+
+function plDataBR(iso) { if (!plEhISO(iso)) return ''; var p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+
+/* plEscalaDoDia (6.76, AC8) — o horário de UM dia: a exceção (folga, férias ou outro horário), o
+   sábado (em branco = o da semana) ou a semana. Pura: a tela da escala e o «Meu dia» usam a mesma.
+   entrada = {entrada, almoco, saida, sabado:{...}, excecoes:{chave:{de, ate, tipo, entrada, almoco, saida, motivo}}} */
+function plEscalaDoDia(entrada, diaISO) {
+  var e = plObj(entrada), out = { entrada: String(e.entrada || ''), almoco: String(e.almoco || ''), saida: String(e.saida || ''), tipo: 'semana', ate: '', motivo: '' };
+  if (!plEhISO(diaISO)) return out;
+  var ex = plObj(e.excecoes), ks = Object.keys(ex).sort(), achou = null, i, x, ate;
+  for (i = 0; i < ks.length; i++) {
+    x = plObj(ex[ks[i]]); ate = plEhISO(x.ate) ? x.ate : x.de;
+    if (plEhISO(x.de) && x.de <= diaISO && diaISO <= ate) achou = x;     /* a mais nova vence */
+  }
+  if (achou) {
+    var aAte = plEhISO(achou.ate) ? achou.ate : achou.de, mot = String(achou.motivo || '');
+    if (achou.tipo === 'folga') return { entrada: '', almoco: '', saida: '', tipo: 'folga', ate: aAte, motivo: mot };
+    if (achou.tipo === 'ferias') return { entrada: '', almoco: '', saida: '', tipo: 'ferias', ate: aAte, motivo: mot };
+    if (achou.tipo === 'horario') return { entrada: String(achou.entrada || ''), almoco: String(achou.almoco || ''), saida: String(achou.saida || ''), tipo: 'horario', ate: aAte, motivo: mot };
+  }
+  var p = diaISO.split('-'), dow = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).getDay();
+  if (dow === 6) {
+    var s = plObj(e.sabado);
+    if (s.entrada || s.almoco || s.saida) return { entrada: String(s.entrada || ''), almoco: String(s.almoco || ''), saida: String(s.saida || ''), tipo: 'sabado', ate: '', motivo: '' };
+  }
+  return out;
+}
+
 /* plRotaDoDia — o card "Meu dia" do monitor: o meu horário e as minhas
-   atividades, na ordem. Nada de outra pessoa, nada de dinheiro. */
-function plRotaDoDia(nome, escala, plano) {
-  var avisos = [];
-  var e = plAchaPorNome(escala, nome);
+   atividades, na ordem. Nada de outra pessoa, nada de dinheiro.
+   6.76 (AC7.3): os parâmetros novos são opcionais — `monId` acha a pessoa pelo id (a troca de nome
+   no Time não apaga o «Meu dia») e `diaISO` aplica a folga, as férias, o outro horário e o sábado.
+   Com três parâmetros, o resultado é o de sempre. O plano com `nenhum` (o dia sem plano, AC10.3)
+   troca o «fale com a Márcia» pela frase do dia. */
+function plRotaDoDia(nome, escala, plano, monId, diaISO) {
+  var avisos = [], nota = '';
   var p = plObj(plano);
-  var minhas = plAchaPorNome(p.porMonitor, nome);
+  var e = monId ? plAchaPessoa(escala, nome, monId) : plAchaPorNome(escala, nome);
+  var minhas = monId ? plAchaPessoa(p.porMonitor, nome, monId, p.ids || {}) : plAchaPorNome(p.porMonitor, nome);
 
   if (!e || typeof e !== 'object') { avisos.push('Seu horário ainda não está na escala — fale com a Márcia.'); e = {}; }
-  if (!plEhLista(minhas)) {
-    avisos.push('Você não está no plano de hoje — fale com a Márcia.');
+  var dia = plEhISO(diaISO) ? plEscalaDoDia(e, diaISO) : { entrada: String(e.entrada || ''), almoco: String(e.almoco || ''), saida: String(e.saida || ''), tipo: 'semana' };
+  var deFora = (dia.tipo === 'folga' || dia.tipo === 'ferias');
+  if (dia.tipo === 'folga') nota = 'Hoje é a sua folga.';
+  else if (dia.tipo === 'ferias') nota = 'Você está de férias até ' + plDataBR(dia.ate) + '.';
+  if (p.nenhum) {
+    nota = (nota ? (nota + ' ') : '') + 'Hoje não há plano do dia: ' + String(p.motivo || '').replace(/[.\s]+$/, '') + '.';
+    minhas = [];
+  } else if (!plEhLista(minhas)) {
+    if (!deFora) avisos.push('Você não está no plano de hoje — fale com a Márcia.');
     minhas = [];
   }
 
@@ -404,11 +459,13 @@ function plRotaDoDia(nome, escala, plano) {
   });
 
   return {
-    entrada: String(e.entrada || ''),
-    almoco: String(e.almoco || ''),
-    saida: String(e.saida || ''),
+    entrada: String(dia.entrada || ''),
+    almoco: String(dia.almoco || ''),
+    saida: String(dia.saida || ''),
     atividades: lista,
     plano: { id: String(p.id || ''), nome: String(p.nome || ''), motivo: String(p.motivo || ''), definidoPor: String(p.definidoPor || '') },
-    avisos: avisos
+    avisos: avisos,
+    nota: nota,
+    dia: String(dia.tipo || 'semana')
   };
 }
