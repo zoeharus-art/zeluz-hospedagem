@@ -10439,6 +10439,15 @@ console.log('\n6.36 — Financeiro: o plano com dias diferentes em cada mês som
 // Dado INVENTADO: a «Tâmara», da tutora «Viajante Teste» (a mesma ficha-modelo da 6.30). O relógio fica
 // CONGELADO nestas provas: toda conta recebe o "hoje" na mão, e a tela que lê o relógio tem o dela trocado.
 const FIN_SRC36 = fs.readFileSync(path.join(__dirname, '..', 'auaulandia', 'financeiro-logica.js'), 'utf8');
+// 6.73 (3ª rodada, S8-P2 — Adriana, 12/10/2026: «sim»: quem saiu continua no Recebimentos do mês em que pagou): o financeiro-logica.js
+// de agora SEM a S8-P2 — os três pedaços desfeitos, letra por letra — é o publicado com a 6.71 (md5 3b1c470677a6989f8326372159a1bfb0,
+// conferido na 6.73 P36). As guardas publicadas que travam o TEXTO da conta passam a olhar este; a 6.73 P44 prova o que a S8-P2 muda.
+const FIN_S8P2_PARES = [
+  ["  /* QUEM SAIU (inativo) CONTINUA NO MÊS EM QUE PAGOU (S8-P2, Story 6.73 — Adriana, 12/10/2026:\n     «sim»). Antes: o inativo saía de todo mês, também do mês em que pagou. Agora ele conta só\n     os pagamentos cuja data cai no mês olhado — o plano atual com renov.inicio no mês (se for\n     Auluno) e as renovações anteriores que contam — e nada mais: não entra em «sem como\n     calcular», nem nos vencidos, nem em mês nenhum além do mês do pagamento. A ficha que mudou\n     de chave (movido_para: troca de nome ou de tutor) ou que foi excluída continua fora: o\n     pagamento está na ficha nova (ou a ficha foi apagada) — contar as duas seria contar duas vezes. */\n  var saiuDoDaycare = {}, saiu;\n  for (i = 0; i < chaves.length; i++) {\n    k = chaves[i];\n    c = finObj(cadastro[k]);\n    saiu = (c.inativo === 'Sim');\n    if (saiu && (c.excluido === true || c.movido_para)) continue;   /* mudou de chave ou foi excluída */\n    if (saiu) saiuDoDaycare[k] = true;\n", "  for (i = 0; i < chaves.length; i++) {\n    k = chaves[i];\n    c = finObj(cadastro[k]);\n    if (c.inativo === 'Sim') continue;                 /* saiu: não cobra */\n"],
+  ["    if (saiu && finMesDe(r.inicio) !== mes) continue;   /* S8-P2: o plano atual de quem saiu, só no mês do pagamento */\n", ""],
+  ["  /* S8-P2: de quem saiu, só a linha do pagamento do mês — fora de «sem como calcular» e dos vencidos. */\n  var semFica = [], inadFica = [], zs;\n  for (zs = 0; zs < R.semComoCalcular.length; zs++) if (!saiuDoDaycare[R.semComoCalcular[zs].chave]) semFica.push(R.semComoCalcular[zs]);\n  for (zs = 0; zs < R.inadimplentes.length; zs++) {\n    if (saiuDoDaycare[R.inadimplentes[zs].chave]) R.porServico.daycare.inadimplencia -= R.inadimplentes[zs].valorDeUmMes;\n    else inadFica.push(R.inadimplentes[zs]);\n  }\n  R.semComoCalcular = semFica;\n  R.inadimplentes = inadFica;\n\n", ""]
+];
+const FIN_SEM_S8P2 = (() => { let t = FIN_SRC36; for (const [n, a] of FIN_S8P2_PARES) { if (t.split(n).length !== 2) return ''; t = t.replace(n, a); } return t; })();
 const ctx36 = vm.createContext(makeSandbox());
 vm.runInContext(FIN_SRC36, ctx36, { filename: 'financeiro-logica.js' });
 vm.runInContext(extractMainScript(fs.readFileSync(APP, 'utf8')), ctx36, { filename: 'index.html#script (6.36)', timeout: 15000 });
@@ -12473,7 +12482,11 @@ prova('6.44 AC5 — a renovação anterior: virou morador ainda conta no mês em
   const vir = res36(dados36(cad36({ plano: 'morador' }, { renov_hist: { a: hist644(JUL644(), 100, 'virou morador') } })), '2026-07');
   igual([vir.porFILHOt.length, vir.porFILHOt[0].valor, vir.porFILHOt[0].origem], [1, 107700, 'renovacao-anterior']);
   const inat = res36(dados36(cad36(OUT644(), { inativo: 'Sim', renov_hist: { a: hist644(JUL644(), 100) } })), '2026-07');
-  igual(inat.porFILHOt.length, 0, 'inativo: fora (regra de sempre — pergunta 1 da story)');
+  // 6.73 (3ª rodada, S8-P2 — Adriana, 12/10/2026: «sim»). ANTES: «inativo: fora (regra de sempre — pergunta 1 da story)», julho sem linha.
+  // DEPOIS: o inativo continua no mês em que pagou — a renovação anterior de 05/07 (Gold 1x, R$ 1.077,00) conta em julho; em agosto, nada.
+  // PORQUÊ: a pergunta 11 da 6.44 (S8-P2), respondida pela Adriana. O resto desta prova (virou morador, a tabela daquele plano) não muda.
+  igual([inat.porFILHOt.length, inat.porFILHOt[0].valor, inat.porFILHOt[0].origem, inat.semComoCalcular.length], [1, 107700, 'renovacao-anterior', 0], 'inativo: o mês em que pagou (S8-P2)');
+  igual(res36(dados36(cad36(OUT644(), { inativo: 'Sim', renov_hist: { a: hist644(JUL644(), 100) } })), '2026-08').porFILHOt.length, 0, 'inativo: fora do mês seguinte');
   const h2 = res36(dados36(cad36(OUT644(), { renov_hist: { a: hist644(Object.assign(JUL644(), { aulas: 2, ordemPet: 2 }), 100) } })), '2026-07');
   // Gold 2x, 2º: R$ 589,00 com 7% = R$ 547,77; × 3 = R$ 1.643,31
   igual([h2.porFILHOt[0].valor, h2.porFILHOt[0].aulas, h2.porFILHOt[0].mensalidade, h2.porFILHOt[0].ordemPet], [164331, 2, 54777, 2]);
@@ -12564,7 +12577,12 @@ prova('6.44 AC7 — "Renovações anteriores" mostram o valor de cada plano: o g
 prova('6.44 AC8 — o caminho de sempre continua no texto (quem saiu continua fora; ES5)', () => {
   const fin = fs.readFileSync(path.join(__dirname, '..', 'auaulandia', 'financeiro-logica.js'), 'utf8');
   assert.ok(fin.indexOf('    valorMes = entra ? mensal * (meses || 1) : 0;\n') > 0 && fin.indexOf('        R.porServico.daycare.declarado += mensal * (meses || 1);\n') > 0);
-  assert.ok(fin.indexOf("    if (c.inativo === 'Sim') continue;                 /* saiu: não cobra */\n") > 0, 'quem saiu continua fora');
+  // 6.73 (3ª rodada, S8-P2 — Adriana, 12/10/2026: «sim»). ANTES: o texto «    if (c.inativo === 'Sim') continue;  /* saiu: não cobra */»
+  // (quem saiu fora de todo mês). DEPOIS: quem saiu continua no mês em que pagou — o texto da regra nova está no arquivo, e o arquivo
+  // sem a S8-P2 (FIN_SEM_S8P2) ainda tem o texto antigo, letra por letra. PORQUÊ: a pergunta 11 da 6.44 (S8-P2), decidida pela Adriana.
+  assert.ok(fin.indexOf("    if (saiu && (c.excluido === true || c.movido_para)) continue;   /* mudou de chave ou foi excluída */\n") > 0
+    && fin.indexOf("    if (saiu && finMesDe(r.inicio) !== mes) continue;   /* S8-P2: o plano atual de quem saiu, só no mês do pagamento */\n") > 0, 'quem saiu continua no mês em que pagou');
+  assert.ok(FIN_SEM_S8P2.indexOf("    if (c.inativo === 'Sim') continue;                 /* saiu: não cobra */\n") > 0, 'o texto antigo, sem a S8-P2');
   assert.ok(!/\b(const|let)\s|=>/.test(fin.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), 'ES5');
 });
 
@@ -27163,6 +27181,11 @@ const VARRE648 = () => VARRE648_CORPO(extractMainScript(fs.readFileSync(APP, 'ut
 // Os erros do banco vão para a tela pelo zErroMotivo (acertoErroTela e o cartaz da 6.57). Num acréscimo, para a junção com as outras
 // stories não pisar no fim da lista.
 Object.assign(DADO648, { acertoCartaoHTML: 2, acertoTabHistHTML: 1 });
+// 6.73 (planos e recebimentos, parte 2, fora das três telas da 6.48): o .motivo de DADO, lido por uma função só (recMotivoDe) — o motivo
+// que a pessoa escreveu no cartaz da 6.57, guardado no fechamento do mês, no ajuste, no «Não renova» e no histórico da tabela de planos,
+// e o motivo de «fora do total» que o Financeiro escreve sobre a ficha (finResumoMes). Nenhum erro: o erro do banco vai para
+// gravacao-FALHOU e, na tela, pelo zErroMotivo (o cartaz da 6.57 e as frases desta story). Num acréscimo, para a junção não pisar no fim da lista.
+Object.assign(DADO648, { recMotivoDe: 1 });
 prova('6.48 P12 — a varredura (K16): nas telas desta entrega, nenhum erro cru vai para a tela; fora delas, nenhum ponto cru novo', () => {
   const { a, onde } = VARRE648();
   const cruNoLoteA = LOTE_A648.filter((f) => a[f]);
@@ -49239,12 +49262,15 @@ provaAsync('6.71 P7 (AC2.2, AC2.3) — anular a linha de julho da Pipoca (a Gest
     igual(hj, H71(JUL71(), 300), 'nada da linha é reescrito');
     igual([quadro71('2026-07'), quadro71('2026-10')], [0, 107700]);
     igual(aud71('pagamento-anulado').length, 1);
-    // inativa: o cartaz não promete queda; o quadro já não a contava
+    // 6.73 (3ª rodada, S8-P2 — Adriana, 12/10/2026: «sim»). ANTES: inativa, o quadro já não a contava (julho R$ 0,00) e o cartaz dizia «Pipoca
+    // está inativa: pela regra de hoje, este pagamento já não entra no Recebimentos. A anulação fica registrada para quando a regra mudar.».
+    // DEPOIS: a inativa continua no mês em que pagou (julho R$ 1.077,00), e o cartaz mostra o efeito pela mesma conta da ativa («… sai da
+    // conta — Total dos planos do Day Care em julho de 2026: R$ 1.077,00 → R$ 0,00.»); depois de anular, julho R$ 0,00. PORQUÊ: a S8-P2.
     cena71([PIPOCA({ inativo: 'Sim', dataSaida: '08/10/2026', motivoSaida: 'viagem da família em outubro', tipoSaida: 'pausa' })]);
-    igual(quadro71('2026-07'), 0);
+    igual(quadro71('2026-07'), 107700);
     await abre71("planoAnularLinhaAbrir('hj1')");
     const ci = cartaz71();
-    assert.ok(ci.indexOf('Pipoca está inativa: pela regra de hoje, este pagamento já não entra no Recebimentos. A anulação fica registrada para quando a regra mudar.') >= 0 && ci.indexOf('sai do Recebimentos') < 0, ci);
+    assert.ok(ci.indexOf('O pagamento de 05/07/2026 (R$ 1.077,00) sai da conta — Total dos planos do Day Care em julho de 2026: R$ 1.077,00 → R$ 0,00.') >= 0 && ci.indexOf('regra de hoje') < 0, ci);
     await toca71(SENHA657);
     igual(quadro71('2026-07'), 0);
     // a «virou morador»
@@ -49321,16 +49347,21 @@ provaAsync('6.71 P9 (AC2.5) — a lista «FILHOt por FILHOt» e o Excel do mês 
 });
 // A conta da BASE (910b143), letra por letra: o arquivo de hoje sem os dois acréscimos da 6.71 (a função pura e a linha da leitura);
 // na própria base (sem os acréscimos), o arquivo como está. O sha-256 confere que é a base e nada mais.
+// 6.73 (3ª rodada): ANTES a base era tirada do arquivo de agora (FIN_SRC36); DEPOIS, do arquivo de agora sem a S8-P2 (FIN_SEM_S8P2), que a
+// 6.73 P36 prova ser o publicado com a 6.71, letra por letra. PORQUÊ: a S8-P2 (Adriana, 12/10/2026) mudou a conta de quem saiu; a base desta
+// prova é a de antes da 6.71 e continua com a sha 92070f0fed71379d.
 const FIN_BASE671 = (() => {
-  const i = FIN_SRC36.indexOf('/* A LINHA DO HISTÓRICO ESTÁ ANULADA?'), j = FIN_SRC36.indexOf('/* AS RENOVAÇÕES ANTERIORES QUE FORAM PAGAMENTO (6.44).');
+  const F = FIN_SEM_S8P2;
+  const i = F.indexOf('/* A LINHA DO HISTÓRICO ESTÁ ANULADA?'), j = F.indexOf('/* AS RENOVAÇÕES ANTERIORES QUE FORAM PAGAMENTO (6.44).');
   const L = '    /* 6.71 (AC3.1): o pagamento anulado (lançado por engano) é lido como se a linha nunca tivesse existido. */\n    if (finLinhaAnulada(o)) continue;\n';
-  if (i < 0 && FIN_SRC36.indexOf(L) < 0) return FIN_SRC36;
-  return (i > 0 && j > i && FIN_SRC36.split(L).length === 2) ? (FIN_SRC36.slice(0, i) + FIN_SRC36.slice(j)).replace(L, '') : '';
+  if (i < 0 && F.indexOf(L) < 0) return F;
+  return (i > 0 && j > i && F.split(L).length === 2) ? (F.slice(0, i) + F.slice(j)).replace(L, '') : '';
 })();
 const sha71 = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
 prova('6.71 P10 (AC3.2, guarda) — sem marca nova, nada muda: finRenovHistContados e finResumoMes dão o JSON idêntico ao da base (910b143, num sandbox novo) em todas as fichas das provas 6.36 e 6.44 e nas desta story', () => {
   igual(sha71(FIN_BASE671), '92070f0fed71379d', 'a conta da base, letra por letra');
   const ctxB = vm.createContext(makeSandbox()); vm.runInContext(FIN_BASE671, ctxB);
+  const ctxS8 = vm.createContext(makeSandbox()); vm.runInContext(FIN_SEM_S8P2, ctxS8);   // 6.73 (S8-P2): a conta de agora sem a S8-P2
   const fichas = [
     { renov: renov36() }, { renov: renov36({ ordemPet: 2 }) }, { renov: OUT644(), renov_hist: { a: hist644(Object.assign(JUL644(), { valor_plano_cent: 107700 }), 100) } },
     { renov: OUT644(), renov_hist: { a: hist644(JUL644(), 100), b: hist644(Object.assign(JUL644(), { inicio: '2026-04-05', fim: '2026-06-30' }), 50) } },
@@ -49344,7 +49375,14 @@ prova('6.71 P10 (AC3.2, guarda) — sem marca nova, nada muda: finRenovHistConta
     igual(JSON.stringify(ctx671.finRenovHistContados(f)), JSON.stringify(ctxB.finRenovHistContados(f)), 'finRenovHistContados, ficha ' + i);
     const cad = {}; cad['tâmara__viajante teste'] = Object.assign({ n: 'Tâmara', tutor: 'Viajante Teste', dias: ['seg'] }, f);
     ['2026-04', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12'].forEach((m) => {
-      igual(JSON.stringify(ctx671.finResumoMes(dados36(cad), m, { hoje: '2026-10-10' })), JSON.stringify(ctxB.finResumoMes(dados36(cad), m, { hoje: '2026-10-10' })), 'finResumoMes, ficha ' + i + ', ' + m);
+      // 6.73 (3ª rodada, S8-P2 — Adriana, 12/10/2026: «sim»). ANTES: a ficha 12 (inativa, Gold pago em 05/10) dava o mesmo JSON da base em todo
+      // mês (fora de todos). DEPOIS: ela continua em outubro, o mês em que pagou. Para a inativa, a base é comparada com a conta de agora SEM a
+      // S8-P2 (FIN_SEM_S8P2: o mesmo JSON), e a conta de agora dá a da base mais a linha de outubro, e nada mais. PORQUÊ: a decisão S8-P2.
+      const jb = JSON.stringify(ctxB.finResumoMes(dados36(cad), m, { hoje: '2026-10-10' }));
+      if (f.inativo !== 'Sim') { igual(JSON.stringify(ctx671.finResumoMes(dados36(cad), m, { hoje: '2026-10-10' })), jb, 'finResumoMes, ficha ' + i + ', ' + m); return; }
+      igual(JSON.stringify(ctxS8.finResumoMes(dados36(cad), m, { hoje: '2026-10-10' })), jb, 'finResumoMes sem a S8-P2, ficha ' + i + ', ' + m);
+      const A = JSON.parse(jb), N = JSON.parse(JSON.stringify(ctx671.finResumoMes(dados36(cad), m, { hoje: '2026-10-10' })));
+      igual([N.porFILHOt.map((o) => [o.valor, o.vigencia.inicio]), N.inadimplentes, N.semComoCalcular, A.porFILHOt.length], [m === '2026-10' ? [[107700, '2026-10-05']] : [], A.inadimplentes, A.semComoCalcular, 0], 'a inativa, ' + m);
     });
   });
 });
@@ -49730,15 +49768,20 @@ provaAsync('6.71 P28 (AC8.2) — a pergunta de inativar diz «Pela regra de hoje
     cena71([TAMARA()]);
     r71(`__zpq657=[false]; __ztq657=['mudou de cidade com a família'];`);
     await abre71("saidaInativar('botao')"); await esp71();
+    // 6.73 (3ª rodada, S8-P2 — Adriana, 12/10/2026: «sim»). ANTES: «Pela regra de hoje, quem sai não entra na conta do mês: Total dos planos do
+    // Day Care em outubro de 2026: R$ 1.077,00 → R$ 0,00 (pagamento de 05/10/2026).», e outubro R$ 0,00 depois de inativar (com a Pipoca,
+    // julho e outubro). DEPOIS: inativar não muda mês nenhum — «No Recebimentos, nada muda: quem sai continua contando no mês em que pagou.»,
+    // e outubro continua R$ 1.077,00 (a Pipoca, julho e outubro também). PORQUÊ: a S8-P2. A linha sem pagamento (o terceiro caso) não muda.
     const l = J71('__zp657')[0][1];
-    igual(l[l.length - 1], 'Pela regra de hoje, quem sai não entra na conta do mês: Total dos planos do Day Care em outubro de 2026: R$ 1.077,00 → R$ 0,00 (pagamento de 05/10/2026).');
-    igual([quadro71('2026-10'), ficha71().tipoSaida], [0, 'definitiva']);
-    // com a renovação de julho também: os dois meses
+    igual(l[l.length - 1], 'No Recebimentos, nada muda: quem sai continua contando no mês em que pagou.');
+    igual([quadro71('2026-10'), ficha71().tipoSaida, ficha71().inativo], [107700, 'definitiva', 'Sim']);
+    // com a renovação de julho também: os dois meses continuam
     cena71([PIPOCA()]);
     r71(`__zpq657=[true]; __ztq657=['viagem da família em outubro'];`);
     await abre71("saidaInativar('botao')"); await esp71();
     const l2 = J71('__zp657')[0][1];
-    igual(l2[l2.length - 1], 'Pela regra de hoje, quem sai não entra na conta do mês: Total dos planos do Day Care em julho de 2026: R$ 1.077,00 → R$ 0,00 (pagamento de 05/07/2026); Total dos planos do Day Care em outubro de 2026: R$ 1.077,00 → R$ 0,00 (pagamento de 05/10/2026).');
+    igual(l2[l2.length - 1], 'No Recebimentos, nada muda: quem sai continua contando no mês em que pagou.');
+    igual([quadro71('2026-07'), quadro71('2026-10'), ficha71().inativo], [107700, 107700, 'Sim']);
     // sem pagamento no período olhado: sem a linha
     cena71([TAMARA({ renov: { plano: '', inicio: '', fim: '', aulas: '' } })]);
     r71(`__zpq657=[true]; __ztq657=['viagem da família em outubro'];`);
@@ -49932,6 +49975,17 @@ prova('6.71 P34 (AC12, AC13, guarda) — a área protegida e o #v-daycare idênt
     recResumoDoMes: '10ddb8cf3b010782', recQuebra: '3029846b45eb8f19', corrAbrir: '208265cf2a0de416', corrConfirmar: 'a4a11ee0e87ee8b1', corrCartazHTML: 'ea386e50e8f29f5b',
     corrRegistro: '968f5e08727ea4e0', corrRastro: 'a3731be57d28c0c3', corrRiscadoHTML: '666f47261fa79fea', corrAssinar: 'd9821a379af1ac0d', corrBarrar: 'ccc7a375fd2f556d',
     motivoQuatroPalavras: '668d0e513bd2cb53', acaoNome: '6b107e97fadabe6f', acaoRotulo: 'b9e9d4d877637170' };
+  // 6.73 (AC9.1): o recResumoDoMes passa os descontos da tabela salva (descontosPlano(): os salvos em Configurações, ou os de
+  // fábrica) no lugar do DESC_PET_PLANO. Antes 10ddb8cf3b010782, depois b0c791901aff4252. Porquê: a tabela de planos salva tem de valer
+  // também no quadro «Recebimentos do mês». A guarda: a 6.73 P40 roda o texto da base e o de agora lado a lado — sem tabela salva,
+  // o mesmo JSON em 300 cadastros × 13 meses. As outras 39 funções desta lista continuam com o texto da base.
+  Object.assign(BASE, { recResumoDoMes: 'b0c791901aff4252' });
+  // 6.73, 3ª rodada. (1) S8-P2 (Adriana, 12/10/2026: «sim»): o finResumoMes conta quem saiu no mês em que pagou. Antes 7508ce9e42d74859,
+  // depois 84b64580835c2329. A guarda: a 6.73 P44 (o arquivo sem a S8-P2 é o publicado, letra por letra; sem ficha inativa, o mesmo JSON).
+  // (2) S8-P7 a P11 («só adriana»): o cartaz da 6.57 ganha o nível «adriana» (a senha da Adriana): corrConfirmar a4a11ee0e87ee8b1 →
+  // 269f582534fd389c e corrCartazHTML ea386e50e8f29f5b → 541eb6c5475599dc. A guarda: a 6.73 P46 roda o texto da base e o de agora lado a
+  // lado — em todo cartaz sem o nível «adriana», o mesmo HTML e o mesmo resultado. As outras 36 funções desta lista continuam com o da base.
+  Object.assign(BASE, { finResumoMes: '84b64580835c2329', corrConfirmar: '269f582534fd389c', corrCartazHTML: '541eb6c5475599dc' });
   const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = sha71(runN('String(' + n + ')')); });
   igual(agora, BASE, 'as funções que ficam');
   const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
@@ -49944,10 +49998,13 @@ prova('6.71 P34 (AC12, AC13, guarda) — a área protegida e o #v-daycare idênt
   // o finRenovHistContados de hoje = o da base + a linha da leitura (AC3.1), e nada mais
   const ctxB = vm.createContext(makeSandbox()); vm.runInContext(FIN_BASE671, ctxB);
   igual(sha71(String(ctxB.finRenovHistContados)), '2f56d73d50faa01b', 'o finRenovHistContados da base');
-  const fin = FIN_SRC36;
+  // 6.73 (3ª rodada, S8-P2): ANTES os textos travados eram procurados no arquivo de agora; DEPOIS, no arquivo sem a S8-P2 (FIN_SEM_S8P2, o
+  // publicado) — o «if (c.inativo === 'Sim') continue;» é exatamente o que a S8-P2 trocou, por decisão da Adriana. O ES5 é do arquivo de agora.
+  const fin = FIN_SEM_S8P2;
   ["    if (c.inativo === 'Sim') continue;                 /* saiu: não cobra */\n", '    valorMes = entra ? mensal * (meses || 1) : 0;\n', '        R.porServico.daycare.declarado += mensal * (meses || 1);\n',
     '    var entra = (finMesDe(r.inicio) === mes);\n'].forEach((t) => assert.ok(fin.indexOf(t) > 0, t));
-  assert.ok(!/\b(const|let)\s|=>/.test(fin.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), 'ES5');
+  ['    valorMes = entra ? mensal * (meses || 1) : 0;\n', '        R.porServico.daycare.declarado += mensal * (meses || 1);\n', '    var entra = (finMesDe(r.inicio) === mes);\n'].forEach((t) => assert.ok(FIN_SRC36.indexOf(t) > 0, t));
+  assert.ok(!/\b(const|let)\s|=>/.test(FIN_SRC36.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), 'ES5');
   // nenhuma função nova começa com ck ou pt (as 155 de sempre) e nenhuma declarada duas vezes
   const nomes = {}; for (const m of extractMainScript(src).matchAll(/(?:^|[\s;{}])(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)) nomes[m[1]] = (nomes[m[1]] || 0) + 1;
   igual(Object.keys(nomes).filter((k) => nomes[k] > 1), []);
@@ -49966,9 +50023,11 @@ provaAsync('6.71 P35 (AC1.2, AC4.1, AC6.6, AC8.2, risco 10) — o efeito mostrad
     igual(r71('finBRL(' + quadro71('2026-10') + ')'), m[2]);
     r71('__zpq657=[true]; __ztq657=["viagem da família em outubro"]; __zp657=[];');
     await abre71("saidaInativar('botao')"); await esp71();
+    // 6.73 (3ª rodada, S8-P2): ANTES a pergunta de inativar trazia «julho de 2026: A → B» e o quadro de julho dava B; DEPOIS inativar não muda
+    // mês nenhum: a pergunta diz «No Recebimentos, nada muda…» e o quadro de julho dá o mesmo número de antes de inativar. PORQUÊ: a S8-P2.
+    const jul0 = quadro71('2026-07');
     const l = J71('__zp657')[0][1].slice(-1)[0];
-    const n = /julho de 2026: (R\$ \d{1,3}(?:\.\d{3})*,\d{2}) → (R\$ \d{1,3}(?:\.\d{3})*,\d{2})/.exec(l);
-    igual(r71('finBRL(' + quadro71('2026-07') + ')'), n[2], l);
+    igual([l, quadro71('2026-07')], ['No Recebimentos, nada muda: quem sai continua contando no mês em que pagou.', jul0]);
   } finally { solta71(); }
 });
 // As travas por dentro que os defeitos plantados mostraram sem prova (o @dev, na implementação): cada uma é promessa de um AC já
@@ -50008,11 +50067,15 @@ provaAsync('6.71 P36 (AC1.4, AC1.2, AC2.2, AC2.4, AC2.5, AC6.4, AC9) — as trav
     await abre71(`planoReabrirLinhaAbrir('${idB}')`);
     igual([r71('CORR_ATUAL'), escCad71().length], [null, 0]);
     igual(za71('NÃO DÁ PARA REABRIR ESTE PLANO'), ['Biscoito não é Auluno agora: toque em «Auluno» na Categoria antes de reabrir o plano.', 'Nada foi gravado.']);
-    // o FILHOt inativo: o cartaz do plano atual não promete queda no Recebimentos (AC1.2, a mesma regra do AC2.2)
+    // o FILHOt inativo. 6.73 (3ª rodada, S8-P2 — Adriana, 12/10/2026: «sim»). ANTES: o cartaz não prometia queda («Biscoito está inativo:
+    // pela regra de hoje, este pagamento já não entra no Recebimentos. …»). DEPOIS: o inativo continua no mês em que pagou, e o cartaz
+    // mostra a queda de verdade, pela mesma conta do ativo («… sai da conta — Total dos planos do Day Care em outubro de 2026: R$ 1.077,00 →
+    // R$ 0,00.»), igual ao quadro depois de anular. PORQUÊ: a S8-P2.
     cena71([{ n: 'Biscoito', tutor: 'Clara Teste', ex: Object.assign({ dias: ['seg'], renov: GOLD71() }, SAIDA71) }]);
+    igual(quadro71('2026-10'), 107700);
     await abre71('planoAnularAtualAbrir()');
     const ci = cartaz71();
-    assert.ok(ci.indexOf('Biscoito está inativo: pela regra de hoje, este pagamento já não entra no Recebimentos. A anulação fica registrada para quando a regra mudar.') >= 0 && !/sai do Recebimentos/.test(ci), ci);
+    assert.ok(ci.indexOf('O pagamento de 05/10/2026 (Gold · trimestral · 1x, R$ 1.077,00) sai da conta — Total dos planos do Day Care em outubro de 2026: R$ 1.077,00 → R$ 0,00.') >= 0 && ci.indexOf('regra de hoje') < 0, ci);
     r71('corrFechar()');
     // «Voltar o plano que saiu» só quando a linha mais nova é a «virou» da categoria de agora (AC6.4): aqui é uma renovação
     cena71([TAMARA({ categoria: 'morador', renov: { plano: 'morador', inicio: '', fim: '', mesRenov: '', aulas: '', ordemPet: 1 }, renov_hist: { h1: H71(JUL71(), 300) } })]);
@@ -50077,7 +50140,9 @@ provaAsync('6.71 P37 (AC1.2, AC8.2, REQ-001) — o total do efeito tem nome: «T
     r71('corrFechar()');
     r71('__zpq657=[true]; __ztq657=["viagem da família em outubro"]; __zp657=[];');
     await abre71("saidaInativar('botao')"); await esp71();
-    igual(J71('__zp657')[0][1].slice(-1)[0], 'Pela regra de hoje, quem sai não entra na conta do mês: Biscoito em outubro de 2026: R$ 1.077,00 → R$ 0,00 (pagamento de 05/10/2026).');
+    // 6.73 (3ª rodada, S8-P2): ANTES «Pela regra de hoje, quem sai não entra na conta do mês: Biscoito em outubro de 2026: R$ 1.077,00 → R$ 0,00
+    // (pagamento de 05/10/2026).»; DEPOIS inativar não muda mês nenhum, com ou sem a carteira inteira. PORQUÊ: a S8-P2.
+    igual(J71('__zp657')[0][1].slice(-1)[0], 'No Recebimentos, nada muda: quem sai continua contando no mês em que pagou.');
     r71('CARTEIRA_CARREGADA=true;');
   } finally { solta71(); }
 });
@@ -50415,7 +50480,9 @@ provaAsync('6.71 QA671-10 (AC8.3, AC8.4) — a saída, a volta e o desfazer da v
     const g = ficha71();
     igual([g.inativo, g.dataSaida, g.motivoSaida, g.tipoSaida, g.saidas.length, !!g.saidas[0].desfeita], ['Sim', '08/10/2026', 'viagem da família em outubro', 'pausa', 1, true]);
     igual(sai(), ['Tâmara|8']);
-    igual(quadro71('2026-10'), 0, 'inativa de novo: pela regra de hoje, fora da conta');
+    // 6.73 (3ª rodada, S8-P2): ANTES «inativa de novo: pela regra de hoje, fora da conta» (outubro R$ 0,00); DEPOIS a inativa continua no mês
+    // em que pagou (outubro R$ 1.077,00). PORQUÊ: a S8-P2 (Adriana, 12/10/2026).
+    igual(quadro71('2026-10'), 107700, 'inativa de novo: continua no mês em que pagou (S8-P2)');
     r71('__za657=[];');
     await abre71('saidaDesfazerVolta()'); await esp71();
     assert.ok(titulos71().indexOf('NÃO HÁ VOLTA PARA DESFAZER') >= 0, JSON.stringify(titulos71()));
@@ -51188,6 +51255,13 @@ provaAsync('6.71 QA re-gate 3 · QA671S-01 (REQ-003) — «no Recebimentos» só
         const antes = QSCARDS();
         const txt = await faz();
         const depois = QSCARDS();
+        // 6.73 (3ª rodada, S8-P2): ANTES inativar mudava outubro (o nome do total seguia a mesma régua); DEPOIS inativar não muda mês nenhum
+        // — a pergunta diz «No Recebimentos, nada muda…», sem total, e o quadro antes e depois é o mesmo. PORQUÊ: a S8-P2 (Adriana, 12/10/2026).
+        if (nome === 'inativar') {
+          assert.ok(txt.indexOf('No Recebimentos, nada muda: quem sai continua contando no mês em que pagou.') >= 0 && !/Total d/.test(txt), txt);
+          igual(depois, antes, 'inativar: o quadro não muda');
+          casos.push(nome + ':nada muda'); continue;
+        }
         const ef = QSCONFERE(txt, antes, depois, nome + ' ' + mF + '/' + mA);
         const esperado = (mF < 60000 && mA < 60000) ? 'quadro' : 'planos';
         assert.ok(Object.keys(ef[esperado]).indexOf('2026-10') >= 0 && Object.keys(ef[esperado === 'quadro' ? 'planos' : 'quadro']).indexOf('2026-10') < 0, nome + ' ' + mF + '/' + mA + ': o nome de outubro devia ser ' + esperado + ' — ' + txt);
@@ -57082,8 +57156,13 @@ provaAsync('6.76 × publicadas · todas as portas — na junção, as 63 portas 
     const m = /^\s*(?:async\s+)?function\s+([\w$]+)\s*\(/.exec(l); if (m) fn = m[1];
     ['corrAssinar', 'senhaQuem', 'orcQuemPelaSenha'].forEach((n) => { if (new RegExp('\\b' + n + '\\(').test(l) && !new RegExp('function ' + n + '\\(').test(l)) (chama[n] = chama[n] || new Set()).add(fn); });
   });
+  // 6.73 × 6.76 (a junção; 4ª rodada da 6.73). ANTES: a senhaQuem chamada só pela corrAssinar, pela orcCancelar e pela orcSalvarEdicao.
+  // DEPOIS: também pela corrSenhaDaAdriana (6.73, S8-P7 a P11, «só adriana»), que no cartaz roda DEPOIS da corrAssinar e só pode recusar:
+  // a régua única decide primeiro (a provisória, a do código já trocada, a do código sem o banco, a desativada e a de fábrica não são a
+  // Adriana) e só então a identidade fixa (souAdriana). PORQUÊ: a decisão da Adriana de 12/10/2026 e o pedido da junção (a régua da
+  // Adriana pela senhaQuem). A prova, antes da troca: a 6.73 P47 e as 6.73 × 6.76 · J1 e J2 (a régua de verdade, sem dublê).
   igual([[...chama.corrAssinar].sort(), [...chama.senhaQuem].sort(), [...chama.orcQuemPelaSenha].sort()],
-    [['corrConfirmar', 'enganoAssinar', 'hospAssinarPorSenha', 'sfConfirmar'], ['corrAssinar', 'orcCancelar', 'orcSalvarEdicao'], ['corrAssinar', 'senhaQuem']], 'a régua tem só estas portas');
+    [['corrConfirmar', 'enganoAssinar', 'hospAssinarPorSenha', 'sfConfirmar'], ['corrAssinar', 'corrSenhaDaAdriana', 'orcCancelar', 'orcSalvarEdicao'], ['corrAssinar', 'senhaQuem']], 'a régua tem só estas portas');
   assert.ok(run('String(corrAssinar)').indexOf("q=(typeof senhaQuem==='function')?senhaQuem(s):((typeof orcQuemPelaSenha==='function')?orcQuemPelaSenha(s):null)") >= 0, 'na corrAssinar, o orcQuemPelaSenha só sem a senhaQuem');
   // ---- as portas do cartaz: toda função do app cujo texto chama o corrAbrir, em qualquer forma — corrAbrir({…}), corrAbrir(op),
   // return corrAbrir(op).then(…) —, lida no app recém-carregado (sem os dublês das provas), sem os comentários.
@@ -57122,9 +57201,21 @@ provaAsync('6.76 × publicadas · todas as portas — na junção, as 63 portas 
   igual([PUB63.length, new Set(PUB63).size], [63, 63]);
   igual([DA667.length, new Set(DA667).size, DA667.filter((n) => PUB63.concat(DA660E661, DA676).includes(n))], [16, 16, []], 'as 16 da 6.67, nenhuma repetida');
   igual(PUB63.filter((n) => !abre.has(n)), [], 'as 63 portas das stories publicadas abrem o cartaz da 6.57');
-  igual([...abre].sort(), PUB63.concat(DA660E661, DA676, DA667).sort(), 'as 99 portas do cartaz (uma porta nova, ou uma que deixou de abrir o cartaz, aparece aqui)');
+  // 6.73 × a ponta do #15 (0c9ed0d: a 6.67 sobre a 6.76; 5ª rodada da 6.73). ANTES: 99 portas (as 63 publicadas, 11 da 6.60 e da 6.61, 9
+  // da 6.76 e as 16 da 6.67). DEPOIS: 107, com as 8 da 6.73 (DA673). PORQUÊ: as portas novas da 6.73, cada uma provada na régua única antes
+  // de entrar na lista (6.73 × 6.76 · J2: a provisória, a do código sem o banco e a desativada recusadas, cada uma com a sua frase, nada
+  // gravado, e a senha certa assina; as cinco «só a Adriana» também na J1, com as senhas fixas do app e a senha trocada de verdade). Na
+  // junção com a 3d6910b (4ª rodada da 6.73), a mesma troca levava as 83 a 91.
+  const DA673 = ['renovCobrancaDesfazerAbrir', 'renovNaoRenovaAbrir', 'renovNaoRenovaReabrirAbrir', 'recFecharAbrir', 'recReabrirAbrir', 'recAjusteAbrir', 'recAjusteMarcar', 'tabelaPlanosAbrir'];
+  igual([DA673.length, new Set(DA673).size, DA673.filter((n) => PUB63.concat(DA660E661, DA676, DA667).includes(n))], [8, 8, []], 'as 8 da 6.73, nenhuma repetida');
+  igual([...abre].sort(), PUB63.concat(DA660E661, DA676, DA667, DA673).sort(), 'as 107 portas do cartaz: as 99 da ponta e as 8 da 6.73 (uma porta nova, ou uma que deixou de abrir o cartaz, aparece aqui)');
   const cc = run('String(corrConfirmar)');
-  assert.ok(cc.indexOf("corrAssinar(senha, corrNivelSenha(op), CORR_OQUE_ASSINA[op.acao]||'isto', {tela:gestao?'':op.telaConcedida, nome:gestao?'':op.assinaNome})") >= 0, 'o cartaz assina só pela corrAssinar');
+  // 6.73 × 6.76 (a junção). ANTES: «corrAssinar(senha, corrNivelSenha(op), CORR_OQUE_ASSINA[op.acao]||'isto', {tela:gestao?'':op.telaConcedida,
+  // nome:gestao?'':op.assinaNome})». DEPOIS: a mesma chamada, uma só; no nível «adriana» (6.73) o 4º argumento leva só a frase de quem não
+  // tem o papel («Só a Adriana …: essa senha é de …»), e nos outros níveis é o mesmo objeto de antes. PORQUÊ: a S8-P7 a P11 («só adriana»).
+  // A prova de que os outros níveis não mudaram: a 6.73 P46 (o corrConfirmar de agora × o da base: o mesmo aviso, passo e registro em 48
+  // combinações) e a parte dinâmica logo abaixo (a porta da Gestão no cartaz de verdade, em toda capacidade da PERM e com cada pessoa).
+  assert.ok(cc.indexOf("corrAssinar(senha, corrNivelSenha(op), CORR_OQUE_ASSINA[op.acao]||'isto', adriana?{semPapel:function(n){ return corrSoAdrianaFrase(op, n); }}\n      :{tela:gestao?'':op.telaConcedida, nome:gestao?'':op.assinaNome})") >= 0, 'o cartaz assina só pela corrAssinar');
   igual((cc.match(/corrAssinar\(/g) || []).length, 1, 'uma chamada só');
   // ---- o dinâmico: uma pessoa ativa de cada papel e a desativada. Só a Monitor tem a tela «hoje» concedida, e ela é quem registrou.
   // Junção da 6.67 sobre a 3d6910b (12/out/2026): antes, 8 papéis; depois, 9, com a Conferência ('conferencia', o papel do aparelho da
@@ -57265,13 +57356,20 @@ provaAsync('6.76 × publicadas · QA676J-01 (estático) — todas as portas do c
     'cfOcorrCorrigirAbrir', 'cfOcorrEnganoAbrir', 'cfOcorrDesfazerAbrir', 'ocorrHospReabrirAbrir', 'cfReabrirAbrir', 'coBolsaReabrirAbrir', 'coCheckoutReabrirAbrir',
     'coPontoCorrigirAbrir', 'coPontoEstornarAbrir'];
   igual([DA667.length, new Set(DA667).size], [16, 16]);
-  igual([...abre].sort(), PUB41.concat(FORA18, OUTRAS15, DA676, DA667).sort(), 'as portas do cartaz na junção (99)');
+  // 6.73 × a ponta do #15 (5ª rodada da 6.73). ANTES: 99 portas (DA667 incluída). DEPOIS: 107, com as 8 da 6.73. PORQUÊ e a prova: como
+  // na «6.76 × publicadas · todas as portas» (6.73 × 6.76 · J1 e J2). Na junção com a 3d6910b (4ª rodada), 83 → 91.
+  const DA673J = ['renovCobrancaDesfazerAbrir', 'renovNaoRenovaAbrir', 'renovNaoRenovaReabrirAbrir', 'recFecharAbrir', 'recReabrirAbrir', 'recAjusteAbrir', 'recAjusteMarcar', 'tabelaPlanosAbrir'];
+  igual([...abre].sort(), PUB41.concat(FORA18, OUTRAS15, DA676, DA667, DA673J).sort(), 'as portas do cartaz na junção (99 + as 8 da 6.73 = 107)');
   // o cartaz: a assinatura só pelo corrAssinar, sempre (nenhum campo do op pula a senha)
   const cc = run('String(corrConfirmar)');
   igual([(cc.match(/corrAssinar\(/g) || []).length, /op\.(semSenha|pulaSenha|senhaOk|assinado)\b/.test(cc), cc.indexOf('if(!ass.ok){') > 0 && cc.indexOf('if(!ass.ok){') < cc.indexOf('op.gravar')], [1, false, true]);
   // a régua de senha: só as funções de antes, as da 6.76 e as duas do orçamento (nenhuma das publicadas)
   // (as 25 de hoje: 9 de antes, 14 da 6.76 e as 2 do orçamento; nenhuma só das publicadas — conferido por fora, função a função)
-  igual([...regua].filter((n) => n !== '(topo)').sort(), ["aparelhoAutorizarJunto", "aparelhoSenhaRecusa", "corrAssinar", "corrConfirmar", "corrPaginasDaPessoa", "destrancarApp", "doLogin",
+  // 6.73 × 6.76 (a junção; 4ª rodada da 6.73). ANTES: as 25. DEPOIS: 27, com as duas da 6.73: a corrSenhaDaAdriana (a régua única
+  // primeiro, pela senhaQuem; depois a identidade fixa: a senha guardada da identidade com souAdriana, ou a do código dela ainda não
+  // trocada) e a corrAdrianaPerfil (só lê o nome e o papel da identidade fixa no mapa das senhas: não confere senha nenhuma). PORQUÊ: a
+  // S8-P7 a P11 («só adriana»). A prova: a 6.73 P47 e a 6.73 × 6.76 · J1 (sem dublê).
+  igual([...regua].filter((n) => n !== '(topo)').sort(), ["aparelhoAutorizarJunto", "aparelhoSenhaRecusa", "corrAdrianaPerfil", "corrAssinar", "corrConfirmar", "corrPaginasDaPessoa", "corrSenhaDaAdriana", "destrancarApp", "doLogin",
     "enganoAssinar", "hospAssinarPorSenha", "orcCancelar", "orcQuemPelaSenha", "orcSalvarEdicao", "renderSenhas", "senhaFixaPelaGuardada", "senhaGuardadaConfere", "senhaPerfil",
     "senhaProvisoriaAinda", "senhaQuem", "senhasRuntime", "sfConfirmar", "timeIdDado", "timeReativarAbrir", "timeReativarGravar", "timeSenhasRecusa", "zSha256Hex"], 'quem tem régua de senha');
 }));
@@ -60079,6 +60177,2802 @@ provaAsync('6.87 QA · QA687R2-A06 (AC2.5; REL-003 do re-gate) — a baixa dada 
   });
 });
 }
+// ================================================================== 6.73 — Planos e recebimentos, parte 2 (S8, parte 2)
+{
+console.log('\n6.73 — Planos e recebimentos, parte 2: «Já cobrei» e «Não renova» na Renovação de planos, «Fechar o mês» com quem e quando e o ajuste com motivo no quadro «Recebimentos do mês», e a tabela de planos em Configurações sem mudar mês fechado');
+// "O app está engessado, tudo preciso entrar no Claude para alterar." (Adriana, 09/out/2026). E, sobre o fechamento do plano (6.44):
+// "Teria que somar quanto a gente recebeu do plano no mês para poder finalizar os recebimentos do mês, o que foi fechado, para a
+// gente bater com o outro sistema." Tudo INVENTADO: tutores «Teste» (Biscoito, Pipoca, Nina, Toddy, Tâmara, Pingo, Quindim, Bento).
+// Relógio FIXO no sábado, 10/10/2026, 10:00. Um sandbox PRÓPRIO, na ordem da página (o financeiro-logica.js antes do script grande),
+// com o banco de mentira da 6.57 (ARMA657: conta as gravações, sabe recusar e ficar sem responder) no dia 10/10.
+const ctx673 = vm.createContext(makeSandbox());
+vm.runInContext(FIN_SRC36, ctx673, { filename: 'financeiro-logica.js (6.73)' });
+vm.runInContext(extractMainScript(fs.readFileSync(APP, 'utf8')), ctx673, { filename: 'index.html#script (6.73)', timeout: 15000 });
+const r73 = (c) => vm.runInContext(c, ctx673);
+const J73 = (c) => { const s = r73('JSON.stringify(' + c + ')'); return s === undefined ? undefined : JSON.parse(s); };
+r73('var __RD657=Date; _repVeioTs=Date.now();');
+const T673 = new Date(2026, 9, 10, 10, 0, 0).getTime();
+const ARMA673 = ARMA657.split(String(T657(9, 10, 0))).join(String(T673)).split("'2026-10-09'").join("'2026-10-10'");
+// A espera só por microtarefas (o molde do espera668): o banco de mentira da 6.57 responde por Promise, e nada aqui precisa
+// de uma volta do relógio do Node. Sem volta do relógio, a cauda de rejeições sem dono das provas antigas no sandbox principal
+// (37: «DB.ref(...).push is not a function» em medTgGuardar e «Cannot read properties of null (reading 'ref')»; nascem nas linhas
+// 3776–4259, QA36 a QA49, no bloco 6.56 e no 6.52 — QA da 6.73, DOC-001) não aparece no meio destas provas: ela só aparece na
+// primeira volta do relógio depois delas, e derrubava a rodada. Registrado na story (Dev Agent Record).
+const esp73 = async (n) => { for (let i = 0; i < (n || 6) * 500; i++) await Promise.resolve(); };
+const MOT73 = 'conferido com o sistema da loja';
+const GESTORA73 = { nome: 'Gestora Teste', role: 'gestao' };
+const GOLD73 = (ini, extra) => Object.assign({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: ini, fim: '2026-09-30', mesRenov: 'setembro de 2026', quando: ini }, extra || {});
+const BISCOITO73 = () => ({ n: 'Biscoito', tutor: 'Clara Teste', ex: { dias: ['seg'], renov: GOLD73('2026-07-05') } });
+const PIPOCA73 = () => ({ n: 'Pipoca', tutor: 'Rui Teste', ex: { dias: ['seg'], sexo: 'Fêmea', renov: GOLD73('2026-07-08', { valor_plano_cent: 107700, mensalidade_cent: 35900 }) } });
+const NINA73 = () => ({ n: 'Nina', tutor: 'Sol Teste', ex: { dias: ['ter'], sexo: 'Fêmea', renov: { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-04-05', fim: '2026-06-30', quando: '2026-04-05', valor_plano_cent: 107700 } } });
+const TODDY73 = () => ({ n: 'Toddy', tutor: 'Ana Teste', ex: { dias: ['qua'], renov: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-09-05', fim: '2026-10-15', quando: '2026-09-05', valor_plano_cent: 38700 } } });
+const PINGO73 = () => ({ n: 'Pingo', tutor: 'Lia Teste', ex: { dias: ['sex'], renov: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-09-12', fim: '2026-10-12', quando: '2026-09-12', valor_plano_cent: 38700 } } });
+const TAMARA73 = () => ({ n: 'Tâmara', tutor: 'Viajante Teste', ex: { dias: ['seg'], sexo: 'Fêmea', categoria: 'morador', renov: { plano: 'morador' } } });
+const EMDIA73 = () => ({ n: 'Fred', tutor: 'Rui Teste', ex: { dias: ['seg'], renov: { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31', quando: '2026-10-05', valor_plano_cent: 107700 } } });
+// a cena: as fichas no banco de mentira e no cadastro em memória, a lista do app, quem está no aparelho e os nós do quadro limpos
+const cena73 = (fichas, op) => {
+  ctx673.__f73 = JSON.parse(JSON.stringify(fichas)); ctx673.__o73 = op || {};
+  r73(`__db657={}; PELUDINHOS=[]; pelCadCache={}; IRMAOS_CACHE=__o73.irmaos||{}; CARTEIRA_CARREGADA=true; CORR_ATUAL=null; RENOV_COBRAR=null;
+    REC_FONTES={quando:0, orc:null, irm:null}; REC_FECH={ok:null, v:null, quando:0, vivo:false}; REC_CORPO={}; REC_MES=''; REC_LISTA_ABERTA=false;
+    REC_AVULSO={mes:'', quando:0, lendo:false, ok:false, total_cent:0, n:0, semValor:0, futuros:0};
+    planosCfg=null; descontosCfg=null; TABELA_PLANOS={pedida:false, chegou:false, erro:null, v:null}; TABELA_HIST=null; CFG_PLANOS_DESENHO=null; renovFiltro='cobrar';
+    __f73.forEach(function(f){ var p=Object.assign({n:f.n, tutor:f.tutor, raca:'SRD'}, f.fabrica||{}); PELUDINHOS.push(p);
+      __put657('daycare/cadastro/'+pelKey(p), Object.assign({n:f.n, tutor:f.tutor}, f.ex)); pelCadCache[pelKey(p)]=__get657('daycare/cadastro/'+pelKey(p)); });
+    if(__o73.orc) __put657('auaulandia/orcamentos', __o73.orc);
+    if(__o73.irmaos) __put657('daycare/irmaos', __o73.irmaos);
+    pelAtual=PELUDINHOS[0]; pelAtualIdx=0;
+    document.body.dataset.role=(__o73.login||{}).role||'consultora'; __login657=__o73.login||{nome:'Bia Consultora Teste', role:'consultora'};
+    __esc657=[]; __au657=[]; __za657=[]; __zp657=[]; __zt657=[]; __al657=[]; __zpq657=[]; __ztq657=[]; __recusa657=null; __pendura657=null; __pend657=[]; __tm657=[]; __ls657={};
+    __el657={}; __xls673=[]; relEntregar=function(n, h){ __xls673.push({n:n, h:h}); return true; };`);
+};
+// 3ª rodada (S8-P7, P8, P9 e P11 — Adriana, 12/10/2026: «só adriana»): fechar e reabrir o mês, o ajuste e a tabela assinam só com a
+// senha da Adriana. Na cena, a identidade fixa da Adriana (souAdriana, como a '1101' do app) é a «Adriana Teste», com a senha
+// SENHA_ADR73; a SENHA657 («Gestora Teste», papel gestao) é a outra senha da Gestão (a da Márcia, no app), que não assina estas quatro.
+const SENHA_ADR73 = 's-adriana73';
+const arma73 = () => r73(ARMA673 + `; __sr673=senhasRuntime; senhasRuntime=function(){ var m=__sr673()||{}; m['${SENHA_ADR73}']={role:'gestao', nome:'Adriana Teste', souAdriana:true}; return m; };
+  CORR_ATUAL=null; RENOV_COBRAR=null; __bkRel673=relEntregar;`);
+const solta73 = () => r73(SOLTA657 + `; CORR_ATUAL=null; RENOV_COBRAR=null; relEntregar=__bkRel673; REC_FECH={ok:null, v:null, quando:0, vivo:false}; REC_CORPO={};
+  REC_FONTES={quando:0, orc:null, irm:null}; REC_MES=''; descontosCfg=null; TABELA_PLANOS={pedida:false, chegou:false, erro:null, v:null}; TABELA_HIST=null; renovFiltro='cobrar';`);
+const K73 = (i) => r73(`pelKey(PELUDINHOS[${i || 0}])`);
+const ficha73 = (i) => J73(`__get657('daycare/cadastro/'+pelKey(PELUDINHOS[${i || 0}]))`);
+const contatos73 = (i) => { const c = (ficha73(i) || {}).renov_contatos || {}; return Object.keys(c).sort().map((k) => Object.assign({ _id: k }, c[k])); };
+const escs73 = () => J73('__esc657');
+const escCad73 = () => escs73().filter((e) => /^daycare\/cadastro/.test(e[1]));
+const escRec73 = () => escs73().filter((e) => e[0] === 'update' && e[1] === '' && (e[2] || []).some((p) => /^daycare\/(recebimentos|config\/tabela-planos)/.test(p)));
+const aud73 = (acao) => J73(`__au657.filter(function(a){ return a[0]===${JSON.stringify(acao)}; })`);
+const titulos73 = () => J73('__za657').map((z) => z[0]);
+const za73 = (t) => { const z = J73('__za657').filter((x) => x[0] === t); return z.length ? z[z.length - 1][1] : null; };
+const txt73 = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&middot;/g, '·').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
+const cartaz73 = () => txt73(r73('CORR_ATUAL?corrCartazHTML(CORR_ATUAL):""'));
+const passo73 = () => r73('CORR_ATUAL?CORR_ATUAL.passo:""');
+const aviso73 = () => r73('CORR_ATUAL?CORR_ATUAL.aviso:""');
+const toca73 = async (senha, motivo) => { r73(`corrToque('confirmar', {motivo:${JSON.stringify(motivo || MOT73)}, senha:${JSON.stringify(senha)}})`); await esp73(); };
+const abre73 = async (chamada) => { r73('__a73Res=undefined; __a73=Promise.resolve(' + chamada + ').then(function(x){ __a73Res=x; return x; });'); await esp73(); };
+const res73 = () => J73('__a73Res');
+const quadro73 = (mes) => r73(`recQuebra(recResumoDoMes('${mes}')).total`);
+// as fontes do quadro (os orçamentos, os irmãos) e a terceira (os fechamentos e os ajustes), entregues como o Dashboard da Adriana entrega
+const entrega73 = () => r73(`recGuardarFontes(__get657('auaulandia/orcamentos')||{}, __get657('daycare/irmaos')||{}); recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')||{}});
+  REC_AVULSO={mes:REC_MES||recMesDeHoje(), quando:Date.now(), lendo:false, ok:true, total_cent:0, n:0, semValor:0, futuros:0};`);
+const card73 = (mes) => { if (mes !== undefined) r73(`REC_MES=${JSON.stringify(mes)};`); return r73('recCardHTML()'); };
+const total73 = (h) => ((h.match(/rec-val rec-val-total">([^<]+)</) || [])[1] || '');
+const totalLista73 = (h) => ((h.match(/rec-lista-total">([^<]+)</) || [])[1] || '');
+const renov73 = (filtro) => {
+  r73(`renovFiltro=${JSON.stringify(filtro || 'cobrar')}; __el657.renovLista={innerHTML:''}; __el657.renovFiltros={innerHTML:''}; __el657.renovTipoTit={style:{}, innerHTML:''}; renderRenovacao();`);
+  return { lista: r73('__el657.renovLista.innerHTML'), filtros: txt73(r73('__el657.renovFiltros.innerHTML')).trim() };
+};
+const nomesLista73 = (h) => (h.match(/<div class="renov-nome">[^<]+/g) || []).map((x) => x.replace(/<div class="renov-nome">/, '').trim());
+// o «Já cobrei» respondido (a pergunta na tela, sem senha)
+const cobra73 = async (i, por, resposta, nota) => { await abre73(`renovCobrarAbrir(${i})`); r73(`renovCobrarToque('registrar', {por:${JSON.stringify(por)}, resposta:${JSON.stringify(resposta)}, nota:${JSON.stringify(nota || '')}})`); await esp73(); };
+// o «Não renova» assinado pela própria pessoa (a Consultora Bia)
+const naoRenova73 = async (i, disse) => { await abre73(`renovNaoRenovaAbrir(${i})`); await toca73('s-bia', disse || 'o tutor disse que vai se mudar de cidade'); r73('corrFechar()'); };
+const sha73 = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
+// o «Fechar julho de 2026» inteiro, assinado pela Gestão
+const fecha73 = async (mes) => { await abre73(`recFecharAbrir('${mes}')`); await toca73(SENHA_ADR73); const p = passo73(); r73('corrFechar()'); return p; };
+
+// ---- AC1 — «Já cobrei» na Renovação de planos e na aba Plano --------------------------------------------------
+provaAsync('6.73 P1 (AC1.1) — «Já cobrei» e «Não renova» em cada linha de «a cobrar agora», com 44 px, chamados pelo FILHOt (o índice do PELUDINHOS); o toque no botão para o toque (não abre a ficha); o resto da linha abre como hoje. Base: nenhum botão (SONDA673-G06a)', async () => {
+  arma73();
+  try {
+    cena73([NINA73(), TODDY73()]);
+    const R = renov73('cobrar');
+    const linhas = R.lista.split('<div class="renov-item"').slice(1);
+    igual(linhas.length, 2);
+    linhas.forEach((l, i) => {
+      assert.ok(l.indexOf(' onclick="abrirPeludinhoRenov(' + i + ')">') === 0, 'a linha inteira abre a ficha: ' + l.slice(0, 80));
+      assert.ok(new RegExp('min-height:44px[^"]*" onclick="event\\.stopPropagation\\(\\);renovCobrarAbrir\\(' + i + '\\)">Já cobrei</button>').test(l), l);
+      assert.ok(new RegExp('min-height:44px[^"]*" onclick="event\\.stopPropagation\\(\\);renovNaoRenovaAbrir\\(' + i + '\\)">Não renova</button>').test(l), l);
+    });
+    // o toque no botão: o evento para antes de qualquer outra coisa, e quem abre é a pergunta (não a ficha)
+    const oc = (linhas[1].match(/onclick="(event\.stopPropagation\(\);renovCobrarAbrir\(1\))"/) || [])[1];
+    r73(`__parou73=0; __ab657=[]; (new Function('event', ${JSON.stringify(oc)}))({stopPropagation:function(){ __parou73++; }});`);
+    await esp73();
+    igual([r73('__parou73'), J73('__ab657'), r73('RENOV_COBRAR?RENOV_COBRAR.nome:""')], [1, [], 'Toddy']);
+    r73('renovCobrarToque("cancelar")');
+    // a posição na lista não é o FILHOt: com um FILHOt em dia antes e a lista na ordem do vencimento, o botão leva o índice do
+    // PELUDINHOS (o mesmo que a mesa da Amanda, 6.79, vai passar), e o toque abre o FILHOt da linha
+    cena73([EMDIA73(), TODDY73(), PINGO73()]);
+    const R2 = renov73('cobrar'), L2 = R2.lista.split('<div class="renov-item"').slice(1);
+    igual(nomesLista73(R2.lista), ['Pingo', 'Toddy']);
+    igual(L2.map((l) => [(l.match(/abrirPeludinhoRenov\((\d+)\)/) || [])[1], (l.match(/renovCobrarAbrir\((\d+)\)/) || [])[1], (l.match(/renovNaoRenovaAbrir\((\d+)\)/) || [])[1]]), [['2', '2', '2'], ['1', '1', '1']]);
+    const oc2 = (L2[1].match(/onclick="(event\.stopPropagation\(\);renovCobrarAbrir\(\d+\))"/) || [])[1];
+    r73(`(new Function('event', ${JSON.stringify(oc2)}))({stopPropagation:function(){}});`); await esp73();
+    igual(r73('RENOV_COBRAR?RENOV_COBRAR.nome:""'), 'Toddy'); r73('renovCobrarToque("cancelar")');
+    // o Encãotador não vê os botões (quem mexe no plano)
+    r73(`document.body.dataset.role='monitor';`);
+    const M = renov73('cobrar');
+    igual([M.lista.indexOf('Já cobrei'), M.lista.indexOf('Não renova')], [-1, -1]);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P2 (AC1.2, AC1.3) — a pergunta na tela (como falou, o que respondeu, o que disse até 200 letras), sem senha; uma gravação pela ficha em renov_contatos com o ciclo; «Cobrança registrada» e o rastro só com o ok; o banco recusando: «A COBRANÇA NÃO FOI REGISTRADA» e «Nada mudou.»; sem resposta: «O BANCO AINDA NÃO CONFIRMOU»', async () => {
+  arma73();
+  try {
+    cena73([NINA73(), TODDY73()]);
+    await abre73('renovCobrarAbrir(1)');
+    const h = txt73(r73('renovCobrarHTML(RENOV_COBRAR)'));
+    assert.ok(h.indexOf('Já cobrei — Toddy') >= 0 && h.indexOf('Como você falou com o tutor?') >= 0 && h.indexOf('O que o tutor respondeu?') >= 0 && h.indexOf('O que o tutor disse (opcional, até 200 letras)') >= 0, h);
+    ['WhatsApp', 'Telefone', 'Pessoalmente', 'Ainda não respondeu', 'Vai renovar', 'Vai pensar', 'Não renova'].forEach((t) => assert.ok(h.indexOf(t) >= 0, t));
+    assert.ok(/maxlength="200"/.test(r73('renovCobrarHTML(RENOV_COBRAR)')) && h.indexOf('senha') < 0, 'sem senha');
+    // sem escolher: a régua na própria tela, nada gravado
+    r73(`renovCobrarToque('registrar', {por:'', resposta:'vai_pensar', nota:''})`); await esp73();
+    assert.ok(/Escolha como você falou com o tutor/.test(r73('RENOV_COBRAR.aviso')));
+    r73(`renovCobrarToque('registrar', {por:'WhatsApp', resposta:'', nota:''})`); await esp73();
+    assert.ok(/Escolha o que o tutor respondeu/.test(r73('RENOV_COBRAR.aviso')));
+    r73(`renovCobrarToque('registrar', {por:'WhatsApp', resposta:'vai_pensar', nota:'${'x'.repeat(201)}'})`); await esp73();
+    assert.ok(/passa de 200 letras/.test(r73('RENOV_COBRAR.aviso')));
+    igual(escCad73().length, 0);
+    r73(`renovCobrarToque('registrar', {por:'WhatsApp', resposta:'vai_pensar', nota:'vai ver com o marido'})`); await esp73();
+    const w = escCad73();
+    igual(w.length, 1, 'uma gravação só: ' + JSON.stringify(w));
+    assert.ok(/^daycare\/cadastro\/toddy__ana teste$/.test(w[0][1]) && w[0][2].length === 1 && /^renov_contatos\//.test(w[0][2][0]), JSON.stringify(w));
+    const c = contatos73(1);
+    igual(c.length, 1);
+    igual([c[0].acao, c[0].ciclo, c[0].plano, c[0].por, c[0].resposta, c[0].nota, c[0].ts, c[0].quem, c[0].papel, c[0].login],
+      ['cobrou', '2026-10-15', 'Silver', 'WhatsApp', 'vai_pensar', 'vai ver com o marido', T673, 'Bia Consultora Teste', 'consultora', 'Bia Consultora Teste']);
+    igual(za73('COBRANÇA REGISTRADA'), ['Toddy: Cobrado em 10/10 às 10:00 por Bia Consultora Teste (WhatsApp): vai pensar — «vai ver com o marido».']);
+    igual(aud73('renovacao-cobrada').length, 1);
+    assert.ok(/^Toddy — Cobrado em 10\/10 às 10:00 por Bia Consultora Teste \(WhatsApp\): vai pensar/.test(aud73('renovacao-cobrada')[0][1]), aud73('renovacao-cobrada')[0][1]);
+    igual(r73('RENOV_COBRAR'), null, 'a pergunta fechou');
+    // o banco recusa
+    cena73([NINA73(), TODDY73()]);
+    r73(`__recusa657='^daycare/cadastro';`);
+    await cobra73(1, 'Telefone', 'vai_renovar');
+    const z = za73('A COBRANÇA NÃO FOI REGISTRADA');
+    assert.ok(z && z.length === 2 && z[1] === 'Nada mudou.' && z[0].length > 10 && !/PERMISSION_DENIED/.test(z[0]), JSON.stringify(z));
+    igual([contatos73(1).length, aud73('renovacao-cobrada').length, titulos73().indexOf('COBRANÇA REGISTRADA')], [0, 0, -1]);
+    // sem resposta em 20 s, e o rastro só quando o banco confirmar
+    cena73([NINA73(), TODDY73()]);
+    r73(`__pendura657='^daycare/cadastro';`);
+    await cobra73(1, 'Pessoalmente', 'sem_resposta');
+    r73('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await esp73();
+    assert.ok(za73('O BANCO AINDA NÃO CONFIRMOU'), JSON.stringify(titulos73()));
+    igual([aud73('renovacao-cobrada').length, titulos73().indexOf('COBRANÇA REGISTRADA')], [0, -1]);
+    r73('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await esp73();
+    igual([aud73('renovacao-cobrada').length, contatos73(1).length], [1, 1], 'o banco confirmou depois: o rastro entra');
+  } finally { solta73(); }
+});
+provaAsync('6.73 P3 (AC1.4) — «a cobrar agora» em dois grupos: «Ainda não cobrados (N)» primeiro e «Já cobrados (N)» depois, cada um na ordem de hoje; a linha da última cobrança e «2 cobranças neste ciclo»; o número do botão «a cobrar agora» igual ao de antes da cobrança', async () => {
+  arma73();
+  try {
+    cena73([TODDY73(), NINA73(), PINGO73()]);
+    const A = renov73('cobrar');
+    igual(nomesLista73(A.lista), ['Nina', 'Pingo', 'Toddy'], 'a ordem de hoje: o vencido, depois quem vence antes');
+    assert.ok(/^3 a cobrar agora 0 em dia 0 sem plano 3 todos/.test(A.filtros), A.filtros);
+    assert.ok(txt73(A.lista).indexOf('Ainda não cobrados (3)') >= 0 && txt73(A.lista).indexOf('Já cobrados (0)') >= 0, txt73(A.lista).slice(0, 200));
+    await cobra73(2, 'WhatsApp', 'vai_pensar'); r73('__za657=[];');      // Pingo
+    await cobra73(0, 'Telefone', 'sem_resposta');                         // Toddy
+    const B = renov73('cobrar'), t = txt73(B.lista);
+    igual(nomesLista73(B.lista), ['Nina', 'Pingo', 'Toddy'], 'Nina em «Ainda não cobrados»; Pingo e Toddy em «Já cobrados», na ordem de hoje');
+    assert.ok(t.indexOf('Ainda não cobrados (1)') < t.indexOf('Nina') && t.indexOf('Nina') < t.indexOf('Já cobrados (2)') && t.indexOf('Já cobrados (2)') < t.indexOf('Pingo') && t.indexOf('Pingo') < t.indexOf('Toddy'), t);
+    assert.ok(t.indexOf('Cobrado em 10/10 às 10:00 por Bia Consultora Teste (WhatsApp): vai pensar') > t.indexOf('Pingo'), t);
+    assert.ok(t.indexOf('Cobrado em 10/10 às 10:00 por Bia Consultora Teste (Telefone): ainda não respondeu') > t.indexOf('Toddy'), t);
+    assert.ok(/^3 a cobrar agora 0 em dia 0 sem plano 3 todos/.test(B.filtros), 'o número do botão continua: ' + B.filtros);
+    await cobra73(0, 'Pessoalmente', 'vai_renovar');
+    const C = txt73(renov73('cobrar').lista);
+    assert.ok(C.indexOf('Cobrado em 10/10 às 10:00 por Bia Consultora Teste (Pessoalmente): vai renovar · 2 cobranças neste ciclo') > 0, C);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P4 (AC1.5) — o ciclo: o Confirmar de um plano novo tira a marca (o FILHOt sai de «a cobrar agora» como hoje); «Desfazer a última renovação» a devolve; as cobranças antigas ficam em «Cobranças da renovação (N)» na aba Plano, cada uma com o ciclo', async () => {
+  arma73();
+  try {
+    cena73([TODDY73(), NINA73()]);
+    await cobra73(0, 'WhatsApp', 'vai_renovar');
+    igual(J73('renovCobrancaDe(pelExtra(PELUDINHOS[0])).cobrancas.length'), 1);
+    // o Confirmar de um plano novo (o fim muda: 15/10 → 31/10)
+    r73(`document.body.dataset.role='consultora'; pelAtual=PELUDINHOS[0]; pelAtualIdx=0; renovRascunho={_k:pelKey(pelAtual), plano:'Silver', aulas:1, inicio:'2026-10-10'}; __zpq657=[true, true, true, true];`);
+    await abre73('confirmarRenovacao()'); await esp73();
+    igual(ficha73(0).renov.fim, '2026-10-31', 'o plano novo foi gravado');
+    const cob = J73('renovCobrancaDe(pelExtra(PELUDINHOS[0]))');
+    igual([cob.ciclo, cob.cobrancas.length, cob.todos.length], ['2026-10-31', 0, 1], 'a marca não vale para o ciclo novo; o registro continua');
+    igual(nomesLista73(renov73('cobrar').lista), ['Nina'], 'o Toddy saiu de «a cobrar agora» (em dia)');
+    const hp = txt73(r73('renovCobrancaFichaHTML(pelExtra(PELUDINHOS[0]), PELUDINHOS[0])'));
+    assert.ok(/Cobranças da renovação \(1\)/.test(hp) && hp.indexOf('Cobrado em 10/10 às 10:00 por Bia Consultora Teste (WhatsApp): vai renovar') >= 0 && hp.indexOf('ciclo que vence em 15/10/2026') >= 0, hp);
+    assert.ok(hp.indexOf('Cobrado em') === hp.lastIndexOf('Cobrado em'), 'a linha da última cobrança do ciclo novo não aparece (só no histórico)');
+    // «Desfazer a última renovação» (a Gestão assina): o fim volta a 15/10, e a cobrança daquele ciclo volta a valer
+    r73(`__zpq657=[true, true];`);
+    await abre73('desfazerRenovacao()'); await toca73(SENHA657); r73('corrFechar()');
+    igual(ficha73(0).renov.fim, '2026-10-15');
+    const cob2 = J73('renovCobrancaDe(pelExtra(PELUDINHOS[0]))');
+    igual([cob2.ciclo, cob2.cobrancas.length], ['2026-10-15', 1]);
+    const t = txt73(renov73('cobrar').lista);
+    assert.ok(t.indexOf('Já cobrados (1)') >= 0 && t.indexOf('Cobrado em 10/10 às 10:00 por Bia Consultora Teste (WhatsApp): vai renovar') > t.indexOf('Já cobrados (1)'), t);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P5 (AC1.6) — na aba Plano, junto da mensagem «Plano finalizou — oferecer renovação», o «Já cobrei» (44 px) e a linha da última cobrança; a mensagem e o «Copiar para o tutor» iguais; sem vigência (morador), sem o botão', async () => {
+  arma73();
+  try {
+    cena73([TODDY73(), TAMARA73()]);
+    await cobra73(0, 'Telefone', 'vai_pensar', 'liga semana que vem');
+    const h = r73('renovCobrancaFichaHTML(pelExtra(PELUDINHOS[0]), PELUDINHOS[0])');
+    assert.ok(/id="renovCobrancaFicha"/.test(h) && /min-height:44px[^"]*" onclick="renovCobrarAbrir\('toddy__ana teste'\)">Já cobrei</.test(h), h);
+    assert.ok(txt73(h).indexOf('Cobrado em 10/10 às 10:00 por Bia Consultora Teste (Telefone): vai pensar — «liga semana que vem»') >= 0, txt73(h));
+    assert.ok(/onclick="renovNaoRenovaAbrir\('toddy__ana teste'\)">Não renova</.test(h), 'e o «Não renova» na aba Plano');
+    // o lugar: logo depois do «Copiar para o tutor» da mensagem «Plano finalizou», dentro do mesmo bloco; a mensagem é a de sempre
+    const src = fs.readFileSync(APP, 'utf8');
+    const iMsg = src.indexOf('<div class="renov-msg-tit">Plano finalizou &mdash; oferecer renovação</div>');
+    const bloco = src.slice(iMsg, src.indexOf('<div class="renov-msg"><div class="renov-msg-tit">Renovação confirmada</div>', iMsg));
+    assert.ok(bloco.indexOf('${escAttr(msgPlanoFinalizou(p,ex))}') > 0 && bloco.indexOf('onclick="copiarGest(this)">Copiar para o tutor</button>') > 0 && bloco.indexOf('${renovCobrancaFichaHTML(ex,p)}</div>') > bloco.indexOf('Copiar para o tutor'), bloco);
+    // sem vigência: sem o botão (e sem o «Não renova»)
+    const hm = r73('renovCobrancaFichaHTML(pelExtra(PELUDINHOS[1]), PELUDINHOS[1])');
+    igual([hm.indexOf('Já cobrei'), hm.indexOf('Não renova')], [-1, -1]);
+    // a pergunta também recusa o morador chamado de fora (console, tela velha): nada gravado
+    await abre73('renovCobrarAbrir(1)');
+    igual([r73('RENOV_COBRAR'), za73('NÃO HÁ PLANO PARA COBRAR')[1], escCad73().length], [null, 'Nada foi gravado.', 1]);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P6 (AC1.7) — «Desfazer esta cobrança»: o cartaz «anular» com a senha da própria pessoa e o motivo; um registro novo {acao:"desfez", alvo}; riscada no histórico, fora de «Já cobrados»; nada apagado; o Encãotador e o posto barrados', async () => {
+  arma73();
+  try {
+    cena73([TODDY73(), NINA73()]);
+    await cobra73(0, 'WhatsApp', 'vai_pensar');
+    const id = contatos73(0)[0]._id;
+    await abre73(`renovCobrancaDesfazerAbrir(0, '${id}')`);
+    const c = cartaz73();
+    assert.ok(/Desfazer esta cobrança — Toddy/.test(c) && /Toddy sai de «Já cobrados» e volta para «Ainda não cobrados» em «a cobrar agora»\./.test(c) && /Sua senha/.test(c), c);
+    igual(J73('CORR_ATUAL.op.acao'), 'anular');
+    await toca73('s-posto');
+    assert.ok(/senha de posto não assina/.test(aviso73()), aviso73());
+    await toca73('s-caio');
+    assert.ok(/Caio Encãotador Teste, que não pode assinar/.test(aviso73()), aviso73());
+    igual(escCad73().length, 1, 'nada gravado com as senhas recusadas');
+    await toca73('s-bia', 'marquei a cobrança no FILHOt errado');
+    igual(passo73(), 'pronto'); r73('corrFechar()');
+    const L = contatos73(0);
+    igual(L.length, 2, 'a cobrança fica; o desfazer é um registro novo');
+    const d = L.filter((x) => x.acao === 'desfez')[0];
+    igual([d.alvo, d.ciclo, d.registro.acao, d.registro.por, d.registro.motivo], [id, '2026-10-15', 'anular', 'Bia Consultora Teste', 'marquei a cobrança no FILHOt errado']);
+    igual(L.filter((x) => x.acao === 'cobrou')[0].por, 'WhatsApp', 'nada reescrito');
+    igual(J73('renovCobrancaDe(pelExtra(PELUDINHOS[0])).cobrancas.length'), 0);
+    const t = txt73(renov73('cobrar').lista);
+    assert.ok(t.indexOf('Ainda não cobrados (2)') >= 0 && t.indexOf('Já cobrados (0)') >= 0, t);
+    const hp = r73('renovCobrancaFichaHTML(pelExtra(PELUDINHOS[0]), PELUDINHOS[0])');
+    assert.ok(/class="corr-riscado"/.test(hp) && /Desfeita por Bia Consultora Teste \(Consultora de Bem-Estar\), em 10\/10\/2026 às 10:00/.test(txt73(hp)) && /Motivo: marquei a cobrança no FILHOt errado/.test(txt73(hp)), txt73(hp));
+    igual([aud73('renovacao-cobranca-desfeita').length, aud73('registro-anulado').length], [1, 1]);
+    // o Encãotador chamando a função: barrado antes de qualquer gravação
+    r73(`document.body.dataset.role='monitor'; __esc657=[];`);
+    await abre73(`renovCobrancaDesfazerAbrir(0, '${id}')`);
+    igual([r73('CORR_ATUAL'), escCad73().length], [null, 0]);
+    assert.ok(J73('__au657').some((a) => /^BARROU desfazer a cobrança da renovação/.test(a[1])), 'BARROU na auditoria');
+    await abre73('renovCobrarAbrir(0)');
+    igual(r73('RENOV_COBRAR'), null, 'e não registra cobrança');
+    assert.ok(J73('__au657').some((a) => /^BARROU registrar a cobrança da renovação/.test(a[1])));
+  } finally { solta73(); }
+});
+
+// ---- AC2 — «Não renova» com o que o tutor disse, e «Reabrir» ---------------------------------------------------
+provaAsync('6.73 P7 (AC2.1 a AC2.3) — «Não renova» na linha e na aba Plano, também no plano em dia; o cartaz com as duas frases; a senha da própria pessoa (o motivo é o que o tutor disse); uma gravação {acao:"nao_renova", ciclo, plano, motivo, registro}; «Registrado» e o rastro só com o ok', async () => {
+  arma73();
+  try {
+    cena73([NINA73(), EMDIA73()]);
+    await abre73('renovNaoRenovaAbrir(0)');
+    const c = cartaz73();
+    assert.ok(c.indexOf('Nina sai de «a cobrar agora» e vai para «Não renova». O plano continua valendo até 30/06/2026, porque já foi pago: nada muda no Recebimentos.') >= 0, c);
+    // 3ª rodada (S8-P2 — Adriana, 12/10/2026: «sim»). ANTES: «… a pergunta de inativar mostra o que muda no Recebimentos (pela regra de
+    // hoje, quem sai deixa de contar também no mês em que pagou, a menos que o mês esteja fechado).». DEPOIS: «… quem sai continua no
+    // Recebimentos do mês em que pagou.». PORQUÊ: a regra mudou por decisão dela; a frase do AC2.2 acompanha.
+    assert.ok(c.indexOf('Não renova não inativa nem muda a categoria. Se ela continua vindo como avulsa, troque a categoria na ficha. Se não vem mais, use «Saiu do Day Care — inativar» na aba Plano: quem sai continua no Recebimentos do mês em que pagou.') >= 0 && c.indexOf('regra de hoje') < 0, c);
+    assert.ok(!/\bS\d+-P\d+\b/.test(c), 'nenhum código interno de pergunta (S8-P2) no cartaz da Consultora');
+    assert.ok(/Renovação de Nina ?: «a cobrar» → «não renova»/.test(c) && /Sua senha/.test(c) && /No motivo, escreva o que o tutor disse/.test(c), c);
+    await toca73('s-posto', 'o tutor disse que vai se mudar');
+    igual(escCad73().length, 0, 'o posto não assina');
+    // o banco recusa: nada, nem rastro
+    r73(`__recusa657='^daycare/cadastro';`);
+    await toca73('s-bia', 'o tutor disse que vai se mudar');
+    igual([passo73(), contatos73(0).length, aud73('renovacao-nao-renova').length], ['falhou', 0, 0]);
+    r73('corrFechar(); __recusa657=null;');
+    await naoRenova73(0, 'o tutor disse que vai se mudar');
+    const L = contatos73(0);
+    igual(L.length, 1);
+    igual([L[0].acao, L[0].ciclo, L[0].plano, L[0].motivo, L[0].registro.por, L[0].registro.papel, L[0].ts], ['nao_renova', '2026-06-30', 'Gold', 'o tutor disse que vai se mudar', 'Bia Consultora Teste', 'consultora', T673]);
+    igual(aud73('renovacao-nao-renova').length, 1);
+    // o plano em dia também pode receber o aviso (o tutor avisa antes)
+    const h = r73('renovCobrancaFichaHTML(pelExtra(PELUDINHOS[1]), PELUDINHOS[1])');
+    assert.ok(/onclick="renovNaoRenovaAbrir\('fred__rui teste'\)">Não renova</.test(h), h);
+    await naoRenova73(1, 'o tutor avisou que vai viajar o ano todo');
+    igual(J73('renovCobrancaDe(pelExtra(PELUDINHOS[1])).naoRenova.ciclo'), '2026-12-31');
+    // ele chamado pela tela que já tinha a marca: recusa, nada gravado
+    r73('__esc657=[];');
+    await abre73('renovNaoRenovaAbrir(0)');
+    igual([r73('CORR_ATUAL'), escCad73().length], [null, 0]);
+    assert.ok(/^Nina — avisou em 10\/10 às 10:00, por Bia Consultora Teste: o tutor disse que vai se mudar\.$/.test(za73('JÁ ESTÁ EM «NÃO RENOVA»')[0]));
+  } finally { solta73(); }
+});
+provaAsync('6.73 P8 (AC2.4) — a Nina sai de «a cobrar agora» (e do número) e do Painel da Supervisão; o filtro «não renova (1)» com quem, quando, o que o tutor disse, o plano e o período, e «Reabrir»; a aba Plano mostra a mesma linha. Base: fica nos dois para sempre (SONDA673-G06a, G06b)', async () => {
+  arma73();
+  try {
+    cena73([NINA73(), TODDY73()]);
+    const pa0 = J73('paDadosPlanos()');
+    igual(pa0, [{ nome: 'Nina', label: 'venceu há 102 dias', vencido: true, dias: -102 }, { nome: 'Toddy', label: 'vence em 5 dias', vencido: false, dias: 5 }], 'sem marca, a lista da base (SONDA673-G06b)');
+    await naoRenova73(0, 'o tutor disse que vai se mudar');
+    const R = renov73('cobrar');
+    igual(nomesLista73(R.lista), ['Toddy']);
+    assert.ok(/^1 a cobrar agora 0 em dia 0 sem plano 2 todos 1 não renova /.test(R.filtros), R.filtros);
+    igual(J73('paDadosPlanos()').map((x) => x.nome), ['Toddy'], 'o Painel da Supervisão sem a Nina');
+    const N = renov73('naorenova');
+    igual(nomesLista73(N.lista), ['Nina']);
+    const t = txt73(N.lista);
+    assert.ok(t.indexOf('Nina — avisou em 10/10 às 10:00, por Bia Consultora Teste: o tutor disse que vai se mudar') >= 0 && t.indexOf('Gold · 1x') >= 0 && t.indexOf('05/04/2026 a 30/06/2026') >= 0, t);
+    assert.ok(new RegExp('min-height:44px[^"]*" onclick="event\\.stopPropagation\\(\\);renovNaoRenovaReabrirAbrir\\(0,\'' + contatos73(0)[0]._id + '\'\\)">Reabrir</button>').test(N.lista), N.lista);
+    const hp = txt73(r73('renovCobrancaFichaHTML(pelExtra(PELUDINHOS[0]), PELUDINHOS[0])'));
+    assert.ok(hp.indexOf('Não renova: Nina — avisou em 10/10 às 10:00, por Bia Consultora Teste: o tutor disse que vai se mudar') >= 0, hp);
+    // o filtro só aparece com alguém nele (sem marca, os filtros de hoje)
+    cena73([NINA73(), TODDY73()]);
+    igual(renov73('cobrar').filtros.indexOf('não renova'), -1);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P9 (AC2.5, AC2.6) — «Reabrir» (a própria senha, o motivo) grava {acao:"reabriu", alvo}: a Nina volta a «a cobrar agora» e o registro de antes fica riscado; marcar de novo grava outro; o Confirmar de um plano novo encerra a marca sem passo a mais; nada apagado', async () => {
+  arma73();
+  try {
+    cena73([NINA73(), TODDY73()]);
+    await naoRenova73(0, 'o tutor disse que vai se mudar');
+    const id = contatos73(0)[0]._id;
+    await abre73(`renovNaoRenovaReabrirAbrir(0, '${id}')`);
+    const c = cartaz73();
+    assert.ok(/Volta a ficar: na cobrança da renovação, pela régua de sempre/.test(c) && /Nina volta para «a cobrar agora» \(venceu há 102 dias\)\./.test(c) && /Sua senha/.test(c), c);
+    await toca73('s-bia', 'o tutor decidiu renovar o plano');
+    igual(passo73(), 'pronto'); r73('corrFechar()');
+    const L = contatos73(0);
+    igual(L.map((x) => x.acao).sort(), ['nao_renova', 'reabriu']);
+    igual(L.filter((x) => x.acao === 'reabriu')[0].alvo, id);
+    igual(nomesLista73(renov73('cobrar').lista), ['Nina', 'Toddy']);
+    // a mesma régua no Painel da Supervisão: reaberto, a Nina volta para lá também (a régua não é copiada, AC3.1)
+    igual(J73('paDadosPlanos()').map((x) => x.nome), ['Nina', 'Toddy'], 'o Painel da Supervisão acompanha o «Reabrir»');
+    const hp = r73('renovCobrancaFichaHTML(pelExtra(PELUDINHOS[0]), PELUDINHOS[0])');
+    assert.ok(/class="corr-riscado"/.test(hp) && /Reaberto por Bia Consultora Teste/.test(txt73(hp)) && /Motivo: o tutor decidiu renovar o plano/.test(txt73(hp)), txt73(hp));
+    igual(aud73('renovacao-nao-renova-reaberta').length, 1);
+    // marcar de novo: outro registro
+    await naoRenova73(0, 'o tutor mudou de ideia de novo');
+    igual(contatos73(0).length, 3);
+    igual(J73('renovCobrancaDe(pelExtra(PELUDINHOS[0])).naoRenova.motivo'), 'o tutor mudou de ideia de novo');
+    // o Confirmar de um plano novo: a marca não vale para o ciclo novo (sem passo a mais)
+    r73(`pelAtual=PELUDINHOS[0]; pelAtualIdx=0; renovRascunho={_k:pelKey(pelAtual), plano:'Gold', aulas:1, inicio:'2026-10-10'}; __zpq657=[true, true, true, true]; __zp657=[];`);
+    await abre73('confirmarRenovacao()'); await esp73();
+    igual(ficha73(0).renov.inicio, '2026-10-10');
+    igual(J73('renovCobrancaDe(pelExtra(PELUDINHOS[0])).naoRenova'), null);
+    assert.ok(!J73('__zp657').some((p) => /não renova/i.test(p[0] + (p[1] || []).join(' '))), 'nenhuma pergunta a mais');
+    igual(contatos73(0).length, 3, 'nada apagado');
+  } finally { solta73(); }
+});
+
+// ---- AC3 — a mesma régua nas três telas ---------------------------------------------------------------------
+provaAsync('6.73 P10 (AC3.2) — o Dashboard da Adriana: «R$ 746,00 em planos que venceram sem renovação. Destes, R$ 359,00 são de 1 FILHOt cujo tutor avisou que não renova.»; a conta igual. Base: sem a separação (SONDA673-G06b)', async () => {
+  arma73();
+  try {
+    cena73([NINA73(), TODDY73()]);
+    const fin = () => J73(`(function(){ var r=finResumoMes({cadastro:pelCadCache, peludinhos:PELUDINHOS, irmaos:{}, orcamentos:{}, pagamentos:null, planos:planos(), descontoIrmao:descontosPlano()}, '2026-10', {hoje:'2026-10-10'}); return {h:pdirFinHTML(r, false, 'outubro de 2026'), t:r.inadimplenciaTotal, j:JSON.stringify(r)}; })()`);
+    const A = fin();
+    igual(A.t, 74600);
+    assert.ok(txt73(A.h).indexOf('R$ 746,00 em planos que venceram sem renovação. População à parte') >= 0, 'sem marca, a frase de hoje');
+    await naoRenova73(0, 'o tutor disse que vai se mudar');
+    const B = fin();
+    assert.ok(txt73(B.h).indexOf('R$ 746,00 em planos que venceram sem renovação. Destes, R$ 359,00 são de 1 FILHOt cujo tutor avisou que não renova.') >= 0, txt73(B.h));
+    igual([B.t, B.j], [A.t, A.j], 'a conta (o finResumoMes inteiro) igual');
+    await naoRenova73(1, 'o tutor vai mudar de bairro');
+    assert.ok(txt73(fin().h).indexOf('Destes, R$ 746,00 são de 2 FILHOts cujos tutores avisaram que não renovam.') >= 0, txt73(fin().h));
+  } finally { solta73(); }
+});
+provaAsync('6.73 P11 (AC3.3, guarda) — sem marca nenhuma: a Renovação (os itens, a ordem e os números dos filtros), o Painel da Supervisão e o bloco da Adriana dão o resultado da base (SONDA673-G06a, G06b)', async () => {
+  arma73();
+  try {
+    cena73([NINA73(), TODDY73()]);
+    const R = renov73('cobrar');
+    igual([nomesLista73(R.lista), (R.lista.match(/<span class="vd [^"]+">[^<]+/g) || []).map((x) => x.replace(/<[^>]+>/g, ''))], [['Nina', 'Toddy'], ['venceu há 102 dias', 'vence em 5 dias']]);
+    assert.ok(R.filtros.indexOf('2 a cobrar agora 0 em dia 0 sem plano 2 todos Por tipo de cliente — toque para ver quem são 1 mensais 1 trimestrais') === 0, R.filtros);
+    ['ok', 'sem', 'todos'].forEach((f) => { const X = renov73(f); igual(X.lista.indexOf('Já cobrei'), -1, f); });
+    igual(nomesLista73(renov73('todos').lista), ['Nina', 'Toddy']);
+    igual(J73('paDadosPlanos()'), [{ nome: 'Nina', label: 'venceu há 102 dias', vencido: true, dias: -102 }, { nome: 'Toddy', label: 'vence em 5 dias', vencido: false, dias: 5 }]);
+    const h = J73(`pdirFinHTML(finResumoMes({cadastro:pelCadCache, peludinhos:PELUDINHOS, irmaos:{}, orcamentos:{}, pagamentos:null, planos:planos(), descontoIrmao:descontosPlano()}, '2026-10', {hoje:'2026-10-10'}), false, 'outubro de 2026')`);
+    assert.ok(h.indexOf('Destes') < 0 && h.indexOf('<b>R$ 746,00 em planos que venceram sem renovação.</b>') >= 0, h);
+    // a cobrança registrada não muda o Painel (só ganha «cobrado em»)
+    await cobra73(1, 'WhatsApp', 'vai_pensar');
+    igual(J73('paDadosPlanos()'), [{ nome: 'Nina', label: 'venceu há 102 dias', vencido: true, dias: -102 }, { nome: 'Toddy', label: 'vence em 5 dias', vencido: false, dias: 5, cobrado: '10/10 às 10:00' }]);
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(src.indexOf("sub:(p.cobrado?('cobrado em '+p.cobrado+' · '):'')+'vez da Central: cobrar a renovação com o tutor'") > 0);
+  } finally { solta73(); }
+});
+
+// ---- AC4 a AC6 — «Fechar o mês», o mês fechado e os ajustes no quadro «Recebimentos do mês» ------------------------
+// as leituras do quadro feitas pelo próprio app (as fontes, as diárias avulsas do mês e os fechamentos, do banco de mentira)
+const le73 = async (mes) => { r73(`Promise.all([recFontesLer(true), recAvulsoLer('${mes}', true)]);`); await esp73(); };
+const falhaLeitura73 = (re) => r73(`if(typeof __ref73==='undefined' || !__ref73) __ref73=DB.ref; __falha73=${JSON.stringify(re)}; DB={ref:function(p){ var r=__ref73(p);
+  if(__falha73 && new RegExp(__falha73).test(String(p||''))) r.once=function(){ return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }; return r; }};`);
+const JULHO73 = () => [BISCOITO73(), PIPOCA73()];
+// julho de 2026 com tudo o que o quadro mostra: dois planos (um pela tabela, um com valor gravado), uma reserva fechada em julho com a
+// entrada em julho, uma diária avulsa com valor, um ajuste, uma ficha fora do total (Auluno sem plano) e um pagamento anulado (6.71)
+const ORC73 = () => ({ r1: { status: 'fechado', status_em: Date.UTC(2026, 6, 3, 15, 0), entrada: '2026-07-20', saida: '2026-07-22', parcela1_cent: 13000, parcela2_cent: 13000, total_cent: 26000, tutor: 'Jeanine Teste', pets: [{ nome: 'Romeo' }] } });
+const QUINDIM73 = () => ({ n: 'Quindim', tutor: 'Beto Teste', ex: { dias: ['seg'], renov: { plano: '', inicio: '', fim: '', mesRenov: '', aulas: '', ordemPet: 1 } } });
+const BENTO73 = () => ({ n: 'Bento', tutor: 'Duda Teste', ex: { dias: ['seg'], renov: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-09-05', fim: '2026-10-31', quando: '2026-09-05', valor_plano_cent: 38700 },
+  renov_hist: { h1: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-07-10', fim: '2026-07-31', quando: '2026-07-10', valor_plano_cent: 38700, substituidoEm: 100, por: 'Teste', motivo: 'renovação', motivo_conferido: true,
+    anulacoes: { a1: { acao: 'anular', ts: 1, por: 'Gestora Teste', papel: 'gestao', quando: '01/10/2026 às 10:00', motivo: 'o pagamento foi lançado em dobro' } } } } } });
+const RICO73 = () => {
+  cena73(JULHO73().concat([QUINDIM73(), BENTO73()]), { login: GESTORA73, orc: ORC73() });
+  r73(`__put657('daycare/dashboard/2026-07-12/avulso', {x1:{det:{valor_cent:17000}}});
+    __put657('daycare/recebimentos/2026-07/ajustes/aj1', {sentido:'somar', valor_cent:9700, descricao:'diária da Lua lançada sem valor', motivo:'faltou lançar no dia da Lua', ts:5,
+      registro:{acao:'corrigir', por:'Gestora Teste', papel:'gestao', quando:'09/10/2026 às 10:00', motivo:'faltou lançar no dia da Lua', ts:5}});
+    REC_MES='2026-07';`);
+};
+provaAsync('6.73 P12 (AC4.1) — «Fechar julho de 2026» (44 px) no quadro de julho, aberto, para quem vê o quadro (os dois dashboards desenham o mesmo); outubro sem o botão, com «O mês só fecha depois que termina.»; «Lançar um ajuste» nos dois. Base: não existe (SONDA673-K07a)', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 });
+    r73(`REC_MES='2026-07';`); entrega73();
+    const jul = card73('2026-07');
+    assert.ok(/<button type="button" class="pm-bt" style="min-height:44px" onclick="recFecharAbrir\('2026-07'\)">Fechar julho de 2026<\/button>/.test(jul), jul.slice(-900));
+    assert.ok(/onclick="recAjusteAbrir\('2026-07'\)">Lançar um ajuste</.test(jul));
+    r73(`REC_MES=''; REC_AVULSO={mes:'2026-10', quando:Date.now(), lendo:false, ok:true, total_cent:0, n:0, semValor:0, futuros:0};`);
+    const out = card73();
+    assert.ok(out.indexOf('recFecharAbrir') < 0 && out.indexOf('O mês só fecha depois que termina.') >= 0 && /onclick="recAjusteAbrir\('2026-10'\)">Lançar um ajuste</.test(out), out.slice(-700));
+    // o mesmo desenho nos dois dashboards: uma função só
+    const src = fs.readFileSync(APP, 'utf8');
+    igual((src.match(/recCardHTML\(\)/g) || []).length, 4);
+    assert.ok(src.indexOf(`<div id="pdirCardRecebimentos" style="display:contents">'+recCardHTML()+'</div>`) > 0 && src.indexOf(`<div id="poCardRecebimentos" style="display:contents">'+recCardHTML()+'</div>`) > 0);
+    // o mês futuro não se fecha nem pela função (o console, uma tela velha)
+    await abre73(`recFecharAbrir('2026-10')`);
+    igual([r73('CORR_ATUAL'), za73('O MÊS AINDA NÃO TERMINOU')], [null, ['O mês só fecha depois que termina.', 'Nada foi gravado.']]);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P13 (AC4.2) — nada pela metade: sem as diárias avulsas de julho lidas, sem os orçamentos e os irmãos, sem a tabela (pedida e não chegada) ou sem os fechamentos lidos, «Ainda não dá para fechar: …» e nada gravado', async () => {
+  arma73();
+  try {
+    const casos = [['^daycare/dashboard/', 'as diárias avulsas de julho de 2026 ainda não foram lidas'], ['^auaulandia/orcamentos', 'os orçamentos e os vínculos de irmãos não foram lidos'],
+      ['^daycare/recebimentos$', 'os fechamentos e os ajustes de julho de 2026 não foram lidos'], ['tabela', 'a tabela de planos ainda não chegou neste aparelho']];
+    for (const [re, frase] of casos) {
+      cena73(JULHO73(), { login: GESTORA73 });
+      r73('__ref73=null;');
+      if (re === 'tabela') r73('TABELA_PLANOS={pedida:true, chegou:false, erro:null, v:null};'); else falhaLeitura73(re);
+      await abre73(`recFecharAbrir('2026-07')`);
+      const z = za73('AINDA NÃO DÁ PARA FECHAR');
+      assert.ok(z && z[0].indexOf('Ainda não dá para fechar: ') === 0 && z[0].indexOf(frase) > 0 && z[1] === 'Nada foi gravado.', re + ' → ' + JSON.stringify(z));
+      igual([r73('CORR_ATUAL'), escRec73().length], [null, 0], re);
+      r73('if(__ref73) DB.ref=__ref73; __ref73=null; __falha73=null;');
+    }
+  } finally { r73('if(typeof __ref73!=="undefined" && __ref73){ DB.ref=__ref73; __ref73=null; }'); solta73(); }
+});
+provaAsync('6.73 P14 (AC4.3, AC4.4; S8-P7) — o cartaz com a senha da Adriana (a Consultora chamando a função: «BARROU»; as senhas da Consultora, da Supervisão e a outra senha da Gestão recusadas: «Só a Adriana fecha o mês»); uma gravação só, com os dois caminhos, depois de reler o mês; outro aparelho fechou no meio: recusa; «Mês fechado» e o rastro só com o ok; sem resposta: «O BANCO AINDA NÃO CONFIRMOU»', async () => {
+  arma73();
+  try {
+    cena73(JULHO73());
+    await abre73(`recFecharAbrir('2026-07')`);
+    igual(r73('CORR_ATUAL'), null);
+    assert.ok(J73('__au657').some((a) => /^BARROU fechar o mês do Recebimentos/.test(a[1])), 'BARROU na auditoria');
+    cena73(JULHO73(), { login: GESTORA73 });
+    await abre73(`recFecharAbrir('2026-07')`);
+    const c = cartaz73();
+    assert.ok(c.indexOf('Fechar julho de 2026 com R$ 2.154,00: 2 planos, 0 reservas, 0 diárias avulsas e 0 ajustes.') >= 0, c);
+    assert.ok(c.indexOf('Depois de fechado, o quadro de julho de 2026 mostra estes números. Se alguém mexer numa ficha depois, o quadro mostra a diferença em «Mudou depois do fechamento», mas o total fechado não muda.') >= 0, c);
+    // 3ª rodada (S8-P7 — Adriana, 12/10/2026: «só adriana»). ANTES: «(a senha da Gestão e o motivo)», «Senha da Gestão», a Consultora e a
+    // Supervisão recusadas com «Essa senha é de …, que não pode assinar», e a SENHA657 (Gestora Teste) assinava. DEPOIS: «(a senha da
+    // Adriana e o motivo)», «Senha da Adriana», «Quem assina: só a Adriana.», as três recusadas com «Só a Adriana fecha o mês: essa senha
+    // é de …. Nada foi gravado.» e só a SENHA_ADR73 (Adriana Teste) assina. PORQUÊ: a resposta da Adriana às perguntas S8-P7 a P11.
+    assert.ok(c.indexOf('Para mudar o total, reabra o mês (a senha da Adriana e o motivo).') >= 0 && /O mês de julho de 2026 ?: «aberto» → «fechado»/.test(c) && /Senha da Adriana/.test(c) && !/Senha da Gestão/.test(c)
+      && c.indexOf('Quem assina: só a Adriana. O app grava o nome de quem assinou, nunca a senha.') >= 0 && /Fechar julho de 2026 Voltar e mudar os campos/.test(c), c);
+    igual(passo73(), 'conferir');
+    await toca73('s-bia'); igual(aviso73(), 'Só a Adriana fecha o mês: essa senha é de Bia Consultora Teste. Nada foi gravado.');
+    await toca73('s-amanda'); igual(aviso73(), 'Só a Adriana fecha o mês: essa senha é de Amanda Supervisora Teste. Nada foi gravado.');
+    await toca73(SENHA657); igual([aviso73(), passo73()], ['Só a Adriana fecha o mês: essa senha é de Gestora Teste. Nada foi gravado.', 'conferir'], 'a outra senha da Gestão (a da Márcia) não fecha');
+    igual(escRec73().length, 0);
+    await toca73(SENHA_ADR73);
+    igual(passo73(), 'pronto');
+    assert.ok(/^Mês fechado /.test(cartaz73().trim()), cartaz73());
+    const w = escRec73();
+    igual(w.length, 1, 'uma gravação só: ' + JSON.stringify(w));
+    igual(w[0][2].length, 2);
+    assert.ok(/^daycare\/recebimentos-linhas\/2026-07\/[^/]+$/.test(w[0][2][0]) && /^daycare\/recebimentos\/2026-07\/eventos\/[^/]+$/.test(w[0][2][1]), JSON.stringify(w[0][2]));
+    const evs = Object.values(J73(`__get657('daycare/recebimentos/2026-07/eventos')`));
+    igual(evs.length, 1);
+    igual([evs[0].acao, evs[0].total_cent, evs[0].motivo, evs[0].registro.por, evs[0].registro.papel, evs[0].ts], ['fechou', 215400, MOT73, 'Adriana Teste', 'gestao', T673]);
+    igual(evs[0].linhas, w[0][2][0].split('/').pop(), 'o evento aponta o corpo');
+    igual([aud73('recebimentos-mes-fechado').length, aud73('registro-corrigido').length], [1, 1]);
+    assert.ok(/^julho de 2026 fechado com R\$ 2\.154,00 \(2 planos, 0 reservas, 0 diárias avulsas, 0 ajustes\), assinado por Adriana Teste: conferido com o sistema da loja$/.test(aud73('recebimentos-mes-fechado')[0][1]), aud73('recebimentos-mes-fechado')[0][1]);
+    // outro aparelho fechou depois que o cartaz abriu: recusa, nada gravado
+    cena73(JULHO73(), { login: GESTORA73 });
+    await abre73(`recFecharAbrir('2026-07')`);
+    r73(`__put657('daycare/recebimentos/2026-07/eventos/zz', {acao:'fechou', total_cent:215400, linhas:'cz', motivo:'fechado no outro aparelho', ts:${T673 - 60000}, registro:{por:'Adriana Teste'}});`);
+    await toca73(SENHA_ADR73);
+    igual(za73('O MÊS NÃO FOI FECHADO'), ['Outro aparelho fechou julho de 2026 agora há pouco. Nada foi gravado: confira.', 'O mês continua aberto.']);
+    igual([r73('CORR_ATUAL'), escRec73().length, aud73('recebimentos-mes-fechado').length], [null, 0, 0]);
+    // sem resposta em 20 s
+    cena73(JULHO73(), { login: GESTORA73 });
+    r73(`__pendura657='^$';`);
+    await abre73(`recFecharAbrir('2026-07')`); await toca73(SENHA_ADR73);
+    r73('__tm657.filter(function(t){ return t.ms===20000; }).forEach(function(t){ t.fn(); }); __tm657=[];'); await esp73();
+    igual(passo73(), 'semResposta');
+    assert.ok(/O BANCO AINDA NÃO CONFIRMOU/.test(cartaz73()));
+    igual([aud73('recebimentos-mes-fechado').length, aud73('registro-corrigido').length], [0, 0], 'antes do ok: sem rastro');
+    r73('__pend657.forEach(function(x){ x.ok(); }); __pend657=[];'); await esp73();
+    igual([aud73('recebimentos-mes-fechado').length, aud73('registro-corrigido').length], [1, 1], 'o banco confirmou depois: o rastro entra');
+  } finally { solta73(); }
+});
+provaAsync('6.73 P15 (AC4.5) — o mesmo número em todo lugar: o total do cartaz = o do quadro = o «Total da lista» = o TOTAL do Excel, no centavo; o corpo guarda as linhas (com a chave), as diárias avulsas, os ajustes válidos, as fichas fora do total, os pagamentos anulados, a tabela e os descontos', async () => {
+  arma73();
+  try {
+    RICO73();
+    await le73('2026-07');
+    const aberto = card73('2026-07');
+    igual([total73(aberto), totalLista73(aberto)], ['R$ 2.681,00', 'R$ 2.681,00'], 'aberto: planos R$ 2.154,00 + reserva R$ 260,00 + avulsa R$ 170,00 + ajuste R$ 97,00');
+    await abre73(`recFecharAbrir('2026-07')`);
+    const c = cartaz73();
+    assert.ok(c.indexOf('Fechar julho de 2026 com R$ 2.681,00: 2 planos, 1 reserva, 1 diária avulsa e 1 ajuste.') >= 0, c);
+    assert.ok(c.indexOf('1 ficha fica fora do total por falta de dado: Quindim (veja «Ver FILHOt por FILHOt»).') >= 0, c);
+    await toca73(SENHA_ADR73); r73('corrFechar()');
+    const fechado = card73('2026-07');
+    igual([total73(fechado), totalLista73(fechado)], ['R$ 2.681,00', 'R$ 2.681,00']);
+    r73(`__xls673=[]; recBaixarExcel({closest:function(){ return null; }});`);
+    const X = J73('__xls673');
+    igual(X.length, 1);
+    assert.ok(X[0].h.indexOf('<td>TOTAL</td><td></td><td></td><td></td><td>R$ 2.681,00</td>') > 0, 'o TOTAL do Excel');
+    const cid = Object.values(J73(`__get657('daycare/recebimentos/2026-07/eventos')`))[0].linhas;
+    const C = J73(`__get657('daycare/recebimentos-linhas/2026-07/${cid}')`);
+    igual(C.total_cent, 268100);
+    igual(C.linhas.map((x) => [x.chave, x.nome, x.valor, x.data]), [['biscoito__clara teste', 'Biscoito', 107700, '2026-07-05'], ['pipoca__rui teste', 'Pipoca', 107700, '2026-07-08'], ['orc:r1', 'Romeo', 26000, C.linhas[2].data]]);
+    igual([C.avulso.lidos, C.avulso.n, C.avulso.total_cent, C.ajustes.length, C.ajustes[0].id, C.ajustes[0].valor, C.ajustes_cent], [true, 1, 17000, 1, 'aj1', 9700, 9700]);
+    igual([C.fora.length, C.fora[0].chave, C.fora[0].nome, C.anulados.length, C.anulados[0].nome, C.anulados[0].data], [1, 'quindim__beto teste', 'Quindim', 1, 'Bento', '2026-07-10']);
+    igual([C.porTipo.trimestral.valor, C.porTipo.trimestral.quantos, C.porTipo.hospedagem.valor, C.planos_cent], [215400, 2, 26000, 241400]);
+    igual([C.tabela.Gold.valores[1], C.tabela.Silver.hospOff, C.descontos[2], C.descontos[3], C.fechado_em], [35900, 0, 7, 12, T673]);
+    // a lista do corpo é a do quadro, na mesma ordem (recLinhasComChave × recLinhasDoMes)
+    igual(J73(`recLinhasComChave(recResumoDoMes('2026-07')).map(function(x){ delete x.chave; return x; })`), J73(`recLinhasDoMes(recResumoDoMes('2026-07'))`));
+    assert.ok(JSON.stringify(C).indexOf(SENHA657) < 0 && JSON.stringify(C).indexOf(SENHA_ADR73) < 0, 'a senha em lugar nenhum');
+  } finally { solta73(); }
+});
+provaAsync('6.73 P16 (AC5.1, AC5.2; S8-P2) — julho fechado com R$ 2.154,00; depois, o Biscoito inativado e a Pipoca corrigida para R$ 999,00: o quadro continua R$ 2.154,00, com «Fechado em …», e mostra «Mudou depois do fechamento (1)» com a linha da Pipoca (o Biscoito, inativo, continua no mês em que pagou) e «A conta ao vivo hoje daria R$ 2.076,00 (diferença de -R$ 78,00).»; com o Biscoito virando morador, «(2)» e «fora». Base: julho vira R$ 2.076,00', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    igual(await fecha73('2026-07'), 'pronto');
+    r73(`pelCadCache['biscoito__clara teste'].inativo='Sim'; pelCadCache['biscoito__clara teste'].dataSaida='10/10/2026'; pelCadCache['pipoca__rui teste'].renov.valor_plano_cent=99900;`);
+    const h = card73('2026-07'), t = txt73(h);
+    igual(total73(h), 'R$ 2.154,00');
+    // 3ª rodada (S8-P7: quem fecha é a Adriana; S8-P2 — Adriana, 12/10/2026). ANTES: «por Gestora Teste»; «(2)» com «Biscoito — …: R$ 1.077,00 →
+    // fora (inativo desde 10/10/2026)»; «A conta ao vivo hoje daria R$ 999,00 (diferença de -R$ 1.155,00).»; a base dava R$ 999,00.
+    // DEPOIS: «por Adriana Teste»; «(1)», só a Pipoca (o Biscoito, inativo, continua no mês em que pagou: nada mudou nele); R$ 2.076,00
+    // (-R$ 78,00), à mão: 1.077,00 + 999,00 = 2.076,00; a base também R$ 2.076,00. PORQUÊ: as respostas S8-P7 e S8-P2.
+    assert.ok(t.indexOf('Fechado em 10/10/2026 às 10:00 por Adriana Teste: conferido com o sistema da loja') >= 0 && t.indexOf('Total de julho de 2026 (fechado)') >= 0, t.slice(0, 600));
+    igual(107700 + 99900, 207600, 'à mão');
+    assert.ok(t.indexOf('Mudou depois do fechamento (1)') >= 0 && t.indexOf('Biscoito — ') < 0, t);
+    assert.ok(t.indexOf('Pipoca — Gold · trimestral · 1x por semana · pago em 08/07/2026: R$ 1.077,00 → R$ 999,00') >= 0, t);
+    assert.ok(t.indexOf('A conta ao vivo hoje daria R$ 2.076,00 (diferença de -R$ 78,00).') >= 0, t);
+    // a lista e o Excel do mês fechado são os guardados
+    igual(totalLista73(h), 'R$ 2.154,00');
+    assert.ok(t.indexOf('Ver FILHOt por FILHOt (2) — guardado no fechamento') >= 0);
+    // o Biscoito sai do mês de outro jeito (virou morador): a linha dele sai, com a razão que o app sabe
+    r73(`pelCadCache['biscoito__clara teste'].categoria='morador';`);
+    const t3 = txt73(card73('2026-07'));
+    // 4ª rodada (re-gate 3, REQ-003). ANTES: «→ fora (inativo desde 10/10/2026)». DEPOIS: «→ fora (virou Morador(a) Zêluz)». PORQUÊ: com a
+    // S8-P2, inativo sozinho não tira linha nenhuma do mês em que pagou; quem tira a linha do Biscoito é a categoria (morador).
+    assert.ok(t3.indexOf('Mudou depois do fechamento (2)') >= 0 && t3.indexOf('Biscoito — Gold · trimestral · 1x por semana · pago em 05/07/2026: R$ 1.077,00 → fora (virou Morador(a) Zêluz)') >= 0
+      && t3.indexOf('A conta ao vivo hoje daria R$ 999,00 (diferença de -R$ 1.155,00).') >= 0, t3);
+    r73(`delete pelCadCache['biscoito__clara teste'].categoria;`);
+    // sem o fechamento (a base): o mesmo julho vira R$ 2.076,00
+    r73(`REC_FECH={ok:null, v:null, quando:0, vivo:false};`);
+    igual(total73(card73('2026-07')), 'R$ 2.076,00');
+    // sem diferença
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`); await fecha73('2026-07');
+    assert.ok(txt73(card73('2026-07')).indexOf('Mudou depois do fechamento (0) Nada mudou desde o fechamento.') >= 0);
+  } finally { solta73(); }
+});
+// 3ª rodada (QA do re-gate, REQ-001 reaberto e TEST-002). ANTES: a P17 trocava o nome APAGANDO a chave antiga do pelCadCache, o que
+// nenhuma troca faz — e passava com o REQ-001 aberto. DEPOIS: a troca é a do app (renomearCadastroPel: a chave nova com os dados; a
+// antiga FICA no cadastro com excluido:true, movido_para e movido_em; a 6.75 põe também inativo:'Sim'), e o ouvinte do cadastro traz o
+// banco para a memória. PORQUÊ: a prova tem de usar o dado como ele é gravado.
+provaAsync('6.73 P17 (AC5.2; 3ª rodada, REQ-001 e TEST-002) — a troca de nome COMO O APP GRAVA (renomearCadastroPel: a chave antiga fica no cadastro com excluido:true e movido_para; a 6.75 põe também inativo) junta pela cadeia do movido_para: «Nada mudou desde o fechamento.»; o valor mudado junto mostra o antes e o depois com o nome de agora; duas trocas seguidas; sem pagamento na mesma data, «fora (mudou de nome ou de tutor: agora «Pipoca Rosa»)» e «Nova»; a troca de hoje sem inativo (a contagem dupla de antes, OBS-A) aparece como «Nova», com a diferença certa; a reserva mudada depois aparece pela chave orc:{id}', async () => {
+  arma73();
+  try {
+    // a troca pelo app; inativa = a 6.75 (D1: a ficha antiga também inativa); o ouvinte do cadastro traz o banco para a memória
+    const renomeia = async (i, nome, inativa) => {
+      r73(`renomearCadastroPel(PELUDINHOS[${i}], {n:${JSON.stringify(nome)}});`); await esp73();
+      if (inativa) r73(`Object.keys(__get657('daycare/cadastro')||{}).forEach(function(k){ var c=__get657('daycare/cadastro/'+k); if(c && c.movido_para && c.inativo!=='Sim') __put657('daycare/cadastro/'+k+'/inativo', 'Sim'); });`);
+      r73(`pelCadCache=__get657('daycare/cadastro')||{};`);
+    };
+    const mudou = () => { const t = txt73(card73('2026-07')); const i = t.indexOf('Mudou depois do fechamento ('); return t.slice(i, i + 900); };
+    const fechaJulho = async () => { cena73(JULHO73(), { login: GESTORA73, orc: ORC73() }); r73(`REC_MES='2026-07';`); igual(await fecha73('2026-07'), 'pronto'); };
+    // (a) a 6.75: Pipoca → «Pipoca Rosa»; a antiga com excluido, movido_para, movido_em e inativo
+    await fechaJulho();
+    await renomeia(1, 'Pipoca Rosa', true);
+    const velha = J73(`pelCadCache['pipoca__rui teste']`);
+    igual([velha.excluido, velha.movido_para, typeof velha.movido_em, velha.inativo, !!J73(`pelCadCache['pipoca rosa__rui teste']`)], [true, 'pipoca rosa__rui teste', 'number', 'Sim', true], 'gravado como o app grava');
+    igual(r73('recChaveViva("pipoca__rui teste", pelCadCache)'), 'pipoca rosa__rui teste');
+    assert.ok(mudou().indexOf('Mudou depois do fechamento (0) Nada mudou desde o fechamento.') === 0, mudou());
+    // (b) o valor mudou junto (a Pipoca Rosa corrigida para R$ 999,00): o antes e o depois, com o nome de agora
+    r73(`pelCadCache['pipoca rosa__rui teste'].renov.valor_plano_cent=99900;`);
+    const mb = mudou();
+    assert.ok(mb.indexOf('Mudou depois do fechamento (1)') === 0 && mb.indexOf('Pipoca — Gold · trimestral · 1x por semana · pago em 08/07/2026: R$ 1.077,00 → Pipoca Rosa — Gold · trimestral · 1x por semana · pago em 08/07/2026: R$ 999,00') >= 0
+      && mb.indexOf('Nova:') < 0 && mb.indexOf('→ fora') < 0, mb);
+    // (c) duas trocas seguidas (Pipoca → Pipoca Rosa → Rosa): a cadeia até a chave viva
+    await fechaJulho();
+    await renomeia(1, 'Pipoca Rosa', true); await renomeia(1, 'Rosa', true);
+    igual(r73('recChaveViva("pipoca__rui teste", pelCadCache)'), 'rosa__rui teste');
+    assert.ok(mudou().indexOf('Mudou depois do fechamento (0) Nada mudou desde o fechamento.') === 0, mudou());
+    // (d) o pagamento da ficha nova em outra data: não junta (fora, com a razão) e a nova aparece
+    await fechaJulho();
+    await renomeia(1, 'Pipoca Rosa', true);
+    r73(`pelCadCache['pipoca rosa__rui teste'].renov.inicio='2026-07-09';`);
+    const md = mudou();
+    assert.ok(md.indexOf('Mudou depois do fechamento (2)') === 0 && md.indexOf('Pipoca — Gold · trimestral · 1x por semana · pago em 08/07/2026: R$ 1.077,00 → fora (mudou de nome ou de tutor: agora «Pipoca Rosa»)') >= 0
+      && md.indexOf('Nova: Pipoca Rosa — Gold · trimestral · 1x por semana · pago em 09/07/2026: R$ 1.077,00') >= 0, md);
+    // (e) a troca de hoje, sem inativo: a conta de antes conta as duas fichas (OBS-A, pré-existente, a 6.75 conserta); a linha nova
+    // aparece como «Nova» e a diferença é a da conta ao vivo, no centavo
+    await fechaJulho();
+    await renomeia(1, 'Pipoca Rosa', false);
+    const me = mudou();
+    assert.ok(me.indexOf('Mudou depois do fechamento (1)') === 0 && me.indexOf('Nova: Pipoca Rosa — Gold · trimestral · 1x por semana · pago em 08/07/2026: R$ 1.077,00') >= 0
+      && me.indexOf('A conta ao vivo hoje daria R$ 3.491,00 (diferença de R$ 1.077,00).') >= 0, me);
+    // (g) a Pipoca renomeada (6.75) e outra ficha nova, a Bolacha, que pagou um plano diferente no mesmo dia 08/07: a Pipoca junta com a
+    // chave viva DELA (Pipoca Rosa), nunca com a Bolacha, que aparece como «Nova»
+    await fechaJulho();
+    await renomeia(1, 'Pipoca Rosa', true);
+    r73(`PELUDINHOS.push({n:'Bolacha', tutor:'Beatriz Teste', raca:'SRD'}); pelCadCache['bolacha__beatriz teste']={n:'Bolacha', tutor:'Beatriz Teste', dias:['seg'], renov:{plano:'Silver', aulas:1, ordemPet:1, inicio:'2026-07-08', fim:'2026-08-07', quando:'2026-07-08'}};`);
+    const mg = mudou();
+    assert.ok(mg.indexOf('Mudou depois do fechamento (1)') === 0 && mg.indexOf('Nova: Bolacha — Silver · mensal · 1x por semana · pago em 08/07/2026: R$ 387,00') >= 0 && mg.indexOf('Pipoca — ') < 0, mg);
+    // (f) a reserva mudou de valor depois do fechamento: pela chave orc:{id}
+    await fechaJulho();
+    await renomeia(1, 'Pipoca Rosa', true);
+    r73(`__put657('auaulandia/orcamentos/r1/parcela2_cent', 15000); __put657('auaulandia/orcamentos/r1/total_cent', 28000); recGuardarFontes(__get657('auaulandia/orcamentos'), {});`);
+    const t2 = txt73(card73('2026-07'));
+    assert.ok(t2.indexOf('Mudou depois do fechamento (1)') >= 0 && /Romeo — Hospedagem na AuAulândia · reserva fechada em 03\/07\/2026 \+ parcela do dia: entrada em 20\/07\/2026: R\$ 260,00 → R\$ 280,00/.test(t2), t2);
+    assert.ok(t2.indexOf('A conta ao vivo hoje daria R$ 2.434,00 (diferença de R$ 20,00).') >= 0, t2);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P18 (AC5.3) — «Reabrir julho de 2026» (a Gestão, o motivo): o quadro volta à conta ao vivo; «Fechamentos de julho de 2026 (1)»; fechar de novo grava outro corpo e outro evento; os dois fechamentos e a reabertura ficam', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    await fecha73('2026-07');
+    r73(`pelCadCache['pipoca__rui teste'].renov.valor_plano_cent=99900;`);
+    await abre73(`recReabrirAbrir('2026-07')`);
+    const c = cartaz73();
+    // 3ª rodada (S8-P7 a P11, «só adriana»): ANTES «Senha da Gestão»; DEPOIS «Senha da Adriana» e «Quem assina: só a Adriana.».
+    assert.ok(/Volta a ficar: aberto \(a conta ao vivo\)/.test(c) && c.indexOf('O quadro de julho de 2026 volta à conta ao vivo (hoje: R$ 2.076,00).') >= 0 && c.indexOf('O fechamento de 10/10/2026 às 10:00 (R$ 2.154,00, por Adriana Teste) fica guardado em «Fechamentos de julho de 2026».') >= 0 && /Senha da Adriana/.test(c) && c.indexOf('Quem assina: só a Adriana.') >= 0, c);
+    await toca73('s-bia'); igual(passo73(), 'conferir', 'a Consultora não reabre');
+    await toca73(SENHA_ADR73, 'a pipoca pagou com desconto combinado');
+    igual(passo73(), 'pronto'); r73('corrFechar()');
+    const h = card73('2026-07'), t = txt73(h);
+    igual(total73(h), 'R$ 2.076,00', 'a conta ao vivo');
+    assert.ok(t.indexOf('Fechamentos de julho de 2026 (1)') >= 0 && t.indexOf('Fechado com R$ 2.154,00 — 10/10/2026 às 10:00, por Adriana Teste') >= 0 && t.indexOf('Reaberto — 10/10/2026 às 10:00, por Adriana Teste Motivo: a pipoca pagou com desconto combinado') >= 0, t);
+    assert.ok(/onclick="recFecharAbrir\('2026-07'\)">Fechar julho de 2026</.test(h), 'pode fechar de novo');
+    igual(aud73('recebimentos-mes-reaberto').length, 1);
+    igual(await fecha73('2026-07'), 'pronto');
+    const evs = Object.values(J73(`__get657('daycare/recebimentos/2026-07/eventos')`)).sort((a, b) => a.ts - b.ts);
+    igual(evs.map((e) => [e.acao, e.total_cent || null]), [['fechou', 215400], ['reabriu', null], ['fechou', 207600]]);
+    igual(Object.keys(J73(`__get657('daycare/recebimentos-linhas/2026-07')`)).length, 2, 'dois corpos, nenhum sobrescrito');
+    const t3 = txt73(card73('2026-07'));
+    assert.ok(t3.indexOf('Fechamentos de julho de 2026 (2)') >= 0 && total73(card73('2026-07')) === 'R$ 2.076,00', t3);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P19 (AC5.4) — com julho fechado, o efeito da 6.71 diz «julho de 2026 está fechado: o total fechado continua R$ 2.154,00; a mudança aparece em «Mudou depois do fechamento»» (anular o pagamento da Pipoca; inativar o Biscoito) e nunca promete que o total fechado cai', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    await fecha73('2026-07');
+    const F = 'julho de 2026 está fechado: o total fechado continua R$ 2.154,00; a mudança aparece em «Mudou depois do fechamento»';
+    r73('pelAtual=PELUDINHOS[1]; pelAtualIdx=1;');
+    await abre73('planoAnularAtualAbrir()');
+    const c = cartaz73();
+    assert.ok(c.indexOf(F) >= 0 && c.indexOf('R$ 2.154,00 → R$ 1.077,00') < 0 && c.indexOf('R$ 1.077,00 → R$ 0,00') < 0, c);
+    r73('corrFechar()');
+    // 3ª rodada (S8-P2 — Adriana, 12/10/2026: «sim»). ANTES: inativar o Biscoito dizia «Pela regra de hoje, quem sai não entra na conta do
+    // mês: » + F + « (pagamento de 05/07/2026).» (fechado) e «…: Total de julho de 2026 no Recebimentos: R$ 2.154,00 → R$ 1.077,00 (…)»
+    // (aberto). DEPOIS: inativar não muda mês nenhum — «No Recebimentos, nada muda: quem sai continua contando no mês em que pagou.»,
+    // fechado ou aberto, e o quadro aberto continua R$ 2.154,00 com o Biscoito inativo. PORQUÊ: quem sai continua no mês em que pagou.
+    const s = r73('saidaEfeitoLinha(PELUDINHOS[0])');
+    igual(s, 'No Recebimentos, nada muda: quem sai continua contando no mês em que pagou.');
+    // 3ª rodada (o defeito q25 do QA, que a pergunta de inativar segurava antes da S8-P2): a frase do mês fechado diz o total FECHADO, não
+    // o ao vivo — com a Pipoca corrigida para R$ 999,00 depois do fechamento (ao vivo, R$ 2.076,00), anular o plano do Biscoito diz R$ 2.154,00
+    r73(`pelCadCache['pipoca__rui teste'].renov.valor_plano_cent=99900; pelAtual=PELUDINHOS[0]; pelAtualIdx=0;`);
+    igual(quadro73('2026-07'), 207600, 'a conta ao vivo mudou');
+    await abre73('planoAnularAtualAbrir()');
+    const c2 = cartaz73();
+    assert.ok(c2.indexOf(F) >= 0 && c2.indexOf('R$ 2.076,00') < 0, c2);
+    r73(`corrFechar(); pelCadCache['pipoca__rui teste'].renov.valor_plano_cent=107700;`);
+    // o mesmo mês aberto: a mesma frase, e o número do quadro não cai
+    r73(`REC_FECH={ok:null, v:null, quando:0, vivo:false};`);
+    igual(r73('saidaEfeitoLinha(PELUDINHOS[0])'), 'No Recebimentos, nada muda: quem sai continua contando no mês em que pagou.');
+    r73(`pelCadCache['biscoito__clara teste'].inativo='Sim';`);
+    igual(quadro73('2026-07'), 215400, 'o Biscoito inativo continua em julho');
+  } finally { solta73(); }
+});
+provaAsync('6.73 P20 (AC6.1 a AC6.4) — «Lançar um ajuste» (a Gestão): «Somar ao mês» R$ 170,00; o passo de conferir «julho de 2026: R$ 2.154,00 → R$ 2.324,00»; «Ajustes com motivo (1)» no quadro, a linha na lista e no Excel, o «Total da lista» igual; «Tirar do mês» R$ 240,00 sai como -R$ 240,00; a régua na tela; a Consultora barrada', async () => {
+  arma73();
+  try {
+    cena73(JULHO73());
+    r73(`REC_MES='2026-07';`); entrega73();
+    await abre73(`recAjusteAbrir('2026-07')`);
+    igual(r73('CORR_ATUAL'), null);
+    assert.ok(J73('__au657').some((a) => /^BARROU lançar um ajuste no Recebimentos/.test(a[1])));
+    cena73(JULHO73(), { login: GESTORA73 });
+    r73(`REC_MES='2026-07';`); entrega73();
+    await abre73(`recAjusteAbrir('2026-07')`);
+    igual(passo73(), 'campos');
+    const tenta = (v) => r73(`corrToque('continuar', {valores:${JSON.stringify(v)}})`);
+    tenta(['— escolha —', '170,00', 'diária avulsa da Lua lançada sem valor']); assert.ok(/Escolha se o ajuste soma ou tira do mês/.test(aviso73()));
+    tenta(['Somar ao mês', '0', 'diária avulsa da Lua lançada sem valor']); assert.ok(/O valor precisa ser maior que zero/.test(aviso73()));
+    tenta(['Somar ao mês', '-10,00', 'diária avulsa da Lua lançada sem valor']); assert.ok(/O valor precisa ser maior que zero/.test(aviso73()));
+    tenta(['Somar ao mês', '170,00', 'ab']); assert.ok(/pelo menos 3 letras/.test(aviso73()));
+    tenta(['Somar ao mês', '170,00', 'diária avulsa da Lua lançada sem valor']);
+    igual(passo73(), 'conferir');
+    assert.ok(cartaz73().indexOf('julho de 2026: R$ 2.154,00 → R$ 2.324,00') >= 0, cartaz73());
+    await toca73('s-amanda'); igual(passo73(), 'conferir');
+    await toca73(SENHA_ADR73, 'a diária da Lua foi paga no balcão');
+    igual(passo73(), 'pronto'); r73('corrFechar()');
+    const w = escRec73();
+    igual([w.length, w[0][2].length, /^daycare\/recebimentos\/2026-07\/ajustes\/[^/]+$/.test(w[0][2][0])], [1, 1, true]);
+    const aj = Object.values(J73(`__get657('daycare/recebimentos/2026-07/ajustes')`))[0];
+    igual([aj.sentido, aj.valor_cent, aj.descricao, aj.motivo, aj.registro.por, aj.ts], ['somar', 17000, 'diária avulsa da Lua lançada sem valor', 'a diária da Lua foi paga no balcão', 'Adriana Teste', T673]);
+    igual(aud73('recebimentos-ajuste').length, 1);
+    const h = card73('2026-07'), t = txt73(h);
+    igual([total73(h), totalLista73(h)], ['R$ 2.324,00', 'R$ 2.324,00']);
+    // 3ª rodada (S8-P11): «lançados pela Gestão» → «lançados com a senha da Adriana»; quem assinou, a Adriana Teste
+    assert.ok(t.indexOf('Ajustes com motivo (1) lançados com a senha da Adriana, cada um com o motivo — entram no total do mês R$ 170,00') >= 0, t);
+    assert.ok(t.indexOf('Ajuste — diária avulsa da Lua lançada sem valor: a diária da Lua foi paga no balcão, por Adriana Teste em 10/10/2026 às 10:00 ajuste com motivo R$ 170,00') >= 0, t);
+    r73(`__xls673=[]; recBaixarExcel({closest:function(){ return null; }});`);
+    const X = J73('__xls673')[0].h;
+    assert.ok(X.indexOf('<td>Ajuste</td><td></td><td>Ajuste — diária avulsa da Lua lançada sem valor: a diária da Lua foi paga no balcão, por Adriana Teste em 10/10/2026 às 10:00</td><td>julho de 2026</td><td>R$ 170,00</td>') > 0, X.slice(-900));
+    assert.ok(X.indexOf('<td>TOTAL</td><td></td><td></td><td></td><td>R$ 2.324,00</td>') > 0);
+    // «Tirar do mês»
+    await abre73(`recAjusteAbrir('2026-07')`);
+    r73(`corrToque('continuar', {valores:['Tirar do mês', '240,00', 'plano devolvido ao tutor do Bento']})`);
+    assert.ok(cartaz73().indexOf('julho de 2026: R$ 2.324,00 → R$ 2.084,00') >= 0, cartaz73());
+    await toca73(SENHA_ADR73, 'o plano foi devolvido ao tutor'); r73('corrFechar()');
+    const h2 = card73('2026-07');
+    igual([total73(h2), totalLista73(h2)], ['R$ 2.084,00', 'R$ 2.084,00']);
+    assert.ok(txt73(h2).indexOf('Ajustes com motivo (2) lançados pela Gestão, cada um com o motivo — entram no total do mês R$ -') < 0 && txt73(h2).indexOf('-R$ 240,00') >= 0 && txt73(h2).indexOf('R$ -') < 0, txt73(h2));
+  } finally { solta73(); }
+});
+provaAsync('6.73 P21 (AC6.5, AC6.6) — «Anular este ajuste» (a Gestão): riscado, fora do total, com «Reabrir», que o devolve; nada apagado; em mês fechado, sem os botões e sem a função («Para ajustar, reabra o mês.»); o fechamento guarda os ajustes válidos da hora', async () => {
+  arma73();
+  try {
+    RICO73(); r73(`__put657('daycare/recebimentos/2026-07/ajustes/aj2', {sentido:'tirar', valor_cent:5000, descricao:'taxa devolvida ao tutor', motivo:'cobrado a mais no balcão', ts:6, registro:{por:'Gestora Teste', quando:'09/10/2026 às 11:00', motivo:'cobrado a mais no balcão', ts:6}});`);
+    await le73('2026-07');
+    igual(total73(card73('2026-07')), 'R$ 2.631,00');
+    await abre73(`recAjusteAnularAbrir('aj1', '2026-07')`);
+    const c = cartaz73();
+    // 3ª rodada (S8-P7 a P11, «só adriana»): ANTES «Senha da Gestão»; DEPOIS «Senha da Adriana» e «Quem assina: só a Adriana.».
+    assert.ok(c.indexOf('julho de 2026: R$ 2.631,00 → R$ 2.534,00.') >= 0 && c.indexOf('O ajuste fica riscado, fora do total, com «Reabrir».') >= 0 && /Senha da Adriana/.test(c) && c.indexOf('Quem assina: só a Adriana.') >= 0, c);
+    await toca73(SENHA_ADR73, 'a diária da Lua já estava no avulso');
+    igual([passo73(), za73('O AJUSTE NÃO FOI ANULADO')], ['pronto', null], cartaz73()); r73('corrFechar()');
+    const aj = J73(`__get657('daycare/recebimentos/2026-07/ajustes/aj1')`);
+    igual([aj.valor_cent, aj.descricao, Object.values(aj.anulacoes).map((x) => x.acao)], [9700, 'diária da Lua lançada sem valor', ['anular']], 'nada apagado: um registro novo');
+    const h = card73('2026-07'), t = txt73(h);
+    igual(total73(h), 'R$ 2.534,00');
+    assert.ok(/class="corr-riscado"/.test(h) && t.indexOf('Anulado (lançado por engano) por Adriana Teste (Gestão), em 10/10/2026 às 10:00') >= 0 && /onclick="recAjusteReabrirAbrir\('aj1','2026-07'\)">Reabrir</.test(h), t);
+    igual(aud73('recebimentos-ajuste-anulado').length, 1);
+    await abre73(`recAjusteReabrirAbrir('aj1', '2026-07')`);
+    assert.ok(cartaz73().indexOf('julho de 2026: R$ 2.534,00 → R$ 2.631,00.') >= 0, cartaz73());
+    await toca73(SENHA_ADR73, 'a diária era outra e não estava'); r73('corrFechar()');
+    igual(total73(card73('2026-07')), 'R$ 2.631,00');
+    igual(Object.values(J73(`__get657('daycare/recebimentos/2026-07/ajustes/aj1')`).anulacoes).map((x) => x.acao).sort(), ['anular', 'reabrir']);
+    igual(aud73('recebimentos-ajuste-reaberto').length, 1);
+    // anula o aj2 e fecha: o fechamento guarda só o válido
+    await abre73(`recAjusteAnularAbrir('aj2', '2026-07')`); await toca73(SENHA_ADR73, 'a taxa não foi devolvida ainda'); r73('corrFechar()');
+    await fecha73('2026-07');
+    const cid = Object.values(J73(`__get657('daycare/recebimentos/2026-07/eventos')`))[0].linhas;
+    igual(J73(`__get657('daycare/recebimentos-linhas/2026-07/${cid}')`).ajustes.map((a) => a.id), ['aj1']);
+    // mês fechado: sem «Lançar um ajuste», sem «Anular», sem «Reabrir» do ajuste; e a função recusa
+    const hf = card73('2026-07');
+    assert.ok(hf.indexOf('recAjusteAbrir') < 0 && hf.indexOf('recAjusteAnularAbrir') < 0 && hf.indexOf('recAjusteReabrirAbrir') < 0 && txt73(hf).indexOf('Para ajustar, reabra o mês.') >= 0, txt73(hf).slice(-500));
+    await abre73(`recAjusteAbrir('2026-07')`);
+    igual([r73('CORR_ATUAL'), za73('NÃO DÁ PARA LANÇAR O AJUSTE AGORA')], [null, ['julho de 2026 está fechado. Para ajustar, reabra o mês.', 'Nada foi gravado.']]);
+    await abre73(`recAjusteAnularAbrir('aj1', '2026-07')`);
+    igual(za73('NÃO DÁ PARA ANULAR O AJUSTE AGORA'), ['julho de 2026 está fechado. Para ajustar, reabra o mês.', 'Nada foi gravado.']);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P22 (AC6.7, guarda) — o ajuste é do quadro de conferência: o JSON do finResumoMes e o Financeiro da Adriana iguais com e sem ajuste', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 });
+    r73(`REC_MES='2026-07';`); entrega73();
+    const fin = () => J73(`(function(){ var r=finResumoMes({cadastro:pelCadCache, peludinhos:PELUDINHOS, irmaos:{}, orcamentos:{}, pagamentos:null, planos:planos(), descontoIrmao:descontosPlano()}, '2026-07', {hoje:'2026-10-10'}); return JSON.stringify(r)+'|'+pdirFinHTML(r, false, 'julho de 2026')+'|'+JSON.stringify(recResumoDoMes('2026-07')); })()`);
+    const antes = fin();
+    await abre73(`recAjusteAbrir('2026-07')`);
+    r73(`corrToque('continuar', {valores:['Somar ao mês', '170,00', 'diária avulsa da Lua lançada sem valor']})`);
+    await toca73(SENHA_ADR73); r73('corrFechar()');
+    igual(total73(card73('2026-07')), 'R$ 2.324,00');
+    igual(fin(), antes);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P37 (AC5.1) — os três casos de leitura: o corpo ainda lendo («Lendo o fechamento de julho de 2026…», sem total); a leitura dos fechamentos falhando (a frase, sem os botões novos); os fechamentos não entregues (como as provas antigas): o HTML do quadro igual ao da base. E o Excel do mês fechado com «FECHADO em …» no título e «Mudou depois do fechamento» depois do TOTAL, fora do total', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    await fecha73('2026-07');
+    // o corpo ainda não chegou (a leitura fica pendurada)
+    r73(`REC_CORPO={}; __ref73=DB.ref; DB={ref:function(p){ var r=__ref73(p); if(/^daycare\\/recebimentos-linhas/.test(String(p))) r.once=function(){ return new Promise(function(){}); }; return r; }};`);
+    const h1 = card73('2026-07');
+    assert.ok(txt73(h1).indexOf('Lendo o fechamento de julho de 2026…') >= 0 && total73(h1) === '' && h1.indexOf('rec-lista-total') < 0, txt73(h1));
+    r73('DB.ref=__ref73; __ref73=null; REC_CORPO={};');
+    // a leitura dos fechamentos falhou: a conta ao vivo, dizendo isso, sem «Fechar» nem «Lançar um ajuste»
+    r73(`REC_FECH={ok:false, v:null, quando:Date.now(), vivo:false};`);
+    const h2 = card73('2026-07');
+    assert.ok(txt73(h2).indexOf('Não consegui conferir se julho de 2026 está fechado: esta é a conta ao vivo.') >= 0 && h2.indexOf('recFecharAbrir') < 0 && h2.indexOf('recAjusteAbrir') < 0 && total73(h2) === 'R$ 2.154,00', txt73(h2).slice(-400));
+    // os fechamentos não entregues: o quadro exatamente como na base 788fb9e (sha do HTML medido na base, s673/tools/cardbase.js)
+    r73(`REC_FECH={ok:null, v:null, quando:0, vivo:false}; recGuardarFontes({}, {}); REC_AVULSO={mes:'2026-07', quando:1, lendo:false, ok:true, total_cent:0, n:0, semValor:0, futuros:0};`);
+    igual(sha73(card73('2026-07')), 'e305f2e8e143728e', 'o HTML do quadro sem os fechamentos entregues = o da base');
+    // o Excel do mês fechado
+    r73(`recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')}); pelCadCache['pipoca__rui teste'].renov.valor_plano_cent=99900; REC_CORPO={};`);
+    card73('2026-07'); await esp73(); card73('2026-07');
+    r73(`__xls673=[]; recBaixarExcel({closest:function(){ return null; }});`);
+    const X = J73('__xls673')[0].h;
+    assert.ok(X.indexOf('Recebimentos de julho de 2026 — FECHADO em 10/10/2026 às 10:00 por Adriana Teste') > 0, X.slice(0, 600));
+    const iT = X.indexOf('<td>TOTAL</td><td></td><td></td><td></td><td>R$ 2.154,00</td>'), iM = X.indexOf('<td>Mudou depois do fechamento</td><td></td><td>FORA DO TOTAL</td><td></td><td></td><td>Pipoca — Gold · trimestral · 1x por semana · pago em 08/07/2026: R$ 1.077,00 → R$ 999,00</td>');
+    assert.ok(iT > 0 && iM > iT, X.slice(-1200));
+    assert.ok(X.indexOf('a conta ao vivo hoje daria R$ 2.076,00 (diferença de -R$ 78,00)') > iT, X.slice(-600));
+  } finally { r73('if(typeof __ref73!=="undefined" && __ref73){ DB.ref=__ref73; __ref73=null; }'); solta73(); }
+});
+
+// ---- AC7 a AC9 — a tabela de planos em Configurações e o efeito dela nos meses ------------------------------------
+// o cartão desenhado e os campos dele preenchidos com uma tabela (T, no formato do cartão; os valores em centavos)
+const cartao73 = () => { r73(`__el657.cfgPlanosWrap={innerHTML:''}; __el657.cfgPlanosSt={style:{}, textContent:''}; __el657.cfgPlanosHist={innerHTML:''}; cfgPlanosRender();`); return r73('__el657.cfgPlanosWrap.innerHTML'); };
+const campos73 = (mudar) => {
+  ctx673.__m73 = mudar || {};
+  r73(`(function(){ var T=tabelaPlanosAtual(), cx=function(c){ return acertoReaisTexto(c); };
+    ['Silver','Gold','Black'].forEach(function(k){ [1,2,3,4,5].forEach(function(n){ __el657['cfgPl_'+k+'_'+n]={value:cx(T[k].valores[n])}; }); __el657['cfgPlOff_'+k]={value:String(T[k].hospOff)}; });
+    __el657.cfgPlIrmao_2={value:String(T.descontoIrmao[2])}; __el657.cfgPlIrmao_3={value:String(T.descontoIrmao[3])};
+    Object.keys(__m73).forEach(function(id){ __el657[id]={value:String(__m73[id])}; }); })();`);
+};
+const stCfg73 = () => r73('__el657.cfgPlanosSt.textContent');
+const salva73 = async (mudar, senha, motivo) => { cartao73(); campos73(mudar); await abre73('cfgPlanosSalvar()'); if (senha) { await toca73(senha, motivo || 'a tabela comercial de 2027 chegou'); } };
+provaAsync('6.73 P23 (AC7.1) — o cartão «Planos do Day Care», logo abaixo de «Valores do Day Care» (so-master): as 15 mensalidades, os dois descontos de irmão e os três descontos na AuAulândia; «ainda é a tabela de fábrica de 2026»; sem campo de compromisso, de nome ou de parcelas. Base: não existe (SONDA673-L11a)', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 });
+    const h = cartao73();
+    const ids = ['Silver', 'Gold', 'Black'].reduce((a, k) => a.concat([1, 2, 3, 4, 5].map((n) => 'cfgPl_' + k + '_' + n)), []).concat(['cfgPlOff_Silver', 'cfgPlOff_Gold', 'cfgPlOff_Black', 'cfgPlIrmao_2', 'cfgPlIrmao_3']);
+    ids.forEach((id) => assert.ok(new RegExp('id="' + id + '"[^>]*min-height:44px').test(h), id));
+    igual((h.match(/<input /g) || []).length, 20, 'só os 20 campos: nenhum de compromisso, nome ou parcelas');
+    assert.ok(/id="cfgPl_Gold_1"[^>]*value="359,00"/.test(h) && /id="cfgPl_Silver_5"[^>]*value="1\.067,00"/.test(h) && /id="cfgPlOff_Black"[^>]*value="15"/.test(h) && /id="cfgPlIrmao_3"[^>]*value="12"/.test(h), h.slice(0, 600));
+    const t = txt73(h);
+    assert.ok(t.indexOf('Gold · trimestral — a mensalidade, por quantas vezes na semana') >= 0 && t.indexOf('Trimestral: hoje vale 1x R$ 359,00 · 2x R$ 589,00 · 3x R$ 699,00 · 4x R$ 829,00 · 5x R$ 969,00; desconto na AuAulândia 10% — ainda é a tabela de fábrica de 2026.') >= 0, t);
+    assert.ok(t.indexOf('Hoje vale: 2º FILHOt 7%, 3º em diante 12% — ainda é a tabela de fábrica de 2026.') >= 0, t);
+    assert.ok(/min-height:44px" onclick="cfgPlanosSalvar\(\)">Salvar a tabela</.test(h) && /onclick="cfgPlanosFabrica\(\)">Voltar à tabela de fábrica</.test(h));
+    const src = fs.readFileSync(APP, 'utf8');
+    const iV = src.indexOf('<div class="card so-master" id="cardValoresDaycare">'), iP = src.indexOf('<div class="card so-master" id="cardPlanosDaycare">'), iT = src.indexOf('<h2 style="font-size:19px">Avisos no Telegram</h2>');
+    assert.ok(iV > 0 && iP > iV && iT > iP && src.slice(iV, iP).split('<div class="card').length === 2, 'logo abaixo de «Valores do Day Care»');
+    assert.ok(src.indexOf('if(typeof cfgPlanosAbrir===\'function\') cfgPlanosAbrir();') > 0, 'desenhado ao abrir Configurações');
+  } finally { solta73(); }
+});
+provaAsync('6.73 P24 (AC7.2, AC7.3) — «Salvar a tabela»: a Supervisão vê o cartão e é barrada ao salvar; a régua na própria tela (zero, negativo, 51%, os dois descontos de irmão em 0%, «Nada mudou»); o cartaz «corrigir» com cada valor que mudou e a senha da Adriana (S8-P9)', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: { nome: 'Amanda Supervisora Teste', role: 'supervisor' } });
+    assert.ok(cartao73().indexOf('id="cfgPl_Gold_1"') > 0, 'a Supervisão vê o cartão');
+    await salva73({ cfgPl_Gold_1: '399,00' });
+    igual(r73('CORR_ATUAL'), null);
+    assert.ok(J73('__au657').some((a) => /^BARROU mudar a tabela de planos do Day Care/.test(a[1])), 'BARROU');
+    cena73(JULHO73(), { login: GESTORA73 });
+    const casos = [[{ cfgPl_Gold_1: '0' }, 'O valor de «Gold · 1x por semana» precisa ser maior que zero, em reais (por exemplo: 359,00). Nada foi salvo.'],
+      [{ cfgPl_Gold_1: '-5,00' }, 'O valor de «Gold · 1x por semana» precisa ser maior que zero, em reais (por exemplo: 359,00). Nada foi salvo.'],
+      [{ cfgPlOff_Silver: '51' }, 'O desconto na AuAulândia do Silver precisa ser um número inteiro de 0 a 50 (%). Nada foi salvo.'],
+      [{ cfgPlIrmao_2: '7,5' }, 'O desconto do 2º FILHOt da família precisa ser um número inteiro de 0 a 50 (%). Nada foi salvo.'],
+      [{ cfgPlIrmao_2: '0', cfgPlIrmao_3: '0' }, 'Com os dois descontos em 0%, a conta do Financeiro voltaria aos 7% e 12% de fábrica. Deixe pelo menos um deles maior que zero. Nada foi salvo.'],
+      [{}, 'Nada mudou: a tabela é a mesma de agora. Nada foi salvo.']];
+    for (const [m, frase] of casos) { await salva73(m); igual([stCfg73(), r73('CORR_ATUAL')], [frase, null], JSON.stringify(m)); }
+    await salva73({ cfgPl_Gold_1: '399,00', cfgPlIrmao_2: '8', cfgPlOff_Gold: '12' });
+    const c = cartaz73();
+    assert.ok(/Gold · 1x por semana ?: «R\$ 359,00» → «R\$ 399,00»/.test(c) && /2º FILHOt da família ?: «7%» → «8%»/.test(c) && /Desconto na AuAulândia, Gold ?: «10%» → «12%»/.test(c), c);
+    // 3ª rodada (S8-P7 a P11, «só adriana»): ANTES «Senha da Gestão»; DEPOIS «Senha da Adriana» e «Quem assina: só a Adriana.».
+    assert.ok(/Mudar a tabela de planos do Day Care/.test(c) && /Senha da Adriana/.test(c) && c.indexOf('Quem assina: só a Adriana.') >= 0 && /Salvar a tabela/.test(c), c);
+    igual(escRec73().length, 0, 'nada gravado antes da senha');
+    // 3ª rodada (S8-P9): ANTES «Essa senha é de Amanda Supervisora Teste, que não pode assinar…»; DEPOIS «Só a Adriana muda a tabela de
+    // planos: essa senha é de …», também para a outra senha da Gestão (a SENHA657, «Gestora Teste»), que não grava nada.
+    await toca73('s-amanda'); igual(aviso73(), 'Só a Adriana muda a tabela de planos: essa senha é de Amanda Supervisora Teste. Nada foi gravado.');
+    await toca73(SENHA657); igual([aviso73(), escRec73().length], ['Só a Adriana muda a tabela de planos: essa senha é de Gestora Teste. Nada foi gravado.', 0]);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P25 (AC7.4, AC7.5) — a gravação única (a tabela inteira e o histórico com o antes, o depois, o motivo, o registro e o efeito); o rastro «tabela-planos» com o antes e o depois de cada linha; só com o ok; «Voltar à tabela de fábrica» só preenche', async () => {
+  arma73();
+  try {
+    // o banco recusa: nada muda (nem a tabela da memória, nem o rastro)
+    cena73(JULHO73(), { login: GESTORA73 });
+    r73(`__recusa657='^$';`);
+    await salva73({ cfgPl_Gold_1: '399,00' }, SENHA_ADR73);
+    igual([r73('mensalidade("Gold",1,1)'), aud73('tabela-planos').length], [35900, 0]);
+    assert.ok(za73('A TABELA NÃO FOI SALVA') && r73('CORR_ATUAL') === null, JSON.stringify(titulos73()));
+    cena73(JULHO73(), { login: GESTORA73 });
+    await salva73({ cfgPl_Gold_1: '399,00', cfgPlIrmao_2: '8' }, SENHA_ADR73);
+    igual(passo73(), 'pronto'); r73('corrFechar()');
+    const w = escRec73();
+    igual(w.length, 1, JSON.stringify(escs73()));
+    igual(w[0][2].length, 2);
+    assert.ok(w[0][2][0] === 'daycare/config/tabela-planos' && /^daycare\/config\/tabela-planos-historico\/[^/]+$/.test(w[0][2][1]), JSON.stringify(w[0][2]));
+    const T = J73(`__get657('daycare/config/tabela-planos')`);
+    igual([T.Gold.valores[1], T.Gold.valores[2], T.Silver.valores[1], T.Gold.hospOff, T.descontoIrmao[2], T.descontoIrmao[3], T.quem, T.ts], [39900, 58900, 38700, 10, 8, 12, 'Adriana Teste', T673]);   // 3ª rodada (S8-P9): quem assinou, a Adriana
+    igual(Object.keys(T).sort(), ['Black', 'Gold', 'Silver', 'descontoIrmao', 'quem', 'ts'], 'sem compromisso, nome nem parcelas');
+    const H = Object.values(J73(`__get657('daycare/config/tabela-planos-historico')`))[0];
+    igual([H.antes.Gold.valores[1], H.depois.Gold.valores[1], H.antes.descontoIrmao[2], H.depois.descontoIrmao[2], H.motivo, H.registro.por, H.registro.papel], [35900, 39900, 7, 8, 'a tabela comercial de 2027 chegou', 'Adriana Teste', 'gestao']);
+    igual(H.efeito.map((m) => [m.mes, m.antes, m.depois]), [['2026-07', 215400, 227400]]);
+    const a = aud73('tabela-planos');
+    igual(a.length, 1);
+    assert.ok(a[0][1].indexOf('mudou a tabela de planos do Day Care: Gold · 1x por semana: R$ 359,00 → R$ 399,00; 2º FILHOt da família: 7% → 8% — motivo: a tabela comercial de 2027 chegou, assinado por Adriana Teste') === 0, a[0][1]);
+    assert.ok(a[0][2].antes.indexOf('Gold · 1x por semana: R$ 359,00') >= 0 && a[0][2].depois.indexOf('Gold · 1x por semana: R$ 399,00') >= 0);
+    igual([r73('mensalidade("Gold",1,1)'), r73('mensalidade("Gold",1,2)'), J73('descontosPlano()')], [39900, 36708, { 2: 8, 3: 12 }], 'a tabela nova vale na hora, neste aparelho (39.900 × 92% = 36.708)');
+    // «Voltar à tabela de fábrica» só preenche os campos
+    r73('__esc657=[];');
+    cartao73(); r73('cfgPlanosFabrica()');
+    const h = r73('__el657.cfgPlanosWrap.innerHTML');
+    assert.ok(/id="cfgPl_Gold_1"[^>]*value="359,00"/.test(h) && /id="cfgPlIrmao_2"[^>]*value="7"/.test(h), 'os campos com a tabela de 2026');
+    igual([escs73().length, r73('mensalidade("Gold",1,1)')], [0, 39900], 'nada gravado: a tabela salva continua');
+    assert.ok(/Nada foi salvo: confira e toque em «Salvar a tabela»/.test(stCfg73()));
+    campos73({ cfgPl_Gold_1: '359,00', cfgPlIrmao_2: '7' });   // o que a página mostra agora (o sandbox não lê o innerHTML)
+    igual(r73('cfgPlanosSujo()'), true, 'o que está no cartão é rascunho (o ouvinte não apaga)');
+  } finally { solta73(); }
+});
+provaAsync('6.73 P26 (AC8.1, AC8.2) — Gold 1x de R$ 359,00 para R$ 399,00 com julho aberto: o cartaz diz, antes da senha, «julho de 2026 — Total dos planos do Day Care: R$ 2.154,00 → R$ 2.274,00 (Biscoito: R$ 1.077,00 → R$ 1.197,00).»; depois de salvar, o quadro de julho dá R$ 2.274,00 (o mesmo número); só o desconto na AuAulândia: «Nenhum mês passado muda.». Base: muda calado (SONDA673-K07c)', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 });
+    await salva73({ cfgPl_Gold_1: '399,00' });
+    const c = cartaz73();
+    assert.ok(c.indexOf('Mudam (mês aberto, plano sem valor gravado):') >= 0 && c.indexOf('julho de 2026 — Total dos planos do Day Care: R$ 2.154,00 → R$ 2.274,00 (Biscoito: R$ 1.077,00 → R$ 1.197,00).') >= 0, c);
+    assert.ok(c.indexOf('Não mudam: os planos confirmados desde 07/10/2026 guardam o valor da época (valor gravado).') >= 0 && c.indexOf('Nenhum mês passado muda.') < 0 && c.indexOf('Não mudam (mês fechado)') < 0, c);
+    assert.ok(c.indexOf('Daqui para a frente: o próximo Confirmar de cada plano, o convite ao trimestral da mensagem «Plano finalizou» e o desconto na AuAulândia dos orçamentos novos usam a tabela nova; num orçamento já feito, o desconto muda se alguém tocar «Mudar as datas», porque ela remonta o plano de hoje de cada FILHOt.') >= 0, c);
+    await toca73(SENHA_ADR73); r73('corrFechar()');
+    r73(`REC_MES='2026-07';`); entrega73();
+    igual([quadro73('2026-07'), total73(card73('2026-07'))], [227400, 'R$ 2.274,00'], 'o número do cartaz bate com o quadro');
+    // só o desconto na AuAulândia: os meses passados não mudam
+    cena73(JULHO73(), { login: GESTORA73 });
+    await salva73({ cfgPlOff_Gold: '12' });
+    assert.ok(cartaz73().indexOf('Nenhum mês passado muda.') >= 0 && cartaz73().indexOf('Mudam (') < 0, cartaz73());
+    // a base, sem cartaz nenhum: a tabela trocada direto muda julho calada (o que a sonda provou)
+    cena73(JULHO73());
+    r73(`planosCfg=JSON.parse(JSON.stringify(PLANOS_PADRAO)); planosCfg.Gold.valores[1]=39900; recGuardarFontes({}, {});`);
+    igual(quadro73('2026-07'), 227400);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P27 (AC8.1, AC8.3, AC8.4) — com julho fechado: «Não mudam (mês fechado): julho de 2026.»; depois de salvar, o quadro continua R$ 2.154,00 e «Mudou depois do fechamento» mostra «a tabela de planos mudou em 10/10/2026»; um mês fechado no meio do cartaz: «Os meses mudaram enquanto a tabela estava aberta. Nada foi gravado: confira o cartaz de novo.»', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    await fecha73('2026-07');
+    r73(`Date.now=function(){ return ${T673 + 3600000}; };`);
+    await salva73({ cfgPl_Gold_1: '399,00' });
+    const c = cartaz73();
+    assert.ok(c.indexOf('Não mudam (mês fechado): julho de 2026. O total fechado continua; a diferença aparece em «Mudou depois do fechamento», no quadro do mês.') >= 0 && c.indexOf('Mudam (mês aberto') < 0, c);
+    await toca73(SENHA_ADR73); igual(passo73(), 'pronto'); r73('corrFechar()');
+    igual(Object.values(J73(`__get657('daycare/config/tabela-planos-historico')`))[0].fechados, ['2026-07']);
+    const h = card73('2026-07'), t = txt73(h);
+    igual(total73(h), 'R$ 2.154,00');
+    assert.ok(t.indexOf('Biscoito — Gold · trimestral · 1x por semana · pago em 05/07/2026: R$ 1.077,00 → R$ 1.197,00 (a tabela de planos mudou em 10/10/2026)') >= 0, t);
+    assert.ok(t.indexOf('A conta ao vivo hoje daria R$ 2.274,00 (diferença de R$ 120,00).') >= 0, t);
+    // a releitura: agosto fechou em outro aparelho enquanto o cartaz estava aberto
+    cena73(JULHO73(), { login: GESTORA73 });
+    await salva73({ cfgPl_Gold_1: '399,00' });
+    r73(`__put657('daycare/recebimentos/2026-08/eventos/z8', {acao:'fechou', total_cent:0, linhas:'c8', motivo:'fechado no outro aparelho', ts:${T673}, registro:{por:'Adriana Teste'}});`);
+    await toca73(SENHA_ADR73);
+    igual(za73('A TABELA NÃO FOI SALVA'), ['Os meses mudaram enquanto a tabela estava aberta. Nada foi gravado: confira o cartaz de novo.', 'A tabela continua como estava.']);
+    igual([escRec73().length, r73('mensalidade("Gold",1,1)'), aud73('tabela-planos').length], [0, 35900, 0]);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P28 (AC9.1) — a tabela do banco chega pelo ouvinte e vai para planosCfg (com o nome, o compromisso e as parcelas de fábrica); a tabela nova chega sem recarregar; sem o nó, planos() é a tabela de fábrica (guarda); a lista do Firebase e o valor torto', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 });
+    r73(`__on73={}; __ref73=DB.ref; DB={ref:function(p){ var r=__ref73(p); r.on=function(ev, ok, nao){ __on73[p]={ok:ok, nao:nao}; }; return r; }};`);
+    r73('tabelaPlanosOuvir();');
+    igual([r73('TABELA_PLANOS.pedida'), r73('TABELA_PLANOS.chegou'), r73('planosProntos()'), r73('recTrava()')], [true, false, false, 'a tabela de planos ainda não chegou neste aparelho']);
+    const chega = (v) => { ctx673.__v73 = v; r73(`__on73['daycare/config/tabela-planos'].ok({val:function(){ return __v73; }});`); };
+    chega({ Gold: { valores: { 1: 39900, 2: 58900, 3: 69900, 4: 82900, 5: 96900 }, hospOff: 12 }, descontoIrmao: { 2: 8, 3: 15 }, ts: T673, quem: 'Gestora Teste' });
+    igual([r73('TABELA_PLANOS.chegou'), r73('planosProntos()')], [true, true]);
+    igual(J73('planos().Gold'), { rotulo: 'Gold', compromisso: 'trimestral', parcelas: 2, hospOff: 12, valores: { 1: 39900, 2: 58900, 3: 69900, 4: 82900, 5: 96900 } });
+    igual(J73('planos().Silver'), J73('PLANOS_PADRAO.Silver'), 'o plano que o nó não traz fica com a tabela de fábrica');
+    igual([r73('mensalidade("Gold",1,1)'), J73('descontosPlano()')], [39900, { 2: 8, 3: 15 }]);
+    chega({ Gold: { valores: [null, 41900, 58900, 69900, 82900, 96900], hospOff: 10 }, descontoIrmao: { 2: 7, 3: 12 } });
+    igual(r73('mensalidade("Gold",1,1)'), 41900, 'a tabela nova chega sem recarregar (e a lista do Firebase vale)');
+    chega({ Gold: { valores: { 1: 0, 2: 'x', 3: 69900, 4: 82900, 5: 96900 }, hospOff: 99 }, descontoIrmao: { 2: 0, 3: 0 } });
+    igual([J73('planos().Gold.valores[1]'), J73('planos().Gold.valores[2]'), J73('planos().Gold.hospOff'), r73('descontosPlano()===DESC_PET_PLANO')], [35900, 58900, 10, true], 'o valor torto fica com o de fábrica');
+    chega(null);
+    igual([r73('planos()===PLANOS_PADRAO'), r73('descontosPlano()===DESC_PET_PLANO'), r73('mensalidade("Gold",1,1)')], [true, true, 35900], 'sem o nó: a tabela de fábrica, igual à base');
+    const src = fs.readFileSync(APP, 'utf8');
+    const w = src.slice(src.indexOf('function wireFirebaseListeners()'), src.indexOf("DB.ref('daycare/config/sensiveis')"));
+    assert.ok(w.indexOf('tabelaPlanosOuvir();') > 0 && w.indexOf('recFechOuvir();') > 0, 'os ouvintes ligam ao abrir o app');
+  } finally { r73('if(typeof __ref73!=="undefined" && __ref73){ DB.ref=__ref73; __ref73=null; }'); solta73(); }
+});
+provaAsync('6.73 P29 (AC9.2) — mensalidade = finMensalidade para todo plano × 1 a 5 vezes × 1º ao 5º FILHOt: com a tabela de fábrica (igual à base), com os descontos 2º 8% e 3º 15% e com o 3º em 0%. Base: discordam (SONDA673-L11c)', async () => {
+  arma73();
+  try {
+    cena73(JULHO73());
+    const roda = () => J73(`(function(){ var out=[], d=descontosPlano(); ['Silver','Gold','Black'].forEach(function(k){ [1,2,3,4,5].forEach(function(a){ [1,2,3,4,5].forEach(function(o){
+      var base=Math.round(planos()[k].valores[a]*(100-(DESC_PET_PLANO[o]||(o>=3?12:0)))/100);
+      out.push([k, a, o, mensalidade(k,a,o), finMensalidade(planos(),k,a,o,d), base]); }); }); }); return out; })()`);
+    const fab = roda();
+    igual(fab.length, 75);
+    igual(fab.filter((x) => x[3] !== x[4] || x[3] !== x[5]), [], 'com a tabela de fábrica: a tela, o Financeiro e a conta da base');
+    r73('descontosCfg={2:8, 3:15};');
+    const tr = roda();
+    igual(tr.filter((x) => x[3] !== x[4]), [], 'com 8% e 15%: a tela = o Financeiro');
+    igual(tr.filter((x) => x[0] === 'Gold' && x[1] === 1 && x[2] === 4).map((x) => [x[3], x[4]]), [[30515, 30515]], 'o 4º FILHOt com o desconto do 3º (na base, R$ 315,92 × R$ 305,15)');
+    r73('descontosCfg={2:7, 3:0};');
+    const z = roda();
+    igual(z.filter((x) => x[3] !== x[4]), [], 'com o 3º em 0%: 0% vale 0% nas duas');
+    igual(z.filter((x) => x[0] === 'Gold' && x[1] === 1 && x[2] === 3).map((x) => x[3]), [35900]);
+    r73('descontosCfg=null;');
+  } finally { solta73(); }
+});
+provaAsync('6.73 P30 (AC9.3) — depois de pedida e antes de chegar: o quadro diz «a tabela de planos ainda não chegou neste aparelho»; o Confirmar e o orçamento (salvar, salvar a edição, mudar as datas) recusam sem gravar; o Dashboard da Adriana tem a trava; sem o pedido (as provas antigas), nada muda', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 });
+    r73(`REC_MES='2026-07'; entregue=1;`); entrega73();
+    r73('TABELA_PLANOS={pedida:true, chegou:false, erro:null, v:null};');
+    const h = txt73(card73('2026-07'));
+    assert.ok(h.indexOf('Ainda não sei dizer. a tabela de planos ainda não chegou neste aparelho. Um total pela metade é pior do que nenhum') >= 0 && total73(card73('2026-07')) === '', h);
+    r73(`pelAtual=PELUDINHOS[0]; pelAtualIdx=0; renovRascunho={_k:pelKey(pelAtual), plano:'Gold', aulas:1, inicio:'2026-10-10'}; __zpq657=[true, true, true];`);
+    await abre73('confirmarRenovacao()');
+    igual([za73('A TABELA DE PLANOS AINDA NÃO CHEGOU'), escCad73().length], [['A tabela de planos ainda não chegou neste aparelho. Espere uns segundos e toque de novo. Nada foi gravado.'], 0]);
+    for (const f of ['orcSalvar()', 'orcSalvarEdicao()', "orcMudarDatas('r1')"]) {
+      r73('__za657=[]; __esc657=[];');
+      await abre73(f);
+      igual([titulos73(), escs73().length], [['A TABELA DE PLANOS AINDA NÃO CHEGOU'], 0], f);
+    }
+    const src = fs.readFileSync(APP, 'utf8'), pd = src.slice(src.indexOf('  function pdirAbrir('), src.indexOf('// INIT do Day Care'));
+    // a trava do Dashboard da Adriana: chegando, «ainda não chegou»; a leitura que falhou (2ª rodada, OBS-02), «Não consegui ler» com «Tentar de novo»
+    assert.ok(/else if\(typeof planosProntos==='function' && !planosProntos\(\)\)\{[\s\S]{0,1200}A tabela de planos ainda não chegou neste aparelho/.test(pd)
+      && /else if\(typeof planosProntos==='function' && !planosProntos\(\)\)\{[\s\S]{0,600}Não consegui ler a tabela de planos neste aparelho[\s\S]{0,400}tabelaPlanosTentar\(\)[^>]{0,4}>Tentar de novo/.test(pd), 'a trava do Dashboard da Adriana');
+    // chegou: tudo anda (e sem o pedido, nunca travou: as provas antigas)
+    r73('TABELA_PLANOS={pedida:true, chegou:true, erro:null, v:null};');
+    igual(total73(card73('2026-07')), 'R$ 2.154,00');
+    r73('TABELA_PLANOS={pedida:false, chegou:false, erro:null, v:null};');
+    igual([r73('planosProntos()'), r73('recTrava()')], [true, '']);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P31 (AC9.4) — «Tabelas anteriores (1)» com quando, quem, o motivo, os valores e o efeito registrado; «Voltar a esta tabela» (cartaz «reabrir», a Gestão, o motivo e o efeito do AC8) grava a versão escolhida como tabela nova; o histórico com as duas', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 });
+    await salva73({ cfgPl_Gold_1: '399,00' }, SENHA_ADR73); r73('corrFechar()');
+    const hid = Object.keys(J73(`__get657('daycare/config/tabela-planos-historico')`))[0];
+    const hh = r73('cfgPlanosHistHTML()'), t = txt73(hh);
+    assert.ok(t.indexOf('Tabelas anteriores (1)') >= 0 && t.indexOf('Usada até 10/10/2026 às 10:00 — trocada por Adriana Teste (Gestão)') >= 0 && t.indexOf('Motivo: a tabela comercial de 2027 chegou') >= 0, t);
+    assert.ok(t.indexOf('Gold · 1x por semana: R$ 359,00') >= 0 && t.indexOf('Efeito registrado: julho de 2026 R$ 2.154,00 → R$ 2.274,00.') >= 0, t);
+    assert.ok(new RegExp('min-height:44px[^"]*" onclick="cfgPlanosVoltarAbrir\\(\'' + hid + '\'\\)">Voltar a esta tabela<').test(hh), hh);
+    await abre73(`cfgPlanosVoltarAbrir('${hid}')`);
+    const c = cartaz73();
+    // 3ª rodada (S8-P7 a P11, «só adriana»): ANTES «Senha da Gestão»; DEPOIS «Senha da Adriana» e «Quem assina: só a Adriana.».
+    assert.ok(/Volta a ficar: a tabela usada até 10\/10\/2026 às 10:00/.test(c) && c.indexOf('Gold · 1x por semana: R$ 399,00 → R$ 359,00') >= 0 && c.indexOf('julho de 2026 — Total dos planos do Day Care: R$ 2.274,00 → R$ 2.154,00 (Biscoito: R$ 1.197,00 → R$ 1.077,00).') >= 0 && /Senha da Adriana/.test(c) && c.indexOf('Quem assina: só a Adriana.') >= 0, c);
+    await toca73('s-bia'); igual(passo73(), 'conferir');
+    await toca73(SENHA_ADR73, 'a tabela de 2027 ainda não vale'); igual(passo73(), 'pronto'); r73('corrFechar()');
+    igual(r73('mensalidade("Gold",1,1)'), 35900);
+    const H = J73(`__get657('daycare/config/tabela-planos-historico')`);
+    igual(Object.keys(H).length, 2);
+    const novo = Object.keys(H).filter((k) => k !== hid)[0];
+    igual([H[novo].voltou_de, H[novo].antes.Gold.valores[1], H[novo].depois.Gold.valores[1]], [hid, 39900, 35900]);
+    igual(aud73('tabela-planos-voltou').length, 1);
+    assert.ok(txt73(r73('cfgPlanosHistHTML()')).indexOf('Tabelas anteriores (2)') >= 0);
+  } finally { solta73(); }
+});
+provaAsync('6.73 P32 (AC9.5, AC9.6) — a dica da aba Plano com os descontos salvos; os três textos «… confira a tabela comercial» ganham «em Configurações › Planos do Day Care» (o começo igual); a tabela nunca grava em daycare/config/planos (os planos do dia). Base: SONDA673-L11b, L11d', async () => {
+  arma73();
+  try {
+    const src = fs.readFileSync(APP, 'utf8');
+    assert.ok(src.indexOf('pago à vista. Desconto: 2º peludinho ${descontosPlano()[2]}%, 3º ${descontosPlano()[3]}%.</div>') > 0 && src.indexOf('Desconto: 2º peludinho 7%, 3º 12%.') < 0);
+    cena73(JULHO73(), { login: GESTORA73 });
+    igual([r73('descontosPlano()[2]'), r73('descontosPlano()[3]')], [7, 12], 'sem tabela salva: o texto de hoje');
+    assert.ok(src.indexOf('As mensalidades dos planos (Mensal · Trimestral · Semestral) continuam na tabela comercial, em Configurações › Planos do Day Care.') > 0);
+    assert.ok(src.indexOf("x por semana — confira a tabela comercial em Configurações › Planos do Day Care.');") > 0 && src.indexOf("x por semana — confira a tabela comercial em Configurações › Planos do Day Care'}); return; }") > 0);
+    await salva73({ cfgPlIrmao_2: '8', cfgPlIrmao_3: '15' }, SENHA_ADR73); r73('corrFechar()');
+    igual([r73('descontosPlano()[2]'), r73('descontosPlano()[3]')], [8, 15], 'a dica lê a tabela salva');
+    assert.ok(!escs73().some((e) => /daycare\/config\/planos(\/|$)/.test(e[1]) || (e[2] || []).some((p) => /^daycare\/config\/planos(\/|$)/.test(p))), JSON.stringify(escs73()));
+    igual(J73(`__get657('daycare/config/planos')`), null);
+    // o meio do mês, sem valor na tabela: a mesma frase, com o caminho novo
+    const mm = J73(`(function(){ var bk=planosCfg; planosCfg=JSON.parse(JSON.stringify(PLANOS_PADRAO)); delete planosCfg.Gold.valores[1]; var r=mmDados(PELUDINHOS[0]); planosCfg=bk; return r; })()`);
+    assert.ok(/^a tabela de planos não tem valor para Gold de 1x por semana — confira a tabela comercial em Configurações › Planos do Day Care$/.test(String((((mm || {}).pendentes || [])[0] || {}).falta || '')), JSON.stringify(mm));
+  } finally { solta73(); }
+});
+provaAsync('6.73 P33 (AC14, EN2, guarda) — renovMesesN e a turma do dia (pelDias e turmaDoDia) dão o mesmo resultado com a tabela de fábrica e com uma tabela salva de valores e descontos trocados: o compromisso não muda', async () => {
+  arma73();
+  try {
+    const hopi = { n: 'Hopi', tutor: 'Lia Teste', ex: { dias: ['seg', 'qua'], renov: { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2026-12-31', quando: '2026-10-05', dias_modo: 'mudam', dias_mes: [['seg'], ['seg'], ['seg', 'qua']] } } };
+    cena73([hopi, TODDY73(), NINA73(), BISCOITO73()]);
+    const mede = () => J73(`(function(){ var out={}; [{plano:'Silver'},{plano:'Gold'},{plano:'Black'},{plano:'morador'},{}].forEach(function(r){ out[r.plano||'-']=renovMesesN(r); });
+      out.dias=['2026-10-12','2026-11-09','2026-12-09','2027-01-06'].map(function(d){ return pelDias(PELUDINHOS[0], d); });
+      out.turma=['seg','ter','qua'].map(function(d){ var bk=dcDia; dcDia=d; var t=turmaDoDia('2026-12-09').map(function(o){ return o.p.n; }); dcDia=bk; return t; }); return out; })()`);
+    const fab = mede();
+    igual([fab.Silver, fab.Gold, fab.Black, fab.morador], [0, 3, 6, 0]);
+    r73(`tabelaPlanosAplicar({Silver:{valores:{1:40000,2:62000,3:74000,4:88000,5:107000}, hospOff:5}, Gold:{valores:{1:39900,2:59900,3:70900,4:83900,5:97900}, hospOff:12}, Black:{valores:{1:34800,2:57800,3:68800,4:82800,5:96800}, hospOff:20}, descontoIrmao:{2:9, 3:14}});`);
+    igual(mede(), fab);
+    r73('tabelaPlanosAplicar(null);');
+  } finally { solta73(); }
+});
+
+// ---- AC10 a AC15 — S8-P2 pronta e não aplicada, quem assina, o rastro, a área protegida e o que fica idêntico ----------
+// 3ª rodada (S8-P2 — Adriana, 12/10/2026: «sim»). ANTES, esta prova guardava a regra de hoje: ao inativar, setembro do Toddy ia de R$ 387,00 a
+// R$ 0,00, e a 6.44 AC8 e as duas checagens do harness travavam o texto antigo. DEPOIS, ela guarda a regra nova: quem sai continua no mês em
+// que pagou, e em nenhum outro; a 6.44 AC8 e as checagens do harness revistas (com o antes, o depois e o porquê nos dois arquivos). PORQUÊ: a
+// resposta da Adriana à S8-P2 (a pergunta 11 da 6.44).
+provaAsync('6.73 P34 (AC10; S8-P2 aplicada) — quem sai continua no mês em que pagou: setembro do Toddy (Silver pago 05/09, R$ 387,00) continua R$ 387,00 ao inativar; agosto e outubro sem ele; fora dos vencidos e de «sem como calcular»; na lista «FILHOt por FILHOt», no Excel e no fechamento; a 6.44 AC8 e as checagens do harness revistas; nenhuma chave escondida (a regra vale sempre)', async () => {
+  arma73();
+  try {
+    cena73([TODDY73()], { login: GESTORA73 });
+    r73('recGuardarFontes({}, {});');
+    igual(quadro73('2026-09'), 38700);
+    r73(`pelCadCache['toddy__ana teste'].inativo='Sim'; pelCadCache['toddy__ana teste'].dataSaida='2026-10-10';`);
+    igual([quadro73('2026-08'), quadro73('2026-09'), quadro73('2026-10'), quadro73('2026-11')], [0, 38700, 0, 0], 'só setembro, o mês em que pagou');
+    // o plano do Toddy vence em 15/10: ativo, em novembro ele é «plano vencido»; inativo, não
+    const venc = (m) => J73(`(function(){ var R=recResumoDoMes('${m}'); return [R.inadimplentes.map(function(o){ return o.chave; }), R.semComoCalcular.map(function(o){ return o.chave; }), R.inadimplenciaTotal]; })()`);
+    igual(venc('2026-11'), [[], [], 0], 'inativo: fora dos vencidos');
+    r73(`pelCadCache['toddy__ana teste'].inativo='Nao';`);
+    igual(venc('2026-11'), [['toddy__ana teste'], [], 38700], 'ativo: vencido em novembro');
+    r73(`pelCadCache['toddy__ana teste'].inativo='Sim'; pelCadCache['toddy__ana teste'].renov.aulas=''; pelCadCache['toddy__ana teste'].dias=[]; delete pelCadCache['toddy__ana teste'].renov.valor_plano_cent;`);
+    igual([venc('2026-09'), quadro73('2026-09')], [[[], [], 0], 0], 'inativo sem como calcular: fora, sem entrar em «sem como calcular»');
+    r73(`pelCadCache['toddy__ana teste'].inativo='Nao';`);
+    igual(venc('2026-09')[1], ['toddy__ana teste'], 'ativo sem como calcular: em «sem como calcular»');
+    // a lista, o Excel e o fechamento de setembro com o Toddy inativo
+    cena73([TODDY73()], { login: GESTORA73 });
+    r73(`pelCadCache['toddy__ana teste'].inativo='Sim'; pelCadCache['toddy__ana teste'].dataSaida='2026-10-10'; REC_MES='2026-09';`); entrega73();
+    const h = card73('2026-09');
+    igual([total73(h), totalLista73(h)], ['R$ 387,00', 'R$ 387,00']);
+    assert.ok(txt73(h).indexOf('Toddy') >= 0, txt73(h).slice(0, 800));
+    r73(`__xls673=[]; recBaixarExcel({closest:function(){ return null; }});`);
+    const X = J73('__xls673');
+    assert.ok(X.length === 1 && X[0].h.indexOf('<td>Toddy</td>') >= 0 && X[0].h.indexOf('<td>TOTAL</td><td></td><td></td><td></td><td>R$ 387,00</td>') > 0, X.length ? X[0].h.slice(-900) : 'sem Excel');
+    igual(await fecha73('2026-09'), 'pronto');
+    const ev = Object.values(J73(`__get657('daycare/recebimentos/2026-09/eventos')`))[0];
+    const C = J73(`__get657('daycare/recebimentos-linhas/2026-09/${ev.linhas}')`);
+    igual([ev.total_cent, C.linhas.map((x) => [x.chave, x.valor])], [38700, [['toddy__ana teste', 38700]]]);
+    // a 6.44 AC8 e as checagens do harness revistas (o antes, o depois e o porquê nos dois arquivos)
+    const me = fs.readFileSync(__filename, 'utf8');
+    assert.ok(me.indexOf("    && fin.indexOf(\"    if (saiu && finMesDe(r.inicio) !== mes) continue;   /* S8-P2: o plano atual de quem saiu, só no mês do pagamento */\\n\") > 0, 'quem saiu continua no mês em que pagou');") > 0, 'a 6.44 AC8 revista');
+    const hz = fs.readFileSync(path.join(__dirname, 'harness.js'), 'utf8');
+    assert.ok(hz.indexOf("check('caixa: a receber de agosto = R$ 4.777,04 (R$ 4.390,04 + o Bud, inativo, que pagou em agosto: S8-P2)',") > 0
+      && hz.indexOf("check('caixa: os três aulunos continuam somando R$ 4.390,04 (soma conferida à mão; o comportamento publicado)',") > 0
+      && hz.indexOf("check('quem saiu (inativo) fica só no mês em que pagou: o Bud em agosto com R$ 387,00; em setembro, fora da conta, dos vencidos e de «sem como calcular»',") > 0
+      && hz.indexOf("check('quem saiu (inativo) não é cobrado'") < 0, 'as checagens do harness revistas');
+    // nenhuma chave escondida: a regra vale sempre, sem opção que a desligue
+    const app = fs.readFileSync(APP, 'utf8');
+    assert.ok(!/\b(S8P2|s8p2|regraInativo|inativoNoMes|INATIVO_NO_MES)\b/.test(app + FIN_SRC36) && !/opcoes\.(inativo|s8|regra)/i.test(FIN_SRC36), 'nenhuma chave da S8-P2 no código');
+  } finally { solta73(); }
+});
+provaAsync('6.73 P35 (AC11, AC12) — quem assina: o posto não assina (o «Não renova», o «Fechar o mês», a tabela) e o nome digitado não vale; a Linha do tempo traduz as onze ações novas; todo R$ no formato completo, com o negativo como -R$; a senha em nenhum registro, rastro, histórico nem fechamento', async () => {
+  arma73();
+  try {
+    cena73([NINA73(), TODDY73()]);
+    await abre73('renovNaoRenovaAbrir(0)');
+    await toca73('s-posto', 'o tutor disse que vai se mudar'); assert.ok(/senha de posto não assina/.test(aviso73()), aviso73());
+    await toca73('Bia Consultora Teste', 'o tutor disse que vai se mudar'); assert.ok(/Essa senha não é de ninguém cadastrado/.test(aviso73()), aviso73());
+    r73('corrFechar()');
+    cena73(JULHO73(), { login: GESTORA73 });
+    await abre73(`recFecharAbrir('2026-07')`);
+    await toca73('s-posto'); assert.ok(/senha de posto não assina/.test(aviso73()));
+    await toca73('Gestora Teste'); assert.ok(/Essa senha não é de ninguém cadastrado/.test(aviso73()));
+    igual(escRec73().length, 0);
+    r73('corrFechar()');
+    await salva73({ cfgPl_Gold_1: '399,00' }, 's-posto');
+    assert.ok(/senha de posto não assina/.test(aviso73())); r73('corrFechar()');
+    // a sessão inteira: cobrança, «Não renova», fechar, reabrir, ajuste, anular e reabrir o ajuste, a tabela
+    cena73(JULHO73().concat([NINA73()]), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    await cobra73(2, 'WhatsApp', 'vai_pensar');
+    await abre73('renovNaoRenovaAbrir(2)'); await toca73(SENHA657, 'o tutor disse que vai se mudar'); r73('corrFechar()');
+    await fecha73('2026-07');
+    await abre73(`recReabrirAbrir('2026-07')`); await toca73(SENHA_ADR73, 'faltou uma diária avulsa no mês'); r73('corrFechar()');
+    await abre73(`recAjusteAbrir('2026-07')`); r73(`corrToque('continuar', {valores:['Tirar do mês', '240,00', 'plano devolvido ao tutor']})`); await toca73(SENHA_ADR73, 'o plano foi devolvido ao tutor'); r73('corrFechar()');
+    const aid = Object.keys(J73(`__get657('daycare/recebimentos/2026-07/ajustes')`))[0];
+    await abre73(`recAjusteAnularAbrir('${aid}', '2026-07')`); await toca73(SENHA_ADR73, 'o ajuste foi lançado por engano'); r73('corrFechar()');
+    await abre73(`recAjusteReabrirAbrir('${aid}', '2026-07')`); await toca73(SENHA_ADR73, 'o ajuste era certo afinal'); r73('corrFechar()');
+    await salva73({ cfgPl_Gold_1: '399,00' }, SENHA_ADR73); r73('corrFechar()');
+    const acoes = ['renovacao-cobrada', 'renovacao-nao-renova', 'recebimentos-mes-fechado', 'recebimentos-mes-reaberto', 'recebimentos-ajuste', 'recebimentos-ajuste-anulado', 'recebimentos-ajuste-reaberto', 'tabela-planos'];
+    acoes.forEach((a) => igual(aud73(a).length, 1, a));
+    const todas = acoes.concat(['renovacao-cobranca-desfeita', 'renovacao-nao-renova-reaberta', 'tabela-planos-voltou']);
+    const rot = J73(`${JSON.stringify(todas)}.map(function(a){ return [a, acaoNome(a), acaoRotulo({acao:a, detalhe:'x'})]; })`);
+    rot.forEach(([a, nome, linha]) => { assert.ok(nome !== a && !/[a-z]-[a-z]/.test(nome) && linha === nome + ' — x', a + ' → ' + nome); });
+    igual(rot.map((x) => x[1]), ['Registrou a cobrança da renovação do plano', 'O tutor avisou que não renova o plano', 'Fechou o mês do Recebimentos', 'Reabriu o mês do Recebimentos',
+      'Lançou um ajuste no Recebimentos', 'Anulou um ajuste do Recebimentos', 'Reabriu um ajuste do Recebimentos', 'Mudou a tabela de planos do Day Care',
+      'Desfez a cobrança da renovação do plano', 'Voltou à cobrança da renovação («Não renova» reaberto)', 'Voltou a uma tabela de planos anterior']);
+    // a senha em lugar nenhum
+    const tudo = JSON.stringify(J73('__db657')) + JSON.stringify(J73('__au657'));
+    [SENHA657, SENHA_ADR73, 's-bia', 's-amanda', 's-posto'].forEach((s) => assert.ok(tudo.indexOf('"' + s + '"') < 0 && tudo.indexOf(s + ' ') < 0, 'a senha ' + s));
+    // todo R$ no formato completo (o quadro, a lista, o rastro) e o negativo como -R$
+    const h = card73('2026-07') + JSON.stringify(J73('__au657').map((a) => a[1]));
+    assert.ok(!/R\$\s*-|R\$\s*\d+(?![\d.,])|R\$\s*\d{1,3}(\.\d{3})*(?!,\d{2})\b/.test(h.replace(/R\$\s*\d{1,3}(\.\d{3})*,\d{2}/g, '')), 'R$ fora do formato');
+    assert.ok(txt73(h).indexOf('-R$ 240,00') >= 0 && txt73(h).indexOf('R$ -') < 0);
+  } finally { solta73(); }
+});
+prova('6.73 P36 (AC14, AC15, guarda) — financeiro-logica.js idêntico ao da versão publicada com a 6.71, mais a S8-P2 (3ª rodada); as fatias «só observa» sem gravação e sem ouvinte, o quadro sem janela nativa, sem cor cravada e sem «R$» na mão, e recCardHTML() 4 vezes; as gravações do quadro no bloco do fechamento, fora das fatias; a área protegida, o #v-daycare, a PERM e as declarações ck/pt idênticas', () => {
+  // 3ª rodada (S8-P2 — Adriana, 12/10/2026: «sim»). ANTES: o financeiro-logica.js inteiro com o md5 da 6.71 publicada (3b1c4706…). DEPOIS: o
+  // arquivo de agora (c25c4909…) sem os três pedaços da S8-P2 (FIN_SEM_S8P2) tem o md5 da 6.71 publicada — a S8-P2 é a única mudança. PORQUÊ:
+  // a decisão da Adriana muda a conta de quem saiu, e só ela.
+  const md5 = (t) => require('crypto').createHash('md5').update(t).digest('hex');
+  igual([md5(FIN_SEM_S8P2), md5(FIN_SRC36)], ['3b1c470677a6989f8326372159a1bfb0', 'c25c49091ffed876ea9c88fde507ce9a'], 'o financeiro-logica.js da 6.71 publicada + a S8-P2');
+  const html = fs.readFileSync(APP, 'utf8');
+  const fat = (a, b) => html.slice(html.indexOf(a), b ? html.indexOf(b, html.indexOf(a)) : html.indexOf('// INIT do Day Care'));
+  const REC = fat('RECEBIMENTOS DO MÊS, POR TIPO (v-12, 18/set/2026)', 'PAINEL DA DIRETORIA — a mesa da Adriana (v-09'), OP = fat('function poComHoje'), PA = fat('PAINEL DA SUPERVISÃO — a mesa da Amanda (v-08, 07/set/2026)'), PD = fat('PAINEL DA DIRETORIA — a mesa da Adriana (v-09, 07/set/2026)');
+  const grava = /DB\.ref\([^)]*\)\.(set|update|push|remove|transaction)\b/;
+  [REC, OP, PA, PD].forEach((f, i) => { assert.ok(f.length > 3000 && !grava.test(f), 'fatia ' + i + ': ' + (f.match(grava) || [''])[0]); });
+  assert.ok(!/\.on\('value'/.test(REC) && /\.once\('value'\)/.test(REC) && !/\b(confirm|prompt|alert)\(/.test(REC) && !/#[0-9A-Fa-f]{3,8}\b/.test(REC) && REC.indexOf("'R$") < 0 && PD.indexOf("'R$") < 0);
+  assert.ok(!/\.on\('value'/.test(OP) && !/\.on\('value'/.test(PA), 'nenhum ouvinte nas fatias');
+  igual((html.match(/recCardHTML\(\)/g) || []).length, 4);
+  // as gravações moram no bloco do fechamento, antes de «MEU PAINEL» (fora de todas as fatias, inclusive a do pmComoVai)
+  const iBloco = html.indexOf('O BLOCO DO FECHAMENTO — as gravações do quadro «Recebimentos do mês»'), iPm = html.indexOf('function pmComoVai'), iPC = html.indexOf('PAINEL DAS CONSULTORAS — a mesa da Central Zêluz (v-07, 07/set/2026)');
+  const iLP = html.indexOf('LANÇAR PAGAMENTO — o recebimento vira registro (v-10'), fLP = html.indexOf('MEU PAINEL — a fatia do Monitor (Fase 2.1)', iLP);
+  assert.ok(iLP > 0 && fLP > iLP && !/\.on\('value'/.test(html.slice(iLP, fLP)), 'a fatia do «Lançar pagamento» só lê com once');
+  ['recFechOuvir', 'recFecharAbrir', 'recReabrirAbrir', 'recAjusteAbrir', 'recAjusteAnularAbrir', 'recAjusteReabrirAbrir', 'recAjusteMarcar'].forEach((f) => {
+    const i = html.indexOf('function ' + f + '('); assert.ok(i > iBloco && i < iPm && i < iPC && (i < iLP || i > fLP), f); });
+  // a área protegida, o #v-daycare, a PERM e as declarações ck/pt (os hashes da 6.65 P22)
+  const ctxN = vm.createContext(makeSandbox());
+  vm.runInContext(extractMainScript(html), ctxN, { filename: 'index.html#script (6.73 P36)', timeout: 15000 });
+  const runN = (c) => vm.runInContext(c, ctxN);
+  const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  // 5ª rodada (a junção com a ponta do #15, 0c9ed0d). ANTES: a PERM inteira 'f79140b1c2844dd5' (as 39 capacidades da 788fb9e e da 3d6910b).
+  // DEPOIS: a PERM inteira '02898b691c0a839c' (42) e a PERM sem as três da 6.67 'f79140b1c2844dd5'. PORQUÊ: a 6.67, publicada antes, trouxe
+  // três capacidades (lancar-manual-plantao, trabalha-plantao, conferir-checkin); a 6.73 não muda permissão nenhuma — a PERM da junta é a
+  // da ponta, letra por letra, e as 39 de antes continuam as mesmas.
+  igual([prot.length, sha73(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), sha73(runN('JSON.stringify(PERM)')), runN('Object.keys(PERM).length'),
+    sha73(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; return JSON.stringify(c); })()"))],
+    [155, '5bac486c669007ec', '02898b691c0a839c', 42, 'f79140b1c2844dd5']);
+  const i = html.indexOf('id="v-daycare"'), j = html.indexOf('id="v-', i + 10);
+  igual([sha73(html.slice(i, j)), sha73(html.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
+});
+provaAsync('6.73 P38 (AC1.2, AC8.1) — a resposta «Não renova» no «Já cobrei» grava a cobrança e abre o cartaz do «Não renova» (cancelado, fica só a cobrança, em «Já cobrados»); confirmado, a marca; o cartaz da tabela diz que «Mudar as datas» remonta o desconto na AuAulândia de um orçamento já feito', async () => {
+  arma73();
+  try {
+    cena73([NINA73(), TODDY73()]);
+    await cobra73(1, 'WhatsApp', 'nao_renova', 'vai mudar de cidade');
+    igual(contatos73(1).map((x) => [x.acao, x.resposta]), [['cobrou', 'nao_renova']], 'a cobrança gravada com a resposta');
+    igual(passo73(), 'conferir', 'o cartaz do «Não renova» abriu depois do ok');
+    const c = cartaz73();
+    assert.ok(c.indexOf('Cobrança registrada: Cobrado em 10/10 às 10:00 por Bia Consultora Teste (WhatsApp): não renova — «vai mudar de cidade». Agora, o «Não renova»:') >= 0 && /Não renova — Toddy/.test(c), c);
+    igual(titulos73().indexOf('COBRANÇA REGISTRADA'), -1, 'a frase da cobrança vem no próprio cartaz');
+    r73(`corrToque('cancelar')`); await esp73();
+    const cob = J73('renovCobrancaDe(pelExtra(PELUDINHOS[1]))');
+    igual([cob.cobrancas.length, cob.naoRenova], [1, null], 'cancelado: fica só a cobrança');
+    const t = txt73(renov73('cobrar').lista);
+    assert.ok(t.indexOf('Já cobrados (1)') >= 0 && t.indexOf('não renova — «vai mudar de cidade»') > t.indexOf('Já cobrados (1)'), t);
+    // de novo, agora confirmando: a marca
+    await cobra73(1, 'Telefone', 'nao_renova');
+    await toca73('s-bia', 'o tutor confirmou que vai se mudar'); r73('corrFechar()');
+    igual(J73('renovCobrancaDe(pelExtra(PELUDINHOS[1])).naoRenova.motivo'), 'o tutor confirmou que vai se mudar');
+    igual(nomesLista73(renov73('naorenova').lista), ['Toddy']);
+    // o cartaz da tabela e o «Mudar as datas»
+    cena73(JULHO73(), { login: GESTORA73 });
+    await salva73({ cfgPlOff_Gold: '12' });
+    assert.ok(cartaz73().indexOf('num orçamento já feito, o desconto muda se alguém tocar «Mudar as datas», porque ela remonta o plano de hoje de cada FILHOt.') >= 0, cartaz73());
+  } finally { solta73(); }
+});
+provaAsync('6.73 P39 (AC4.7, AC3.1) — o Dashboard da Adriana sem «só observa» nem «nada aqui grava», com a nota nova; a nota da Márcia com «Fechar o mês» e os ajustes; os comentários do código; o «Já cobrei» e o «Não renova» chamados pelo FILHOt fora da Renovação (como a mesa da Amanda da 6.79 vai chamar) gravam igual', async () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const pd = src.slice(src.indexOf('  function pdirAbrir('), src.indexOf('// INIT do Day Care'));
+  assert.ok(!/só observa|nada aqui grava/i.test(pd), 'o Dashboard da Adriana não diz que não grava');
+  assert.ok(pd.indexOf('Assim que a rede voltar, abra esta tela de novo. O que já foi registrado está guardado.') > 0 && pd.indexOf('Nada foi perdido. Abra a tela de novo em instantes.') > 0);
+  // 3ª rodada (S8-P7, P8 e P11 — «só adriana»): ANTES «sempre com a senha da Gestão e o rastro»; DEPOIS «sempre com a senha da Adriana e o rastro»
+  assert.ok(pd.indexOf('Quase todos os quadros abrem a tela onde a senhora decide, e lá fica o rastro de quem fez. O quadro «Recebimentos do mês» grava daqui mesmo, sempre com a senha da Adriana e o rastro: «Fechar o mês», «Reabrir o mês» e os ajustes com motivo.') > 0 && pd.indexOf('senha da Gestão') < 0);
+  const po = src.slice(src.indexOf('  function poAbrir('), src.indexOf('  function poAbrir(') + 12000);
+  // a nota da Márcia: a frase de sempre do encaixe (o harness v-33 confere «A única exceção é <strong>Pedidos de encaixe</strong>») e o quadro do dinheiro
+  assert.ok(po.indexOf('A única exceção é <strong>Pedidos de encaixe</strong>, entre os pedidos do dia:') > 0 && po.indexOf('No dinheiro, o quadro <strong>Recebimentos do mês</strong> grava daqui mesmo «Fechar o mês», «Reabrir o mês» e os ajustes com motivo, sempre com a senha da Adriana e o rastro.') > 0);
+  // os comentários do quadro e do Dashboard da Adriana (os da Márcia e das Consultoras, painéis que continuam sem gravar, ficam para a 6.79)
+  const iRq = src.indexOf('RECEBIMENTOS DO MÊS, POR TIPO (v-12, 18/set/2026)'), rq = src.slice(iRq, src.indexOf('PAINEL DA DIRETORIA — a mesa da Adriana (v-09', iRq));
+  const pdc = src.slice(src.indexOf('PAINEL DA DIRETORIA — a mesa da Adriana (v-09, 07/set/2026)'), src.indexOf('// INIT do Day Care'));
+  assert.ok(!/SÓ OBSERVA/.test(rq) && !/SÓ OBSERVA/.test(pdc) && rq.indexOf('O DESENHO DESTE QUADRO NÃO GRAVA') > 0 && pdc.indexOf('O DESENHO DESTE PAINEL NÃO GRAVA') > 0);
+  arma73();
+  try {
+    cena73([NINA73(), TODDY73(), PINGO73()]);
+    r73(`renovFiltro='todos';`);
+    await cobra73(2, 'WhatsApp', 'vai_renovar');                 // pelo índice do PELUDINHOS, a Renovação nem desenhada
+    await abre73(`renovCobrarAbrir('toddy__ana teste')`);       // pela chave da ficha
+    r73(`renovCobrarToque('registrar', {por:'Telefone', resposta:'vai_pensar', nota:''})`); await esp73();
+    igual([contatos73(0).length, contatos73(1).map((x) => x.por), contatos73(2).map((x) => x.por)], [0, ['Telefone'], ['WhatsApp']]);
+    await abre73(`renovNaoRenovaAbrir('nina__sol teste')`); await toca73('s-bia', 'o tutor disse que vai se mudar'); r73('corrFechar()');
+    igual(contatos73(0).map((x) => x.acao), ['nao_renova']);
+    await abre73('renovCobrarAbrir(9)');
+    igual([r73('RENOV_COBRAR'), za73('NÃO ACHEI ESTE FILHOt')], [null, ['Atualize a tela e tente de novo.', 'Nada foi gravado.']]);
+  } finally { solta73(); }
+});
+// O recResumoDoMes de antes da 6.73 (o texto da base 788fb9e, que a 6.71 P34 trava pelo sha 10ddb8cf3b010782): sem tabela salva, o de agora
+// dá o mesmo JSON, cadastro por cadastro e mês por mês (a guarda da troca do hash na 6.71 P34, AC9.1).
+const REC_RESUMO_BASE673 = `function recResumoDoMes(mes){
+    if(recTrava()) return null;
+    return finResumoMes({
+      cadastro:(typeof pelCadCache!=='undefined')?pelCadCache:{},
+      peludinhos:(typeof PELUDINHOS!=='undefined')?PELUDINHOS:[],
+      irmaos:REC_FONTES.irm||{},
+      orcamentos:REC_FONTES.orc||{},
+      pagamentos:null,
+      planos:(typeof planos==='function')?planos():null,
+      descontoIrmao:(typeof DESC_PET_PLANO!=='undefined')?DESC_PET_PLANO:null
+    }, mes, {hoje:(typeof hojeISO==='function')?hojeISO():''});
+  }`;
+provaAsync('6.73 P40 (AC9.1, guarda da 6.71 P34) — o recResumoDoMes de agora × o da base (o texto travado pela 6.71 P34): sem tabela salva, o mesmo JSON em 300 cadastros sorteados × 13 meses; com os descontos salvos, o de agora usa os salvos', async () => {
+  igual(sha73(REC_RESUMO_BASE673), '10ddb8cf3b010782', 'é o texto da base');
+  arma73();
+  try {
+    r73('var recResumoDoMesBase673=(' + REC_RESUMO_BASE673 + ');');
+    let s = 673; const rnd = () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; };
+    const pick = (a) => a[Math.floor(rnd() * a.length)];
+    const fichas = [], irm = {};
+    for (let i = 0; i < 300; i++) {
+      const mes = pick(['2026-01', '2026-02', '2026-03', '2026-05', '2026-07', '2026-08', '2026-09', '2026-10', '2026-12']), dia = String(1 + Math.floor(rnd() * 27)).padStart(2, '0');
+      const plano = pick(['Silver', 'Gold', 'Black', 'Gold', '', 'avulso']);
+      const r = { plano, aulas: 1 + Math.floor(rnd() * 5), inicio: plano ? mes + '-' + dia : '', fim: plano ? '2027-01-31' : '', quando: mes + '-' + dia };
+      if (rnd() < 0.5) r.ordemPet = 1 + Math.floor(rnd() * 4);
+      if (rnd() < 0.3) r.valor_plano_cent = 100000 + Math.floor(rnd() * 99999);
+      const ex = { dias: ['seg'], renov: r };
+      if (rnd() < 0.1) ex.inativo = 'Sim';
+      fichas.push({ n: 'Teste' + i, tutor: 'Família ' + (i % 120) + ' Teste', ex });
+      if (i % 7 === 0 && i > 0) irm['v' + i] = { a: ('teste' + i + '__família ' + (i % 120) + ' teste'), b: ('teste' + (i - 1) + '__família ' + ((i - 1) % 120) + ' teste') };
+    }
+    cena73(fichas, { irmaos: irm });
+    r73('recGuardarFontes({}, __get657("daycare/irmaos")||{});');
+    const meses = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12', '2027-01'];
+    const dif = J73(`${JSON.stringify(meses)}.filter(function(m){ return JSON.stringify(recResumoDoMes(m))!==JSON.stringify(recResumoDoMesBase673(m)); })`);
+    igual(dif, [], 'sem tabela salva: o mesmo JSON');
+    const soma = J73(`${JSON.stringify(meses)}.reduce(function(t, m){ return t+recQuebra(recResumoDoMes(m)).total; }, 0)`);
+    assert.ok(soma > 0, 'a amostra tem dinheiro: ' + soma);
+    r73('descontosCfg={2:9, 3:14};');
+    const dif2 = J73(`${JSON.stringify(meses)}.filter(function(m){ return JSON.stringify(recResumoDoMes(m))!==JSON.stringify(recResumoDoMesBase673(m)); })`);
+    assert.ok(dif2.length > 0, 'com os descontos salvos, o quadro usa os salvos (a base não)');
+    r73('descontosCfg=null;');
+  } finally { solta73(); }
+});
+provaAsync('6.73 P41 (AC5.2) — cada linha junta com a sua: o FILHOt que pagou duas vezes em julho (a renovação de 05/07 e o plano de 28/07), com o pagamento de 05/07 anulado depois do fechamento, perde só a linha de 05/07; a reserva da AuAulândia que mudou de data dentro do mês aparece com o antes e o depois (não como «saiu» e «nova»)', async () => {
+  arma73();
+  try {
+    const bis = { n: 'Biscoito', tutor: 'Clara Teste', ex: { dias: ['seg'], renov: GOLD73('2026-07-28', { vig_inicio: '2026-10-01', fim: '2026-12-31', valor_plano_cent: 107700 }),
+      renov_hist: { a: Object.assign(GOLD73('2026-07-05', { valor_plano_cent: 107700 }), { substituidoEm: 100, por: 'Teste', motivo: 'renovação' }) } } };
+    cena73([bis, PIPOCA73()], { login: GESTORA73, orc: ORC73() }); r73(`REC_MES='2026-07';`); entrega73();
+    igual(total73(card73('2026-07')), 'R$ 3.491,00', 'Biscoito duas vezes, Pipoca e a reserva do Romeo');
+    igual(await fecha73('2026-07'), 'pronto');
+    r73(`pelCadCache['biscoito__clara teste'].renov_hist.a.anulacoes={x1:{acao:'anular', ts:Date.now(), por:'Gestora Teste', quando:'10/10/2026 às 10:00', motivo:'o pagamento foi lançado em dobro'}};
+      __put657('auaulandia/orcamentos/r1/entrada', '2026-07-21'); __put657('auaulandia/orcamentos/r1/saida', '2026-07-23');
+      __put657('auaulandia/orcamentos/r1/parcela2_cent', 15000); __put657('auaulandia/orcamentos/r1/total_cent', 28000); recGuardarFontes(__get657('auaulandia/orcamentos'), {});`);
+    const h = card73('2026-07'), t = txt73(h);
+    igual(total73(h), 'R$ 3.491,00', 'o total fechado não muda');
+    const ls = (h.match(/<div class="pm-li rec-mudou-li"><div class="pm-li-txt"><span>[^<]*<\/span>/g) || []).map((x) => txt73(x).trim());
+    igual(ls, ['Biscoito — Gold · trimestral · 1x por semana · pago em 05/07/2026: R$ 1.077,00 → fora (pagamento anulado)',
+      'Romeo — Hospedagem na AuAulândia · reserva fechada em 03/07/2026 + parcela do dia: entrada em 20/07/2026: R$ 260,00 → R$ 280,00'], t);
+    assert.ok(t.indexOf('Mudou depois do fechamento (2)') >= 0 && t.indexOf('A conta ao vivo hoje daria R$ 2.434,00 (diferença de -R$ 1.057,00).') >= 0, t);
+  } finally { solta73(); }
+});
+// ---- 2ª rodada do @dev: as observações do QA (OBS-01 e OBS-03) com prova própria ---------------------------------------------------
+provaAsync('6.73 P42 (AC5.1, 2ª rodada, QA OBS-01) — o corpo do fechamento que falhou ao ler é relido sem recarregar o app: «Tentar de novo» no quadro relê na hora; sozinho, o quadro relê quando se desenha de novo depois de 30 segundos (logo depois da falha, não: sem laço); o Excel diz que a leitura falhou, não «lendo»', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    igual(await fecha73('2026-07'), 'pronto');
+    r73(`REC_CORPO={}; __ref73b=DB.ref; __falha73=true; __leu73=0; DB={ref:function(p){ var r=__ref73b(p); if(/^daycare\\/recebimentos-linhas/.test(String(p))){ var o=r.once; r.once=function(){ __leu73++; return __falha73?Promise.reject(new Error('disconnect')):o.apply(r, arguments); }; } return r; }};`);
+    card73('2026-07'); await esp73();
+    const h1 = card73('2026-07');
+    assert.ok(txt73(h1).indexOf('Não consegui ler o fechamento de julho de 2026. Nenhum total foi mostrado no lugar dele. Toque em «Tentar de novo».') >= 0 && total73(h1) === '' && totalLista73(h1) === '', txt73(h1));
+    const bt = (h1.match(/onclick="(recCorpoTentar\('2026-07','[^']+'\))">Tentar de novo</) || [])[1];
+    assert.ok(bt, 'o botão «Tentar de novo»');
+    // o Excel diz que a leitura falhou
+    r73(`__st73={style:{}, textContent:''}; recBaixarExcel({closest:function(){ return {querySelector:function(){ return __st73; }}; }});`);
+    igual(r73('__st73.textContent'), 'Ainda não dá para baixar: não consegui ler o fechamento de julho de 2026. Toque em «Tentar de novo» no quadro.');
+    // logo depois da falha, redesenhar não relê (sem laço)
+    const n1 = r73('__leu73'); card73('2026-07'); await esp73(); igual(r73('__leu73'), n1, 'sem releitura logo depois da falha');
+    // «Tentar de novo», com a rede de volta: o total fechado aparece
+    r73(`__falha73=false; ${bt};`); await esp73();
+    igual([r73('__leu73'), total73(card73('2026-07'))], [n1 + 1, 'R$ 2.154,00']);
+    // e sozinho, depois de 30 segundos: outra falha, o relógio anda 31 s, o quadro se desenha de novo e relê
+    r73(`REC_CORPO={}; __falha73=true;`); card73('2026-07'); await esp73();
+    const n2 = r73('__leu73');
+    r73(`__falha73=false; Date.now=function(){ return ${T673 + 31000}; };`); card73('2026-07'); await esp73();
+    igual([r73('__leu73'), total73(card73('2026-07'))], [n2 + 1, 'R$ 2.154,00'], 'relido sozinho depois de 30 segundos');
+    r73('DB.ref=__ref73b;');
+  } finally { solta73(); }
+});
+provaAsync('6.73 P43 (AC8.1, AC8.2, 2ª rodada, QA OBS-03) — o cartaz da tabela com a hospedagem e o ajuste no mês: quando o aparelho sabe o quadro inteiro (as fontes e as diárias avulsas do mês lidas há menos de um minuto, os ajustes lidos), a linha é o «Total de {mês} no Recebimentos», o mesmo número do quadro antes e depois de salvar; sem isso, o «Total dos planos do Day Care» e a frase de que o resto do mês não muda', async () => {
+  arma73();
+  try {
+    // julho: Biscoito (Gold 1x, R$ 1.077,00) + Pipoca (gravada, R$ 1.077,00) + a reserva do Romeo (R$ 260,00) + um ajuste de R$ 170,00 = R$ 2.584,00
+    cena73(JULHO73(), { login: GESTORA73, orc: ORC73() }); r73(`REC_MES='2026-07';`);
+    r73(`__put657('daycare/recebimentos/2026-07/ajustes/a1', {sentido:'somar', valor_cent:17000, descricao:'diária da Lua sem valor', motivo:'a diária da Lua foi paga', ts:5, registro:{por:'Gestora Teste', quando:'10/10/2026 às 09:00', motivo:'a diária da Lua foi paga', ts:5}});`);
+    entrega73();
+    igual(total73(card73('2026-07')), 'R$ 2.584,00');
+    // Gold 1x de R$ 359,00 para R$ 399,00: o Biscoito de R$ 1.077,00 para R$ 1.197,00 (3 × R$ 399,00); o quadro de R$ 2.584,00 para R$ 2.704,00
+    await salva73({ cfgPl_Gold_1: '399,00' });
+    const c = cartaz73();
+    assert.ok(c.indexOf('julho de 2026 — Total de julho de 2026 no Recebimentos: R$ 2.584,00 → R$ 2.704,00 (os planos do Day Care: R$ 2.154,00 → R$ 2.274,00; Biscoito: R$ 1.077,00 → R$ 1.197,00).') >= 0, c);
+    assert.ok(c.indexOf('é só a parte dos planos') < 0, 'com o quadro inteiro, sem a frase do total dos planos');
+    await toca73(SENHA_ADR73, 'a tabela comercial de 2027 chegou'); r73('corrFechar()');
+    igual(total73(card73('2026-07')), 'R$ 2.704,00', 'o quadro depois de salvar = o número do cartaz');
+    // sem as fontes frescas (lidas há mais de um minuto): o total dos planos, com o nome, e a frase
+    cena73(JULHO73(), { login: GESTORA73, orc: ORC73() }); r73(`REC_MES='2026-07';`); entrega73();
+    r73(`REC_FONTES.quando=Date.now()-61000;`);
+    await salva73({ cfgPl_Gold_1: '399,00' });
+    const c2 = cartaz73();
+    assert.ok(c2.indexOf('julho de 2026 — Total dos planos do Day Care: R$ 2.154,00 → R$ 2.274,00 (Biscoito: R$ 1.077,00 → R$ 1.197,00).') >= 0
+      && c2.indexOf('O «Total dos planos do Day Care» é só a parte dos planos: a hospedagem, as diárias avulsas e os ajustes do mês não mudam com a tabela; no quadro «Recebimentos do mês», o total do mês muda a mesma diferença.') >= 0, c2);
+    r73('corrFechar()');
+  } finally { solta73(); }
+});
+// ================================================================== 6.73 QA — os ataques do QA independente (Quinn, 1ª rodada, qa673/ataque673.js),
+// levados para a Fase 0 na 2ª rodada do @dev (TEST-001), com o texto do QA. Mudaram só o nome («6.73 QA · QA673-NN …») e, nas três
+// que provavam os achados, o que o conserto troca (cada troca com o antes, o depois e o porquê, na própria prova):
+//   QA673-03 (REL-001): o 2º aparelho relê a ficha e é recusado (antes: os dois gravavam); e o «Reabrir» fecha os dois do ciclo.
+//   QA673-15 (OBS-02): com a leitura da tabela em erro, a frase diz que a leitura falhou e «Tentar de novo» liga o ouvinte de novo.
+//   QA673-02 e QA673-05 já estavam escritas como o certo (REQ-001 e REQ-002) e passam sem troca.
+// Tudo INVENTADO (tutores «Teste»). Relógio do bloco (sábado, 10/10/2026, 10:00). As contas esperadas estão escritas À MÃO aqui,
+// com a aritmética ao lado, sem chamar nenhuma função de dinheiro do app para chegar ao número esperado.
+const QA73 = {};
+QA73.SET = () => {
+  // setembro de 2026, para conferir à mão (ordemPet explícito: a conta do Financeiro usa o explícito)
+  const S = (n, tutor, renov, extra) => ({ n, tutor, ex: Object.assign({ dias: ['seg'], renov }, extra || {}) });
+  return [
+    // Silver 2x, 1º: 617,00 × 1 = R$ 617,00
+    S('Amora', 'Ana Teste', { plano: 'Silver', aulas: 2, ordemPet: 1, inicio: '2026-09-03', fim: '2026-10-02', quando: '2026-09-03' }),
+    // Silver 1x, 2º: 387,00 × 93% = 359,91 × 1 = R$ 359,91
+    S('Bolota', 'Bruno Teste', { plano: 'Silver', aulas: 1, ordemPet: 2, inicio: '2026-09-04', fim: '2026-10-03', quando: '2026-09-04' }),
+    // Gold 3x, 3º: 699,00 × 88% = 615,12 × 3 = R$ 1.845,36
+    S('Cacau', 'Carla Teste', { plano: 'Gold', aulas: 3, ordemPet: 3, inicio: '2026-09-05', fim: '2026-12-04', quando: '2026-09-05' }),
+    // Black 2x, 4º (o desconto do 3º): 568,00 × 88% = 499,84 × 6 = R$ 2.999,04
+    S('Dengo', 'Dora Teste', { plano: 'Black', aulas: 2, ordemPet: 4, inicio: '2026-09-10', fim: '2027-03-09', quando: '2026-09-10' }),
+    // Gold 1x com o valor gravado: R$ 990,00
+    S('Estrela', 'Eva Teste', { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-09-12', fim: '2026-12-11', quando: '2026-09-12', valor_plano_cent: 99000, mensalidade_cent: 33000 }, { sexo: 'Fêmea' }),
+    // a renovação anterior paga em 01/09 (gravada, R$ 387,00); o plano de agora é de outubro
+    S('Fumaça', 'Fábio Teste', { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-10-01', fim: '2026-10-31', quando: '2026-10-01', valor_plano_cent: 38700 },
+      { renov_hist: { h1: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-09-01', fim: '2026-09-30', quando: '2026-09-01', valor_plano_cent: 38700, substituidoEm: 100, por: 'Teste', motivo: 'renovação', motivo_conferido: true } } }),
+    // inativa: fora de todo mês (a regra de hoje)
+    S('Gaia', 'Gil Teste', { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-09-06', fim: '2026-12-05', quando: '2026-09-06' }, { inativo: 'Sim', dataSaida: '2026-09-30' }),
+    // Auluno sem plano: fora do total por falta de dado
+    S('Hortelã', 'Helô Teste', { plano: '', inicio: '', fim: '', mesRenov: '', aulas: '', ordemPet: 1 }),
+    // o pagamento de 15/09 foi anulado (6.71); o de agora, 20/09, gravado R$ 387,00
+    S('Íris', 'Ivo Teste', { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-09-20', fim: '2026-10-19', quando: '2026-09-20', valor_plano_cent: 38700 },
+      { sexo: 'Fêmea', renov_hist: { i1: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-09-15', fim: '2026-10-14', quando: '2026-09-15', valor_plano_cent: 38700, substituidoEm: 50, por: 'Teste', motivo: 'renovação', motivo_conferido: true,
+        anulacoes: { a1: { acao: 'anular', ts: 1, por: 'Gestora Teste', papel: 'gestao', quando: '01/10/2026 às 10:00', motivo: 'o pagamento foi lançado em dobro' } } } } }),
+    // agosto (aberto): Silver 1x, 1º, sem valor gravado: R$ 387,00
+    S('Kiwi', 'Kátia Teste', { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-08-07', fim: '2026-09-06', quando: '2026-08-07' }),
+  ];
+};
+// r1: fechada em 02/09 (R$ 130,00) + entrada 20/09 (R$ 130,00) = R$ 260,00 em setembro; r2: fechada em 28/08 (R$ 100,00, agosto) + entrada 25/09 (R$ 200,00, setembro)
+QA73.ORC = () => ({
+  r1: { status: 'fechado', status_em: Date.UTC(2026, 8, 2, 15, 0), entrada: '2026-09-20', saida: '2026-09-22', parcela1_cent: 13000, parcela2_cent: 13000, total_cent: 26000, tutor: 'Jeanine Teste', pets: [{ nome: 'Romeo' }] },
+  r2: { status: 'fechado', status_em: Date.UTC(2026, 7, 28, 15, 0), entrada: '2026-09-25', saida: '2026-09-27', parcela1_cent: 10000, parcela2_cent: 20000, total_cent: 30000, tutor: 'Otávio Teste', pets: [{ nome: 'Lord' }] },
+  r3: { status: 'pendente', entrada: '2026-09-10', saida: '2026-09-12', parcela1_cent: 9000, parcela2_cent: 9000, total_cent: 18000, tutor: 'Paula Teste', pets: [{ nome: 'Nescau' }] },
+});
+QA73.cenaSet = () => {
+  cena73(QA73.SET(), { login: GESTORA73, orc: QA73.ORC() });
+  r73(`__put657('daycare/dashboard/2026-09-22/avulso', {x1:{det:{valor_cent:17000}}});
+    __put657('daycare/dashboard/2026-09-29/avulso', {x2:{det:{valor_cent:9500}}, x3:{det:{}}});
+    __put657('daycare/recebimentos/2026-09/ajustes/aj1', {sentido:'somar', valor_cent:12345, descricao:'banho extra lançado sem valor', motivo:'faltou lançar no dia do banho', ts:5,
+      registro:{acao:'corrigir', por:'Gestora Teste', papel:'gestao', quando:'01/10/2026 às 09:00', motivo:'faltou lançar no dia do banho', ts:5}});
+    __put657('daycare/recebimentos/2026-09/ajustes/aj2', {sentido:'tirar', valor_cent:5000, descricao:'taxa devolvida ao tutor', motivo:'cobrado a mais no balcão', ts:6,
+      registro:{acao:'corrigir', por:'Gestora Teste', papel:'gestao', quando:'01/10/2026 às 09:10', motivo:'cobrado a mais no balcão', ts:6}});
+    __put657('daycare/recebimentos/2026-09/ajustes/aj3', {sentido:'somar', valor_cent:7000, descricao:'diária lançada em dobro', motivo:'lançada duas vezes', ts:7,
+      registro:{acao:'corrigir', por:'Gestora Teste', papel:'gestao', quando:'01/10/2026 às 09:20', motivo:'lançada duas vezes', ts:7},
+      anulacoes:{n1:{acao:'anular', ts:8, por:'Gestora Teste', papel:'gestao', quando:'01/10/2026 às 09:30', motivo:'a diária não era em dobro'}}});
+    REC_MES='2026-09';`);
+};
+// o Excel como linhas: [[FILHOt, Tutor, O quê, Data, Valor, Observação], …]
+QA73.xls = (h) => (h.match(/<tr>[\s\S]*?<\/tr>/g) || []).map((tr) => (tr.match(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/g) || []).map((c) => txt73(c).trim()));
+QA73.cent = (s) => { const m = /^(-?)R\$ ([\d.]+),(\d\d)$/.exec(String(s || '').trim()); return m ? (m[1] ? -1 : 1) * (parseInt(m[2].replace(/\./g, ''), 10) * 100 + parseInt(m[3], 10)) : null; };
+QA73.baixa = () => { r73(`__xls673=[]; recBaixarExcel({closest:function(){ return null; }});`); const X = J73('__xls673'); return X.length ? X[X.length - 1].h : ''; };
+// o banco que recusa como o Firebase de verdade: update/set com undefined em qualquer lugar do valor joga erro (Reference.update failed)
+QA73.estrito = () => r73(`__refQA=DB.ref; __undefQA=[]; DB={ref:function(p){ var r=__refQA(p), up=r.update, st=r.set;
+  var acha=function(v, c){ if(v===undefined) return c||'(raiz)'; if(v && typeof v==='object'){ for(var k in v){ if(Object.prototype.hasOwnProperty.call(v,k)){ var x=acha(v[k], (c?c+'/':'')+k); if(x) return x; } } } return ''; };
+  r.update=function(v){ var x=acha(v, ''); if(x){ __undefQA.push(p+' :: '+x); throw new Error('Reference.update failed: First argument contains undefined in property '+x); } return up.call(r, v); };
+  r.set=function(v){ var x=acha(v, ''); if(x){ __undefQA.push(p+' :: '+x); throw new Error('Reference.set failed: First argument contains undefined in property '+x); } return st.call(r, v); };
+  return r; }};`);
+QA73.soltaEstrito = () => r73('if(typeof __refQA!=="undefined" && __refQA){ DB.ref=__refQA; __refQA=null; }');
+
+provaAsync('6.73 QA · QA673-01 (AC4.4, AC4.5, AC5.1, AC5.2, AC6.4 — conferência à mão) — setembro de 2026 inteiro: 7 planos (Silver 2x, Silver 1x do 2º, Gold 3x do 3º, Black 2x do 4º, um gravado, uma renovação anterior, um pagamento anulado ao lado do atual), uma inativa, uma sem plano, 2 reservas (uma com só a parcela do dia no mês), 2 diárias avulsas com valor e 1 sem, 2 ajustes válidos e 1 anulado: R$ 8.383,76 no quadro, na lista, no cartaz, no Excel e no corpo; depois de fechado, nada muda o total fechado (a tabela nova, a renovação atrasada, a anulação, a diária avulsa corrigida, a inativação, a reserva mudada, o ajuste recusado) e «Mudou depois do fechamento» diz cada linha com o antes e o depois e «A conta ao vivo hoje daria R$ 7.773,93 (diferença de -R$ 609,83).» [3ª rodada do @dev, S8-P2: a inativa Gaia, paga em 06/09, continua em setembro — R$ 9.460,76 fechado; a Amora inativada depois também fica — ao vivo R$ 9.467,93, diferença de R$ 7,17]', async () => {
+  arma73();
+  try {
+    QA73.cenaSet();
+    await le73('2026-09');
+    // À MÃO: planos 617,00 + 359,91 + 1.845,36 + 2.999,04 + 990,00 + 387,00 (Fumaça, 01/09) + 387,00 (Íris, 20/09) = 7.585,31;
+    // reservas 260,00 + 200,00 = 460,00; avulsas 170,00 + 95,00 = 265,00; ajustes 123,45 − 50,00 = 73,45; total 8.383,76
+    // 3ª rodada do @dev (S8-P2 — Adriana, 12/10/2026: «sim»): a Gaia (Gold 1x, 1º, paga em 06/09, inativa desde 30/09) continua no mês
+    // em que pagou: 359,00 × 3 = 1.077,00. ANTES: R$ 8.383,76. DEPOIS: 8.383,76 + 1.077,00 = R$ 9.460,76 (os planos, 8.662,31).
+    // E (S8-P11) «lançados pela Gestão» → «lançados com a senha da Adriana». PORQUÊ: as decisões S8-P2 e S8-P11.
+    const ESP = 61700 + 35991 + 184536 + 299904 + 99000 + 38700 + 38700 + 26000 + 20000 + 17000 + 9500 + 12345 - 5000;
+    igual(ESP, 838376, 'a conta à mão (antes da S8-P2)');
+    igual(ESP + 35900 * 3, 946076, 'a conta à mão, com a Gaia');
+    const ab = card73('2026-09');
+    igual([total73(ab), totalLista73(ab)], ['R$ 9.460,76', 'R$ 9.460,76'], 'o quadro aberto e a lista');
+    const t0 = txt73(ab);
+    // o Gold: Cacau 1.845,36 + Estrela 990,00 + Gaia 1.077,00 = 3.912,36, 3 FILHOts (antes: 2.835,36, 2 FILHOts)
+    ['Mensalidade plano Silver — um mês · 4 FILHOts R$ 1.750,91', 'Trimestral plano Gold — três meses à vista · 3 FILHOts R$ 3.912,36', 'Semestral plano Black — seis meses à vista · 1 FILHOt R$ 2.999,04',
+      'Hospedagem na AuAulândia parcelas das reservas fechadas que caem no mês · 2 reservas R$ 460,00', 'Ajustes com motivo (2) lançados com a senha da Adriana, cada um com o motivo — entram no total do mês R$ 73,45']
+      .forEach((x) => assert.ok(t0.indexOf(x) >= 0, x + '\n' + t0.slice(0, 1500)));
+    // o Excel do mês aberto: as linhas com valor somadas à mão dão o TOTAL
+    const X0 = QA73.xls(QA73.baixa()), iT0 = X0.findIndex((l) => l[0] === 'TOTAL');
+    igual(X0[iT0][4], 'R$ 9.460,76');
+    igual(X0.slice(1, iT0).reduce((t, l) => t + (QA73.cent(l[4]) || 0), 0), 946076, 'as linhas do Excel somam o TOTAL');
+    // o cartaz
+    await abre73(`recFecharAbrir('2026-09')`);
+    const c = cartaz73();
+    assert.ok(c.indexOf('Fechar setembro de 2026 com R$ 9.460,76: 8 planos, 2 reservas, 2 diárias avulsas e 2 ajustes.') >= 0, c);
+    assert.ok(c.indexOf('1 ficha fica fora do total por falta de dado: Hortelã (veja «Ver FILHOt por FILHOt»).') >= 0, c);
+    await toca73(SENHA_ADR73, 'conferido com o sistema da loja em outubro'); igual(passo73(), 'pronto'); r73('corrFechar()');
+    const ev = Object.values(J73(`__get657('daycare/recebimentos/2026-09/eventos')`));
+    igual([ev.length, ev[0].acao, ev[0].total_cent], [1, 'fechou', 946076]);
+    const G = J73(`__get657('daycare/recebimentos-linhas/2026-09/${ev[0].linhas}')`);
+    igual([G.total_cent, G.planos_cent, G.ajustes_cent, G.avulso.lidos, G.avulso.n, G.avulso.total_cent, G.avulso.semValor], [946076, 912231, 7345, true, 2, 26500, 1]);
+    igual([G.porTipo.mensal.valor, G.porTipo.mensal.quantos, G.porTipo.trimestral.valor, G.porTipo.trimestral.quantos, G.porTipo.semestral.valor, G.porTipo.hospedagem.valor, G.porTipo.hospedagem.quantos],
+      [175091, 4, 391236, 3, 299904, 46000, 2]);
+    igual(G.linhas.slice(0, 8).map((x) => [x.nome, x.valor]), [['Fumaça', 38700], ['Amora', 61700], ['Bolota', 35991], ['Cacau', 184536], ['Gaia', 107700], ['Dengo', 299904], ['Estrela', 99000], ['Íris', 38700]]);
+    igual(G.linhas.slice(8).map((x) => [x.chave, x.nome, x.valor]).sort(), [['orc:r1', 'Romeo', 26000], ['orc:r2', 'Lord', 20000]]);
+    igual(G.ajustes.map((a) => [a.id, a.valor]), [['aj1', 12345], ['aj2', -5000]], 'o anulado fica de fora');
+    igual([G.fora.map((x) => x.nome), G.anulados.map((x) => [x.nome, x.data])], [['Hortelã'], [['Íris', '2026-09-15']]]);
+    igual([G.tabela.Silver.valores[1], G.descontos], [38700, { 2: 7, 3: 12 }]);
+    // o quadro fechado, a lista e o Excel guardados
+    const f1 = card73('2026-09');
+    igual([total73(f1), totalLista73(f1)], ['R$ 9.460,76', 'R$ 9.460,76']);
+    assert.ok(txt73(f1).indexOf('Fechado em 10/10/2026 às 10:00 por Adriana Teste: conferido com o sistema da loja em outubro') >= 0 && txt73(f1).indexOf('Nada mudou desde o fechamento.') >= 0, txt73(f1).slice(0, 900));
+    // ---- depois de fechado: tudo o que mexe no mês ----
+    r73(`Date.now=function(){ return ${T673 + 3600000}; };`);
+    // (a) a tabela nova (Silver 1x R$ 399,00; 2º FILHOt 8%): o cartaz conta agosto (aberto: o Kiwi) e põe setembro em «Não mudam (mês fechado)»
+    await salva73({ cfgPl_Silver_1: '399,00', cfgPlIrmao_2: '8' });
+    const ct = cartaz73();
+    // À MÃO: Kiwi 387,00 → 399,00; Bolota 387,00 × 92% = 356,04?? não: 399,00 × 92% = 367,08 (setembro, fechado: não muda)
+    assert.ok(ct.indexOf('agosto de 2026 — Total dos planos do Day Care: R$ 387,00 → R$ 399,00 (Kiwi: R$ 387,00 → R$ 399,00).') >= 0, ct);
+    assert.ok(ct.indexOf('Não mudam (mês fechado): setembro de 2026.') >= 0 && ct.indexOf('setembro de 2026 — Total') < 0, ct);
+    assert.ok(ct.indexOf('Estrela') < 0 && ct.indexOf('Íris') < 0 && ct.indexOf('Fumaça') < 0, 'os gravados não aparecem: ' + ct);
+    await toca73(SENHA_ADR73, 'a tabela comercial de 2027 chegou'); igual(passo73(), 'pronto'); r73('corrFechar()');
+    igual([r73('mensalidade("Silver",1,2)'), r73('finMensalidade(planos(), "Silver", 1, 2, descontosPlano())')], [36708, 36708], 'tela = Financeiro');
+    // (b) a renovação atrasada: a Jade pagou em 28/09 (lançada só agora, gravada R$ 387,00)
+    r73(`PELUDINHOS.push({n:'Jade', tutor:'Juca Teste', raca:'SRD'}); pelCadCache['jade__juca teste']={n:'Jade', tutor:'Juca Teste', dias:['seg'], renov:{plano:'Silver', aulas:1, ordemPet:1, inicio:'2026-09-28', fim:'2026-10-27', quando:'2026-10-10', valor_plano_cent:38700}};`);
+    // (c) a anulação do pagamento de 01/09 da Fumaça (6.71)
+    r73(`pelCadCache['fumaça__fábio teste'].renov_hist.h1.anulacoes={z1:{acao:'anular', ts:${T673 + 3600000}, por:'Gestora Teste', papel:'gestao', quando:'10/10/2026 às 11:00', motivo:'o pagamento foi lançado por engano'}};`);
+    // (d) a diária avulsa de 22/09 corrigida de R$ 170,00 para R$ 150,00 (a 6.72) e relida
+    r73(`__put657('daycare/dashboard/2026-09-22/avulso/x1/det/valor_cent', 15000); REC_AVULSO.quando=0;`); await le73('2026-09');
+    // (e) a Amora sai do Day Care (inativada hoje)
+    r73(`pelCadCache['amora__ana teste'].inativo='Sim'; pelCadCache['amora__ana teste'].dataSaida='2026-10-10';`);
+    // (f) a reserva r2 mudou a parcela do dia para R$ 220,00 (a 6.68)
+    r73(`__put657('auaulandia/orcamentos/r2/parcela2_cent', 22000); __put657('auaulandia/orcamentos/r2/total_cent', 32000); recGuardarFontes(__get657('auaulandia/orcamentos'), __get657('daycare/irmaos')||{});`);
+    // (g) o ajuste em mês fechado: recusado, nada gravado
+    const antesW = escRec73().length;
+    await abre73(`recAjusteAbrir('2026-09')`); await abre73(`recAjusteAnularAbrir('aj1', '2026-09')`);
+    igual([r73('CORR_ATUAL'), escRec73().length], [null, antesW], 'nada gravado em mês fechado');
+    const f2 = card73('2026-09'), t2 = txt73(f2);
+    igual([total73(f2), totalLista73(f2)], ['R$ 9.460,76', 'R$ 9.460,76'], 'o total fechado não muda');
+    // À MÃO, a conta ao vivo: planos 7.585,31 − 617,00 (Amora) + 7,17 (Bolota 359,91 → 367,08) − 387,00 (Fumaça) + 387,00 (Jade) = 6.975,48;
+    // reservas 260,00 + 220,00 = 480,00; avulsas 150,00 + 95,00 = 245,00; ajustes 73,45; total 7.773,93; diferença 7.773,93 − 8.383,76 = −609,83
+    igual(758531 - 61700 + 717 - 38700 + 38700 + 26000 + 22000 + 15000 + 9500 + 7345, 777393);
+    // 3ª rodada do @dev (S8-P2): a Amora inativada hoje (paga em 03/09) e a Gaia continuam em setembro. ANTES: «(6)», com «Amora — …: R$ 617,00
+    // → fora (inativo desde 10/10/2026)», e «R$ 7.773,93 (diferença de -R$ 609,83)». DEPOIS, à mão: planos 7.585,31 + 1.077,00 (Gaia) +
+    // 7,17 − 387,00 + 387,00 = 8.669,48; + 480,00 + 245,00 + 73,45 = 9.467,93; diferença 9.467,93 − 9.460,76 = 7,17; «(5)», sem a Amora.
+    igual(758531 + 107700 + 717 - 38700 + 38700 + 26000 + 22000 + 15000 + 9500 + 7345, 946793);
+    assert.ok(t2.indexOf('Mudou depois do fechamento (5)') >= 0 && t2.indexOf('Amora — ') < 0, t2);
+    [/Bolota — Silver · mensal · 1x por semana · pago em 04\/09\/2026: R\$ 359,91 → R\$ 367,08 \(a tabela de planos mudou em 10\/10\/2026\)/,
+      /Fumaça — Silver · mensal · 1x por semana · [^:]*: R\$ 387,00 → fora \(pagamento anulado\)/,
+      /Lord — Hospedagem na AuAulândia · [^:]*parcela do dia: entrada em 25\/09\/2026: R\$ 200,00 → R\$ 220,00/,
+      /Nova: Jade — Silver · mensal · 1x por semana · pago em 28\/09\/2026: R\$ 387,00/,
+      /Diárias avulsas com valor: R\$ 265,00 → R\$ 245,00/].forEach((re) => assert.ok(re.test(t2), re + '\n' + t2.slice(t2.indexOf('Mudou depois'), t2.indexOf('Mudou depois') + 1400)));
+    assert.ok(t2.indexOf('A conta ao vivo hoje daria R$ 9.467,93 (diferença de R$ 7,17).') >= 0, t2.slice(t2.indexOf('Mudou depois')));
+    // o Excel do mês fechado: o TOTAL é o fechado, as linhas com valor somam o TOTAL, e as de «Mudou depois» vêm depois, fora do total
+    const X = QA73.xls(QA73.baixa()), iT = X.findIndex((l) => l[0] === 'TOTAL');
+    assert.ok(/— FECHADO em 10\/10\/2026 às 10:00 por Adriana Teste/.test(QA73.baixa()), 'o título');
+    igual([X[iT][4], X.slice(1, iT).reduce((t, l) => t + (QA73.cent(l[4]) || 0), 0)], ['R$ 9.460,76', 946076]);
+    const mud = X.slice(iT + 1).filter((l) => l[0] === 'Mudou depois do fechamento');
+    igual([mud.length, mud.every((l) => l[2] === 'FORA DO TOTAL' && l[4] === '')], [6, true], JSON.stringify(mud));
+    // o efeito da 6.71 sobre o mês fechado (a saída do Bolota, agora). 3ª rodada do @dev (S8-P2): ANTES «setembro de 2026 está fechado: o
+    // total fechado continua R$ 8.383,76; …» (a saída tirava o Bolota de setembro). DEPOIS: a saída não muda mês nenhum.
+    const sl = r73(`saidaEfeitoLinha(PELUDINHOS[1])`);
+    igual(sl, 'No Recebimentos, nada muda: quem sai continua contando no mês em que pagou.');
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA · QA673-02 (AC5.2) — a junção pela data, pelo plano e pelo valor é só para a ficha que TROCOU DE CHAVE: o Biscoito inativado depois do fechamento e a Bolacha (outra ficha, que continua com a chave dela) com um pagamento atrasado de 05/07 do mesmo Gold 1x não somem um no outro — «Mudou depois do fechamento» mostra o Biscoito «fora» e a Bolacha «Nova», e não «Nada mudou desde o fechamento.»', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    igual(await fecha73('2026-07'), 'pronto');
+    r73(`pelCadCache['biscoito__clara teste'].inativo='Sim'; pelCadCache['biscoito__clara teste'].dataSaida='2026-10-10';
+      PELUDINHOS.push({n:'Bolacha', tutor:'Beatriz Teste', raca:'SRD'});
+      pelCadCache['bolacha__beatriz teste']={n:'Bolacha', tutor:'Beatriz Teste', dias:['seg'], renov:{plano:'Gold', aulas:1, ordemPet:1, inicio:'2026-07-05', fim:'2026-09-30', quando:'2026-10-10'}};`);
+    igual(J73(`pelCadCache['biscoito__clara teste']`) !== null, true, 'o Biscoito continua no cadastro, com a mesma chave (inativo)');
+    const t = txt73(card73('2026-07'));
+    assert.ok(t.indexOf('Nada mudou desde o fechamento.') < 0, 'diz «Nada mudou» com o Biscoito fora e a Bolacha nova: ' + t.slice(t.indexOf('Mudou depois'), t.indexOf('Mudou depois') + 300));
+    // 3ª rodada do @dev (S8-P2 — Adriana, 12/10/2026: «sim»). ANTES: «Biscoito — …: R$ 1.077,00 → fora (inativo desde 10/10/2026)» e
+    // «Nova: Bolacha». DEPOIS: o Biscoito só inativado continua no mês em que pagou (a linha dele fica, com a mesma chave): «(1)», só a
+    // «Nova: Bolacha». PORQUÊ: a decisão S8-P2. O que a prova segura (a ficha que continua com a chave dela não some na nova) segue
+    // provado abaixo, com o Biscoito saindo do mês por outro caminho (virou morador): «(2)», «fora» e «Nova».
+    assert.ok(t.indexOf('Mudou depois do fechamento (1)') >= 0 && t.indexOf('Biscoito — ') < 0 && /Nova: Bolacha — Gold · trimestral · 1x por semana · pago em 05\/07\/2026: R\$ 1\.077,00/.test(t), t.slice(t.indexOf('Mudou depois'), t.indexOf('Mudou depois') + 600));
+    r73(`pelCadCache['biscoito__clara teste'].categoria='morador';`);
+    const t2 = txt73(card73('2026-07'));
+    // 4ª rodada (re-gate 3, REQ-003). ANTES: «→ fora (inativo desde 10/10/2026)». DEPOIS: «→ fora (virou Morador(a) Zêluz)». PORQUÊ: com a
+    // S8-P2, inativo sozinho não tira linha nenhuma do mês em que pagou; quem tira a linha do Biscoito é a categoria (morador).
+    assert.ok(t2.indexOf('Mudou depois do fechamento (2)') >= 0 && /Biscoito — Gold · trimestral · 1x por semana · pago em 05\/07\/2026: R\$ 1\.077,00 → fora \(virou Morador\(a\) Zêluz\)/.test(t2) && /Nova: Bolacha — Gold · trimestral · 1x por semana · pago em 05\/07\/2026: R\$ 1\.077,00/.test(t2), t2.slice(t2.indexOf('Mudou depois'), t2.indexOf('Mudou depois') + 600));
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA · QA673-03 (AC2.5, dois aparelhos) — dois «Não renova» do mesmo ciclo gravados por dois aparelhos (o cartaz de cada um abriu antes de o outro gravar): um «Reabrir» devolve o FILHOt à cobrança (a régua não fica presa no «Não renova» de baixo)', async () => {
+  arma73();
+  try {
+    cena73([NINA73(), TODDY73()]);
+    // o aparelho B abre o cartaz do «Não renova» da Nina; enquanto a Consultora digita, o aparelho A grava o dele
+    await abre73('renovNaoRenovaAbrir(0)');
+    r73(`__put657('daycare/cadastro/nina__sol teste/renov_contatos/zA', {acao:'nao_renova', ciclo:'2026-06-30', plano:'Gold', motivo:'o tutor disse que vai se mudar', ts:${T673 - 60000},
+      registro:{acao:'corrigir', por:'Ana Consultora Teste', papel:'consultora', quando:'10/10/2026 às 09:59', motivo:'o tutor disse que vai se mudar', ts:${T673 - 60000}}});
+      pelCadCache['nina__sol teste']=__get657('daycare/cadastro/nina__sol teste');`);
+    await toca73('s-bia', 'o tutor disse que não volta mais'); r73('corrFechar()');
+    const nrs = contatos73(0).filter((o) => o.acao === 'nao_renova');
+    // 2ª rodada do @dev (REL-001). Antes: 2 («os dois aparelhos gravaram (o cartaz não relê a ficha antes de gravar)»). Depois: 1 — o
+    // cartaz relê a ficha antes de gravar e recusa, dizendo quem marcou. Porquê: dois registros no mesmo ciclo prendiam o FILHOt.
+    igual(nrs.length, 1, 'o 2º aparelho relê a ficha e é recusado');
+    assert.ok(((za73('O «NÃO RENOVA» NÃO FOI GRAVADO') || [])[0] || '').indexOf('Outro aparelho já marcou «Não renova» para Nina agora há pouco (Nina — avisou em 10/10 às 09:59, por Ana Consultora Teste: o tutor disse que vai se mudar). Nada foi gravado.') === 0,
+      JSON.stringify(za73('O «NÃO RENOVA» NÃO FOI GRAVADO')));
+    // «Reabrir» na linha do filtro «Não renova» (a marca mais nova)
+    const id = J73('renovCobrancaDe(pelExtra(PELUDINHOS[0])).naoRenova._id');
+    await abre73(`renovNaoRenovaReabrirAbrir(0, '${id}')`); await toca73('s-bia', 'o tutor ligou e vai renovar'); r73('corrFechar()');
+    igual(J73('renovCobrancaDe(pelExtra(PELUDINHOS[0])).naoRenova'), null, 'depois do «Reabrir», a Nina continua em «Não renova» pela marca do outro aparelho');
+    igual(nomesLista73(renov73('cobrar').lista), ['Nina', 'Toddy']);
+    // 2ª rodada do @dev (REL-001): os dois «Não renova» do ciclo já no banco (gravados ao mesmo tempo, antes da releitura): o «Reabrir»
+    // da linha (o mais novo) fecha os dois, um «reabriu» para cada, e a Nina volta à cobrança na hora
+    cena73([NINA73(), TODDY73()]);
+    r73(`['zA', 'zB'].forEach(function(id, i){ var t=${T673}-60000+i*30000; __put657('daycare/cadastro/nina__sol teste/renov_contatos/'+id, {acao:'nao_renova', ciclo:'2026-06-30', plano:'Gold', motivo:'o tutor disse que vai se mudar', ts:t,
+      registro:{acao:'corrigir', por:(i?'Bia Consultora Teste':'Ana Consultora Teste'), papel:'consultora', quando:'10/10/2026 às 09:5'+(i?'9':'8'), motivo:'o tutor disse que vai se mudar', ts:t}}); });
+      pelCadCache['nina__sol teste']=__get657('daycare/cadastro/nina__sol teste');`);
+    igual(J73('renovCobrancaDe(pelExtra(PELUDINHOS[0])).naoRenova._id'), 'zB');
+    await abre73(`renovNaoRenovaReabrirAbrir(0, 'zB')`);
+    assert.ok(cartaz73().indexOf('Também reabre o outro «Não renova» deste ciclo (Nina — avisou em 10/10 às 09:59, por Ana Consultora Teste: o tutor disse que vai se mudar).') >= 0, cartaz73());
+    await toca73('s-bia', 'o tutor ligou e vai renovar'); r73('corrFechar()');
+    igual(contatos73(0).filter((o) => o.acao === 'reabriu').map((o) => o.alvo).sort(), ['zA', 'zB']);
+    igual(J73('renovCobrancaDe(pelExtra(PELUDINHOS[0])).naoRenova'), null);
+    igual(nomesLista73(renov73('cobrar').lista), ['Nina', 'Toddy']);
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA · QA673-04 (AC4.1, virada do mês, nos dois fusos) — com o relógio do aparelho em 31/10/2026 às 23:59:30, outubro não fecha (o botão não aparece e a função recusa); em 01/11/2026 às 00:00:30, «Fechar outubro de 2026» aparece e grava; o «Lançar um ajuste» de novembro, não de dezembro', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 });
+    const relogio = (a, m, d, hh, mi, ss) => r73(`(function(){ var t=new __RD657(${a}, ${m}, ${d}, ${hh}, ${mi}, ${ss}).getTime(); Date=function(){ var x=Array.prototype.slice.call(arguments); if(!x.length) return new __RD657(t); return new (Function.prototype.bind.apply(__RD657,[null].concat(x)))(); };
+      Date.now=function(){ return t; }; Date.prototype=__RD657.prototype; Date.UTC=__RD657.UTC; Date.parse=__RD657.parse; zHojeISO=__bk657.hz; hojeISO=__bk657.hj; })();`);
+    relogio(2026, 9, 31, 23, 59, 30);
+    igual(r73('hojeISO()'), '2026-10-31', 'o hojeISO de verdade, no fuso deste aparelho');
+    r73(`REC_MES='2026-10';`); entrega73(); r73(`REC_AVULSO.mes='2026-10';`);
+    const h1 = card73('2026-10');
+    assert.ok(h1.indexOf('recFecharAbrir') < 0 && txt73(h1).indexOf('O mês só fecha depois que termina.') >= 0, txt73(h1).slice(-300));
+    await abre73(`recFecharAbrir('2026-10')`);
+    igual([r73('CORR_ATUAL'), za73('O MÊS AINDA NÃO TERMINOU')], [null, ['O mês só fecha depois que termina.', 'Nada foi gravado.']]);
+    relogio(2026, 10, 1, 0, 0, 30);
+    igual(r73('hojeISO()'), '2026-11-01');
+    r73(`REC_FONTES.quando=Date.now(); REC_AVULSO={mes:'2026-10', quando:Date.now(), lendo:false, ok:true, total_cent:0, n:0, semValor:0, futuros:0};`);
+    const h2 = card73('2026-10');
+    assert.ok(/onclick="recFecharAbrir\('2026-10'\)">Fechar outubro de 2026</.test(h2), txt73(h2).slice(-300));
+    await abre73(`recFecharAbrir('2026-10')`);
+    assert.ok(cartaz73().indexOf('Fechar outubro de 2026 com R$ 0,00') >= 0, cartaz73());
+    r73('corrFechar()');
+    await abre73(`recAjusteAbrir('2026-12')`);
+    igual([r73('CORR_ATUAL'), (za73('NÃO DÁ PARA LANÇAR O AJUSTE AGORA') || [])[0]], [null, 'Este mês ainda não começou: não há o que ajustar.']);
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA · QA673-05 (AC9.3, avaliação do achado do @dev) — a tabela pedida e ainda não chegada: o Confirmar recusa, mas o «Começou no meio do mês» (mmConfirmar) grava a mensalidade e o total pela tabela de FÁBRICA no lugar da salva', async () => {
+  arma73();
+  try {
+    cena73([{ n: 'Quindim', tutor: 'Lia Teste', ex: { dias: ['seg'], renov: { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-07', fim: '2026-12-31', mesRenov: 'dezembro de 2026', quando: '2026-10-07' } } }]);
+    // no banco, a tabela salva pela Gestão (Gold 1x R$ 399,00); neste aparelho, pedida e ainda não chegada
+    r73(`__put657('daycare/config/tabela-planos', {Gold:{valores:{1:39900,2:58900,3:69900,4:82900,5:96900}, hospOff:10}, descontoIrmao:{2:7,3:12}, ts:1, quem:'Gestora Teste'});
+      TABELA_PLANOS={pedida:true, chegou:false, erro:null, v:null}; planosCfg=null; renovRascunho=null; mmRascunho=null; document.body.dataset.role='consultora'; __zpq657=[true, true, true];`);
+    r73(`renovRascunho={_k:pelKey(pelAtual), plano:'Gold', aulas:1, inicio:'2026-10-10'};`);
+    await abre73('confirmarRenovacao()');
+    igual(za73('A TABELA DE PLANOS AINDA NÃO CHEGOU'), [r73('PLANOS_TRAVA_FRASE')], 'o Confirmar recusa');
+    r73('renovRascunho=null; __zpq657=[true, true, true];');
+    await abre73('mmConfirmar(2)'); await esp73();
+    const mm1 = (ficha73(0).renov || {}).meio_mes, z1 = titulos73();
+    // o controle: com a tabela chegada (Gold 1x R$ 399,00), o mesmo meio do mês grava pela tabela salva
+    cena73([{ n: 'Quindim', tutor: 'Lia Teste', ex: { dias: ['seg'], renov: { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-07', fim: '2026-12-31', mesRenov: 'dezembro de 2026', quando: '2026-10-07' } } }]);
+    r73(`tabelaPlanosAplicar({Gold:{valores:{1:39900,2:58900,3:69900,4:82900,5:96900}, hospOff:10}, descontoIrmao:{2:7,3:12}}); TABELA_PLANOS.pedida=true; TABELA_PLANOS.chegou=true;
+      renovRascunho=null; mmRascunho=null; document.body.dataset.role='consultora'; __zpq657=[true, true, true];`);
+    await abre73('mmConfirmar(2)'); await esp73();
+    const mm2 = (ficha73(0).renov || {}).meio_mes;
+    igual([mm2 && mm2.mensalidade_cent], [39900], 'o controle: com a tabela chegada, a mensalidade é a salva');
+    igual([mm1 === undefined, z1.indexOf('A TABELA DE PLANOS AINDA NÃO CHEGOU') >= 0], [true, true],
+      'com a tabela pedida e ainda não chegada, o meio do mês gravou pela tabela de fábrica: ' + JSON.stringify(mm1 && { mensalidade_cent: mm1.mensalidade_cent, diaria_plano_cent: mm1.diaria_plano_cent, total_cent: mm1.total_cent }) + ' ' + JSON.stringify(z1));
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA · QA673-06 (AC8.1, AC8.2, AC9.2 — o cartaz da tabela conferido à mão) — o 2º FILHOt de 7% para 10%, o 3º de 12% para 15% e o Black 2x de R$ 568,00 para R$ 590,00, com agosto aberto e setembro fechado: o cartaz lista só os meses abertos que mudam, com cada FILHOt, e põe setembro em «Não mudam»; depois de salvar, o quadro de agosto dá o número do cartaz e o de setembro continua o fechado; o gravado não muda', async () => {
+  arma73();
+  try {
+    const S = (n, tutor, renov) => ({ n, tutor, ex: { dias: ['seg'], renov } });
+    cena73([
+      S('Ágata', 'Lu Teste', { plano: 'Silver', aulas: 1, ordemPet: 2, inicio: '2026-08-03', fim: '2026-09-02', quando: '2026-08-03' }),   // 387,00 × 93% = 359,91 → × 90% = 348,30
+      S('Brisa', 'Lu Teste', { plano: 'Gold', aulas: 2, ordemPet: 3, inicio: '2026-08-04', fim: '2026-11-03', quando: '2026-08-04' }),     // 589,00 × 88% = 518,32 × 3 = 1.554,96 → × 85% = 500,65 × 3 = 1.501,95
+      S('Ciça', 'Mel Teste', { plano: 'Black', aulas: 2, ordemPet: 1, inicio: '2026-08-05', fim: '2027-02-04', quando: '2026-08-05' }),    // 568,00 × 6 = 3.408,00 → 590,00 × 6 = 3.540,00
+      S('Duna', 'Mel Teste', { plano: 'Black', aulas: 2, ordemPet: 1, inicio: '2026-08-06', fim: '2027-02-05', quando: '2026-08-06', valor_plano_cent: 340800 }),   // gravado: não muda
+      S('Eco', 'Nei Teste', { plano: 'Black', aulas: 2, ordemPet: 5, inicio: '2026-09-08', fim: '2027-03-07', quando: '2026-09-08' }),     // setembro (fechado): 568,00 × 88% = 499,84 × 6 = 2.999,04
+    ], { login: GESTORA73 });
+    r73(`REC_MES='2026-09';`);
+    igual(await fecha73('2026-09'), 'pronto');
+    r73(`Date.now=function(){ return ${T673 + 3600000}; };`);
+    await salva73({ cfgPlIrmao_2: '10', cfgPlIrmao_3: '15', cfgPl_Black_2: '590,00' });
+    const c = cartaz73();
+    // À MÃO: agosto antes = 359,91 + 1.554,96 + 3.408,00 + 3.408,00 (Duna, gravado) = 8.730,87; depois = 348,30 + 1.501,95 + 3.540,00 + 3.408,00 = 8.798,25
+    igual([38700 * 93 / 100, Math.round(38700 * 90 / 100), Math.round(58900 * 88 / 100) * 3, Math.round(58900 * 85 / 100) * 3], [35991, 34830, 155496, 150195]);
+    assert.ok(c.indexOf('agosto de 2026 — Total dos planos do Day Care: R$ 8.730,87 → R$ 8.798,25 (Ciça: R$ 3.408,00 → R$ 3.540,00; Ágata: R$ 359,91 → R$ 348,30; Brisa: R$ 1.554,96 → R$ 1.501,95).') >= 0
+      || c.indexOf('agosto de 2026 — Total dos planos do Day Care: R$ 8.730,87 → R$ 8.798,25 (') >= 0, c);
+    ['Ágata: R$ 359,91 → R$ 348,30', 'Brisa: R$ 1.554,96 → R$ 1.501,95', 'Ciça: R$ 3.408,00 → R$ 3.540,00'].forEach((x) => assert.ok(c.indexOf(x) >= 0, x + '\n' + c));
+    assert.ok(c.indexOf('Duna') < 0, 'o gravado não aparece: ' + c);
+    assert.ok(c.indexOf('Não mudam (mês fechado): setembro de 2026.') >= 0 && c.indexOf('Eco') < 0, c);
+    await toca73(SENHA_ADR73, 'a tabela comercial de 2027 chegou'); r73('corrFechar()');
+    r73(`REC_AVULSO={mes:'2026-08', quando:Date.now(), lendo:false, ok:true, total_cent:0, n:0, semValor:0, futuros:0};`);
+    igual(total73(card73('2026-08')), 'R$ 8.798,25', 'o quadro de agosto = o número do cartaz');
+    r73(`REC_AVULSO={mes:'2026-09', quando:Date.now(), lendo:false, ok:true, total_cent:0, n:0, semValor:0, futuros:0};`);
+    const s = txt73(card73('2026-09'));
+    igual(total73(card73('2026-09')), 'R$ 2.999,04', 'setembro continua o fechado');
+    // À MÃO: Eco ao vivo 590,00 × 85% = 501,50 × 6 = 3.009,00
+    assert.ok(s.indexOf('Eco — Black · semestral · 2x por semana · pago em 08/09/2026: R$ 2.999,04 → R$ 3.009,00 (a tabela de planos mudou em 10/10/2026)') >= 0, s.slice(s.indexOf('Mudou')));
+    // a tela = o Financeiro em todo plano × aulas × ordem, com a tabela nova
+    const dif = J73(`(function(){ var d=[]; ['Silver','Gold','Black'].forEach(function(k){ [1,2,3,4,5].forEach(function(a){ [1,2,3,4,5,6].forEach(function(o){ var x=mensalidade(k,a,o), y=finMensalidade(planos(),k,a,o,descontosPlano()); if(x!==y) d.push([k,a,o,x,y]); }); }); }); return d; })()`);
+    igual(dif, []);
+    igual([r73('mensalidade("Black",2,4)'), r73('mensalidade("Gold",1,2)')], [50150, 32310], 'à mão: 590,00 × 85% = 501,50; 359,00 × 90% = 323,10');
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA · QA673-07 (AC9.4) — «Tabelas anteriores» e «Voltar a esta tabela»: fábrica → T1 → T2; voltar à de antes do T2 grava o T1 como tabela nova (um registro novo), com o efeito do AC8 e a senha da Gestão; o histórico lido do banco no formato do Firebase (as mensalidades como lista [null, …]) volta certo; a Supervisão é barrada', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 });
+    await salva73({ cfgPl_Gold_1: '379,00' }, SENHA_ADR73, 'a primeira tabela de 2027'); r73('corrFechar()');
+    r73(`Date.now=function(){ return ${T673 + 60000}; };`);
+    await salva73({ cfgPl_Gold_1: '399,00' }, SENHA_ADR73, 'a segunda tabela de 2027'); r73('corrFechar()');
+    igual(r73('mensalidade("Gold",1,1)'), 39900);
+    // o histórico como o Firebase devolve (o objeto {1..5} vira lista com o 0 vazio)
+    r73(`TABELA_HIST=JSON.parse(JSON.stringify(__get657('daycare/config/tabela-planos-historico'))); Object.keys(TABELA_HIST).forEach(function(k){ ['antes','depois'].forEach(function(q){ ['Silver','Gold','Black'].forEach(function(p){ var v=TABELA_HIST[k][q][p].valores; TABELA_HIST[k][q][p].valores=[null, v[1], v[2], v[3], v[4], v[5]]; }); }); });`);
+    const ks = J73('Object.keys(TABELA_HIST).sort(function(a,b){ return TABELA_HIST[a].registro.ts-TABELA_HIST[b].registro.ts; })');
+    igual(ks.length, 2);
+    cartao73(); r73('__el657.cfgPlanosHist.innerHTML=cfgPlanosHistHTML();');
+    const hh = txt73(r73('cfgPlanosHistHTML()'));
+    assert.ok(hh.indexOf('Tabelas anteriores (2)') >= 0 && hh.indexOf('Motivo: a segunda tabela de 2027') >= 0 && hh.indexOf('Gold · 1x por semana: R$ 379,00') >= 0, hh);
+    // a Supervisão é barrada
+    r73(`document.body.dataset.role='supervisor';`);
+    await abre73(`cfgPlanosVoltarAbrir('${ks[1]}')`);
+    igual(r73('CORR_ATUAL'), null);
+    r73(`document.body.dataset.role='gestao';`);
+    await abre73(`cfgPlanosVoltarAbrir('${ks[1]}')`);
+    const c = cartaz73();
+    assert.ok(/Voltar a uma tabela de planos anterior/.test(c) && c.indexOf('Gold · 1x por semana: R$ 399,00 → R$ 379,00') >= 0 && c.indexOf('julho de 2026 — Total dos planos do Day Care: R$ 2.214,00 → R$ 2.214,00') < 0, c);
+    // À MÃO: julho, o Biscoito (sem gravado) 3 × 399,00 = 1.197,00 → 3 × 379,00 = 1.137,00; com a Pipoca gravada 1.077,00: 2.274,00 → 2.214,00
+    assert.ok(c.indexOf('julho de 2026 — Total dos planos do Day Care: R$ 2.274,00 → R$ 2.214,00 (Biscoito: R$ 1.197,00 → R$ 1.137,00).') >= 0, c);
+    await toca73(SENHA_ADR73, 'voltar para a primeira de 2027'); igual(passo73(), 'pronto'); r73('corrFechar()');
+    igual([r73('mensalidade("Gold",1,1)'), Object.keys(J73(`__get657('daycare/config/tabela-planos-historico')`)).length], [37900, 3], 'a volta grava a tabela e um registro novo');
+    igual(aud73('tabela-planos-voltou').length, 1);
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA · QA673-08 (AC4.4, dois aparelhos) — um ajuste lançado em outro aparelho entre abrir o «Fechar» e confirmar: recusa, nada gravado; e os dois aparelhos fechando ao mesmo tempo (as duas releituras antes das duas gravações): os dois fechamentos ficam, o estado é o mais novo, e «Reabrir» reabre o mais novo', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    await abre73(`recFecharAbrir('2026-07')`);
+    r73(`__put657('daycare/recebimentos/2026-07/ajustes/zz', {sentido:'somar', valor_cent:1000, descricao:'banho lançado sem valor', motivo:'faltou o valor', ts:1, registro:{por:'Adriana Teste', papel:'gestao', quando:'10/10/2026 às 09:59'}});`);
+    await toca73(SENHA_ADR73);
+    igual(za73('O MÊS NÃO FOI FECHADO'), ['Os ajustes ou o fechamento de julho de 2026 mudaram em outro aparelho enquanto o cartaz estava aberto. Nada foi gravado: confira.', 'O mês continua aberto.']);
+    igual(escRec73().length, 0);
+    // as duas gravações ao mesmo tempo: o gravar do cartaz chamado duas vezes antes de qualquer uma terminar
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    await abre73(`recFecharAbrir('2026-07')`);
+    // 3ª rodada do @dev (S8-P7): ANTES o aparelho A assinava como «Gestora Teste» (a senha da Gestão); DEPOIS os dois aparelhos assinam
+    // como a Adriana — a função que grava recusa outro nome (recSoAdriana: «BARROU»). PORQUÊ: só a Adriana fecha o mês.
+    r73(`__gQA=CORR_ATUAL.op.gravar; __rgQA=corrRegistro(CORR_ATUAL.op, [], {nome:'Adriana Teste', papel:'gestao'}, 'fechado no aparelho A', Date.now());
+      __rgQB=corrRegistro(CORR_ATUAL.op, [], {nome:'Adriana Teste', papel:'gestao'}, 'fechado no aparelho B', Date.now());
+      __pA=Promise.resolve(__gQA(__rgQA)); __pB=Promise.resolve(__gQB=__gQA(__rgQB)); corrFechar();`);
+    await esp73();
+    const evs = J73(`__get657('daycare/recebimentos/2026-07/eventos')`), cps = J73(`__get657('daycare/recebimentos-linhas/2026-07')`);
+    igual([Object.keys(evs).length, Object.keys(cps).length], [2, 2], 'nada é sobrescrito');
+    r73(`recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')}); REC_FECH.vivo=false;`);
+    const F = J73(`recFechadoDe('2026-07')`);
+    igual([F.fechado, F.eventos.length], [true, 2]);
+    const h = txt73(card73('2026-07'));
+    assert.ok(h.indexOf('Fechamentos de julho de 2026 (2)') >= 0 && total73(card73('2026-07')) === 'R$ 2.154,00', h.slice(0, 800));
+    await abre73(`recReabrirAbrir('2026-07')`); await toca73(SENHA_ADR73, 'os dois aparelhos fecharam juntos'); igual(passo73(), 'pronto'); r73('corrFechar()');
+    r73(`recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')});`);
+    igual(J73(`recFechadoDe('2026-07').fechado`), false, 'reaberto');
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA · QA673-09 (AC11, AC12.3) — quem assina, na função: a Consultora, a Supervisão e o Encãotador chamando fechar, reabrir, ajustar, anular, salvar a tabela e voltar a uma tabela: «BARROU», nada gravado; o posto não assina; a senha em nenhum registro, fechamento, histórico, ajuste, cobrança nem auditoria', async () => {
+  arma73();
+  try {
+    const chamadas = [`recFecharAbrir('2026-07')`, `recReabrirAbrir('2026-07')`, `recAjusteAbrir('2026-07')`, `recAjusteAnularAbrir('aj1', '2026-07')`, `cfgPlanosSalvar()`, `cfgPlanosVoltarAbrir('h1')`];
+    for (const papel of ['consultora', 'supervisor', 'monitor']) {
+      cena73(JULHO73(), { login: { nome: 'Alguém Teste', role: papel } }); r73(`REC_MES='2026-07';`); entrega73(); cartao73(); campos73({ cfgPl_Gold_1: '399,00' });
+      for (const ch of chamadas) {
+        await abre73(ch);
+        igual([r73('CORR_ATUAL'), escRec73().length], [null, 0], papel + ' ' + ch);
+      }
+      igual(J73('__au657').filter((a) => /^BARROU/.test(a[1])).length >= 5, true, papel + ': ' + JSON.stringify(J73('__au657').map((a) => a[1].slice(0, 60))));
+    }
+    // a Gestão faz tudo, e uma senha de posto não assina
+    cena73(JULHO73().concat([NINA73(), TODDY73()]), { login: GESTORA73 }); r73(`REC_MES='2026-07';`); entrega73();
+    await abre73(`recFecharAbrir('2026-07')`); await toca73('s-posto');
+    assert.ok(/posto/i.test(aviso73()) && passo73() === 'conferir', aviso73()); r73('corrFechar()');
+    await abre73(`recAjusteAbrir('2026-07')`); r73(`corrToque('continuar', {valores:['Somar ao mês', '170,00', 'diária avulsa da Lua']})`); await toca73(SENHA_ADR73, 'a diária da Lua foi paga'); r73('corrFechar()');
+    const aj = Object.keys(J73(`__get657('daycare/recebimentos/2026-07/ajustes')`))[0]; r73(`recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')});`);
+    await abre73(`recAjusteAnularAbrir('${aj}', '2026-07')`); await toca73(SENHA_ADR73, 'a diária era de outro mês'); r73('corrFechar()');
+    r73(`recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')});`);
+    await fecha73('2026-07');
+    r73(`recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')});`);
+    await abre73(`recReabrirAbrir('2026-07')`); await toca73(SENHA_ADR73, 'reabrir para conferir de novo'); r73('corrFechar()');
+    await salva73({ cfgPl_Gold_1: '399,00' }, SENHA_ADR73); r73('corrFechar()');
+    await cobra73(3, 'WhatsApp', 'vai_pensar');
+    await abre73('renovNaoRenovaAbrir(2)'); await toca73(SENHA657, 'o tutor disse que vai viajar'); r73('corrFechar()');
+    const tudo = JSON.stringify(J73('__db657')) + JSON.stringify(J73('__au657'));
+    igual([tudo.indexOf(SENHA657), tudo.indexOf(SENHA_ADR73), tudo.indexOf('s-bia'), tudo.indexOf('s-posto')], [-1, -1, -1, -1], 'nenhuma senha gravada');
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA · QA673-10 (Firebase de verdade) — com um banco que recusa undefined como o Firebase (Reference.update failed), «Já cobrei», «Não renova», «Reabrir», «Desfazer esta cobrança», «Fechar», «Reabrir o mês», o ajuste, «Anular» e «Salvar a tabela» gravam (nenhum campo undefined), num mês com reserva, avulsa, ajuste, fora do total e anulado', async () => {
+  arma73();
+  try {
+    QA73.cenaSet(); await le73('2026-09'); QA73.estrito();
+    await fecha73('2026-09');
+    r73(`recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')});`);
+    await abre73(`recReabrirAbrir('2026-09')`); await toca73(SENHA_ADR73, 'reabrir para lançar o ajuste'); r73('corrFechar()');
+    r73(`recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')});`);
+    await abre73(`recAjusteAbrir('2026-09')`); r73(`corrToque('continuar', {valores:['Tirar do mês', '12,34', 'troco devolvido ao tutor']})`); await toca73(SENHA_ADR73, 'o troco foi devolvido'); r73('corrFechar()');
+    r73(`recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')});`);
+    await abre73(`recAjusteAnularAbrir('aj1', '2026-09')`); await toca73(SENHA_ADR73, 'o banho extra já estava'); r73('corrFechar()');
+    await salva73({ cfgPl_Gold_1: '399,00' }, SENHA_ADR73); r73('corrFechar()');
+    r73(`document.body.dataset.role='consultora'; __login657={nome:'Bia Consultora Teste', role:'consultora'};`);
+    const iK = r73(`PELUDINHOS.findIndex(function(p){ return p.n==='Kiwi'; })`);
+    await cobra73(iK, 'Telefone', 'vai_pensar', 'liga amanhã');
+    const idc = contatos73(iK).filter((o) => o.acao === 'cobrou')[0]._id;
+    await abre73(`renovCobrancaDesfazerAbrir(${iK}, '${idc}')`); await toca73('s-bia', 'cobrei o FILHOt errado'); r73('corrFechar()');
+    await naoRenova73(iK, 'o tutor disse que vai se mudar');
+    const idn = contatos73(iK).filter((o) => o.acao === 'nao_renova')[0]._id;
+    await abre73(`renovNaoRenovaReabrirAbrir(${iK}, '${idn}')`); await toca73('s-bia', 'o tutor ligou e vai renovar'); r73('corrFechar()');
+    igual(J73('__undefQA'), [], 'nenhum undefined nas gravações');
+    igual([Object.keys(J73(`__get657('daycare/recebimentos/2026-09/eventos')`)).length, Object.keys(J73(`__get657('daycare/config/tabela-planos-historico')`)).length, contatos73(iK).length], [2, 1, 4]);
+  } finally { QA73.soltaEstrito(); solta73(); }
+});
+
+provaAsync('6.73 QA · QA673-11 (AC1 a AC3 — uma régua só nas quatro telas) — com cobranças, «Não renova», «Reabrir» e «Desfazer esta cobrança» misturados: a Renovação («a cobrar agora», os grupos, o número do botão, o filtro «Não renova»), a aba Plano, o Painel da Supervisão e a linha dos vencidos do Dashboard da Adriana dizem o mesmo, a cada passo', async () => {
+  arma73();
+  try {
+    const P = (n, tutor, fim, ini, plano, valor, sexo) => ({ n, tutor, ex: { dias: ['seg'], sexo, renov: { plano: plano || 'Silver', aulas: 1, ordemPet: 1, inicio: ini, fim, quando: ini, valor_plano_cent: valor || 38700 } } });
+    cena73([P('Nina', 'Sol Teste', '2026-06-30', '2026-04-05', 'Gold', 107700, 'Fêmea'), P('Toddy', 'Ana Teste', '2026-10-15', '2026-09-16'), P('Pingo', 'Lia Teste', '2026-10-12', '2026-09-13'),
+      P('Fred', 'Rui Teste', '2026-12-31', '2026-10-05', 'Gold', 107700), P('Zeca', 'Tom Teste', '2026-09-30', '2026-09-01')]);
+    const confere = (passo) => {
+      const R = renov73('cobrar'), N = renov73('naorenova'), nomesR = nomesLista73(R.lista), nomesN = nomesLista73(N.lista);
+      const sup = J73('paDadosPlanos()').map((x) => x.nome).sort();
+      const nCob = Number((/^(\d+) a cobrar agora/.exec(R.filtros) || [])[1]);
+      const nNR = Number((/(\d+) não renova/.exec(R.filtros) || [0, 0])[1]);
+      const nr = J73(`PELUDINHOS.filter(function(p){ return !!renovCobrancaDe(pelExtra(p)).naoRenova; }).map(function(p){ return p.n; }).sort()`);
+      const abaNR = J73(`PELUDINHOS.filter(function(p){ return /class="hint renov-nr"/.test(renovCobrancaFichaHTML(pelExtra(p), p)); }).map(function(p){ return p.n; }).sort()`);
+      igual([nomesR.slice().sort(), sup, nCob, nomesR.length], [sup, sup, sup.length, sup.length], passo + ': a Renovação × a Supervisão');
+      igual([nomesN.slice().sort(), abaNR, nNR], [nr, nr, nr.length], passo + ': o filtro «Não renova» × a aba Plano');
+      // a linha dos vencidos do Dashboard da Adriana: a parte de quem não renova = a soma, à mão, dos vencidos marcados
+      const fin = J73(`finResumoMes({cadastro:pelCadCache, peludinhos:PELUDINHOS, irmaos:{}, orcamentos:{}, pagamentos:null, planos:planos(), descontoIrmao:descontosPlano()}, '2026-10', {hoje:'2026-10-10'})`);
+      const venc = (fin.inadimplentes || []).filter((o) => o.servico === 'daycare');
+      const parte = venc.filter((o) => nr.indexOf((o.nome || '')) >= 0).reduce((t, o) => t + o.valorDeUmMes, 0);
+      const linha = txt73(r73(`pdirFinHTML(finResumoMes({cadastro:pelCadCache, peludinhos:PELUDINHOS, irmaos:{}, orcamentos:{}, pagamentos:null, planos:planos(), descontoIrmao:descontosPlano()}, '2026-10', {hoje:'2026-10-10'}), false, 'outubro de 2026')`));
+      if (parte) assert.ok(linha.indexOf('Destes, ' + r73(`finBRL(${parte})`) + ' são de') >= 0, passo + ': ' + linha.slice(linha.indexOf('vencidos'), linha.indexOf('vencidos') + 300));
+      else assert.ok(linha.indexOf('Destes,') < 0, passo);
+      return { R: nomesR, N: nomesN, nCob };
+    };
+    let e = confere('0, sem marca');
+    igual(e.R, ['Nina', 'Zeca', 'Pingo', 'Toddy']);
+    await cobra73(1, 'WhatsApp', 'vai_pensar'); e = confere('1, o Toddy cobrado');
+    igual(e.nCob, 4, 'o número do botão continua');
+    await naoRenova73(0, 'o tutor disse que vai se mudar'); e = confere('2, a Nina não renova');
+    igual([e.nCob, e.N], [3, ['Nina']]);
+    await naoRenova73(4, 'o tutor vai pôr no outro Day Care'); e = confere('3, o Zeca não renova');
+    await naoRenova73(3, 'o tutor avisou antes do vencimento'); e = confere('4, o Fred (em dia) não renova');
+    igual(e.N.sort(), ['Fred', 'Nina', 'Zeca'].sort());
+    const idN = J73('renovCobrancaDe(pelExtra(PELUDINHOS[0])).naoRenova._id');
+    await abre73(`renovNaoRenovaReabrirAbrir(0, '${idN}')`); await toca73('s-bia', 'o tutor ligou e vai renovar'); r73('corrFechar()'); e = confere('5, a Nina reaberta');
+    const idC = contatos73(1).filter((o) => o.acao === 'cobrou')[0]._id;
+    await abre73(`renovCobrancaDesfazerAbrir(1, '${idC}')`); await toca73('s-bia', 'cobrei o FILHOt errado'); r73('corrFechar()'); e = confere('6, a cobrança do Toddy desfeita');
+    const t = txt73(renov73('cobrar').lista);
+    assert.ok(t.indexOf('Já cobrados (0)') >= 0 && t.indexOf('Ainda não cobrados (3)') >= 0, t);
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA · QA673-12 (AC6.4, AC5.4 com a 6.71) — o ajuste com motivo entra no «Total de {mês} no Recebimentos» da pergunta da 6.71 (o mesmo número do quadro); o JSON do finResumoMes não muda; o «Total da lista» e o TOTAL do Excel com um «Tirar do mês» maior que o mês dão o negativo como -R$', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`); entrega73();
+    r73(`__put657('daycare/recebimentos/2026-07/ajustes/aj1', {sentido:'somar', valor_cent:17000, descricao:'diária da Lua sem valor', motivo:'faltou lançar', ts:5, registro:{por:'Gestora Teste', papel:'gestao', quando:'09/10/2026 às 10:00', motivo:'faltou lançar', ts:5}});
+      recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')}); REC_FONTES.quando=Date.now(); REC_AVULSO.quando=Date.now();`);
+    igual(total73(card73('2026-07')), 'R$ 2.324,00');
+    r73('pelAtual=PELUDINHOS[1]; pelAtualIdx=1;');
+    await abre73('planoAnularAtualAbrir()');
+    const c = cartaz73();
+    // À MÃO: 2.154,00 + 170,00 = 2.324,00; sem a Pipoca (1.077,00): 1.247,00
+    assert.ok(c.indexOf('Total de julho de 2026 no Recebimentos: R$ 2.324,00 → R$ 1.247,00') >= 0, c);
+    r73('corrFechar()');
+    // um «Tirar do mês» de R$ 3.000,00: o total do mês fica negativo e sai -R$
+    r73(`__put657('daycare/recebimentos/2026-07/ajustes/aj2', {sentido:'tirar', valor_cent:300000, descricao:'estorno do plano do Biscoito', motivo:'estornado no cartão', ts:6, registro:{por:'Gestora Teste', papel:'gestao', quando:'09/10/2026 às 10:10', motivo:'estornado no cartão', ts:6}});
+      recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')});`);
+    const h = card73('2026-07');
+    // À MÃO: 2.154,00 + 170,00 − 3.000,00 = −676,00
+    igual([total73(h), totalLista73(h)], ['-R$ 676,00', '-R$ 676,00']);
+    const X = QA73.xls(QA73.baixa()), iT = X.findIndex((l) => l[0] === 'TOTAL');
+    igual(X[iT][4], '-R$ 676,00');
+    assert.ok(txt73(h).indexOf('R$ -') < 0 && txt73(h).indexOf('Ajustes com motivo (2)') >= 0 && txt73(h).indexOf('-R$ 2.830,00') >= 0, txt73(h));
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA · QA673-13 (AC5.1 — o corpo como o Firebase devolve) — o corpo do fechamento lido do banco com as listas como objetos de chaves numéricas, sem as listas vazias (o Firebase não guarda lista vazia) e com as mensalidades da tabela como lista: o quadro fechado, a lista, o Excel e «Mudou depois do fechamento» saem certos', async () => {
+  arma73();
+  try {
+    QA73.cenaSet(); await le73('2026-09');
+    await fecha73('2026-09');
+    const ev = Object.values(J73(`__get657('daycare/recebimentos/2026-09/eventos')`))[0];
+    // o corpo como o Firebase devolveria
+    r73(`(function(){ var C=__get657('daycare/recebimentos-linhas/2026-09/${ev.linhas}'); var obj=function(L){ var o={}; (L||[]).forEach(function(x,i){ o[String(i)]=x; }); return o; };
+      C.linhas=obj(C.linhas); C.ajustes=obj(C.ajustes); C.fora=obj(C.fora); delete C.anulados; ['Silver','Gold','Black'].forEach(function(k){ var v=C.tabela[k].valores; C.tabela[k].valores=[null,v[1],v[2],v[3],v[4],v[5]]; });
+      __put657('daycare/recebimentos-linhas/2026-09/${ev.linhas}', C); REC_CORPO={}; })();`);
+    card73('2026-09'); await esp73();
+    const h = card73('2026-09'), t = txt73(h);
+    // 3ª rodada do @dev (S8-P2 — Adriana, 12/10/2026: «sim»). ANTES: R$ 8.383,76 e «(9)» (a Gaia, inativa, fora de setembro). DEPOIS:
+    // R$ 9.460,76 e «(10)»: a Gaia (Gold 1x, 1º, paga em 06/09, inativa desde 30/09) continua no mês em que pagou — 359,00 × 3 = 1.077,00;
+    // 8.383,76 + 1.077,00 = 9.460,76. PORQUÊ: a decisão S8-P2.
+    igual(838376 + 35900 * 3, 946076, 'à mão');
+    igual([total73(h), totalLista73(h)], ['R$ 9.460,76', 'R$ 9.460,76']);
+    assert.ok(t.indexOf('Nada mudou desde o fechamento.') >= 0 && t.indexOf('Ver FILHOt por FILHOt (10) — guardado no fechamento') >= 0, t.slice(0, 1500));
+    const X = QA73.xls(QA73.baixa()), iT = X.findIndex((l) => l[0] === 'TOTAL');
+    igual([X[iT][4], X.slice(1, iT).reduce((s, l) => s + (QA73.cent(l[4]) || 0), 0)], ['R$ 9.460,76', 946076]);
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA · QA673-14 (AC4.7, AC4.6) — o Dashboard da Adriana sem «só observa» e sem «nada aqui grava»; a nota nova; a nota da Márcia com «Fechar o mês» e os ajustes; as gravações (DB.ref().update, .set, .push com valor) do quadro só no bloco do fechamento, fora das fatias «só observa»', async () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const i0 = src.indexOf('function pdirAbrir('), i1 = src.indexOf('\n  }\n', i0);
+  const pd = src.slice(i0, i1);
+  igual([/só observa/.test(pd), /nada aqui grava/i.test(pd)], [false, false]);
+  // 3ª rodada do @dev (S8-P7, P8 e P11 — «só adriana»): ANTES «sempre com a senha da Gestão»; DEPOIS «sempre com a senha da Adriana». PORQUÊ: a decisão.
+  assert.ok(pd.indexOf('O quadro «Recebimentos do mês» grava daqui mesmo, sempre com a senha da Adriana e o rastro: «Fechar o mês», «Reabrir o mês» e os ajustes com motivo.') > 0);
+  const po = src.slice(src.indexOf('function poAbrir('), src.indexOf('function poAbrir(') + 6000);
+  assert.ok(po.indexOf('«Fechar o mês», «Reabrir o mês» e os ajustes com motivo') > 0);
+  const iC = Math.min(src.indexOf('PAINEL DAS CONSULTORAS — a mesa da Central Zêluz (v-07, 07/set/2026)'), src.indexOf('function pmComoVai'), src.indexOf('LANÇAR PAGAMENTO — o recebimento vira registro (v-10')), iF = src.indexOf('// INIT do Day Care');
+  const iB = src.indexOf('O BLOCO DO FECHAMENTO'), iL = src.indexOf('LANÇAR PAGAMENTO — o recebimento vira registro');
+  assert.ok(iB > 0 && iL > iB && (iB > iF || iL <= iC), "o bloco do fechamento fora das fatias");
+  igual((src.slice(iB, iL).match(/DB\.ref\(\)\.update\(/g) || []).length, 4, 'as gravações do quadro (fechar, reabrir, ajuste, anular/reabrir o ajuste) no bloco');
+  const iR = src.indexOf('O MÊS FECHADO, «MUDOU DEPOIS DO FECHAMENTO» E OS AJUSTES COM MOTIVO'), iR2 = src.indexOf('AS DIÁRIAS AVULSAS DO MÊS (Adriana, 21/set/2026)');
+  igual((src.slice(iR, iR2).match(/DB\.ref\([^)]*\)\.(update|set|transaction|remove|push)\(/g) || []).length, 0, 'o desenho do mês fechado (dentro da fatia) não grava');
+});
+
+provaAsync('6.73 QA · QA673-15 (AC9.3 — a trava, nos dois sentidos) — pedida e não chegada: o quadro, o Dashboard da Adriana, o «Fechar», o ajuste, o Confirmar e o orçamento esperam; chegada pelo ouvinte: tudo anda; a leitura que falha (o ouvinte com erro) deixa a trava e diz por quê?', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`); entrega73();
+    r73(`__onQA={}; __refQ2=DB.ref; DB={ref:function(p){ var r=__refQ2(p); r.on=function(ev, ok, nao){ __onQA[p]={ok:ok, nao:nao}; }; return r; }}; tabelaPlanosOuvir();`);
+    assert.ok(txt73(card73('2026-07')).indexOf('a tabela de planos ainda não chegou neste aparelho') >= 0);
+    await abre73(`recFecharAbrir('2026-07')`);
+    assert.ok((za73('AINDA NÃO DÁ PARA FECHAR') || [''])[0].indexOf('a tabela de planos ainda não chegou neste aparelho') >= 0, JSON.stringify(titulos73()));
+    await abre73(`recAjusteAbrir('2026-07')`);
+    assert.ok((za73('NÃO DÁ PARA LANÇAR O AJUSTE AGORA') || [''])[0].indexOf('a tabela de planos ainda não chegou') >= 0, JSON.stringify(za73('NÃO DÁ PARA LANÇAR O AJUSTE AGORA')));
+    await abre73('orcSalvar()'); await abre73('orcSalvarEdicao()'); await abre73(`orcMudarDatas('r1')`);
+    igual(J73('__za657').filter((z) => z[0] === 'A TABELA DE PLANOS AINDA NÃO CHEGOU').length, 3);
+    // a leitura falhou (permissão): o ouvinte chama o erro
+    r73(`__onQA['daycare/config/tabela-planos'].nao(new Error('permission_denied at /daycare/config/tabela-planos'));`);
+    igual([r73('planosProntos()'), r73('TABELA_PLANOS.erro?String(TABELA_PLANOS.erro.message):""')], [false, 'permission_denied at /daycare/config/tabela-planos']);
+    const msg = r73('recTrava()');
+    // 2ª rodada do @dev (OBS-02). Antes: «a tabela de planos ainda não chegou neste aparelho» para sempre. Depois: a frase diz que a
+    // leitura falhou, o quadro e as portas oferecem «Tentar de novo», e o ouvinte é ligado de novo. Porquê: «espere» não resolvia.
+    assert.ok(/^não consegui ler a tabela de planos neste aparelho \(.+\): toque em «Tentar de novo»$/.test(msg), msg);
+    assert.ok(/onclick="tabelaPlanosTentar\(\)">Tentar de novo</.test(card73('2026-07')), 'o quadro com «Tentar de novo»');
+    r73(`__zp657=[]; __zpq657=[false]; pelAtual=PELUDINHOS[0]; renovRascunho={_k:pelKey(pelAtual), plano:'Gold', aulas:1, inicio:'2026-10-10'};`);
+    await abre73('confirmarRenovacao()');
+    igual([J73('__zp657').map((z) => z[0]), escCad73().length], [['NÃO CONSEGUI LER A TABELA DE PLANOS'], 0], 'o Confirmar pergunta se tenta de novo, sem gravar');
+    r73('renovRascunho=null;');
+    r73('__onQA={};'); igual(r73('tabelaPlanosTentar()'), true);
+    igual(J73(`Object.keys(__onQA)`), ['daycare/config/tabela-planos'], 'o ouvinte ligado de novo');
+    igual([r73('TABELA_PLANOS.erro'), r73('planosProntos()'), r73('recTrava()')], [null, false, 'a tabela de planos ainda não chegou neste aparelho'], 'tentando de novo: o ouvinte novo');
+    r73(`__onQA['daycare/config/tabela-planos'].ok({val:function(){ return null; }});`);
+    igual([r73('planosProntos()'), r73('recTrava()'), r73('mensalidade("Gold",1,1)')], [true, '', 35900], 'sem o nó: a tabela de fábrica');
+    r73('DB.ref=__refQ2;');
+  } finally { solta73(); }
+});
+
+// ---- as guardas que a Fase 0 sozinha não prova (os 12 defeitos do QA que ela deixou vivos) ------------------------------
+provaAsync('6.73 QA · QA673-16 (AC5.3, dois aparelhos) — «Reabrir» num aparelho que ainda mostra o fechamento antigo, depois que outro aparelho reabriu e fechou de novo: recusa («mudou em outro aparelho»), nada gravado', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    igual(await fecha73('2026-07'), 'pronto');
+    // o outro aparelho reabriu e fechou de novo; este aparelho ainda não recebeu (REC_FECH velho)
+    r73(`__put657('daycare/recebimentos/2026-07/eventos/zr', {acao:'reabriu', motivo:'conferir de novo no outro aparelho', ts:${T673 + 1000}, registro:{por:'Adriana Teste', quando:'10/10/2026 às 10:00'}});
+      __put657('daycare/recebimentos/2026-07/eventos/zs', {acao:'fechou', total_cent:215400, linhas:'cz2', motivo:'fechado de novo no outro aparelho', ts:${T673 + 2000}, registro:{por:'Adriana Teste', quando:'10/10/2026 às 10:00'}});`);
+    const antes = Object.keys(J73(`__get657('daycare/recebimentos/2026-07/eventos')`)).length;
+    await abre73(`recReabrirAbrir('2026-07')`); await toca73(SENHA_ADR73, 'reabrir para conferir a Pipoca');
+    igual(za73('O MÊS NÃO FOI REABERTO'), ['O fechamento de julho de 2026 mudou em outro aparelho enquanto o cartaz estava aberto. Nada foi gravado: confira.', 'O mês continua fechado.']);
+    igual(Object.keys(J73(`__get657('daycare/recebimentos/2026-07/eventos')`)).length, antes, 'nada gravado');
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA · QA673-17 (AC5.3, relógio atrasado) — «Reabrir» num aparelho com o relógio 1 hora atrás: o evento novo nunca fica atrás do fechamento (o mês fica mesmo reaberto)', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    await fecha73('2026-07');
+    r73(`Date.now=function(){ return ${T673 - 3600000}; };`);
+    await abre73(`recReabrirAbrir('2026-07')`); await toca73(SENHA_ADR73, 'reabrir para conferir a Pipoca'); igual(passo73(), 'pronto'); r73('corrFechar()');
+    r73(`recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')}); REC_FECH.vivo=false;`);
+    igual(J73(`recFechadoDe('2026-07').fechado`), false, 'o mês reaberto ficou fechado: o evento «reabriu» atrás do «fechou»');
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA · QA673-18 (AC6.6, dois aparelhos) — o ajuste com o cartaz aberto enquanto outro aparelho fecha o mês: recusa («Outro aparelho fechou ou reabriu…»), nada gravado', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`); entrega73();
+    await abre73(`recAjusteAbrir('2026-07')`); r73(`corrToque('continuar', {valores:['Somar ao mês', '170,00', 'diária avulsa da Lua']})`);
+    r73(`__put657('daycare/recebimentos/2026-07/eventos/zf', {acao:'fechou', total_cent:215400, linhas:'cz', motivo:'fechado no outro aparelho', ts:${T673 - 1000}, registro:{por:'Adriana Teste'}});`);
+    await toca73(SENHA_ADR73, 'a diária da Lua foi paga');
+    igual(za73('O AJUSTE NÃO FOI LANÇADO'), ['Outro aparelho fechou ou reabriu julho de 2026 agora há pouco. Nada foi gravado: confira.', 'O mês continua como estava.']);
+    igual(J73(`__get657('daycare/recebimentos/2026-07/ajustes')`), null);
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA · QA673-19 (AC6.5, relógio atrasado) — «Reabrir este ajuste» num aparelho com o relógio 1 hora atrás da anulação: o ajuste volta a contar (o registro novo nunca fica atrás do mais novo)', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    r73(`__put657('daycare/recebimentos/2026-07/ajustes/aj1', {sentido:'somar', valor_cent:17000, descricao:'diária da Lua sem valor', motivo:'faltou lançar', ts:5, registro:{por:'Gestora Teste', quando:'09/10/2026 às 10:00', motivo:'faltou lançar', ts:5},
+      anulacoes:{n1:{acao:'anular', ts:${T673}, por:'Gestora Teste', papel:'gestao', quando:'10/10/2026 às 10:00', motivo:'a diária era de outro mês'}}});`);
+    entrega73();
+    igual(total73(card73('2026-07')), 'R$ 2.154,00', 'anulado: fora do total');
+    r73(`Date.now=function(){ return ${T673 - 3600000}; };`);
+    await abre73(`recAjusteReabrirAbrir('aj1', '2026-07')`); await toca73(SENHA_ADR73, 'a diária era deste mês mesmo'); igual(passo73(), 'pronto'); r73('corrFechar()');
+    r73(`recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')});`);
+    igual(total73(card73('2026-07')), 'R$ 2.324,00', 'reaberto: o ajuste volta ao total');
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA · QA673-20 (AC8.2) — o cartaz da tabela conta o mês de uma renovação ANTERIOR sem valor gravado: o Silver 1x de R$ 387,00 para R$ 399,00 muda agosto (o pagamento de 05/08 está no histórico do Kiwi; o plano de agora, gravado, é de outubro)', async () => {
+  arma73();
+  try {
+    cena73([{ n: 'Kiwi', tutor: 'Kátia Teste', ex: { dias: ['seg'], renov: { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-05', fim: '2027-01-04', quando: '2026-10-05', valor_plano_cent: 107700 },
+      renov_hist: { h1: { plano: 'Silver', aulas: 1, ordemPet: 1, inicio: '2026-08-05', fim: '2026-09-04', quando: '2026-08-05', substituidoEm: 100, por: 'Teste', motivo: 'renovação', motivo_conferido: true } } } }], { login: GESTORA73 });
+    igual(J73(`recResumoDoMes||1`) !== null, true);
+    await salva73({ cfgPl_Silver_1: '399,00' });
+    const c = cartaz73();
+    assert.ok(c.indexOf('agosto de 2026 — Total dos planos do Day Care: R$ 387,00 → R$ 399,00 (Kiwi: R$ 387,00 → R$ 399,00).') >= 0, c);
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA · QA673-21 (AC8.1) — o mês fechado e REABERTO é mês aberto no cartaz da tabela: julho reaberto aparece em «Mudam», não em «Não mudam (mês fechado)»', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    await fecha73('2026-07');
+    r73(`recGuardarFechamentos({ok:true, v:__get657('daycare/recebimentos')});`);
+    await abre73(`recReabrirAbrir('2026-07')`); await toca73(SENHA_ADR73, 'reabrir para conferir a Pipoca'); r73('corrFechar()');
+    await salva73({ cfgPl_Gold_1: '399,00' });
+    const c = cartaz73();
+    assert.ok(c.indexOf('julho de 2026 — Total dos planos do Day Care: R$ 2.154,00 → R$ 2.274,00 (Biscoito: R$ 1.077,00 → R$ 1.197,00).') >= 0 && c.indexOf('Não mudam (mês fechado)') < 0, c);
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA · QA673-22 (AC7.4, dois aparelhos) — outro aparelho salvou outra tabela enquanto este cartaz estava aberto: recusa («A tabela mudou em outro aparelho…»), e a tabela do outro aparelho fica', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 });
+    await salva73({ cfgPl_Gold_1: '399,00' });
+    r73(`__put657('daycare/config/tabela-planos', {Silver:{valores:{1:39900,2:61700,3:73700,4:87700,5:106700}, hospOff:0}, Gold:{valores:{1:35900,2:58900,3:69900,4:82900,5:96900}, hospOff:10}, Black:{valores:{1:33800,2:56800,3:67800,4:81800,5:95800}, hospOff:15}, descontoIrmao:{2:7,3:12}, ts:${T673 - 1000}, quem:'Adriana Teste'});`);
+    await toca73(SENHA_ADR73, 'a tabela comercial de 2027 chegou');
+    igual(za73('A TABELA NÃO FOI SALVA'), ['A tabela mudou em outro aparelho depois que esta tela abriu. Nada foi gravado: abra Configurações de novo e confira.', 'A tabela continua como estava.']);
+    igual([J73(`__get657('daycare/config/tabela-planos')`).Silver.valores[1], J73(`__get657('daycare/config/tabela-planos')`).Gold.valores[1], J73(`__get657('daycare/config/tabela-planos-historico')`)], [39900, 35900, null]);
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA · QA673-23 (AC1.4, AC3.1) — duas cobranças em horas diferentes: a Renovação e o Painel da Supervisão mostram a ÚLTIMA (11:00); e com dois «Não renova» ativos (dois aparelhos), a linha mostra o mais novo', async () => {
+  arma73();
+  try {
+    cena73([TODDY73(), NINA73()]);
+    await cobra73(0, 'Telefone', 'sem_resposta');
+    r73(`Date.now=function(){ return ${T673 + 3600000}; };`);
+    await cobra73(0, 'WhatsApp', 'vai_pensar');
+    const sup = J73('paDadosPlanos()').filter((x) => x.nome === 'Toddy')[0];
+    igual(sup.cobrado, '10/10 às 11:00', 'o Painel da Supervisão com a última cobrança');
+    assert.ok(txt73(renov73('cobrar').lista).indexOf('Cobrado em 10/10 às 11:00 por Bia Consultora Teste (WhatsApp): vai pensar · 2 cobranças neste ciclo') >= 0);
+    // dois «Não renova» ativos da Nina (o de Ana às 09:59, o de Bia às 11:00): a linha mostra o de Bia
+    r73(`__put657('daycare/cadastro/nina__sol teste/renov_contatos/zA', {acao:'nao_renova', ciclo:'2026-06-30', plano:'Gold', motivo:'o tutor disse que vai se mudar', ts:${T673 - 60000},
+      registro:{acao:'corrigir', por:'Ana Consultora Teste', papel:'consultora', quando:'10/10/2026 às 09:59', motivo:'o tutor disse que vai se mudar', ts:${T673 - 60000}}});
+      __put657('daycare/cadastro/nina__sol teste/renov_contatos/zB', {acao:'nao_renova', ciclo:'2026-06-30', plano:'Gold', motivo:'o tutor não volta mais', ts:${T673 + 3600000},
+      registro:{acao:'corrigir', por:'Bia Consultora Teste', papel:'consultora', quando:'10/10/2026 às 11:00', motivo:'o tutor não volta mais', ts:${T673 + 3600000}}});
+      pelCadCache['nina__sol teste']=__get657('daycare/cadastro/nina__sol teste');`);
+    assert.ok(txt73(renov73('naorenova').lista).indexOf('Nina — avisou em 10/10 às 11:00, por Bia Consultora Teste: o tutor não volta mais') >= 0, txt73(renov73('naorenova').lista));
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA · QA673-24 (AC11) — «Já cobrei» com a pergunta aberta e o aparelho trocado para o Encãotador (a tela velha): «Registrar» é barrado na função que grava, nada gravado', async () => {
+  arma73();
+  try {
+    cena73([NINA73(), TODDY73()]);
+    await abre73('renovCobrarAbrir(1)');
+    r73(`document.body.dataset.role='monitor'; __login657={nome:'Caio Encãotador Teste', role:'monitor'};`);
+    r73(`renovCobrarToque('registrar', {por:'WhatsApp', resposta:'vai_pensar', nota:''})`); await esp73();
+    igual([escCad73().length, contatos73(1).length], [0, 0], 'nada gravado');
+    assert.ok(J73('__au657').some((a) => /^BARROU registrar a cobrança da renovação/.test(a[1])), JSON.stringify(J73('__au657').map((a) => a[1].slice(0, 60))));
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA · QA673-25 (AC4.2) — «Fechar» relê as fontes do quadro: a reserva fechada em julho em outro aparelho há 30 segundos (as fontes deste aparelho ainda sem ela, dentro do cache de 60 s) entra no fechamento', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73, orc: ORC73() }); r73(`REC_MES='2026-07'; recGuardarFontes({}, {}); recGuardarFechamentos({ok:true, v:{}});`);
+    await abre73(`recFecharAbrir('2026-07')`);
+    const c = cartaz73();
+    assert.ok(c.indexOf('Fechar julho de 2026 com R$ 2.414,00: 2 planos, 1 reserva, 0 diárias avulsas e 0 ajustes.') >= 0, c);
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA · QA673-26 (AC5.1) — o evento «fechou» aponta um corpo que não está no banco: o quadro nunca mostra um total (nem R$ 0,00); diz que não conseguiu ler o fechamento', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    r73(`__put657('daycare/recebimentos/2026-07/eventos/e1', {acao:'fechou', total_cent:215400, linhas:'naoexiste', motivo:'conferido', ts:${T673}, registro:{por:'Gestora Teste', quando:'10/10/2026 às 10:00', motivo:'conferido'}});`);
+    entrega73(); card73('2026-07'); await esp73();
+    const h = card73('2026-07');
+    igual([total73(h), totalLista73(h)], ['', ''], 'nenhum total');
+    assert.ok(txt73(h).indexOf('Não consegui ler o fechamento de julho de 2026.') >= 0, txt73(h).slice(0, 600));
+  } finally { solta73(); }
+});
+// ================================================================== 6.73 QA re-gate · as provas do re-gate da 2ª rodada (Quinn), na Fase 0 desde a 3ª rodada
+// O arquivo do QA (scratchpad/qa673r2/ataque673r2.js), com o nome «6.73 QA re-gate · QA673R2-NN …» e o texto do QA. Trocas, cada uma com o
+// antes, o depois e o porquê ali mesmo: a QA673R2-02 (b), pela S8-P2 (o Biscoito só inativado continua no mês em que pagou), com o caso
+// (b2) que segura a mesma coisa por outro caminho; e a assinatura da tabela na QA673R2-06, pela S8-P9 (só a Adriana).
+// Tudo INVENTADO (tutores «Teste»). Relógio do bloco (sábado, 10/10/2026, 10:00). Contas esperadas escritas à mão.
+const QB73 = {};
+// fecha julho com o Biscoito (Gold 1x sem valor gravado, 05/07) e a Pipoca (Gold 1x gravada, 08/07): R$ 2.154,00
+QB73.julhoFechado = async (extra) => { cena73(JULHO73().concat(extra || []), { login: GESTORA73 }); r73(`REC_MES='2026-07';`); igual(await fecha73('2026-07'), 'pronto'); };
+QB73.mudou = () => { const t = txt73(card73('2026-07')); const i = t.indexOf('Mudou depois do fechamento ('); return t.slice(i, i + 900); };
+// a troca de nome como o app grava (renomearCadastroPel de hoje; a 6.75 mantém e acrescenta inativo:'Sim'): a ficha nova recebe os dados,
+// a antiga FICA no cadastro com excluido:true, movido_para e movido_em
+QB73.renomeia = (kA, nB, tutorB, comInativo) => r73(`(function(){ var a=pelCadCache['${kA}'], kB=(${JSON.stringify(nB)}+'__'+${JSON.stringify(tutorB)}).toLowerCase();
+  pelCadCache[kB]=Object.assign(JSON.parse(JSON.stringify(a)), {n:${JSON.stringify(nB)}, tutor:${JSON.stringify(tutorB)}, _novo:true, _renomeado_de:'${kA}'});
+  a.excluido=true; a.movido_para=kB; a.movido_em=${T673 + 1000}; ${comInativo ? "a.inativo='Sim';" : ''}
+  PELUDINHOS=PELUDINHOS.filter(function(p){ return pelKey(p)!=='${kA}'; }); PELUDINHOS.push({n:${JSON.stringify(nB)}, tutor:${JSON.stringify(tutorB)}, raca:'SRD'}); })();`);
+
+provaAsync('6.73 QA re-gate · QA673R2-01 (AC5.2, REQ-001) — a troca de nome COMO O APP GRAVA (a ficha antiga fica no cadastro com excluido:true e movido_para; com a 6.75, também inativo): depois do fechamento, a Pipoca que virou «Pipoca Rosa» junta com a linha de antes — «Nada mudou desde o fechamento.», não «fora» e «Nova»', async () => {
+  arma73();
+  try {
+    await QB73.julhoFechado();
+    QB73.renomeia('pipoca__rui teste', 'Pipoca Rosa', 'Rui Teste', true);
+    const m = QB73.mudou();
+    assert.ok(m.indexOf('Mudou depois do fechamento (0)') === 0 && m.indexOf('Nada mudou desde o fechamento.') > 0, 'a troca de nome (6.75: a antiga inativa, excluída, movido_para) aparece como saiu e nova: ' + m.slice(0, 500));
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA re-gate · QA673R2-02 (AC5.2, REQ-001) — a junção da troca de chave sem casar fichas diferentes: (a) a chave que sumiu do cadastro junta com a nova (o caso da P17); (b) com duas fichas do mesmo plano, data e valor, uma renomeada e a outra inativada, a renomeada junta com a dela e a inativada sai «fora (inativo)»; (c) a reserva cancelada e outra reserva nova com a mesma data, o mesmo «o quê» e o mesmo valor aparecem as duas; (d) a ficha EXCLUÍDA pela Diretoria (fica no cadastro com excluido:true) e outra ficha nova com o mesmo Gold 1x de 05/07 aparecem as duas', async () => {
+  arma73();
+  try {
+    const BOLO = () => ({ n: 'Bolo', tutor: 'Beto Teste', ex: { dias: ['seg'], renov: GOLD73('2026-07-05') } });
+    // (a) a chave sumiu do cadastro: junta (Nada mudou)
+    await QB73.julhoFechado();
+    r73(`var c=pelCadCache['pipoca__rui teste']; delete pelCadCache['pipoca__rui teste']; c.n='Pipoca Rosa'; pelCadCache['pipoca rosa__rui teste']=c; PELUDINHOS[1]={n:'Pipoca Rosa', tutor:'Rui Teste', raca:'SRD'};`);
+    assert.ok(QB73.mudou().indexOf('Nada mudou desde o fechamento.') > 0, '(a) ' + QB73.mudou());
+    // (b) Biscoito e Bolo, os dois Gold 1x de 05/07 sem valor gravado (R$ 1.077,00): o Bolo renomeado (a chave sumiu), o Biscoito inativado
+    await QB73.julhoFechado([BOLO()]);
+    r73(`var c=pelCadCache['bolo__beto teste']; delete pelCadCache['bolo__beto teste']; c.n='Bolinho'; pelCadCache['bolinho__beto teste']=c; PELUDINHOS[2]={n:'Bolinho', tutor:'Beto Teste', raca:'SRD'};
+      pelCadCache['biscoito__clara teste'].inativo='Sim'; pelCadCache['biscoito__clara teste'].dataSaida='2026-10-10';`);
+    const mb = QB73.mudou();
+    // 3ª rodada do @dev (S8-P2 — Adriana, 12/10/2026: «sim»). ANTES: «(1)», com «Biscoito — …: R$ 1.077,00 → fora (inativo desde
+    // 10/10/2026)» e sem «Nova:». DEPOIS: «(0) Nada mudou» — o Biscoito só inativado continua no mês em que pagou (a linha dele fica,
+    // com a mesma chave) e o Bolo renomeado junta com o Bolinho. PORQUÊ: a decisão S8-P2. O que o caso segurava (a ficha que fica no
+    // cadastro sem movido_para não junta com a nova) continua provado no (b2), com o Biscoito saindo do mês por outro caminho.
+    assert.ok(mb.indexOf('Mudou depois do fechamento (0)') === 0 && mb.indexOf('Nada mudou desde o fechamento.') > 0 && mb.indexOf('Nova:') < 0, '(b) ' + mb);
+    // (b2) o Biscoito virou morador (continua no cadastro, sem movido_para, e o plano dele sai da conta): «fora», e o Bolinho junta com o Bolo
+    r73(`pelCadCache['biscoito__clara teste'].categoria='morador';`);
+    const mb2 = QB73.mudou();
+    // 4ª rodada (re-gate 3, REQ-003). ANTES: «→ fora (inativo desde 10/10/2026)». DEPOIS: «→ fora (virou Morador(a) Zêluz)». PORQUÊ: com a
+    // S8-P2, inativo sozinho não tira linha nenhuma do mês em que pagou; quem tira a linha do Biscoito é a categoria (morador).
+    assert.ok(mb2.indexOf('Mudou depois do fechamento (1)') === 0 && /Biscoito — Gold · trimestral · 1x por semana · pago em 05\/07\/2026: R\$ 1\.077,00 → fora \(virou Morador\(a\) Zêluz\)/.test(mb2) && mb2.indexOf('Nova:') < 0, '(b2) ' + mb2);
+    // (c) a reserva r1 cancelada; a r9, nova, com as mesmas parcelas e datas
+    cena73(JULHO73(), { login: GESTORA73, orc: ORC73() }); r73(`REC_MES='2026-07';`); await fecha73('2026-07');
+    r73(`var o=__get657('auaulandia/orcamentos'); o.r9=JSON.parse(JSON.stringify(o.r1)); o.r9.pets=[{nome:'Romeo'}]; o.r1.status='cancelado'; __put657('auaulandia/orcamentos', o); recGuardarFontes(__get657('auaulandia/orcamentos'), {});`);
+    const mc = QB73.mudou();
+    assert.ok(mc.indexOf('Mudou depois do fechamento (2)') === 0 && /Romeo — Hospedagem na AuAulândia · .*?: R\$ 260,00 → fora/.test(mc) && /Nova: Romeo — Hospedagem na AuAulândia/.test(mc), '(c) ' + mc);
+    // (d) o Biscoito excluído pela Diretoria (fica no cadastro) e o Bolo, novo, com o mesmo Gold 1x de 05/07
+    await QB73.julhoFechado();
+    r73(`pelCadCache['biscoito__clara teste'].excluido=true; pelCadCache['biscoito__clara teste'].inativo='Sim';
+      PELUDINHOS.push({n:'Bolo', tutor:'Beto Teste', raca:'SRD'}); pelCadCache['bolo__beto teste']={n:'Bolo', tutor:'Beto Teste', dias:['seg'], renov:${JSON.stringify(GOLD73('2026-07-05'))}};`);
+    const md = QB73.mudou();
+    assert.ok(md.indexOf('Nada mudou') < 0 && /Biscoito — [^:]*: R\$ 1\.077,00 → fora/.test(md) && /Nova: Bolo — /.test(md), '(d) ' + md);
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA re-gate · QA673R2-03 (AC2, REL-001) — os dois aparelhos ao mesmo tempo DE VERDADE (as duas releituras antes das duas gravações): os dois gravam, e um «Reabrir» devolve a Nina; e o plano trocado em outro aparelho com o cartaz do «Não renova» aberto: recusa, nada gravado', async () => {
+  arma73();
+  try {
+    cena73([NINA73(), TODDY73()]);
+    await abre73('renovNaoRenovaAbrir(0)');
+    r73(`__gNR=CORR_ATUAL.op.gravar; __rA=corrRegistro(CORR_ATUAL.op, [], {nome:'Bia Consultora Teste', papel:'consultora'}, 'o tutor disse que vai se mudar', Date.now());
+      __rB=corrRegistro(CORR_ATUAL.op, [], {nome:'Ana Consultora Teste', papel:'consultora'}, 'o tutor não volta mais', Date.now()+1);
+      Promise.resolve(__gNR(__rA)); Promise.resolve(__gNR(__rB)); corrFechar();`);
+    await esp73();
+    igual(contatos73(0).filter((o) => o.acao === 'nao_renova').length, 2, 'as duas releituras antes das duas gravações: os dois gravam');
+    const id = J73('renovCobrancaDe(pelExtra(PELUDINHOS[0])).naoRenova._id');
+    await abre73(`renovNaoRenovaReabrirAbrir(0, '${id}')`); await toca73('s-bia', 'o tutor ligou e vai renovar'); r73('corrFechar()');
+    igual([J73('renovCobrancaDe(pelExtra(PELUDINHOS[0])).naoRenova'), nomesLista73(renov73('cobrar').lista)], [null, ['Nina', 'Toddy']]);
+    // o plano trocado (um Confirmar em outro aparelho: o fim mudou) com o cartaz aberto
+    cena73([NINA73(), TODDY73()]);
+    await abre73('renovNaoRenovaAbrir(1)');
+    r73(`__put657('daycare/cadastro/toddy__ana teste/renov/fim', '2026-11-15');`);
+    await toca73('s-bia', 'o tutor disse que não renova mais');
+    igual([za73('O «NÃO RENOVA» NÃO FOI GRAVADO'), contatos73(1).length], [['O plano de Toddy mudou em outro aparelho enquanto o cartaz estava aberto. Nada foi gravado: confira.', 'Nada mudou.'], 0]);
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA re-gate · QA673R2-04 (AC5.1, OBS-01) — «Tentar de novo» com a leitura do corpo FALHANDO DE NOVO: a mesma frase e o mesmo botão, uma leitura por toque, nenhum total, nenhum laço; e o Excel continua dizendo que a leitura falhou', async () => {
+  arma73();
+  try {
+    await QB73.julhoFechado();
+    r73(`REC_CORPO={}; __refQB=DB.ref; __leuQB=0; DB={ref:function(p){ var r=__refQB(p); if(/^daycare\\/recebimentos-linhas/.test(String(p))){ r.once=function(){ __leuQB++; return Promise.reject(new Error('PERMISSION_DENIED: Permission denied')); }; } return r; }};`);
+    card73('2026-07'); await esp73();
+    for (let i = 0; i < 3; i++) {
+      const h = card73('2026-07'), t = txt73(h);
+      assert.ok(t.indexOf('Não consegui ler o fechamento de julho de 2026.') >= 0 && total73(h) === '' && totalLista73(h) === '' && /onclick="recCorpoTentar\('2026-07','[^']+'\)">Tentar de novo</.test(h), 'volta ' + i + ': ' + t.slice(0, 400));
+      const n0 = r73('__leuQB');
+      for (let k = 0; k < 4; k++) { card73('2026-07'); await esp73(); }
+      igual(r73('__leuQB'), n0, 'redesenhar não relê (sem laço), volta ' + i);
+      const bt = (h.match(/onclick="(recCorpoTentar\('2026-07','[^']+'\))"/) || [])[1];
+      r73(bt); await esp73();
+      igual(r73('__leuQB'), n0 + 1, 'uma leitura por toque, volta ' + i);
+    }
+    r73(`__stQB={style:{}, textContent:''}; recBaixarExcel({closest:function(){ return {querySelector:function(){ return __stQB; }}; }});`);
+    igual(r73('__stQB.textContent'), 'Ainda não dá para baixar: não consegui ler o fechamento de julho de 2026. Toque em «Tentar de novo» no quadro.');
+    r73('DB.ref=__refQB;');
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA re-gate · QA673R2-05 (AC9.3, OBS-02, REQ-002) — a leitura da tabela falhando DE NOVO depois do «Tentar de novo»: as cinco portas que gravam valor pela tabela (o Confirmar, o meio do mês, salvar o orçamento, salvar a edição, «Mudar as datas») continuam sem gravar e perguntam «Tentar de novo»; «Agora não» não liga outro ouvinte; o quadro, o «Fechar» e o ajuste dizem que a leitura falhou; com a tabela chegando, tudo anda', async () => {
+  arma73();
+  try {
+    cena73([{ n: 'Quindim', tutor: 'Lia Teste', ex: { dias: ['seg'], renov: { plano: 'Gold', aulas: 1, ordemPet: 1, inicio: '2026-10-07', fim: '2026-12-31', mesRenov: 'dezembro de 2026', quando: '2026-10-07' } } }].concat(JULHO73()), { login: GESTORA73 });
+    r73(`REC_MES='2026-07';`); entrega73();
+    r73(`__onQB={}; __nOnQB=0; __refQ3=DB.ref; DB={ref:function(p){ var r=__refQ3(p); r.on=function(ev, ok, nao){ __nOnQB++; __onQB[p]={ok:ok, nao:nao}; }; return r; }}; tabelaPlanosOuvir();`);
+    const falha = () => r73(`__onQB['daycare/config/tabela-planos'].nao(new Error('permission_denied at /daycare/config/tabela-planos'));`);
+    falha();
+    for (let volta = 0; volta < 2; volta++) {
+      igual(r73('planosProntos()'), false);
+      assert.ok(/^não consegui ler a tabela de planos neste aparelho \(.+\): toque em «Tentar de novo»$/.test(r73('recTrava()')), r73('recTrava()'));
+      // as portas, com «Agora não»: nada gravado, nenhum ouvinte novo
+      const n0 = r73('__nOnQB');
+      r73(`__zp657=[]; __zpq657=[false, false, false, false, false]; pelAtual=PELUDINHOS[0]; pelAtualIdx=0; renovRascunho={_k:pelKey(pelAtual), plano:'Gold', aulas:1, inicio:'2026-10-10'}; mmRascunho=null; document.body.dataset.role='gestao';`);
+      await abre73('confirmarRenovacao()'); r73('renovRascunho=null;');
+      await abre73('mmConfirmar(2)'); await abre73('orcSalvar()'); await abre73('orcSalvarEdicao()'); await abre73(`orcMudarDatas('r1')`);
+      igual(J73('__zp657').map((z) => z[0]), ['NÃO CONSEGUI LER A TABELA DE PLANOS', 'NÃO CONSEGUI LER A TABELA DE PLANOS', 'NÃO CONSEGUI LER A TABELA DE PLANOS', 'NÃO CONSEGUI LER A TABELA DE PLANOS', 'NÃO CONSEGUI LER A TABELA DE PLANOS'], 'volta ' + volta);
+      igual([escCad73().length, !!((ficha73(0) || {}).renov || {}).meio_mes, r73('__nOnQB')], [0, false, n0], '«Agora não»: nada gravado, nenhum ouvinte novo ' + JSON.stringify(ficha73(0)));
+      await abre73(`recFecharAbrir('2026-07')`);
+      assert.ok(((za73('AINDA NÃO DÁ PARA FECHAR') || [''])[0]).indexOf('não consegui ler a tabela de planos neste aparelho') >= 0, JSON.stringify(za73('AINDA NÃO DÁ PARA FECHAR')));
+      // «Tentar de novo» (pela porta do Confirmar): um ouvinte novo, que FALHA DE NOVO
+      r73(`__zpq657=[true]; renovRascunho={_k:pelKey(pelAtual), plano:'Gold', aulas:1, inicio:'2026-10-10'};`);
+      await abre73('confirmarRenovacao()'); r73('renovRascunho=null;');
+      igual([r73('__nOnQB'), r73('TABELA_PLANOS.erro'), r73('planosProntos()')], [n0 + 1, null, false], 'tentando: o ouvinte novo, ainda sem a tabela');
+      falha();
+    }
+    // a tabela chega (Gold 1x R$ 399,00): o meio do mês grava pela tabela salva
+    r73(`__onQB['daycare/config/tabela-planos'].ok({val:function(){ return {Gold:{valores:{1:39900,2:58900,3:69900,4:82900,5:96900}, hospOff:10}, descontoIrmao:{2:7,3:12}, ts:1, quem:'Gestora Teste'}; }}); __zpq657=[true, true, true];`);
+    igual([r73('planosProntos()'), r73('recTrava()')], [true, '']);
+    await abre73('mmConfirmar(2)'); await esp73();
+    igual(((ficha73(0).renov || {}).meio_mes || {}).mensalidade_cent, 39900);
+    r73('DB.ref=__refQ3;');
+  } finally { solta73(); }
+});
+provaAsync('6.73 QA re-gate · QA673R2-06 (AC8.1, AC8.2, OBS-03 — conferido à mão) — o cartaz da tabela com o total do quadro: julho com o Biscoito (R$ 1.077,00 pela tabela), a Pipoca (gravada, R$ 1.077,00), a reserva do Romeo (R$ 260,00), duas diárias avulsas (R$ 95,00 + R$ 75,50) e dois ajustes (+R$ 123,45, −R$ 50,00): R$ 2.657,95; Gold 1x para R$ 399,00 e o 2º FILHOt para 8%: R$ 2.777,95; agosto (Silver 1x do 2º, sem as avulsas lidas) com o «Total dos planos» e a frase; depois de salvar, os dois quadros dão os números do cartaz', async () => {
+  arma73();
+  try {
+    cena73(JULHO73().concat([{ n: 'Kiwi', tutor: 'Kátia Teste', ex: { dias: ['seg'], renov: { plano: 'Silver', aulas: 1, ordemPet: 2, inicio: '2026-08-07', fim: '2026-09-06', quando: '2026-08-07' } } }]), { login: GESTORA73, orc: ORC73() });
+    r73(`REC_MES='2026-07'; __put657('daycare/dashboard/2026-07-14/avulso', {x1:{det:{valor_cent:9500}}, x2:{det:{valor_cent:7550}}});
+      __put657('daycare/recebimentos/2026-07/ajustes/a1', {sentido:'somar', valor_cent:12345, descricao:'banho extra sem valor', motivo:'faltou lançar o banho', ts:5, registro:{por:'Gestora Teste', quando:'10/10/2026 às 09:00', motivo:'faltou lançar o banho', ts:5}});
+      __put657('daycare/recebimentos/2026-07/ajustes/a2', {sentido:'tirar', valor_cent:5000, descricao:'taxa devolvida', motivo:'cobrado a mais no balcão', ts:6, registro:{por:'Gestora Teste', quando:'10/10/2026 às 09:10', motivo:'cobrado a mais no balcão', ts:6}});`);
+    await le73('2026-07');
+    // À MÃO: 1.077,00 + 1.077,00 + 260,00 + 95,00 + 75,50 + 123,45 − 50,00 = 2.657,95
+    igual(107700 + 107700 + 26000 + 9500 + 7550 + 12345 - 5000, 265795);
+    igual(total73(card73('2026-07')), 'R$ 2.657,95');
+    await salva73({ cfgPl_Gold_1: '399,00', cfgPlIrmao_2: '8' });
+    const c = cartaz73();
+    // À MÃO: o Biscoito 3 × 399,00 = 1.197,00 (+120,00): 2.657,95 → 2.777,95; os planos 2.154,00 → 2.274,00
+    assert.ok(c.indexOf('julho de 2026 — Total de julho de 2026 no Recebimentos: R$ 2.657,95 → R$ 2.777,95 (os planos do Day Care: R$ 2.154,00 → R$ 2.274,00; Biscoito: R$ 1.077,00 → R$ 1.197,00).') >= 0, c);
+    // À MÃO: o Kiwi (Silver 1x, 2º) 387,00 × 93% = 359,91 → 387,00 × 92% = 356,04
+    igual([Math.round(38700 * 93 / 100), Math.round(38700 * 92 / 100)], [35991, 35604]);
+    assert.ok(c.indexOf('agosto de 2026 — Total dos planos do Day Care: R$ 359,91 → R$ 356,04 (Kiwi: R$ 359,91 → R$ 356,04).') >= 0
+      && c.indexOf('O «Total dos planos do Day Care» é só a parte dos planos') >= 0, c);
+    // 3ª rodada do @dev (S8-P9): ANTES a SENHA657 («Gestora Teste», a senha da Gestão) assinava; DEPOIS só a senha da Adriana (SENHA_ADR73).
+    await toca73(SENHA_ADR73, 'a tabela comercial de 2027 chegou'); r73('corrFechar()');
+    igual(total73(card73('2026-07')), 'R$ 2.777,95', 'julho depois = o número do cartaz');
+    r73(`REC_AVULSO={mes:'2026-08', quando:Date.now(), lendo:false, ok:true, total_cent:0, n:0, semValor:0, futuros:0};`);
+    // agosto: o Kiwi R$ 356,04 + a parcela da reserva? (a r1 é de julho) = R$ 356,04
+    igual(total73(card73('2026-08')), 'R$ 356,04', 'agosto depois = o total dos planos do cartaz (o mês só tem o plano)');
+  } finally { solta73(); }
+});
+// ================================================================== 6.73, 3ª rodada: as provas novas (S8-P2, «só adriana», a guarda do cartaz)
+// O texto da base (788fb9e) do corrConfirmar e do corrCartazHTML, letra por letra (a 6.71 P34 travava estes dois; a 6.73 P46 roda os dois lado a lado).
+const CORR_BASE673 = { corrConfirmar: "async function corrConfirmar(S, dados){\n    var op=S.op;\n    var motivo=String(('motivo' in dados)?dados.motivo:corrLerDom('corrMotivo')).trim();\n    var senha=('senha' in dados)?dados.senha:corrLerDom('corrSenha');\n    // a senha sai da página na hora (e o redesenho não a devolve): conferida e esquecida\n    try{ var elS=document.getElementById('corrSenha'); if(elS && typeof elS.value==='string') elS.value=''; }catch(e){} /* silencioso de propósito: sem o campo na página, não há o que limpar */\n    S.motivo=motivo;\n    var mv=motivoQuatroPalavras(motivo);\n    if(!mv.ok){ S.aviso=mv.erro; corrDesenhar(); return {ok:false, onde:'motivo'}; }\n    var gestao=(op.nivel==='gestao');\n    var ass=corrAssinar(senha, corrNivelSenha(op), CORR_OQUE_ASSINA[op.acao]||'isto', {tela:gestao?'':op.telaConcedida, nome:gestao?'':op.assinaNome});\n    senha='';\n    if(!ass.ok){ S.aviso=ass.erro; corrDesenhar(); return {ok:false, onde:'senha'}; }\n    var reg=corrRegistro(op, S.mud, ass, motivo, Date.now()), mud=(S.mud||[]).slice();\n    S.passo='gravando'; S.aviso=''; corrDesenhar();\n    var pr;\n    try{ pr=(typeof op.gravar==='function')?Promise.resolve(op.gravar(JSON.parse(JSON.stringify(reg)))):Promise.resolve({ok:false, erro:'a tela não disse como gravar'}); }\n    catch(e){ pr=Promise.resolve({ok:false, erro:e}); }\n    var resp=pr.then(function(r){ return (r && r.ok===true)?{ok:true}\n        :{ok:false, erro:(r&&r.erro)||'a gravação não confirmou', incerto:!!(r && r.incerto), depois:(r && r.incerto)?r.depois:null}; },\n      function(e){ return {ok:false, erro:e}; });\n    // 6.60 (REL-002): «incerto» = a conexão caiu depois de enviar; o `depois` diz, mais tarde, se entrou\n    var confirma=function(x){\n      if(!(x && x.incerto && x.depois)) return Promise.resolve(x);\n      return Promise.resolve(x.depois).then(function(y){ return (y && y.ok===true)?{ok:true}:{ok:false, erro:(y&&y.erro)||x.erro}; }, function(e){ return {ok:false, erro:e}; });\n    };\n    var r=await corrComPrazo(resp, CORR_PRAZO, CORR_PRAZO_ERRO);\n    if(r && (r.semResposta || r.incerto)){\n      // o banco ainda pode responder: o rastro só entra se ele confirmar\n      (r.incerto?confirma(r):resp.then(confirma)).then(function(r2){ if(r2.ok) corrRastro(reg, mud); else _logFalhaGrav('correção — '+reg.oque, r2.erro); });\n      corrTerminar(S, 'semResposta', {ok:false, semResposta:true, incerto:!!r.incerto, reg:reg});\n      return S.res;\n    }\n    if(r && r.ok){ corrRastro(reg, mud); corrTerminar(S, 'pronto', {ok:true, reg:reg}); return S.res; }\n    _logFalhaGrav('correção — '+reg.oque, r&&r.erro);\n    S.erro=(r&&r.erro)||'';\n    corrTerminar(S, 'falhou', {ok:false, erro:S.erro, reg:reg});\n    return S.res;\n  }",
+  corrCartazHTML: "function corrCartazHTML(S){\n    S=S||CORR_ATUAL; if(!S) return '';\n    var op=S.op, topo=corrTitulo(op), cor='var(--z-blue)', corpo='', bts='';\n    var aviso=S.aviso?('<div id=\"corrAviso\" role=\"alert\" style=\"margin-top:10px;color:var(--crm-critico);font-weight:800\">'+esc(S.aviso)+'</div>'):'';\n    var cancelar=corrBotaoHTML('cancelar', 'Cancelar — não mexer em nada', '');\n    // 6.59 (opcional): op.info — linhas neutras que a tela quer à vista nos campos e no conferir (a pesagem, a dose do\n    // vermífugo antes e depois, a instrução que passa para a versão nova); a régua da tela (op.validar) pode trocá-las\n    var info=(Array.isArray(op.info) && op.info.length)?('<div class=\"corr-info\" style=\"margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--z-cream-warm);font-size:15px\">'\n      +op.info.map(function(t){ return '<div style=\"margin:3px 0\">'+esc(t)+'</div>'; }).join('')+'</div>'):'';\n    if(S.passo==='campos'){\n      corpo='<div style=\"font-size:15px\">'+esc(op.camposTexto||'Mude o que estiver errado e toque em «Continuar». O que aparece aqui é o valor de agora.')+'</div>'+info\n        +(op.campos||[]).map(function(x, i){\n          var v=String((S.valores||[])[i]==null?'':S.valores[i]);\n          return '<label for=\"corrC_'+i+'\" style=\"display:block;margin-top:12px;font-size:15px;font-weight:800\">'+esc(x.rotulo||x.c||'')+'</label>'\n            +(Array.isArray(x.opcoes)?('<select id=\"corrC_'+i+'\" style=\"'+CORR_CAMPO_ESTILO+'\">'+x.opcoes.map(function(o){ o=String(o==null?'':o);\n                return '<option value=\"'+escAttr(o)+'\"'+((o===v)?' selected':'')+'>'+esc(o)+'</option>'; }).join('')+'</select>')\n            :x.grande?('<textarea id=\"corrC_'+i+'\" rows=\"3\" style=\"'+CORR_CAMPO_ESTILO+';resize:vertical\">'+esc(v)+'</textarea>')\n                      :('<input id=\"corrC_'+i+'\" type=\"text\" value=\"'+escAttr(v)+'\" style=\"'+CORR_CAMPO_ESTILO+'\">'));\n        }).join('')+aviso;\n      bts=corrBotaoHTML('continuar', 'Continuar', 'var(--z-blue)')+cancelar;\n    } else if(S.passo==='conferir'){\n      if(op.acao==='corrigir') corpo='<div style=\"font-weight:800;font-size:16px\">Antes → Depois</div>'\n        +(S.mud||[]).map(function(m){ return '<div style=\"margin-top:6px\"><strong>'+esc(m.rotulo)+'</strong>: <span style=\"text-decoration:line-through\">'\n          +esc(corrQ(corrValorTexto(m.de)))+'</span> → '+esc(corrQ(m.para))+'</div>'; }).join('');\n      else if(op.acao==='anular') corpo=((op.cascata||[]).length?('<div style=\"font-weight:800\">Sai junto:</div>'+corrListaHTML(op.cascata)):'<div>Nada mais sai junto.</div>')\n        +'<div style=\"margin-top:8px\">O registro fica riscado, com quem, quando e o motivo. Nada é apagado.</div>';\n      else corpo='<div><strong>Volta a ficar:</strong> '+esc(op.paraEstado||'reaberto')+'</div>'\n        +((op.volta||[]).length?('<div style=\"margin-top:6px;font-weight:800\">Volta junto:</div>'+corrListaHTML(op.volta)):'')\n        +((S.mud||[]).length?('<div style=\"margin-top:8px;font-weight:800\">Antes → Depois</div>'+(S.mud||[]).map(function(m){ return '<div style=\"margin-top:6px\"><strong>'+esc(m.rotulo)+'</strong>: <span style=\"text-decoration:line-through\">'\n          +esc(corrQ(corrValorTexto(m.de)))+'</span> → '+esc(corrQ(m.para))+'</div>'; }).join('')):'')\n        +'<div style=\"margin-top:8px\">A volta é um registro novo: o que foi decidido antes continua guardado, com quem, quando e o motivo.</div>';\n      corpo+=info;   // 6.59\n      if(op.aviso) corpo+='<div role=\"alert\" style=\"margin-top:10px;padding:10px 12px;border-radius:12px;border:2px solid var(--crm-critico);color:var(--crm-critico);font-weight:800\">'+esc(op.aviso)+'</div>';\n      var gestao=(op.nivel==='gestao');\n      corpo+='<label for=\"corrMotivo\" style=\"display:block;margin-top:14px;font-size:15px;font-weight:800\">Motivo (pelo menos 4 palavras)</label>'\n        +'<textarea id=\"corrMotivo\" rows=\"3\" style=\"'+CORR_CAMPO_ESTILO+';resize:vertical\">'+esc(S.motivo||'')+'</textarea>'\n        +'<label for=\"corrSenha\" style=\"display:block;margin-top:12px;font-size:15px;font-weight:800\">'+(gestao?'Senha da Gestão':'Sua senha')+'</label>'\n        +'<input id=\"corrSenha\" type=\"password\" autocomplete=\"off\" value=\"\" style=\"'+CORR_CAMPO_ESTILO+'\">'\n        +'<div style=\"margin-top:6px;font-size:14px;color:var(--z-blue-soft)\">Quem assina: '+esc(corrQuemPode(corrNivelSenha(op), gestao?'':op.telaConcedida)+((!gestao && op.assinaNome)?(', ou '+op.assinaNome+', que registrou'):''))+'. O app grava o nome de quem assinou, nunca a senha.</div>'\n        +aviso;\n      bts=corrBotaoHTML('confirmar', op.botao||((op.acao==='anular' && op.genero==='f')?'Anular (lançada por engano)':CORR_BOTAO[op.acao])||'Gravar', (op.acao==='anular')?'var(--crm-critico)':'var(--z-blue)')\n        +(corrComCampos(op)?corrBotaoHTML('voltar', 'Voltar e mudar os campos', 'var(--z-blue)'):'')+cancelar;\n    } else if(S.passo==='gravando'){\n      corpo='<div>Gravando… espere a confirmação do banco.</div>';\n    } else if(S.passo==='pronto'){\n      var rg=(S.res&&S.res.reg)||{};\n      topo=op.tituloOk||((op.acao==='anular' && op.genero==='f')?'Anulada':CORR_TITULO_OK[op.acao])||'Pronto'; cor='var(--crm-ok)';\n      corpo='<div>Gravado no sistema, assinado por '+esc(rg.por||'-')+(rg.papel?(' ('+esc(corrPapelNome(rg.papel))+')'):'')+', em '+esc(rg.quando||'')+'.</div>'\n        +'<div style=\"margin-top:6px\">O rastro ficou na Linha do tempo do dia.</div>';\n      bts=corrBotaoHTML('fechar', 'Fechar', 'var(--crm-ok)');\n    } else if(S.passo==='falhou'){\n      topo='NADA FOI GRAVADO'; cor='var(--crm-critico)';\n      corpo='<div>'+esc(zErroFrase(zErroInicial(zErroMotivo(S.erro, 'banco', '', {agora:true}))))+'</div>'\n        +'<div style=\"margin-top:6px\">O registro continua como estava.'+esc(zErroAcao(S.erro, {alvo:'banco', agora:true}))+'</div>';\n      bts=corrBotaoHTML('fechar', 'Fechar', 'var(--crm-critico)');\n    } else if(S.passo==='semResposta'){\n      topo='O BANCO AINDA NÃO CONFIRMOU'; cor='var(--z-gold-deep)';\n      corpo=((S.res && S.res.incerto)?'<div>A conexão caiu no meio da gravação: a mudança pode ter entrado.</div>'\n          :('<div>Passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.</div>'))\n        +'<div style=\"margin-top:6px\">Confira na tela se a mudança entrou antes de tentar de novo.</div>';\n      bts=corrBotaoHTML('fechar', 'Fechar', 'var(--z-gold-deep)');\n    }\n    return '<div style=\"background:var(--z-cream);border-radius:20px;max-width:580px;width:100%;box-sizing:border-box;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;max-height:92vh;display:flex;flex-direction:column\">'\n      +'<div style=\"background:'+cor+';color:var(--z-cream);padding:16px 20px;font-weight:800;font-size:21px;line-height:1.2;overflow-wrap:anywhere\">'+esc(topo)+'</div>'\n      +'<div style=\"padding:16px 20px;overflow:auto;color:var(--z-blue);font-size:16px;line-height:1.5;font-weight:600;overflow-wrap:anywhere\">'+corpo+'</div>'\n      +(bts?('<div style=\"padding:0 20px 20px;display:flex;flex-direction:column;gap:9px\">'+bts+'</div>'):'')\n      +'</div>';\n  }" };
+
+prova('6.73 P44 (AC10; S8-P2, guarda) — o financeiro-logica.js sem a S8-P2 é o publicado com a 6.71 (md5); sem ficha inativa, o mesmo JSON do finResumoMes de antes em 300 cadastros × 13 meses × 3 «hoje»; com as inativas, o de antes MAIS as linhas delas no mês do pagamento — nada em «sem como calcular», nos vencidos ou em outro mês; a inativa que mudou de chave (movido_para) ou foi excluída continua fora', () => {
+  igual(require('crypto').createHash('md5').update(FIN_SEM_S8P2).digest('hex'), '3b1c470677a6989f8326372159a1bfb0', 'sem a S8-P2 = o publicado');
+  const ctxA = vm.createContext(makeSandbox()); vm.runInContext(FIN_SEM_S8P2, ctxA);
+  const ctxB = vm.createContext(makeSandbox()); vm.runInContext(FIN_SRC36, ctxB);
+  let s = 7344; const rnd = () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; };
+  const pick = (a) => a[Math.floor(rnd() * a.length)];
+  const MS = ['2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12'];
+  const dia = () => String(1 + Math.floor(rnd() * 27)).padStart(2, '0');
+  const cad = {}, irm = {}, pag = {}, saiu = [], fora = [];
+  for (let i = 0; i < 300; i++) {
+    const k = 'p' + i + '__família ' + (i % 110) + ' teste';
+    const plano = pick(['Silver', 'Gold', 'Black', 'Gold', 'Silver', '', 'avulso', 'morador']);
+    const m = pick(MS), r = { plano, inicio: plano ? m + '-' + dia() : '', quando: m + '-01' };
+    if (rnd() < 0.8) r.aulas = 1 + Math.floor(rnd() * 5);
+    if (rnd() < 0.5) r.ordemPet = 1 + Math.floor(rnd() * 4);
+    if (rnd() < 0.5 && r.inicio) r.fim = pick(['2026-01-31', '2026-05-31', '2026-08-31', '2026-10-15', '2026-12-31', '2027-03-31']);
+    if (rnd() < 0.25) r.valor_plano_cent = 30000 + Math.floor(rnd() * 300000);
+    const c = { n: 'P' + i, tutor: 'Família ' + (i % 110) + ' Teste', renov: r };
+    if (rnd() < 0.85) c.dias = ['seg', 'ter', 'qua', 'qui', 'sex'].filter(() => rnd() < 0.4);
+    if (rnd() < 0.3) c.renov_hist = { h1: { plano: pick(['Silver', 'Gold', 'Black', 'Platina']), aulas: pick([1, 2, 3, '']), ordemPet: 1, inicio: pick(MS) + '-' + dia(), fim: '2026-12-31', substituidoEm: 10, por: 'Teste', motivo: pick(['renovação', 'virou morador', 'anulado']), motivo_conferido: true } };
+    if (rnd() < 0.2) { c.inativo = 'Sim'; c.dataSaida = '2026-10-01'; }
+    if (c.inativo && rnd() < 0.25) { if (rnd() < 0.5) c.excluido = true; else { c.excluido = true; c.movido_para = 'outra__chave'; } }
+    if (c.inativo === 'Sim') (c.excluido ? fora : saiu).push(k);
+    cad[k] = c;
+    if (i > 0 && i % 9 === 0) irm['v' + i] = { a: k, b: 'p' + (i - 1) + '__família ' + ((i - 1) % 110) + ' teste' };
+    if (rnd() < 0.08 && r.inicio) { const mp = r.inicio.slice(0, 7); pag[mp] = pag[mp] || {}; pag[mp]['g' + i] = { chave: k, valor_cent: pick([38700, 107700, 5000]), data: r.inicio }; }
+  }
+  assert.ok(saiu.length >= 30 && fora.length >= 5, saiu.length + ' inativas, ' + fora.length + ' excluídas ou movidas');
+  const sem = {}; Object.keys(cad).forEach((k) => { if (cad[k].inativo !== 'Sim') sem[k] = cad[k]; });
+  const difSem = [], difCom = [], somaMes = {};
+  for (const m of MS) for (const h of ['2026-10-10', '2026-06-15', '']) {
+    const dd = (c) => ({ cadastro: c, irmaos: irm, pagamentos: pag, orcamentos: {}, peludinhos: [] });
+    const a0 = JSON.stringify(ctxA.finResumoMes(dd(sem), m, { hoje: h })), b0 = JSON.stringify(ctxB.finResumoMes(dd(sem), m, { hoje: h }));
+    if (a0 !== b0) difSem.push(m + ' ' + h);
+    const A = JSON.parse(JSON.stringify(ctxA.finResumoMes(dd(cad), m, { hoje: h }))), B = JSON.parse(JSON.stringify(ctxB.finResumoMes(dd(cad), m, { hoje: h })));
+    const delas = B.porFILHOt.filter((o) => saiu.indexOf(o.chave) >= 0);
+    const mesDela = (o) => String((o.vigencia || {}).inicio || o.venceEm || '').slice(0, 7);
+    const ok = JSON.stringify(B.porFILHOt.filter((o) => saiu.indexOf(o.chave) < 0)) === JSON.stringify(A.porFILHOt)
+      && JSON.stringify(B.inadimplentes) === JSON.stringify(A.inadimplentes) && JSON.stringify(B.semComoCalcular) === JSON.stringify(A.semComoCalcular)
+      && B.inadimplenciaTotal === A.inadimplenciaTotal && delas.every((o) => mesDela(o) === m)
+      && !B.porFILHOt.some((o) => fora.indexOf(o.chave) >= 0)
+      && B.aReceberTotal - A.aReceberTotal === delas.reduce((t, o) => t + o.falta, 0) && B.recebidoTotal - A.recebidoTotal === delas.reduce((t, o) => t + o.pago, 0)
+      // o aviso do «Nº do peludinho na família» conta a inativa só no mês do pagamento (o plano atual dela)
+      && B.ordemPetSuposta - A.ordemPetSuposta === delas.filter((o) => !o.origem && o.ordemPetSuposta).length
+      && B.ordemFamiliaResolvida - A.ordemFamiliaResolvida === delas.filter((o) => !o.origem && o.resolvidoPorFamilia).length;
+    if (!ok) difCom.push(m + ' ' + h);
+    if (h === '2026-10-10') somaMes[m] = delas.reduce((t, o) => t + o.valor, 0);
+  }
+  igual([difSem, difCom], [[], []]);
+  assert.ok(Object.keys(somaMes).filter((m) => somaMes[m] > 0).length >= 6, 'as inativas pagaram em vários meses: ' + JSON.stringify(somaMes));
+});
+
+provaAsync('6.73 P45 (AC4.3, AC5.3, AC6.2, AC6.5, AC7.2, AC9.4, AC11; S8-P7, P8, P9 e P11 — «só adriana») — as seis portas (lançar, anular e reabrir o ajuste; fechar e reabrir o mês; salvar a tabela e voltar a uma tabela) pedem a senha da Adriana: «Senha da Adriana» e «Quem assina: só a Adriana.»; a outra senha da Gestão, a da Supervisão e a da Consultora: «Só a Adriana …: essa senha é de …. Nada foi gravado.»; o posto e o nome digitado também não; a Adriana assina e o registro leva o nome dela; a função que grava confere de novo («BARROU», nada gravado); o «Não renova» e o «Anular» do plano (6.71) continuam com a senha de sempre', async () => {
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`); entrega73();
+    const recusa = async (oque) => {
+      const c = cartaz73();
+      assert.ok(/Senha da Adriana/.test(c) && c.indexOf('Quem assina: só a Adriana. O app grava o nome de quem assinou, nunca a senha.') >= 0 && !/Senha da Gestão/.test(c), c);
+      const n0 = escs73().length;
+      for (const [senha, nome] of [[SENHA657, 'Gestora Teste'], ['s-amanda', 'Amanda Supervisora Teste'], ['s-bia', 'Bia Consultora Teste']]) {
+        await toca73(senha); igual([aviso73(), passo73()], ['Só a Adriana ' + oque + ': essa senha é de ' + nome + '. Nada foi gravado.', 'conferir'], oque + ' / ' + nome);
+      }
+      await toca73('s-posto'); assert.ok(/senha de posto não assina/.test(aviso73()), aviso73());
+      await toca73('Adriana Teste'); assert.ok(/Essa senha não é de ninguém cadastrado/.test(aviso73()), aviso73());
+      igual(escs73().length, n0, oque + ': nada gravado');
+      await toca73(SENHA_ADR73); igual(passo73(), 'pronto', oque + ': a Adriana assina');
+      r73('corrFechar()');
+    };
+    // 1. lançar o ajuste
+    await abre73(`recAjusteAbrir('2026-07')`); r73(`corrToque('continuar', {valores:['Somar ao mês', '170,00', 'diária avulsa da Lua lançada sem valor']})`);
+    await recusa('lança ajuste no Recebimentos');
+    const aj = J73(`__get657('daycare/recebimentos/2026-07/ajustes')`), aid = Object.keys(aj)[0];
+    igual([Object.keys(aj).length, aj[aid].registro.por, aj[aid].registro.papel], [1, 'Adriana Teste', 'gestao']);
+    // 2. anular e 3. reabrir o ajuste
+    await abre73(`recAjusteAnularAbrir('${aid}', '2026-07')`); await recusa('anula ajuste do Recebimentos');
+    await abre73(`recAjusteReabrirAbrir('${aid}', '2026-07')`); await recusa('reabre ajuste do Recebimentos');
+    const an = J73(`__get657('daycare/recebimentos/2026-07/ajustes/${aid}/anulacoes')`);
+    igual(Object.values(an).map((x) => [x.acao, x.por]).sort(), [['anular', 'Adriana Teste'], ['reabrir', 'Adriana Teste']]);
+    // 4. fechar e 5. reabrir o mês
+    await abre73(`recFecharAbrir('2026-07')`); r73(`corrToque('continuar', {valores:['fechado']})`); await recusa('fecha o mês');
+    await abre73(`recReabrirAbrir('2026-07')`); await recusa('reabre o mês');
+    igual(Object.values(J73(`__get657('daycare/recebimentos/2026-07/eventos')`)).map((e) => [e.acao, e.registro.por]).sort(), [['fechou', 'Adriana Teste'], ['reabriu', 'Adriana Teste']]);
+    // 6. salvar a tabela e 7. voltar a uma tabela
+    await salva73({ cfgPl_Gold_1: '399,00' }); await recusa('muda a tabela de planos');
+    igual(J73(`__get657('daycare/config/tabela-planos')`).quem, 'Adriana Teste');
+    r73('cfgPlanosRender();');
+    const hid = Object.keys(J73(`__get657('daycare/config/tabela-planos-historico')`))[0];
+    await abre73(`cfgPlanosVoltarAbrir('${hid}')`); await recusa('muda a tabela de planos');
+    igual(Object.keys(J73(`__get657('daycare/config/tabela-planos-historico')`)).length, 2);
+    // a função que grava confere de novo: um registro com outro nome (a tela velha, o console) — «BARROU», nada gravado
+    const n0 = escs73().length;
+    await abre73(`recAjusteAbrir('2026-07')`); r73(`corrToque('continuar', {valores:['Tirar do mês', '12,34', 'troco devolvido ao tutor']})`);
+    r73(`__gR=CORR_ATUAL.op.gravar; __rR=corrRegistro(CORR_ATUAL.op, [], {nome:'Gestora Teste', papel:'gestao'}, 'o troco foi devolvido ao tutor', Date.now()); __xR=null; Promise.resolve(__gR(__rR)).then(function(x){ __xR=x; }); corrFechar();`);
+    await esp73();
+    igual([J73('__xR').ok, J73('__xR').barrou, escs73().length], [false, true, n0]);
+    assert.ok(J73('__au657').some((a) => /^BARROU lançar um ajuste no Recebimentos/.test(a[1])), 'BARROU');
+    igual(za73('ESTA AÇÃO NÃO É SUA'), ['Quem pode lançar um ajuste no Recebimentos: só a Adriana, com a senha dela.', 'Nada foi gravado.']);
+    await abre73(`recFecharAbrir('2026-07')`);
+    r73(`__gR=CORR_ATUAL.op.gravar; __rR=corrRegistro(CORR_ATUAL.op, [], {nome:'Adriana Teste', papel:'supervisor'}, 'conferido com o sistema da loja', Date.now()); __xR=null; Promise.resolve(__gR(__rR)).then(function(x){ __xR=x; }); corrFechar();`);
+    await esp73();
+    igual([J73('__xR').barrou, escs73().length], [true, n0], 'o nome certo com outro papel também não');
+    cartao73(); campos73({ cfgPl_Gold_1: '409,00' }); await abre73('cfgPlanosSalvar()');
+    r73(`__gR=CORR_ATUAL.op.gravar; __rR=corrRegistro(CORR_ATUAL.op, [], {nome:'Gestora Teste', papel:'gestao'}, 'a tabela comercial de 2027 chegou', Date.now()); __xR=null; Promise.resolve(__gR(__rR)).then(function(x){ __xR=x; }); corrFechar();`);
+    await esp73();
+    igual([J73('__xR').ok, J73('__xR').erro, escs73().length], [false, 'só a Adriana assina a tabela de planos', n0]);
+    // o que não muda: o «Não renova» com a senha da própria pessoa (a Gestora também) e o «Anular» do plano da 6.71 com a senha da Gestão
+    cena73([NINA73(), TODDY73()], { login: GESTORA73 });
+    await abre73('renovNaoRenovaAbrir(1)'); await toca73(SENHA657, 'o tutor disse que vai se mudar'); igual(passo73(), 'pronto'); r73('corrFechar()');
+    cena73(JULHO73(), { login: GESTORA73 }); r73('pelAtual=PELUDINHOS[1]; pelAtualIdx=1;');
+    await abre73('planoAnularAtualAbrir()');
+    assert.ok(/Senha da Gestão/.test(cartaz73()) && cartaz73().indexOf('Quem assina: a Gestão ou a Diretoria.') >= 0, cartaz73());
+    await toca73(SENHA657, 'o pagamento foi lançado em dobro'); igual(passo73(), 'pronto'); r73('corrFechar()');
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 P46 (S8-P7 a P11, guarda da 6.71 P34) — o cartaz da 6.57 sem o nível «adriana» é o da base: corrCartazHTML de agora × o da base, o mesmo HTML em todo passo e nível (própria, Gestão, a tela concedida, quem registrou), com e sem aviso, info e campos; corrConfirmar de agora × o da base, o mesmo aviso, o mesmo passo e o mesmo registro com cada senha (vazia, de ninguém, de posto, da Consultora, da Supervisão, da Gestão e da Adriana)', async () => {
+  igual([sha73(CORR_BASE673.corrConfirmar), sha73(CORR_BASE673.corrCartazHTML)], ['a4a11ee0e87ee8b1', 'ea386e50e8f29f5b'], 'os textos da base');
+  arma73();
+  try {
+    cena73(JULHO73(), { login: GESTORA73 });
+    r73('var corrConfirmarBase673=(' + CORR_BASE673.corrConfirmar + '); var corrCartazHTMLBase673=(' + CORR_BASE673.corrCartazHTML + ');');
+    const OPS = [
+      { acao: 'corrigir', titulo: 'Corrigir o peso', oque: 'o peso', campos: [{ c: 'peso', rotulo: 'Peso', valor: '8,2' }], nivel: 'propria', capacidade: 'ver-plano' },
+      { acao: 'corrigir', titulo: 'Corrigir a hora', oque: 'a hora', campos: [{ c: 'h', rotulo: 'Hora', valor: '10:00', opcoes: ['10:00', '11:00'] }], nivel: 'gestao', capacidade: 'gestao-role', info: ['Uma linha neutra.'] },
+      { acao: 'anular', oque: 'o banho', nivel: 'gestao', capacidade: 'gestao-role', cascata: ['O banho sai da TV.'], aviso: 'Atenção: dinheiro.' },
+      { acao: 'anular', oque: 'a dose', genero: 'f', nivel: 'propria', capacidade: 'ver-plano', telaConcedida: 'orcamento', assinaNome: 'Bia Consultora Teste' },
+      { acao: 'reabrir', oque: 'a reserva', nivel: 'propria', capacidade: 'assinar-orcamento', telaConcedida: 'orcamento', paraEstado: 'valendo', volta: ['A reserva volta à lista.'] },
+      { acao: 'reabrir', oque: 'o remédio', nivel: 'gestao', capacidade: 'gestao-role', campos: [{ c: 'dose', rotulo: 'Dose', valor: '1', grande: true }], paraEstado: 'em uso' }];
+    ctx673.__ops673 = OPS;
+    const html = J73(`(function(){ var out=[]; __ops673.forEach(function(op){ ['campos','conferir','gravando','pronto','falhou','semResposta'].forEach(function(passo){ [0,1].forEach(function(av){
+      var S={op:op, passo:passo, valores:(op.campos||[]).map(function(x){ return String(x.valor); }), mud:[{c:'x', rotulo:'X', de:'1', para:'2'}], motivo:av?'o motivo escrito antes':'', aviso:av?'Escreva o motivo.':'', erro:av?new Error('PERMISSION_DENIED: Permission denied'):'', res:{reg:{por:'Bia Consultora Teste', papel:'consultora', quando:'10/10/2026 às 10:00'}, incerto:!!av}};
+      out.push([op.acao+'/'+(op.nivel||'')+'/'+passo+'/'+av, corrCartazHTML(S)===corrCartazHTMLBase673(S)]); }); }); }); return out; })()`);
+    igual(html.filter((x) => !x[1]).map((x) => x[0]), [], 'o mesmo HTML');
+    igual(html.length, 72);
+    // corrConfirmar: o mesmo aviso, passo, retorno e registro (a gravação de mentira guarda o registro)
+    r73(`__cmp673=[]; (async function(){ for(var i=0;i<__ops673.length;i++){ var op=__ops673[i]; var senhas=['', 'ninguem-tem', 's-posto', 's-bia', 's-amanda', '${SENHA657}', '${SENHA_ADR73}', 'Bia Consultora Teste'];
+      for(var j=0;j<senhas.length;j++){ var res=[];
+        for(var b=0;b<2;b++){ var regs=[]; var o=Object.assign({}, op, {gravar:function(reg){ regs.push(reg); return Promise.resolve({ok:true}); }});
+          var S={op:o, passo:'conferir', valores:[], mud:[], motivo:'', aviso:'', erro:null, res:null, fim:null};
+          var r=await (b?corrConfirmarBase673:corrConfirmar)(S, {motivo:'o tutor pediu para mudar', senha:senhas[j]});
+          res.push(JSON.stringify([r && r.ok, r && r.onde, S.aviso, S.passo, regs.map(function(x){ return [x.por, x.papel, x.acao, x.motivo]; })])); }
+        __cmp673.push([op.acao+'/'+(op.nivel||'')+'/'+senhas[j], res[0]===res[1], res[0]]); } } })();`);
+    await esp73(12);
+    const cmp = J73('__cmp673');
+    igual([cmp.length, cmp.filter((x) => !x[1]).map((x) => x[0])], [48, []], 'o mesmo resultado');
+    assert.ok(cmp.some((x) => /"pronto"/.test(x[2])) && cmp.some((x) => /não pode assinar/.test(x[2])) && cmp.some((x) => /senha de posto/.test(x[2])), 'a amostra tem assinatura, recusa e posto');
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 P47 (S8-P7 a P11, junto da 6.76) — a identidade da Adriana pela senha: a da identidade fixa marcada souAdriana assina; a da Gestão que não é dela, de ninguém ou vazia, não; com a régua da 6.76 (a senha fixa trocada e guardada no banco), a senha guardada da Adriana assina e a provisória não', async () => {
+  arma73();
+  // 4ª rodada (re-gate 3, TEST-003). ANTES: uma senhaFixaPelaGuardada de mentira e, no fim, «delete globalThis.senhaFixaPelaGuardada» com
+  // «typeof === 'undefined'» — na junção com a 6.76 a função é DECLARADA no app: o delete não a apaga, a prova falhava e a de mentira ficava
+  // no sandbox. DEPOIS: as funções e o estado de verdade guardados aqui e devolvidos no fim (e conferidos), e a régua da 6.76 DE VERDADE
+  // (senhaQuem, senhaFixaPelaGuardada e senhasRuntime do app, a senha trocada guardada no banco como hash e sal). PORQUÊ: o TEST-003.
+  r73('__fsf673=senhaFixaPelaGuardada; __sq673=senhaQuem; __sfb673=SENHAS_FIXAS_BANCO; __srW673=senhasRuntime; __mo673=MONITORES;');
+  try {
+    igual([r73(`corrSenhaDaAdriana('${SENHA_ADR73}')`), r73(`corrSenhaDaAdriana('${SENHA657}')`), r73(`corrSenhaDaAdriana('s-bia')`), r73(`corrSenhaDaAdriana('')`), r73(`corrSenhaDaAdriana(null)`), r73(`corrSenhaDaAdriana('nada')`)], [true, false, false, false, false, false]);
+    igual([J73('corrAdrianaPerfil()'), r73(`corrRegDaAdriana({por:'Adriana Teste', papel:'gestao'})`), r73(`corrRegDaAdriana({por:'Adriana Teste', papel:'supervisor'})`), r73(`corrRegDaAdriana({por:'Gestora Teste', papel:'gestao'})`), r73('corrRegDaAdriana(null)')],
+      [{ nome: 'Adriana Teste', papel: 'gestao' }, true, false, false, false]);
+    // o papel é o da identidade da Adriana (não um papel cravado): com ela como Diretoria, o registro da Diretoria vale e o da Gestão não
+    r73(`__srB673=senhasRuntime; senhasRuntime=function(){ var m=__srB673(); m['${SENHA_ADR73}']=Object.assign({}, m['${SENHA_ADR73}'], {role:'diretoria'}); return m; };`);
+    igual([r73(`corrRegDaAdriana({por:'Adriana Teste', papel:'diretoria'})`), r73(`corrRegDaAdriana({por:'Adriana Teste', papel:'gestao'})`)], [true, false]);
+    r73('senhasRuntime=__srB673;');
+    // sem o mapa das senhas: a lista fixa do app (a '1101', souAdriana) dá o nome e o papel
+    r73('__srA673=senhasRuntime; senhasRuntime=function(){ throw new Error("sem mapa"); };');
+    igual([J73('corrAdrianaPerfil()'), r73(`corrSenhaDaAdriana('${SENHA_ADR73}')`)], [{ nome: 'Adriana · Gestão Total', papel: 'gestao' }, false]);
+    r73('senhasRuntime=__srA673;');
+    // a régua da 6.76 de verdade: as senhas fixas do app (a '1101' é a da Adriana, a '0902' a da Márcia, a '1001' a do posto)
+    const sda = (x) => r73(`corrSenhaDaAdriana(${JSON.stringify(x)})`);
+    r73('senhasRuntime=__bk657.sr; MONITORES=[]; MON_BANCO=null; MON_PENDENTE=false; MON_DESATIVADOS=[]; SENHAS_FIXAS_BANCO={}; __ls657={};');
+    // o banco respondeu «nenhuma trocada»: a do código da Adriana é a dela; a da Márcia e a do posto, não
+    igual([sda('1101'), sda('0902'), sda('1001'), J73('corrAdrianaPerfil()')], [true, false, false, { nome: 'Adriana · Gestão Total', papel: 'gestao' }]);
+    // a Adriana e a Márcia trocaram (a nova guardada no banco, só o hash e o sal): a nova da Adriana é a dela; a 1101 do código não é
+    // mais (e sai do mapa das senhas: o perfil vem da lista fixa); a nova da Márcia e a do código dela, não
+    r73(`SENHAS_FIXAS_BANCO={adriana:${JSON.stringify(FIXA73('nova-da-adriana'))}, marcia:${JSON.stringify(FIXA73('nova-da-marcia'))}};`);
+    igual([sda('nova-da-adriana'), sda('1101'), sda('nova-da-marcia'), sda('0902'), sda(SENHA_ADR73), J73("senhasRuntime()['1101']||null"), J73('corrAdrianaPerfil()')],
+      [true, false, false, false, false, null, { nome: 'Adriana · Gestão Total', papel: 'gestao' }]);
+    igual([J73("corrAssinar('nova-da-adriana', 'gestao-role', 'isto', {})"), r73("corrRegDaAdriana({por:'Adriana · Gestão Total', papel:'gestao'})"), r73("corrRegDaAdriana({por:'Adriana · Gestão Total', papel:'diretoria'})")],
+      [{ ok: true, nome: 'Adriana · Gestão Total', papel: 'gestao', erro: '' }, true, false], 'o corrAssinar da 6.76 aceita pela senhaQuem, com o papel da Gestão — o que a função que grava confere');
+    // a provisória da Adriana (a Gestão deu, ela ainda não trocou): não é a dela, e o corrAssinar recusa com a frase da provisória
+    r73(`SENHAS_FIXAS_BANCO={adriana:${JSON.stringify(FIXA73('provisoria-da-adriana', { provisoria: true }))}};`);
+    igual([sda('provisoria-da-adriana'), sda('1101'), J73("corrAssinar('provisoria-da-adriana', 'gestao-role', 'isto', {}).erro")], [false, false, X676_PROV]);
+    // sem o banco e sem a cópia do aparelho: a do código não é conferida (SEC-008) — não é a dela, e o corrAssinar recusa com a frase do banco
+    r73('SENHAS_FIXAS_BANCO=null; __ls657={};');
+    igual([sda('1101'), J73("corrAssinar('1101', 'gestao-role', 'isto', {}).erro")], [false, X676_SEMB]);
+    // as funções de verdade, nunca trocadas
+    igual([r73('senhaFixaPelaGuardada===__fsf673'), r73('senhaQuem===__sq673'), /senhaGuardadaConfere\(/.test(r73('String(senhaFixaPelaGuardada)'))], [true, true, true]);
+    // a frase da recusa
+    igual([r73(`corrSoAdrianaFrase({adrianaOque:'fecha o mês'}, 'Gestora Teste')`), r73(`corrSoAdrianaFrase({acao:'anular'}, '')`)],
+      ['Só a Adriana fecha o mês: essa senha é de Gestora Teste. Nada foi gravado.', 'Só a Adriana assina esta anulação. Nada foi gravado.']);
+  } finally { r73('senhaFixaPelaGuardada=__fsf673; senhaQuem=__sq673; SENHAS_FIXAS_BANCO=__sfb673; senhasRuntime=__srW673; MONITORES=__mo673;'); solta73(); }
+});
+
+// ================================================================== 6.73, 4ª rodada (@dev, 12/out/2026) — o fechamento dos CONCERNS do re-gate 3 e a
+// junção com a 6.76 publicada (3d6910b). Abaixo: os ataques do QA do re-gate 3 (TEST-004: QA673R3-01 a 05, transcritos do arquivo do QA,
+// só o nome ganha o prefixo «6.73 QA re-gate 3 · »), a causa certa de cada linha que sai do mês fechado (REQ-003) e as provas da junção:
+// as sete portas «só a Adriana» com a régua da 6.76 de verdade (J1) e as 8 portas novas da 6.73 no cartaz (J2), que entram nas listas
+// fechadas da 6.76 («6.76 × publicadas · todas as portas» e QA676J-01) pelo protocolo das guardas.
+// ---- os ataques do QA do re-gate 3 (qa673r3/ataque673r3.js) ----------------------------------------------------------------------
+// ================================================================== QA 6.73 (Quinn) — re-gate da 3ª rodada: ataques novos, dentro do bloco 6.73
+// Tudo INVENTADO (tutores «Teste»). Relógio do bloco (sábado, 10/10/2026, 10:00). Contas esperadas escritas à mão.
+// Tabela de fábrica: Silver 1x = R$ 387,00 (mensal); Gold 1x = R$ 359,00 × 3 = R$ 1.077,00 (trimestral).
+const QC73 = {};
+QC73.SIL = (ini, fim, extra) => Object.assign({ plano: 'Silver', aulas: 1, ordemPet: 1, inicio: ini, fim: fim, quando: ini }, extra || {});
+QC73.GOL = (ini, fim, extra) => Object.assign({ plano: 'Gold', aulas: 1, ordemPet: 1, inicio: ini, fim: fim, quando: ini }, extra || {});
+QC73.H = (r) => Object.assign({}, r, { substituidoEm: 100, por: 'Teste', motivo: 'renovação', motivo_conferido: true });
+QC73.f = (n, tutor, ex) => ({ n: n, tutor: tutor, ex: Object.assign({ dias: ['seg'] }, ex) });
+// a carteira da S8-P2 (a mesma do qa673r3/tools/s8p2mao.js, mais a Nara): inativas, trocadas de nome, excluídas, sem plano, vencidas
+QC73.carteiraS8 = () => [
+  QC73.f('Lupa', 'Lia Teste', { inativo: 'Sim', dataSaida: '2026-09-20', renov: QC73.GOL('2026-09-06', '2026-12-05') }),
+  QC73.f('Nilo', 'Nei Teste', { inativo: 'Sim', dataSaida: '2026-09-15', renov: QC73.SIL('2026-08-01', '2026-08-31'), renov_hist: { h1: QC73.H(QC73.SIL('2026-07-01', '2026-07-31')) } }),
+  QC73.f('Ravi', 'Rita Teste', { inativo: 'Sim', excluido: true, movido_para: 'ravi rosa__rita teste', movido_em: 1, renov: QC73.SIL('2026-08-10', '2026-09-09') }),
+  QC73.f('Ravi Rosa', 'Rita Teste', { _renomeado_de: 'ravi__rita teste', renov: QC73.SIL('2026-08-10', '2026-09-09') }),
+  QC73.f('Tito', 'Tais Teste', { inativo: 'Sim', dataSaida: '2026-09-05', excluido: true, motivoExclusao: 'cadastro em dobro da recepção', renov: QC73.SIL('2026-09-02', '2026-10-01') }),
+  QC73.f('Uno', 'Ugo Teste', { excluido: true, motivoExclusao: 'cadastro em dobro da recepção', renov: QC73.SIL('2026-09-03', '2026-10-02') }),
+  QC73.f('Kira', 'Kel Teste', { inativo: 'Sim', dataSaida: '2026-08-15', renov: { plano: 'Silver' } }),
+  QC73.f('Zeca', 'Zuza Teste', { inativo: 'Sim', dataSaida: '2026-09-01', renov: QC73.SIL('2026-08-20', '2026-09-19') }),
+  QC73.f('Duda', 'Dani Teste', { renov: QC73.SIL('2026-09-05', '2026-10-04') }),
+  QC73.f('Bela', 'Bia Teste', { inativo: 'Sim', dataSaida: '2026-09-30', excluido: true, movido_para: 'bela rosa__bia teste', movido_em: 1, renov: QC73.GOL('2026-08-12', '2026-11-11') }),
+  QC73.f('Bela Rosa', 'Bia Teste', { inativo: 'Sim', dataSaida: '2026-09-30', _renomeado_de: 'bela__bia teste', renov: QC73.GOL('2026-08-12', '2026-11-11') }),
+  QC73.f('Nara', 'Neli Teste', { inativo: 'Sim', dataSaida: '2026-08-31', renov: QC73.SIL('2026-08-01', '2026-08-30') })
+];
+QC73.R = (mes) => J73(`(function(){ var R=recResumoDoMes('${mes}'); return {linhas:R.porFILHOt.map(function(o){ return [o.chave, o.valor]; }).sort(), inad:R.inadimplentes.map(function(o){ return o.chave; }), sem:R.semComoCalcular.map(function(o){ return o.chave; }), inadT:R.inadimplenciaTotal, total:recQuebra(R).total}; })()`);
+QC73.mudou = (mes) => { const t = txt73(card73(mes)); const i = t.indexOf('Mudou depois do fechamento ('); return i < 0 ? '(sem a seção) ' + t.slice(0, 400) : t.slice(i, i + 900); };
+// a troca de nome como a 6.75 grava (a antiga fica no cadastro com excluido, movido_para e inativo:'Sim'); a nova herda o resto
+QC73.troca675 = (kA, nB, tutorB) => r73(`(function(){ var a=pelCadCache['${kA}'], kB=(${JSON.stringify(nB)}+'__'+${JSON.stringify(tutorB)}).toLowerCase();
+  pelCadCache[kB]=Object.assign(JSON.parse(JSON.stringify(a)), {n:${JSON.stringify(nB)}, tutor:${JSON.stringify(tutorB)}, _novo:true, _renomeado_de:'${kA}'}); delete pelCadCache[kB].excluido; delete pelCadCache[kB].movido_para;
+  a.excluido=true; a.movido_para=kB; a.movido_em=${T673 + 1000}; a.inativo='Sim';
+  PELUDINHOS=PELUDINHOS.filter(function(p){ return pelKey(p)!=='${kA}'; }); PELUDINHOS.push({n:${JSON.stringify(nB)}, tutor:${JSON.stringify(tutorB)}, raca:'SRD'}); })();`);
+
+provaAsync('6.73 QA re-gate 3 · QA673R3-01 (S8-P2 — conferido à mão em dois meses) — quem saiu conta só no mês em que pagou: julho R$ 387,00 (a renovação anterior do Nilo), agosto R$ 2.625,00 (Nilo, Ravi Rosa uma vez só, Zeca, Bela Rosa uma vez só, Nara), setembro R$ 1.851,00 (Lupa, Uno, Duda; o Tito inativo e excluído fora), outubro R$ 0,00; nenhuma inativa nos vencidos nem em «sem como calcular», e a inadimplência de agosto sem a Nara', async () => {
+  arma73();
+  try {
+    cena73(QC73.carteiraS8(), { login: GESTORA73 }); entrega73();
+    const jul = QC73.R('2026-07'), ago = QC73.R('2026-08'), set = QC73.R('2026-09'), out = QC73.R('2026-10');
+    igual([jul.total, ago.total, set.total, out.total], [38700, 262500, 185100, 0], 'os quatro meses à mão');
+    igual(jul.linhas, [['nilo__nei teste', 38700]]);
+    igual(ago.linhas, [['bela rosa__bia teste', 107700], ['nara__neli teste', 38700], ['nilo__nei teste', 38700], ['ravi rosa__rita teste', 38700], ['zeca__zuza teste', 38700]]);
+    igual(set.linhas, [['duda__dani teste', 38700], ['lupa__lia teste', 107700], ['uno__ugo teste', 38700]]);
+    const inat = ['lupa__lia teste', 'nilo__nei teste', 'ravi__rita teste', 'tito__tais teste', 'kira__kel teste', 'zeca__zuza teste', 'bela__bia teste', 'bela rosa__bia teste', 'nara__neli teste'];
+    [jul, ago, set, out].forEach((R, i) => assert.ok(!R.inad.concat(R.sem).some((k) => inat.indexOf(k) >= 0), 'mês ' + i + ': inativa nos vencidos ou em «sem como calcular»: ' + JSON.stringify([R.inad, R.sem])));
+    igual(ago.inadT, 0, 'a inadimplência de agosto sem a Nara (vencida em 30/08, inativa)');
+    // o quadro do mês (o mesmo número)
+    igual([total73(card73('2026-08')), total73(card73('2026-09'))], ['R$ 2.625,00', 'R$ 1.851,00']);
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA re-gate 3 · QA673R3-02 (S8-P2 com «Mudou depois do fechamento») — setembro fechado com R$ 1.464,00 (Lupa inativa, Gold 06/09, e Duda, Silver 05/09): inativar a Duda depois e trocar o nome da Lupa como a 6.75 grava não mudam nada; a Duda inativa e depois EXCLUÍDA sai do total ao vivo (R$ 1.077,00, diferença de -R$ 387,00)', async () => {
+  arma73();
+  try {
+    cena73([QC73.carteiraS8()[0], QC73.carteiraS8()[8]], { login: GESTORA73 }); r73(`REC_MES='2026-09';`);
+    igual(await fecha73('2026-09'), 'pronto');
+    igual(total73(card73('2026-09')), 'R$ 1.464,00');
+    r73(`pelCadCache['duda__dani teste'].inativo='Sim'; pelCadCache['duda__dani teste'].dataSaida='2026-10-10';`);
+    const a = QC73.mudou('2026-09');
+    assert.ok(a.indexOf('Mudou depois do fechamento (0)') === 0 && a.indexOf('Nada mudou desde o fechamento.') > 0, '(a) inativar depois do fechamento: ' + a);
+    QC73.troca675('lupa__lia teste', 'Lupa Rosa', 'Lia Teste');
+    const b = QC73.mudou('2026-09');
+    assert.ok(b.indexOf('Mudou depois do fechamento (0)') === 0 && b.indexOf('Nada mudou desde o fechamento.') > 0, '(b) a Lupa inativa trocada de nome como a 6.75: ' + b);
+    r73(`pelCadCache['duda__dani teste'].excluido=true; pelCadCache['duda__dani teste'].motivoExclusao='cadastro em dobro da recepção';`);
+    const c = QC73.mudou('2026-09');
+    assert.ok(c.indexOf('Mudou depois do fechamento (1)') === 0 && /Duda — Silver · mensal · 1x por semana · pago em 05\/09\/2026: R\$ 387,00 → fora/.test(c)
+      && c.indexOf('A conta ao vivo hoje daria R$ 1.077,00 (diferença de -R$ 387,00).') > 0, '(c) a Duda inativa e excluída: ' + c);
+    console.log('    QA673R3-02 (c), a razão mostrada: ' + (c.match(/→ fora[^A]*/) || [''])[0].trim());
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA re-gate 3 · QA673R3-03 (AC5.2, REQ-001 — a cadeia do movido_para) — três trocas seguidas juntam («Nada mudou»); o ciclo (A → B → A), o laço (A → A) e o movido_para para uma chave que não existe terminam sem travar e mostram a linha «fora»; duas fichas unidas numa só (Biscoito e Pipoca → Bolinha): a da mesma data junta, a outra sai «fora (mudou de nome ou de tutor: agora «Bolinha»)»', async () => {
+  arma73();
+  try {
+    // (a) Pipoca → Pipoca 2 → Pipoca 3 → Pipoca 4
+    await QB73.julhoFechado();
+    QC73.troca675('pipoca__rui teste', 'Pipoca 2', 'Rui Teste'); QC73.troca675('pipoca 2__rui teste', 'Pipoca 3', 'Rui Teste'); QC73.troca675('pipoca 3__rui teste', 'Pipoca 4', 'Rui Teste');
+    const a = QC73.mudou('2026-07');
+    assert.ok(a.indexOf('Mudou depois do fechamento (0)') === 0, '(a) três trocas: ' + a);
+    // (b) o ciclo: a Pipoca e a «Pipoca Rosa» apontam uma para a outra, as duas fora da conta (excluídas e inativas)
+    await QB73.julhoFechado();
+    r73(`pelCadCache['pipoca__rui teste'].excluido=true; pelCadCache['pipoca__rui teste'].inativo='Sim'; pelCadCache['pipoca__rui teste'].movido_para='pipoca rosa__rui teste';
+      pelCadCache['pipoca rosa__rui teste']=Object.assign(JSON.parse(JSON.stringify(pelCadCache['pipoca__rui teste'])), {n:'Pipoca Rosa', movido_para:'pipoca__rui teste'});`);
+    const t0 = Date.now(); const b = QC73.mudou('2026-07'); const ms = Date.now() - t0;
+    assert.ok(ms < 5000 && b.indexOf('Mudou depois do fechamento (1)') === 0 && /Pipoca — .*R\$ 1\.077,00 → fora/.test(b) && b.indexOf('A conta ao vivo hoje daria R$ 1.077,00 (diferença de -R$ 1.077,00).') > 0, '(b) o ciclo: ' + ms + ' ms ' + b);
+    console.log('    QA673R3-03 (b) o ciclo, a razão: ' + (b.match(/→ fora[^A]*/) || [''])[0].trim());
+    // (c) o laço: a Pipoca aponta para ela mesma
+    r73(`delete pelCadCache['pipoca rosa__rui teste']; pelCadCache['pipoca__rui teste'].movido_para='pipoca__rui teste';`);
+    const c = QC73.mudou('2026-07');
+    assert.ok(c.indexOf('Mudou depois do fechamento (1)') === 0 && /Pipoca — .*→ fora/.test(c), '(c) o laço: ' + c);
+    // (d) o movido_para para uma chave que não existe no cadastro
+    r73(`pelCadCache['pipoca__rui teste'].movido_para='pipoca nova__rui teste';`);
+    const d = QC73.mudou('2026-07');
+    assert.ok(d.indexOf('Mudou depois do fechamento (1)') === 0 && /→ fora \(mudou de nome ou de tutor: agora «pipoca nova»\)/.test(d), '(d) a chave que não existe: ' + d);
+    // (e) Biscoito (05/07) e Pipoca (08/07) unidas na Bolinha, que tem um Gold 1x de 05/07 (R$ 1.077,00)
+    await QB73.julhoFechado();
+    r73(`['biscoito__clara teste','pipoca__rui teste'].forEach(function(k){ var c=pelCadCache[k]; c.excluido=true; c.inativo='Sim'; c.movido_para='bolinha__ana teste'; });
+      pelCadCache['bolinha__ana teste']={n:'Bolinha', tutor:'Ana Teste', dias:['seg'], renov:${JSON.stringify(GOLD73('2026-07-05'))}}; PELUDINHOS.push({n:'Bolinha', tutor:'Ana Teste', raca:'SRD'});`);
+    const e = QC73.mudou('2026-07');
+    assert.ok(e.indexOf('Mudou depois do fechamento (1)') === 0 && /Pipoca — Gold · trimestral · 1x por semana · pago em 08\/07\/2026: R\$ 1\.077,00 → fora \(mudou de nome ou de tutor: agora «Bolinha»\)/.test(e)
+      && e.indexOf('Nova:') < 0 && e.indexOf('Biscoito') < 0, '(e) duas fichas unidas: ' + e);
+  } finally { solta73(); }
+});
+
+provaAsync('6.73 QA re-gate 3 · QA673R3-04 (S8-P7 a P11 — «só adriana», as pessoas que faltavam) — nas sete portas, a Márcia, um Diretor do Time, um homônimo «Adriana Teste» do Time (papel gestao, sem a identidade) e a Consultora com a página do Recebimentos concedida são recusados com «Só a Adriana …: essa senha é de …. Nada foi gravado.», nada gravado; e as quatro funções que gravam que a P45 não forjou (reabrir o mês, anular e reabrir o ajuste, voltar a uma tabela) barram o registro de outra pessoa', async () => {
+  arma73();
+  try {
+    r73(`__srC673=senhasRuntime; senhasRuntime=function(){ var m=__srC673()||{}; m['s-marcia']={role:'gestao', nome:'Márcia Gestora Teste'}; m['s-dir']={role:'diretoria', nome:'Diretor Teste'};
+      m['s-homo']={role:'gestao', nome:'Adriana Teste'}; m['s-pag']={role:'consultora', nome:'Paula Consultora Teste', paginas:['recebimentos','paineloperacao','painel-diretoria']}; return m; };`);
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`); entrega73();
+    const recusa = async (oque) => {
+      const n0 = escs73().length;
+      for (const [senha, nome] of [['s-marcia', 'Márcia Gestora Teste'], ['s-dir', 'Diretor Teste'], ['s-homo', 'Adriana Teste'], ['s-pag', 'Paula Consultora Teste']]) {
+        await toca73(senha); igual([aviso73(), passo73()], ['Só a Adriana ' + oque + ': essa senha é de ' + nome + '. Nada foi gravado.', 'conferir'], oque + ' / ' + nome);
+      }
+      igual(escs73().length, n0, oque + ': nada gravado');
+      await toca73(SENHA_ADR73); igual(passo73(), 'pronto', oque + ': a Adriana assina'); r73('corrFechar()');
+    };
+    const forja = async (chamada, quem, erroEsperado) => {
+      const n0 = escs73().length;
+      await abre73(chamada);
+      r73(`__gR=CORR_ATUAL.op.gravar; __rR=corrRegistro(CORR_ATUAL.op, [], ${JSON.stringify(quem)}, 'conferido com o sistema da loja', Date.now()); __xR=null; Promise.resolve(__gR(__rR)).then(function(x){ __xR=x; }); corrFechar();`);
+      await esp73();
+      const x = J73('__xR');
+      igual([x.ok, erroEsperado ? x.erro : x.barrou, escs73().length], [false, erroEsperado || true, n0], chamada + ' com ' + JSON.stringify(quem));
+    };
+    await abre73(`recAjusteAbrir('2026-07')`); r73(`corrToque('continuar', {valores:['Somar ao mês', '170,00', 'diária avulsa da Lua lançada sem valor']})`); await recusa('lança ajuste no Recebimentos');
+    const aid = Object.keys(J73(`__get657('daycare/recebimentos/2026-07/ajustes')`))[0];
+    await forja(`recAjusteAnularAbrir('${aid}', '2026-07')`, { nome: 'Gestora Teste', papel: 'gestao' });
+    await abre73(`recAjusteAnularAbrir('${aid}', '2026-07')`); await recusa('anula ajuste do Recebimentos');
+    await forja(`recAjusteReabrirAbrir('${aid}', '2026-07')`, { nome: 'Adriana Teste', papel: 'diretoria' });
+    await abre73(`recAjusteReabrirAbrir('${aid}', '2026-07')`); await recusa('reabre ajuste do Recebimentos');
+    await abre73(`recFecharAbrir('2026-07')`); r73(`corrToque('continuar', {valores:['fechado']})`); await recusa('fecha o mês');
+    await forja(`recReabrirAbrir('2026-07')`, { nome: 'Márcia Gestora Teste', papel: 'gestao' });
+    await abre73(`recReabrirAbrir('2026-07')`); await recusa('reabre o mês');
+    await salva73({ cfgPl_Gold_1: '399,00' }); await recusa('muda a tabela de planos');
+    r73('cfgPlanosRender();');
+    const hid = Object.keys(J73(`__get657('daycare/config/tabela-planos-historico')`))[0];
+    await forja(`cfgPlanosVoltarAbrir('${hid}')`, { nome: 'Gestora Teste', papel: 'gestao' }, 'só a Adriana assina a tabela de planos');
+    await abre73(`cfgPlanosVoltarAbrir('${hid}')`); await recusa('muda a tabela de planos');
+    igual(Object.values(J73(`__get657('daycare/recebimentos/2026-07/eventos')`)).map((e) => [e.acao, e.registro.por]).sort(), [['fechou', 'Adriana Teste'], ['reabriu', 'Adriana Teste']]);
+  } finally { r73('if(typeof __srC673==="function") senhasRuntime=__srC673;'); solta73(); }
+});
+
+provaAsync('6.73 QA re-gate 3 · QA673R3-05 (AC5.2 com a S8-P2 — a ordem da razão) — o Biscoito já inativo no fechamento (continua em julho: R$ 2.154,00) e o pagamento dele ANULADO depois: «Biscoito — …: R$ 1.077,00 → fora (pagamento anulado)», e não «fora (inativo …)» — com a S8-P2, inativo sozinho não tira linha nenhuma', async () => {
+  arma73();
+  try {
+    const fichas = JULHO73(); fichas[0].ex.inativo = 'Sim'; fichas[0].ex.dataSaida = '2026-07-20';
+    cena73(fichas, { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    igual(await fecha73('2026-07'), 'pronto');
+    igual(total73(card73('2026-07')), 'R$ 2.154,00', 'o inativo continua em julho (S8-P2)');
+    r73('pelAtual=PELUDINHOS[0]; pelAtualIdx=0;');
+    await abre73('planoAnularAtualAbrir()'); await toca73(SENHA657, 'o pagamento foi lançado em dobro'); r73('corrFechar()');
+    const m = QC73.mudou('2026-07');
+    assert.ok(m.indexOf('Mudou depois do fechamento (1)') === 0 && /Biscoito — Gold · trimestral · 1x por semana · pago em 05\/07\/2026: R\$ 1\.077,00 → fora \(pagamento anulado\)/.test(m)
+      && m.indexOf('A conta ao vivo hoje daria R$ 1.077,00 (diferença de -R$ 1.077,00).') > 0, m);
+  } finally { solta73(); }
+});
+
+// ---- REQ-003 do re-gate 3: a causa certa de cada linha que sai ---------------------------------------------------------------
+provaAsync('6.73 P48 (AC5.2; re-gate 3, REQ-003) — «Mudou depois do fechamento» diz a causa certa de cada linha que sai: a ficha inativa e EXCLUÍDA, «fora (ficha excluída em 10/10/2026)» (sem a data gravada, «fora (ficha excluída)»); o plano atual da ficha que virou morador, hóspede ou avulso, «fora (virou Morador(a) Zêluz)», «(virou Hóspede (AuAulândia))» e «(virou Auluno Avulso)»; «inativo» nunca é a razão (com a S8-P2, inativo sozinho não tira linha); a ativa excluída continua no mês (OBS-C, como na base); a renovação anterior de quem virou morador continua no mês em que foi paga', async () => {
+  arma73();
+  try {
+    // setembro fechado com a Lupa (inativa, Gold 06/09, R$ 1.077,00) e a Duda (Silver 05/09, R$ 387,00): R$ 1.464,00 (a cena da QA673R3-02)
+    cena73([QC73.carteiraS8()[0], QC73.carteiraS8()[8]], { login: GESTORA73 }); r73(`REC_MES='2026-09';`);
+    igual(await fecha73('2026-09'), 'pronto');
+    igual(total73(card73('2026-09')), 'R$ 1.464,00');
+    // (a) a Duda inativa e excluída, com a data gravada pelo «Excluir» (excluidoEm): a causa é a exclusão, não o «inativo»
+    r73(`var d=pelCadCache['duda__dani teste']; d.inativo='Sim'; d.dataSaida='2026-10-10'; d.excluido=true; d.motivoExclusao='cadastro em dobro da recepção'; d.excluidoEm=${T673};`);
+    let m = QC73.mudou('2026-09');
+    assert.ok(m.indexOf('Mudou depois do fechamento (1)') === 0 && m.indexOf('Duda — Silver · mensal · 1x por semana · pago em 05/09/2026: R$ 387,00 → fora (ficha excluída em 10/10/2026)') > 0
+      && m.indexOf('A conta ao vivo hoje daria R$ 1.077,00 (diferença de -R$ 387,00).') > 0 && m.indexOf('inativo') < 0, '(a) ' + m);
+    // (b) sem a data da exclusão (a ficha excluída por uma versão antiga): só «ficha excluída»
+    r73(`delete pelCadCache['duda__dani teste'].excluidoEm;`);
+    m = QC73.mudou('2026-09');
+    assert.ok(m.indexOf('Duda — Silver · mensal · 1x por semana · pago em 05/09/2026: R$ 387,00 → fora (ficha excluída)') > 0 && m.indexOf('inativo') < 0, '(b) ' + m);
+    // (c) a ativa excluída continua contando no mês (como na base; OBS-C, com destino à 6.77): nada muda
+    r73(`var d=pelCadCache['duda__dani teste']; delete d.inativo; delete d.dataSaida;`);
+    m = QC73.mudou('2026-09');
+    assert.ok(m.indexOf('Mudou depois do fechamento (0)') === 0 && m.indexOf('Nada mudou desde o fechamento.') > 0, '(c) ' + m);
+    // (d) a Lupa (inativa) muda de categoria: o plano atual dela sai, com a categoria nova; nunca «inativo»
+    r73(`var d=pelCadCache['duda__dani teste']; delete d.excluido; delete d.motivoExclusao;`);
+    for (const [cat, rot] of [['morador', 'Morador(a) Zêluz'], ['hospede', 'Hóspede (AuAulândia)'], ['avulso', 'Auluno Avulso']]) {
+      r73(`pelCadCache['lupa__lia teste'].categoria='${cat}';`);
+      m = QC73.mudou('2026-09');
+      assert.ok(m.indexOf('Mudou depois do fechamento (1)') === 0 && m.indexOf('Lupa — Gold · trimestral · 1x por semana · pago em 06/09/2026: R$ 1.077,00 → fora (virou ' + rot + ')') > 0
+        && m.indexOf('A conta ao vivo hoje daria R$ 387,00 (diferença de -R$ 1.077,00).') > 0 && m.indexOf('inativo') < 0, '(d) ' + cat + ': ' + m);
+    }
+    // (e) o Nilo (inativo): julho fechado com a renovação anterior dele (R$ 387,00); ele vira morador depois — a renovação anterior
+    // continua no mês em que foi paga («Nada mudou»); agosto fechado com o plano atual dele: este sai, «virou Morador(a) Zêluz»
+    cena73([QC73.carteiraS8()[1]], { login: GESTORA73 }); r73(`REC_MES='2026-07';`);
+    igual(await fecha73('2026-07'), 'pronto'); igual(total73(card73('2026-07')), 'R$ 387,00');
+    r73(`REC_MES='2026-08';`); igual(await fecha73('2026-08'), 'pronto'); igual(total73(card73('2026-08')), 'R$ 387,00');
+    r73(`pelCadCache['nilo__nei teste'].categoria='morador';`);
+    const jul = QC73.mudou('2026-07'), ago = QC73.mudou('2026-08');
+    assert.ok(jul.indexOf('Mudou depois do fechamento (0)') === 0, '(e) julho: ' + jul);
+    assert.ok(ago.indexOf('Mudou depois do fechamento (1)') === 0 && ago.indexOf('Nilo — Silver · mensal · 1x por semana · pago em 01/08/2026: R$ 387,00 → fora (virou Morador(a) Zêluz)') > 0, '(e) agosto: ' + ago);
+    // a razão, direto (PURA sobre o cadastro): a linha de uma renovação anterior (a data não é a do plano atual) não leva a categoria
+    igual([r73(`recRazaoSaiu({chave:'nilo__nei teste', data:'2026-07-01', nome:'Nilo'}, {})`), r73(`recRazaoSaiu({chave:'nilo__nei teste', data:'2026-08-01', nome:'Nilo'}, {})`)],
+      ['', 'virou Morador(a) Zêluz']);
+  } finally { solta73(); }
+});
+
+// ---- a junção com a 6.76 publicada (3d6910b) -----------------------------------------------------------------------------------
+// A senha fixa trocada como a 6.76 guarda no banco: só o hash (sha256 da senha + sal) e o sal, 64 e 32 letras hexadecimais.
+const FIXA73 = (senha, extra) => { const c = require('crypto'), sal = c.createHash('md5').update('sal-' + senha).digest('hex');
+  return Object.assign({ hash: c.createHash('sha256').update(senha + sal).digest('hex'), sal: sal, alg: 'sha256', trocadaEm: T673, trocadaPor: 'Teste' }, extra || {}); };
+// a régua de senha de verdade no sandbox da 6.73 (a ARMA657 troca o senhasRuntime por um mapa de mentira): as senhas fixas do app
+// (a '1101' é a da Adriana, a '0902' a da Márcia), o Time em MONITORES e o banco das senhas fixas
+const REGUA73 = (time, banco) => r73(`senhasRuntime=__bk657.sr; MON_BANCO=null; MON_PENDENTE=false; MON_DESATIVADOS=[]; MONITORES=${time || '[]'}; SENHAS_FIXAS_BANCO=${banco || '{}'};`);
+const ADR73 = 'Adriana · Gestão Total';
+provaAsync('6.73 × 6.76 · J1 (S8-P7 a P11 na junção, sem dublê; OBS-E do re-gate 3) — as sete portas «só a Adriana» com a régua da 6.76 de verdade (as senhas fixas do app; a da Adriana trocada e guardada no banco como hash e sal): a nova assina as sete, e o registro e o rastro levam «Adriana · Gestão Total (Gestão)» (o papel da Gestão, o mesmo que a função que grava confere); a «1101» do código, depois da troca, é de ninguém; a da Márcia e a de uma Gestora do Time: «Só a Adriana …: essa senha é de …»; a de quem foi desativado, de ninguém; nada gravado em nenhuma recusa; a provisória da Adriana, com a frase da provisória (antes da conferência da Adriana); sem o banco e sem a cópia, a «1101» com a frase do banco; o perfil da Adriana vem da lista fixa quando o mapa tira a «1101»', async () => {
+  arma73();
+  r73('__sfbJ1=SENHAS_FIXAS_BANCO; __srJ1=senhasRuntime; __moJ1=MONITORES;');
+  try {
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`); entrega73();
+    REGUA73(`[{id:'g73', nome:'Gabi Gestora Teste', role:'gestao', senha:'7301'}, ${X676_DORA}]`, `{adriana:${JSON.stringify(FIXA73('8642'))}}`);
+    // o mapa das senhas sem a «1101» (a Adriana trocou), e o perfil dela pela lista fixa
+    igual([J73("senhasRuntime()['1101']||null"), J73("(senhasRuntime()['0902']||{}).nome"), J73('corrAdrianaPerfil()')], [null, 'Márcia · Gestora', { nome: ADR73, papel: 'gestao' }]);
+    const recusa = async (oque) => {
+      const n0 = escs73().length;
+      await toca73('1101'); igual([aviso73(), passo73()], [X676_NINGUEM, 'conferir'], oque + ' / a 1101 depois da troca');
+      await toca73('0902'); igual([aviso73(), passo73()], ['Só a Adriana ' + oque + ': essa senha é de Márcia · Gestora. Nada foi gravado.', 'conferir'], oque + ' / a Márcia');
+      await toca73('7301'); igual([aviso73(), passo73()], ['Só a Adriana ' + oque + ': essa senha é de Gabi Gestora Teste. Nada foi gravado.', 'conferir'], oque + ' / a Gestora do Time');
+      await toca73('s-dora676'); igual([aviso73(), passo73()], [X676_NINGUEM, 'conferir'], oque + ' / a desativada');
+      igual(escs73().length, n0, oque + ': nada gravado');
+      await toca73('8642'); igual(passo73(), 'pronto', oque + ': a Adriana assina com a senha trocada');
+      assert.ok(cartaz73().indexOf('assinado por ' + ADR73 + ' (Gestão)') >= 0, oque + ': o rastro — ' + cartaz73());
+      r73('corrFechar()');
+    };
+    // 1. lançar, 2. anular e 3. reabrir o ajuste
+    await abre73(`recAjusteAbrir('2026-07')`); r73(`corrToque('continuar', {valores:['Somar ao mês', '170,00', 'diária avulsa da Lua lançada sem valor']})`);
+    await recusa('lança ajuste no Recebimentos');
+    const aj = J73(`__get657('daycare/recebimentos/2026-07/ajustes')`), aid = Object.keys(aj)[0];
+    igual([Object.keys(aj).length, aj[aid].registro.por, aj[aid].registro.papel], [1, ADR73, 'gestao']);
+    await abre73(`recAjusteAnularAbrir('${aid}', '2026-07')`); await recusa('anula ajuste do Recebimentos');
+    await abre73(`recAjusteReabrirAbrir('${aid}', '2026-07')`); await recusa('reabre ajuste do Recebimentos');
+    igual(Object.values(J73(`__get657('daycare/recebimentos/2026-07/ajustes/${aid}/anulacoes')`)).map((x) => [x.acao, x.por, x.papel]).sort(), [['anular', ADR73, 'gestao'], ['reabrir', ADR73, 'gestao']]);
+    // 4. fechar e 5. reabrir o mês
+    await abre73(`recFecharAbrir('2026-07')`); r73(`corrToque('continuar', {valores:['fechado']})`); await recusa('fecha o mês');
+    assert.ok(txt73(card73('2026-07')).indexOf('Fechado em 10/10/2026 às 10:00 por ' + ADR73 + ': ') >= 0, 'o quadro do mês fechado');
+    await abre73(`recReabrirAbrir('2026-07')`); await recusa('reabre o mês');
+    igual(Object.values(J73(`__get657('daycare/recebimentos/2026-07/eventos')`)).map((e) => [e.acao, e.registro.por, e.registro.papel]).sort(), [['fechou', ADR73, 'gestao'], ['reabriu', ADR73, 'gestao']]);
+    // 6. salvar a tabela e 7. voltar a uma tabela
+    await salva73({ cfgPl_Gold_1: '399,00' }); await recusa('muda a tabela de planos');
+    igual(J73(`__get657('daycare/config/tabela-planos')`).quem, ADR73);
+    r73('cfgPlanosRender();');
+    const hid = Object.keys(J73(`__get657('daycare/config/tabela-planos-historico')`))[0];
+    await abre73(`cfgPlanosVoltarAbrir('${hid}')`); await recusa('muda a tabela de planos');
+    igual(Object.keys(J73(`__get657('daycare/config/tabela-planos-historico')`)).length, 2);
+    // a provisória da Adriana (a Gestão deu, ela ainda não trocou): a frase da provisória, antes da conferência da Adriana; a 1101 também não
+    r73(`SENHAS_FIXAS_BANCO={adriana:${JSON.stringify(FIXA73('5555', { provisoria: true }))}};`);
+    const n0 = escs73().length;
+    await abre73(`recFecharAbrir('2026-07')`); r73(`corrToque('continuar', {valores:['fechado']})`);
+    await toca73('5555'); igual([aviso73(), passo73()], [X676_PROV, 'conferir'], 'a provisória');
+    await toca73('1101'); igual([aviso73(), passo73()], [X676_NINGUEM, 'conferir'], 'a 1101 com a provisória guardada');
+    // sem o banco e sem a cópia do aparelho: a senha do código não assina (SEC-008 da 6.76)
+    r73(`SENHAS_FIXAS_BANCO=null; if(__ls657) delete __ls657.zeluz_senhas_fixas;`);
+    await toca73('1101'); igual([aviso73(), passo73()], [X676_SEMB, 'conferir'], 'sem o banco');
+    igual(escs73().length, n0, 'nada gravado');
+    // com o banco de volta e nenhuma troca: a 1101 do código é a da Adriana e assina, com o mesmo nome e o mesmo papel
+    r73('SENHAS_FIXAS_BANCO={};');
+    await toca73('1101'); igual(passo73(), 'pronto', 'a 1101 sem troca');
+    assert.ok(cartaz73().indexOf('assinado por ' + ADR73 + ' (Gestão)') >= 0, cartaz73());
+    r73('corrFechar()');
+  } finally { r73('SENHAS_FIXAS_BANCO=__sfbJ1; senhasRuntime=__srJ1; MONITORES=__moJ1;'); solta73(); }
+});
+
+provaAsync('6.73 × 6.76 · J2 (as listas fechadas da 6.76: as 8 portas novas da 6.73 no cartaz) — «Desfazer esta cobrança», «Não renova» e «Reabrir» (a própria senha), e «Lançar um ajuste», «Anular»/«Reabrir este ajuste», «Fechar» e «Reabrir» o mês e «Salvar a tabela»/«Voltar a esta tabela» (só a Adriana): cada uma abre o cartaz da 6.57 e assina pela régua única (corrConfirmar → corrAssinar → senhaQuem); a provisória ainda não trocada, a senha do código sem o banco e sem a cópia e a de quem foi desativado são recusadas, cada uma com a sua frase e sem gravar nada (nas portas «só a Adriana», antes da conferência da Adriana); depois, a senha certa assina', async () => {
+  const DA673 = ['renovCobrancaDesfazerAbrir', 'renovNaoRenovaAbrir', 'renovNaoRenovaReabrirAbrir', 'recFecharAbrir', 'recReabrirAbrir', 'recAjusteAbrir', 'recAjusteMarcar', 'tabelaPlanosAbrir'];
+  arma73();
+  try {
+    // as 8 abrem o cartaz da 6.57 (o texto de cada uma chama o corrAbrir) e o cartaz assina só pela corrAssinar
+    igual(DA673.filter((n) => !/\bcorrAbrir\(/.test(r73('String(' + n + ')'))), []);
+    const cc = r73('String(corrConfirmar)');
+    igual([(cc.match(/corrAssinar\(/g) || []).length, cc.indexOf('if(!ass.ok){') > 0 && cc.indexOf('if(!ass.ok){') < cc.indexOf('op.gravar'), cc.indexOf('corrSenhaDaAdriana(senha)') > cc.indexOf('corrAssinar(')], [1, true, true]);
+    const res = {};
+    // a própria senha: a cobrança desfeita, o «Não renova» e a volta à cobrança (a Consultora Bia assina)
+    cena73([TODDY73(), NINA73()]);
+    await cobra73(0, 'WhatsApp', 'vai_pensar');
+    await abre73(`renovCobrancaDesfazerAbrir(0, '${contatos73(0)[0]._id}')`); res.cobrancaDesfazer = await x676Portas(r73, esp73, MOT73, 's-bia'); r73('corrFechar()');
+    cena73([NINA73(), TODDY73()]);
+    await abre73('renovNaoRenovaAbrir(0)'); res.naoRenova = await x676Portas(r73, esp73, 'o tutor disse que vai se mudar', 's-bia'); r73('corrFechar()');
+    await abre73(`renovNaoRenovaReabrirAbrir(0, '${contatos73(0)[0]._id}')`); res.naoRenovaReabrir = await x676Portas(r73, esp73, 'o tutor decidiu renovar o plano', 's-bia'); r73('corrFechar()');
+    // só a Adriana: o ajuste (lançar, anular, reabrir), o mês (fechar, reabrir) e a tabela (salvar, voltar)
+    cena73(JULHO73(), { login: GESTORA73 }); r73(`REC_MES='2026-07';`); entrega73();
+    await abre73(`recAjusteAbrir('2026-07')`); r73(`corrToque('continuar', {valores:['Somar ao mês', '170,00', 'diária avulsa da Lua lançada sem valor']})`);
+    res.ajusteLancar = await x676Portas(r73, esp73, MOT73, SENHA_ADR73); r73('corrFechar()');
+    const aid = Object.keys(J73(`__get657('daycare/recebimentos/2026-07/ajustes')`))[0];
+    await abre73(`recAjusteAnularAbrir('${aid}', '2026-07')`); res.ajusteAnular = await x676Portas(r73, esp73, MOT73, SENHA_ADR73); r73('corrFechar()');
+    await abre73(`recAjusteReabrirAbrir('${aid}', '2026-07')`); res.ajusteReabrir = await x676Portas(r73, esp73, MOT73, SENHA_ADR73); r73('corrFechar()');
+    await abre73(`recFecharAbrir('2026-07')`); r73(`corrToque('continuar', {valores:['fechado']})`); res.mesFechar = await x676Portas(r73, esp73, MOT73, SENHA_ADR73); r73('corrFechar()');
+    await abre73(`recReabrirAbrir('2026-07')`); res.mesReabrir = await x676Portas(r73, esp73, MOT73, SENHA_ADR73); r73('corrFechar()');
+    await salva73({ cfgPl_Gold_1: '399,00' }); res.tabelaSalvar = await x676Portas(r73, esp73, 'a tabela comercial de 2027 chegou', SENHA_ADR73); r73('corrFechar()');
+    r73('cfgPlanosRender();');
+    const hid = Object.keys(J73(`__get657('daycare/config/tabela-planos-historico')`))[0];
+    await abre73(`cfgPlanosVoltarAbrir('${hid}')`); res.tabelaVoltar = await x676Portas(r73, esp73, 'a tabela de 2027 ainda não vale', SENHA_ADR73); r73('corrFechar()');
+    const esperado = {}; Object.keys(res).forEach((k) => { esperado[k] = x676Esperado(); });
+    igual(res, esperado);
+    igual(Object.keys(res).length, 10, 'as 8 portas (o ajuste por dois caminhos: anular e reabrir; a tabela por dois: salvar e voltar)');
+  } finally { solta73(); }
+});
+}
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< 6.73 (fim)
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
