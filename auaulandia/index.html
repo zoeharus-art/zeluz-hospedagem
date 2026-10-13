@@ -2573,7 +2573,7 @@
   .mcr-bt-plantao{display:block;margin-top:8px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:10px;padding:8px 14px;min-height:44px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
   .mcr-bt-entrada{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue);font-weight:800;min-height:44px}
 </style>
-<link rel="stylesheet" href="historico-checkins.css?v=2026-10-13-06">
+<link rel="stylesheet" href="historico-checkins.css?v=2026-10-13-07">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -5206,13 +5206,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-13-06"></script>
+<script src="resposta-tutor.js?v=2026-10-13-07"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-13-06"></script>
+<script src="painel-logica.js?v=2026-10-13-07"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5224,10 +5224,10 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-13-06"></script>
-<script src="autoria-logica.js?v=2026-10-13-06"></script>
-<script src="historico-checkins.js?v=2026-10-13-06"></script>
-<script src="historico-checkins-pdf.js?v=2026-10-13-06"></script>
+<script src="financeiro-logica.js?v=2026-10-13-07"></script>
+<script src="autoria-logica.js?v=2026-10-13-07"></script>
+<script src="historico-checkins.js?v=2026-10-13-07"></script>
+<script src="historico-checkins-pdf.js?v=2026-10-13-07"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -27222,7 +27222,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-13-06';
+  const APP_VERSAO='2026-10-13-07';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -28408,7 +28408,7 @@
   //  · Agenda: ainda não existe ("em breve");
   //  · Início: a visão geral do dia vem com o papel (e o monitor não a tem).
   const NAV_PAGINAS_FORA='Não se concedem por aqui: a mesa de cada papel (O que fazer hoje, Meu Dashboard e os dashboards das Consultoras, da Amanda, da Márcia e da Adriana), '
-    +'Início (vem com o papel), Escala e plano do dia (é da Márcia), Financeiro do plantão, Configurações (senhas do sistema), Abertura do dia (vai para quem abre a casa) e Agenda (em breve).';
+    +'Início (vem com o papel), Escala e plano do dia (é da Márcia), Financeiro do plantão, Configurações (senhas do sistema), Abertura do dia (vai para quem abre a casa), Agenda (em breve) e Histórico de hospedagens (vem pelo papel de Consultora, Gestão ou Diretoria).';
   const NAV_PAGINAS_KEYS=NAV_PAGINAS_ALL.reduce((a,g)=>a.concat((g.itens||[]).map(x=>x.k)),[]);
   // O QUE O PAPEL JÁ MOSTRA, sem marcação nenhuma (QA da 6.19, achado 1). Vale só para as telas
   // que SÓ LIBERAM — as 8 de NAV_PAGINAS_SO_LIBERA e as 4 da tabela PERM_MENU (Hoje na Zêluz,
@@ -83424,7 +83424,7 @@
   async function coEnviarWhats(){
     var st=document.getElementById('co-status'); if(!coEstadia||!coEstadia.checkout||typeof coEstadia.checkout!=='object'||Array.isArray(coEstadia.checkout)){ if(typeof zAlertao==='function') zAlertao('FINALIZE A CONFERÊNCIA PRIMEIRO',['O PDF final para o tutor só existe depois de salvar a Etapa 4. O rascunho não será enviado como comprovante.'],{botao:'Entendi'}); return null; }
     try{ var d=await coDocumentoSaida(); if(coEstadia!==d.est||coEstadiaId!==d.id) throw new Error('A estadia mudou durante a geração; nenhum arquivo foi compartilhado.'); var f=null; try{ f=new File([d.blob],d.nome,{type:'application/pdf'}); }catch(e){ f=null; } /* Aparelho sem suporte a File: a alternativa é baixar o Blob abaixo. */ if(f&&navigator.canShare&&navigator.canShare({files:[f]})&&navigator.share){ try{ await navigator.share({files:[f],title:'Check-out AuAulândia — '+(d.est.nome||''),text:'Comprovante de check-out'}); if(st){st.style.color='var(--crm-ok)';st.textContent='✅ PDF pronto para enviar. Escolha o WhatsApp e o contato do tutor.';} return d; }catch(e){ if(e&&e.name==='AbortError') return null; } } var ok=ciBaixarBlob(d.blob,d.nome); if(st) st.textContent=ok?'PDF baixado. Anexe o arquivo manualmente no WhatsApp.':'Não consegui compartilhar nem baixar o PDF.'; return ok?d:null;
-    }catch(e){ if(st){st.style.color='var(--crm-critico)';st.textContent='⚠️ Não consegui preparar o PDF: '+((e&&e.message)||e);} return null; }
+    }catch(e){ if(typeof console!=='undefined'&&typeof console.error==='function') console.error('coEnviarWhats: falha ao preparar o PDF',e); if(st){st.style.color='var(--crm-critico)';st.textContent='⚠️ Não consegui preparar o PDF para enviar. Tente gerar o PDF novamente ou avise a Gestão.';} return null; }
   }
 
   /* ====================================================================================

@@ -1,6 +1,6 @@
 # Histórico de hospedagens
 
-Versão: `2026-10-13-06`. Consulta das quatro etapas, integrada aos componentes e painéis existentes. A publicação foi autorizada pela responsável pelo projeto.
+Versão: `2026-10-13-07`. Consulta das quatro etapas, integrada aos componentes e painéis existentes. A publicação foi autorizada pela responsável pelo projeto.
 
 ## Acesso da equipe
 
@@ -52,3 +52,9 @@ Os testes dedicados cobrem interface, autorização dos adaptadores, seleção d
 ## Correção de confiabilidade — 06
 
 O preparo da bolsa e o fechamento da conferência de entrada preservam a estadia e a autoria selecionadas no início do salvamento. Uma resposta atrasada não altera nem fecha uma ficha que foi aberta depois. As marcas enviadas da bolsa são uma cópia do momento da confirmação. Toques repetidos na mesma confirmação aguardam a gravação já em andamento; outra hospedagem pode ser atendida normalmente. Uma falha libera a tentativa seguinte. Regras de conferência, fotos, assinatura, pontuação e visual permanecem iguais.
+
+## Fechamento da revisão — 07
+
+O registro de navegação do histórico foi alinhado ao controle de acesso existente, preservando os papéis autorizados. Os arquivos JavaScript da consulta recebem a versão na URL para acompanhar atualizações em aparelhos com cache. A falha ao preparar um PDF apresenta uma mensagem compreensível na tela, mantendo detalhes técnicos apenas no diagnóstico. Nenhum dado de hospedagem ou estilo global foi alterado.
+
+O cenário de setembro da Lista de troca usa seu próprio relógio de teste e o restaura ao terminar. As comparações estruturais foram conciliadas apenas com as alterações autorizadas do histórico e da confiabilidade, preservando os testes de comportamento. As decisões financeiras reservadas e os rascunhos de reformulação continuam separados das correções publicadas.

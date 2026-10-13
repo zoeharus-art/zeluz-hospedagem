@@ -4926,7 +4926,8 @@ const CHAVES619 = JSON.parse(run('JSON.stringify(NAV_PAGINAS_KEYS)'));
 // O que está no menu e NÃO se concede pelo Time — cada um tem de estar DITO na tela do Time.
 const FORA619 = { inicio: 'Início', mesa: 'O que fazer hoje', painelmeu: 'Meu Dashboard', consultoras: 'das Consultoras',
   'painel-amanda': 'da Amanda', paineloperacao: 'da Márcia', 'painel-diretoria': 'da Adriana', planodia: 'Escala e plano do dia',
-  acerto: 'Financeiro do plantão', config: 'Configurações (senhas do sistema)', abertura: 'Abertura do dia', agenda: 'Agenda (em breve)' };
+  acerto: 'Financeiro do plantão', config: 'Configurações (senhas do sistema)', abertura: 'Abertura do dia', agenda: 'Agenda (em breve)',
+  historicocheckins: 'Histórico de hospedagens (vem pelo papel de Consultora, Gestão ou Diretoria)' };
 prova('o leitor do menu enxerga o menu de verdade (Lançamentos do dia mora em Central Zêluz › Day Care)', () => {
   const d = MENU619.find((x) => x.k === 'dashdc');
   assert.ok(MENU619.length >= 35 && d && d.t === 'Lançamentos do dia' && d.grupo === 'Central Zêluz · Day Care', JSON.stringify(d));
@@ -5753,7 +5754,10 @@ prova('a recarga do dia reaproveita a regra da versão nova e as travas ficam na
   assert.ok(/setInterval\(function\(\)\{\n(?:    try\{ medOntemBatida\(Date\.now\(\)\); \}[^\n]*\n)?(?:    \/\/[^\n]*\n    try\{ medDespRedesenhar\(Date\.now\(\)\); \}[^\n]*\n)?    try\{ zDiaTelaAvancar\(\); \}catch\(e\)\{\}[^\n]*\n    try\{ zViradaDoDiaTick\(\); \}catch\(e\)\{\}[^\n]*\n  \}, 15000\)/.test(src), 'o vigia de 15 s está ligado');
   const travas = src.match(/if\(typeof appDiaVelho==='function' && appDiaVelho\(\)\) return Promise\.resolve\(/g) || [];
   assert.strictEqual(travas.length, 5, 'fotografia da turma, falta automática, dashAutoSincronizar, dashAutoRodar e a baixa da reposição pelo check-in (6.25)');
-  assert.ok(/const APP_VERSAO='2026-10-0(1-0[123]|2-0[1-9]|6-0[1-9]|7-0[1-9]|8-0[1-9]|9-(0[1-9]|[1-9][0-9]))';/.test(src)); // a partir de 09/10 a versão do dia passa de -09 (publicação da 6.52: -10)
+  const vApp = /const APP_VERSAO='(\d{4})-(\d{2})-(\d{2})-(\d{2})';/.exec(src);
+  assert.ok(vApp, 'APP_VERSAO precisa ter YYYY-MM-DD-NN');
+  const dataApp = new Date(Date.UTC(Number(vApp[1]), Number(vApp[2]) - 1, Number(vApp[3])));
+  assert.ok(dataApp.getUTCFullYear() === Number(vApp[1]) && dataApp.getUTCMonth() === Number(vApp[2]) - 1 && dataApp.getUTCDate() === Number(vApp[3]), 'data válida na APP_VERSAO');
 });
 // ================================================================== 6.22 — a renovação encantadora
 console.log('\n6.22 — Mensagem de renovação: o texto da Adriana com o prazo do plano, "da Amora" pela ficha, "manter ou aumentar" e o convite ao trimestral (01/out/2026)');
@@ -10854,9 +10858,12 @@ prova('6.36 — QA (N1): os arquivos de conta carregam com ?v= igual à APP_VERS
   const html = fs.readFileSync(APP, 'utf8');
   const ver = (/const APP_VERSAO='(\d{4}-\d{2}-\d{2}-\d{2})';/.exec(html) || [])[1];
   assert.ok(ver, 'sem APP_VERSAO');
-  ['resposta-tutor.js', 'painel-logica.js', 'financeiro-logica.js'].forEach((f) =>
-    assert.ok(html.indexOf('<script src="' + f + '?v=' + ver + '"></script>') > 0, f + ' sem ?v=' + ver));
-  igual((html.match(/<script src="(?!https?:)/g) || []).length, 3, 'nenhum outro arquivo de fora sem o ?v=');
+  // commit d1b195a: além das três contas, os módulos de autoria e histórico são externos;
+  // cada um tem de levar exatamente a versão do index. Lista fechada: módulo novo exige prova nova.
+  const modulos = ['resposta-tutor.js', 'painel-logica.js', 'financeiro-logica.js', 'autoria-logica.js', 'historico-checkins.js', 'historico-checkins-pdf.js'];
+  const externos = (html.match(/<script src="(?!https?:)([^"]+)"><\/script>/g) || []).map((tag) => /src="([^"]+)"/.exec(tag)[1]);
+  igual((html.match(/<script src="(?!https?:)/g) || []).length, modulos.length, 'nenhum script externo fica fora da lista fechada');
+  igual(externos, modulos.map((f) => f + '?v=' + ver), 'todos os arquivos externos são conhecidos e versionados');
   // a ordem continua: os três antes do script grande
   assert.ok(html.indexOf('<script src="financeiro-logica.js?v=') < html.indexOf('// ---- Firebase (banco gratuito que já temos) ----'));
 });
@@ -39765,7 +39772,8 @@ provaAsync('6.65 P22 (AC13, AC14, guarda) — a área protegida, as permissões,
   igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN('JSON.stringify(PERM)')), runN('VERMIF_PROX')],
     // 6.67: a PERM ganhou 'lancar-manual-plantao', 'trabalha-plantao' e 'conferir-checkin' (a story manda as três capacidades
     // novas: AC1.1, AC2.2 e «quem confere»); as outras capacidades, a área protegida e os 120 dias não mudaram (a 6.67 P34 confere).
-    [155, '5bac486c669007ec', '02898b691c0a839c', 120], 'a área protegida (nomes e texto), as permissões e os 120 dias');
+    // commit d1b195a: soma somente historico-checkins (gestao/diretoria/consultora); as permissões legadas e as 155 funções seguem guardadas.
+    [155, '5bac486c669007ec', '3fcf802b38bbf4f2', 120], 'a área protegida (nomes e texto), as permissões e os 120 dias');
   const src = fs.readFileSync(APP, 'utf8');
   const i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
   igual([h(src.slice(i, j)), h(src.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
@@ -40407,7 +40415,8 @@ provaAsync('6.65 QA Q24 — o que não pode mudar: dose pelo peso (6.59), exame 
   const novo = fs.readFileSync(APP, 'utf8');
   const h = (x) => require('crypto').createHash('sha256').update(String(x)).digest('hex').slice(0, 16);
   const fonte = (src, nome) => { const i = src.indexOf('function ' + nome + '('); if (i < 0) return null; let d = 0, j = src.indexOf('{', i); for (let k = j; k < src.length; k++) { if (src[k] === '{') d++; else if (src[k] === '}') { d--; if (!d) return src.slice(i, k + 1); } } return null; };
-  const BASE = {"fn": {"vermAvaliar": "dbb338c2bf7e64b5", "vermFaixaKg": "30b015b84cf0ada4", "vermMargemKg": "17d894cb494ce621", "vermNumTexto": "fcf2a669fa302195", "vermNumLer": "f3af1b973b05be92", "vermDoseDe": "ca0de65413eef7e3", "vermPertoDaVirada": "b40da171c0d5df85", "vermFrasePeso": "34a4fcbaeed5260b", "vermAvaliarFicha": "b33c7434482bf287", "vermFichaTextoHTML": "c750d8f6a0fe1eed", "vermPreMarcar": "9c3b3baca86cbcb3", "vermBlocoPainelHTML": "fa6a626a6d27de72", "dashLancar": "6267457666ad76f3", "vermPreMarcarVenc": "47968aea4c549131", "vermLinhaVencHTML": "77149b646c2ec3b8", "vencBlocoLancHTML": "60cc11bb3c70521e", "vermOuFezes": "e29f34cc2ad21b05", "prevDispensadoPorExame": "f40ec4cc6325dbf0", "prevForaDaCobranca": "0c57dfd57defbac2", "prevVenceManualSet": "4c84b3c948dc3bc1", "podeVencManual": "88f0694c49496db7", "prevAvisoRecalc": "b295e4128828037a", "prevEraManual": "567f58ccfaac2fb1", "prevChecarLogica": "d28d9aeb0429193a", "pelExtra": "e874a3d2b3b8767a", "setPelExtra": "ded4cc5f9acc60cd", "pelAplicarNoCache": "c174a71c267e339b", "pelCamposBarrados": "99703a2869112cec", "escovaCacheGravado": "452a789d84d96bb5", "vencItensDe": "9e9d1f75fb3e51f0", "prevPendencias": "c87ce87973884715", "prevValor": "c4bc834fdc1a5e09", "hojeAntecipar": "9b8fed3ad9122257", "urgenciasGestao": "c192dbd0f0779796", "vencLancarAuto": "414f3b8869277485", "alertaPrevencao": "8d52ba3995909460", "prevFaltasDe": "521dab44ee9157f1", "vencQuantoTexto": "7a4176b9d8d5c8de", "pelSalvoMostrar": "e1f4ae9d461c3055", "prevCorrigeRegistrar": "af8aac78d783fcf2", "prevCorrigeRedesenhar": "62483ddb8dd49028", "blocoFezes": "2dd50ba50fb2744e", "blocoVacinas": "816ab98cf9e52ef6", "blocoEcto": "8555e7943c933dcd", "blocoColeira": "e3dda9ffae12e570", "prevCorrigeFezesHTML": "b7cdeb888ff067bc", "canEditPel": "712f761f9d9c3b93", "podePapel": "f79e84fc5f1bd977", "zAlertao": "e30d85cfd25aab3a"}, "cache3": {"prevCorrigeExameFezes": "d7f0b5d65dab8eba", "prevCorrigeVenceEm": "8b9245b3fc770879", "prevCorrigeDoseUnica": "fa721ad2fd82ed3f"}, "prox": "913ecb0cb2823d8b", "verm2": "96dc0ff2b72b8511", "dica": "542c5c85e0c8e205", "perm": "cc8cffaa48521917", "dosePeso": 1};
+  // Exceção autorizada pela revisão 05→06: somente o hash da PERM incorpora historico-checkins.
+  const BASE = {"fn": {"vermAvaliar": "dbb338c2bf7e64b5", "vermFaixaKg": "30b015b84cf0ada4", "vermMargemKg": "17d894cb494ce621", "vermNumTexto": "fcf2a669fa302195", "vermNumLer": "f3af1b973b05be92", "vermDoseDe": "ca0de65413eef7e3", "vermPertoDaVirada": "b40da171c0d5df85", "vermFrasePeso": "34a4fcbaeed5260b", "vermAvaliarFicha": "b33c7434482bf287", "vermFichaTextoHTML": "c750d8f6a0fe1eed", "vermPreMarcar": "9c3b3baca86cbcb3", "vermBlocoPainelHTML": "fa6a626a6d27de72", "dashLancar": "6267457666ad76f3", "vermPreMarcarVenc": "47968aea4c549131", "vermLinhaVencHTML": "77149b646c2ec3b8", "vencBlocoLancHTML": "60cc11bb3c70521e", "vermOuFezes": "e29f34cc2ad21b05", "prevDispensadoPorExame": "f40ec4cc6325dbf0", "prevForaDaCobranca": "0c57dfd57defbac2", "prevVenceManualSet": "4c84b3c948dc3bc1", "podeVencManual": "88f0694c49496db7", "prevAvisoRecalc": "b295e4128828037a", "prevEraManual": "567f58ccfaac2fb1", "prevChecarLogica": "d28d9aeb0429193a", "pelExtra": "e874a3d2b3b8767a", "setPelExtra": "ded4cc5f9acc60cd", "pelAplicarNoCache": "c174a71c267e339b", "pelCamposBarrados": "99703a2869112cec", "escovaCacheGravado": "452a789d84d96bb5", "vencItensDe": "9e9d1f75fb3e51f0", "prevPendencias": "c87ce87973884715", "prevValor": "c4bc834fdc1a5e09", "hojeAntecipar": "9b8fed3ad9122257", "urgenciasGestao": "c192dbd0f0779796", "vencLancarAuto": "414f3b8869277485", "alertaPrevencao": "8d52ba3995909460", "prevFaltasDe": "521dab44ee9157f1", "vencQuantoTexto": "7a4176b9d8d5c8de", "pelSalvoMostrar": "e1f4ae9d461c3055", "prevCorrigeRegistrar": "af8aac78d783fcf2", "prevCorrigeRedesenhar": "62483ddb8dd49028", "blocoFezes": "2dd50ba50fb2744e", "blocoVacinas": "816ab98cf9e52ef6", "blocoEcto": "8555e7943c933dcd", "blocoColeira": "e3dda9ffae12e570", "prevCorrigeFezesHTML": "b7cdeb888ff067bc", "canEditPel": "712f761f9d9c3b93", "podePapel": "f79e84fc5f1bd977", "zAlertao": "e30d85cfd25aab3a"}, "cache3": {"prevCorrigeExameFezes": "d7f0b5d65dab8eba", "prevCorrigeVenceEm": "8b9245b3fc770879", "prevCorrigeDoseUnica": "fa721ad2fd82ed3f"}, "prox": "913ecb0cb2823d8b", "verm2": "96dc0ff2b72b8511", "dica": "542c5c85e0c8e205", "perm": "e09d3bc39b6ce623", "dosePeso": 1};
   // 6.63 (AC5.1, AC8.4, guarda refeita): estas mudam de propósito — o verde, o rastro e o «à mão» só com o ok do banco, e a porta da
   // prevenção no painel (prevCorrGravar no lugar do passo do cache). A guarda continua, contra o texto da 6.63; o resto, contra a base 59f16a8.
   // 6.63, 2ª rodada (REL-004 do gate do QA): o setPelExtra, no ok com o soDepoisDoOk, grava na cópia deste aparelho só o patch
@@ -43398,7 +43407,8 @@ provaAsync('6.70 P36 (AC13, AC14, guarda) — a área protegida e o #v-daycare i
   // Antes: a PERM inteira, 'f79140b1c2844dd5'; depois: a PERM sem as três, que continua 'f79140b1c2844dd5' (nenhuma capacidade de antes
   // mudou). Por quê: esta guarda é das capacidades que a 6.70 não podia mexer; a PERM inteira, com as três, é a da 6.65 P22
   // ('02898b691c0a839c'), e a sem as três também é conferida na 6.67 P34.
-  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; return JSON.stringify(c); })()"))], [155, '5bac486c669007ec', 'f79140b1c2844dd5']);
+  // commit d1b195a: esta leitura atual também remove historico-checkins para comparar só as 39 capacidades legadas.
+  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; delete c['historico-checkins']; return JSON.stringify(c); })()"))], [155, '5bac486c669007ec', 'f79140b1c2844dd5']);
   const src = fs.readFileSync(APP, 'utf8');
   const i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
   igual([h(src.slice(i, j)), (src.match(/por\[p\]\.total\+=v; por\[p\]\.noites\+\+;/g) || []).length], ['d350ca846ae9d05e', 1]);
@@ -49992,7 +50002,8 @@ prova('6.71 P34 (AC12, AC13, guarda) — a área protegida e o #v-daycare idênt
   // 6.67 (junção, 12/out/2026): a PERM ganhou 'lancar-manual-plantao', 'trabalha-plantao' e 'conferir-checkin' (as três capacidades novas
   // da 6.67). Antes: a PERM inteira, 'f79140b1c2844dd5'; depois: a PERM sem as três, que continua 'f79140b1c2844dd5'. Por quê: a 6.71 não
   // mexe em permissão, e as outras capacidades continuam as da base; a PERM inteira, com as três, é a da 6.65 P22 ('02898b691c0a839c').
-  igual([prot.length, sha71(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), sha71(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; return JSON.stringify(c); })()"))], [155, '5bac486c669007ec', 'f79140b1c2844dd5'], 'a área protegida e a PERM (sem as três capacidades da 6.67)');
+  // commit d1b195a: esta leitura atual também remove historico-checkins para comparar só as 39 capacidades legadas.
+  igual([prot.length, sha71(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), sha71(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; delete c['historico-checkins']; return JSON.stringify(c); })()"))], [155, '5bac486c669007ec', 'f79140b1c2844dd5'], 'a área protegida e a PERM (sem as três capacidades da 6.67)');
   const src = fs.readFileSync(APP, 'utf8'), i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
   igual([sha71(src.slice(i, j)), sha71(src.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
   // o finRenovHistContados de hoje = o da base + a linha da leitura (AC3.1), e nada mais
@@ -55274,10 +55285,11 @@ prova('6.76 P15 (AC4.1, AC4.2, guarda) — as listas de telas (NAV_PAGINAS_ALL, 
   // '02898b691c0a839c' (42). Por quê: a 6.67 trouxe três capacidades (lancar-manual-plantao, trabalha-plantao, conferir-checkin); as 39
   // de antes ficaram iguais — a PERM sem as três continua 'f79140b1c2844dd5' (as mesmas chaves, na mesma ordem, com os mesmos papéis) e
   // as chaves novas são exatamente as três (a mesma conta da 6.67 P34 e da 6.65 P22).
-  const TRES667 = ['lancar-manual-plantao', 'trabalha-plantao', 'conferir-checkin'];
-  igual([crypto676.createHash('sha256').update(nav).digest('hex').slice(0, 16), crypto676.createHash('sha256').update(run('JSON.stringify(PERM)')).digest('hex').slice(0, 16)], ['92fcf71818c1108d', '02898b691c0a839c']);
-  igual([crypto676.createHash('sha256').update(run(`(function(){ var c=JSON.parse(JSON.stringify(PERM)); ${JSON.stringify(TRES667)}.forEach(function(k){ delete c[k]; }); return JSON.stringify(c); })()`)).digest('hex').slice(0, 16),
-    run('Object.keys(PERM).length'), TRES667.filter((k) => run(`Object.prototype.hasOwnProperty.call(PERM, ${JSON.stringify(k)})`)).length], ['f79140b1c2844dd5', 42, 3], 'as 39 de antes iguais e só as três da 6.67 entraram');
+  // commit d1b195a: Histórico de hospedagens é só por papel; excluído da concessão individual junto às três capacidades da 6.67.
+  const EXCLUIDAS676 = ['lancar-manual-plantao', 'trabalha-plantao', 'conferir-checkin', 'historico-checkins'];
+  igual([crypto676.createHash('sha256').update(nav).digest('hex').slice(0, 16), crypto676.createHash('sha256').update(run('JSON.stringify(PERM)')).digest('hex').slice(0, 16)], ['6ab33b9d79bb5261', '3fcf802b38bbf4f2']);
+  igual([crypto676.createHash('sha256').update(run(`(function(){ var c=JSON.parse(JSON.stringify(PERM)); ${JSON.stringify(EXCLUIDAS676)}.forEach(function(k){ delete c[k]; }); return JSON.stringify(c); })()`)).digest('hex').slice(0, 16),
+    run('Object.keys(PERM).length'), EXCLUIDAS676.filter((k) => run(`Object.prototype.hasOwnProperty.call(PERM, ${JSON.stringify(k)})`)).length], ['f79140b1c2844dd5', 43, 4], 'as 39 de antes iguais e só as três da 6.67 entraram');
   assert.ok(run("NAV_PAGINAS_KEYS.indexOf('planodia')") < 0 && run('NAV_PAGINAS_FORA').indexOf('Escala e plano do dia (é da Márcia)') >= 0);
 });
 prova('6.76 P16* (AC2.2, AC11) — a régua do Time é a da tela: a assinatura usa a capacidade com os MESMOS três papéis da classe so-master (Gestão, Diretoria, Supervisão), sem capacidade nova', () => {
@@ -57485,10 +57497,10 @@ provaAsync('6.76 P41 (AC14, AC15, guarda) — a área protegida, o #v-daycare, a
   // Junção da 6.67 sobre a 3d6910b (12/out/2026): a PERM inteira, antes 'f79140b1c2844dd5' (39 capacidades), depois '02898b691c0a839c'
   // (42). Por quê: as três capacidades da 6.67 (lancar-manual-plantao, trabalha-plantao, conferir-checkin); a área protegida (155, o
   // texto) não muda. As 39 de antes ficaram iguais: a PERM sem as três continua 'f79140b1c2844dd5', e as chaves novas são só as três.
-  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN('JSON.stringify(PERM)'))], [155, '5bac486c669007ec', '02898b691c0a839c']);
-  igual([h(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; return JSON.stringify(c); })()")),
-    runN('Object.keys(PERM).length'), runN("['lancar-manual-plantao', 'trabalha-plantao', 'conferir-checkin'].filter(function(k){ return Object.prototype.hasOwnProperty.call(PERM, k); }).length")],
-    ['f79140b1c2844dd5', 42, 3], 'as 39 de antes iguais e só as três da 6.67 entraram');
+  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN('JSON.stringify(PERM)'))], [155, '5bac486c669007ec', '3fcf802b38bbf4f2']);
+  igual([h(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; delete c['historico-checkins']; return JSON.stringify(c); })()")),
+    runN('Object.keys(PERM).length'), runN("['lancar-manual-plantao', 'trabalha-plantao', 'conferir-checkin', 'historico-checkins'].filter(function(k){ return Object.prototype.hasOwnProperty.call(PERM, k); }).length")],
+    ['f79140b1c2844dd5', 43, 4], 'as 39 de antes iguais e só as três da 6.67 entraram');
   const i = SRC676.indexOf('id="v-daycare"'), j = SRC676.indexOf('id="v-', i + 10);
   igual([h(SRC676.slice(i, j)), h(SRC676.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
   const corpo = (n) => { const m = new RegExp('\\n  (async )?function ' + n + '\\(').exec(SRC676); const k = m.index + 1; const fl = SRC676.indexOf('\n', k), linha = SRC676.slice(k, fl); const ab = (linha.match(/\{/g) || []).length, fe = (linha.match(/\}/g) || []).length;
@@ -58472,7 +58484,7 @@ prova('6.67 P34 (AC16, AC17, guarda) — a área protegida (155 funções ck*/ck
     plantaoAvisoGestao: '416b79648bb37b42', ciQuemRecebeu: '385cbfebf39b2743' };
   const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h667(runN('String(' + n + ')')); });
   igual(agora, BASE, 'as funções que não mudam');
-  igual(h667(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; return JSON.stringify(c); })()")), 'f79140b1c2844dd5', 'as outras capacidades da PERM');
+  igual(h667(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; delete c['historico-checkins']; return JSON.stringify(c); })()")), 'f79140b1c2844dd5', 'as outras capacidades da PERM');
 });
 provaAsync('6.67 P35 (AC12.2, AC12.5, extra) — o placar com o cache frio do Firebase (a 1ª rodada da transação vem com null, e só a que devolve um valor roda de novo com o banco): «Reabrir o check-out» estorna o ponto e «Corrigir os pontos» grava o estorno e o ponto novo, sem dizer «já foi estornado em outro aparelho»', async () => {
   await com667(async () => {
@@ -59874,9 +59886,10 @@ provaAsync('6.87 P27 (AC4.2, AC4.5, guarda) — o texto fica idêntico, letra po
   vm.runInContext(extractMainScript(src), ctxN, { filename: 'index.html#script', timeout: 15000 });
   const runN = (c) => vm.runInContext(c, ctxN);
   const h = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
+  // Exceção autorizada pela revisão 05→06: _cfIndexarEstadias ganhou apenas o setter opcional do mapa vivo.
   const FIX = { turmaDoDia: '8d6a4b2d286378be', turmaDeHoje: '0e2d0a6f88eb36d3', turmaIsoSeguro: '55ddc8b4bbaabd89', pelDias: '5fd229f705b5d897', renderDaycare: '384b207e96711bb8',
     aplicarFaltaAutomatica: 'eb9f31ff8f8e02d1', faltaDormiuAqui: 'aa1fc8a5d36febec', faltaDormiuEste: '749b65edfd2f3601', faltaDormiuLer: '7928610c8c3c3e75', hospTemEstadiaNoDia: '0d9964b394b6d192',
-    estadiaCobreDia: 'b714f3526530b7eb', hospEstadiaGanha: '3a2e8383be7d4167', _cfIndexarEstadias: 'f1f8a48b029c8958', contatoPerfil: 'fd3697be92d30628', contatoEstadiaDoDia: '9289d32a881ddf7a',
+    estadiaCobreDia: 'b714f3526530b7eb', hospEstadiaGanha: '3a2e8383be7d4167', _cfIndexarEstadias: '1f35258131637af6', contatoPerfil: 'fd3697be92d30628', contatoEstadiaDoDia: '9289d32a881ddf7a',
     contatoEstadiasDe: '31094b610108ddd5', contatoEstadiaNaLista: '79a2d76704419739', contatoEstadiaFim: '6c62f1fe7f3ae31c', contatoEstIndice: 'aa167d96ae325692', contatoEstadiaChave: '67d335c6df4d09ea',
     vencEhDiaDayCare: 'af81280079fff828', orcDiaSemana: '193c380832f92f79', orcEhFeriado: '77df0299778edc76', renderKPIs: '67414b248747832d', poTurma: '07fad43ff8fcba9b',
     hojeFrasePresenca: 'c18761ca7572d436', hojeSemCkDe: '7d7d96d4273a07dc', hojeContagem: '76841caec3dca587', hojeAtualizarBadge: '81a9ec159c06b924', hojeTexto: '7d6f582e669d652c',
@@ -59893,7 +59906,7 @@ provaAsync('6.87 P27 (AC4.2, AC4.5, guarda) — o texto fica idêntico, letra po
   const agora = {}; Object.keys(FIX).forEach((n) => { agora[n] = h(String(runN('String(' + n + ')'))); });
   igual([Object.keys(FIX).length, agora], [32, FIX], 'as 32 funções da tabela');
   const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
-  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN('JSON.stringify(PERM)')), runN('Object.keys(PERM).length')], [155, '5bac486c669007ec', '02898b691c0a839c', 42]);
+  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN('JSON.stringify(PERM)')), runN('Object.keys(PERM).length')], [155, '5bac486c669007ec', '3fcf802b38bbf4f2', 43]);
   const i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
   igual([h(src.slice(i, j)), h(src.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
   igual(NOVAS687.filter((n) => /^(ck|ckt|pt)/.test(n)), []);
@@ -61413,8 +61426,8 @@ prova('6.73 P36 (AC14, AC15, guarda) — financeiro-logica.js idêntico ao da ve
   // três capacidades (lancar-manual-plantao, trabalha-plantao, conferir-checkin); a 6.73 não muda permissão nenhuma — a PERM da junta é a
   // da ponta, letra por letra, e as 39 de antes continuam as mesmas.
   igual([prot.length, sha73(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), sha73(runN('JSON.stringify(PERM)')), runN('Object.keys(PERM).length'),
-    sha73(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; return JSON.stringify(c); })()"))],
-    [155, '5bac486c669007ec', '02898b691c0a839c', 42, 'f79140b1c2844dd5']);
+    sha73(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; delete c['historico-checkins']; return JSON.stringify(c); })()"))],
+    [155, '5bac486c669007ec', '3fcf802b38bbf4f2', 43, 'f79140b1c2844dd5']);
   const i = html.indexOf('id="v-daycare"'), j = html.indexOf('id="v-', i + 10);
   igual([sha73(html.slice(i, j)), sha73(html.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
 });
