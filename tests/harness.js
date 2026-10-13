@@ -3771,8 +3771,8 @@ async function main() {
     check('v-25 · a auditoria da tabela diz o que mudou, de quanto para quanto',
       /audit\('orcamento-precos',\s*\n?\s*mudou\.length\?\('alterou a tabela de hospedagem — '\+mudou\.join/.test(html)
       && /\{antes:antes, depois:novo\}/.test(html));
-    check('v-25 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-25 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -4068,8 +4068,8 @@ async function main() {
       && html.indexOf('sem valor registrado ficaram de fora') > 0
       && html.indexOf('Ainda estou lendo os avulsos lançados no mês') > 0);
 
-    check('v-26 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-26 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -4452,8 +4452,8 @@ async function main() {
       }
     } else { check('v-27 · orcRenderConfig existe', false, 'função não encontrada'); }
 
-    check('v-27 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-27 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -5098,8 +5098,8 @@ async function main() {
         delete ctx.document.activeElement; delete ctx.__focoAuto;
       }
     } else { check('v-28 · vencRedesenhoAuto existe', false, 'função não encontrada'); }
-    check('v-28 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-28 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -9637,6 +9637,11 @@ async function main() {
     //   Gold   2x, 1º = 58.900 x 3 ... 176.700
     //   Black  1x, 2º = 33.800 x0,93 = 31.434 x 6 ... 188.604
     //   TOTAL ........................ 439.004 centavos = R$ 4.390,04
+    // Story 6.73 (S8-P2 — Adriana, 12/10/2026: «sim»): quem saiu (inativo) continua no mês em que pagou. O Bud (inativo,
+    // Silver 1x, 1º, pago em 01/08) passa a contar em agosto: + 38.700 = 477.704 centavos = R$ 4.777,04.
+    //   ANTES: «a receber de agosto = R$ 4.390,04» e «quem saiu (inativo) não é cobrado» (o Bud fora de todo mês).
+    //   DEPOIS: R$ 4.777,04 (os mesmos R$ 4.390,04 dos três aulunos + os R$ 387,00 do Bud) e o Bud só em agosto.
+    //   PORQUÊ: o dinheiro entrou em agosto (a pergunta 11 da 6.44, decidida pela Adriana); fora do mês do pagamento, nada muda.
     const CAD = {
       'a__x': { n: 'Ayla', tutor: 'Xuxa', dias: ['seg', 'qua', 'sex'],
         renov: { plano: 'Silver', inicio: '2026-08-01', fim: '2026-08-31', aulas: 3, ordemPet: 1 } },
@@ -9655,8 +9660,12 @@ async function main() {
         renov: { plano: 'Silver', inicio: '2026-08-01', fim: '2026-08-31' } }
     };
     const r1 = ctx.finResumoMes({ cadastro: CAD }, '2026-08');
-    check('caixa: a receber de agosto = R$ 4.390,04 (soma conferida à mão)',
-      r1.aReceberTotal === 439004 && ctx.finBRL(r1.aReceberTotal) === 'R$ 4.390,04',
+    const bud1 = r1.porFILHOt.filter((o) => o.chave === 'inativo__i');
+    check('caixa: os três aulunos continuam somando R$ 4.390,04 (soma conferida à mão; o comportamento publicado)',
+      r1.porFILHOt.filter((o) => o.chave !== 'inativo__i').reduce((a, o) => a + o.falta, 0) === 439004,
+      JSON.stringify(r1.porFILHOt.map((o) => o.chave + ':' + o.falta)));
+    check('caixa: a receber de agosto = R$ 4.777,04 (R$ 4.390,04 + o Bud, inativo, que pagou em agosto: S8-P2)',
+      r1.aReceberTotal === 477704 && ctx.finBRL(r1.aReceberTotal) === 'R$ 4.777,04',
       r1.aReceberTotal + ' / ' + ctx.finBRL(r1.aReceberTotal));
     check('sem nó de pagamento, "recebido" é exatamente R$ 0,00 (não se inventa caixa)',
       r1.recebidoTotal === 0);
@@ -9669,7 +9678,13 @@ async function main() {
       !r1.porFILHOt.some((o) => /repolho|h__w|v__u/.test(o.chave)) &&
       !r1.semComoCalcular.some((o) => /repolho|h__w|v__u/.test(o.chave)),
       JSON.stringify(r1.semComoCalcular.map((o) => o.chave)));
-    check('quem saiu (inativo) não é cobrado', !r1.porFILHOt.some((o) => o.chave === 'inativo__i'));
+    // S8-P2: antes «quem saiu (inativo) não é cobrado» (o Bud fora de agosto); agora ele fica só no mês em que pagou
+    const r1set = ctx.finResumoMes({ cadastro: CAD }, '2026-09', { hoje: '2026-10-10' });
+    check('quem saiu (inativo) fica só no mês em que pagou: o Bud em agosto com R$ 387,00; em setembro, fora da conta, dos vencidos e de «sem como calcular»',
+      bud1.length === 1 && bud1[0].valor === 38700 &&
+      !r1set.porFILHOt.some((o) => o.chave === 'inativo__i') && !r1set.inadimplentes.some((o) => o.chave === 'inativo__i') &&
+      !r1set.semComoCalcular.some((o) => o.chave === 'inativo__i') && !r1.semComoCalcular.some((o) => o.chave === 'inativo__i'),
+      JSON.stringify(bud1) + ' / ' + JSON.stringify(r1set.inadimplentes));
     check('mordida — sem como saber as aulas, o FILHOt sai da soma E aparece listado (não vira R$ 0,00 calado)',
       !r1.porFILHOt.some((o) => o.chave === 'sem__aulas') &&
       r1.semComoCalcular.some((o) => o.chave === 'sem__aulas'),
@@ -9687,8 +9702,9 @@ async function main() {
     check('recebido = R$ 1.237,00 (73.700 + 50.000)',
       r2.recebidoTotal === 123700 && ctx.finBRL(r2.recebidoTotal) === 'R$ 1.237,00',
       ctx.finBRL(r2.recebidoTotal));
-    check('a receber cai para R$ 3.153,04 (4.390,04 - 1.237,00)',
-      r2.aReceberTotal === 315304 && ctx.finBRL(r2.aReceberTotal) === 'R$ 3.153,04',
+    // S8-P2: antes «a receber cai para R$ 3.153,04 (4.390,04 - 1.237,00)»; com o Bud em agosto, 4.777,04 - 1.237,00
+    check('a receber cai para R$ 3.540,04 (4.777,04 - 1.237,00)',
+      r2.aReceberTotal === 354004 && ctx.finBRL(r2.aReceberTotal) === 'R$ 3.540,04',
       ctx.finBRL(r2.aReceberTotal));
     check('recebido + a receber = o devido do mês, ao centavo',
       r2.recebidoTotal + r2.aReceberTotal === r1.aReceberTotal);
@@ -9749,18 +9765,22 @@ async function main() {
     // Se um dia alguém somar os dois cards da tela, o número tem que continuar
     // verdadeiro. Aqui: em 15/08 as três cobranças de agosto (venc. 01/08, 10/08
     // e 01/08) já venceram, então "em atraso" tem que ser EXATAMENTE o "a receber".
+    // Story 6.73 (S8-P2 — Adriana, 12/10/2026: «sim»): o Bud (inativo, Silver 1x, venc. 01/08, R$ 387,00) conta em agosto.
+    //   ANTES: em atraso = a receber = R$ 4.390,04 (15/08); R$ 4.390,04 a receber e R$ 2.623,04 vencido (05/08); pagou → R$ 3.153,04.
+    //   DEPOIS: + R$ 387,00 em cada um (a cobrança do Bud venceu em 01/08): R$ 4.777,04; R$ 4.777,04 e R$ 3.010,04; R$ 3.540,04.
+    //   PORQUÊ: quem saiu continua no mês em que pagou. A régua do atraso (recorte do a receber) é a mesma; só a população mudou.
     const rAtraso = ctx.finResumoMes({ cadastro: CAD }, '2026-08', { hoje: '2026-08-15' });
     check('"em atraso" é recorte de "a receber" — nunca maior que ele',
-      rAtraso.emAtrasoTotal === rAtraso.aReceberTotal && rAtraso.emAtrasoTotal === 439004,
+      rAtraso.emAtrasoTotal === rAtraso.aReceberTotal && rAtraso.emAtrasoTotal === 477704,
       ctx.finBRL(rAtraso.emAtrasoTotal) + ' vs ' + ctx.finBRL(rAtraso.aReceberTotal));
     // Em 05/08 o Gold (vence 10/08) ainda não venceu: sai do atraso, fica no a receber.
     const rAtraso2 = ctx.finResumoMes({ cadastro: CAD }, '2026-08', { hoje: '2026-08-05' });
-    check('o que ainda não venceu fica fora do atraso (R$ 4.390,04 a receber, R$ 2.623,04 vencido)',
-      rAtraso2.aReceberTotal === 439004 && rAtraso2.emAtrasoTotal === 262304,
+    check('o que ainda não venceu fica fora do atraso (R$ 4.777,04 a receber, R$ 3.010,04 vencido)',
+      rAtraso2.aReceberTotal === 477704 && rAtraso2.emAtrasoTotal === 301004,
       ctx.finBRL(rAtraso2.aReceberTotal) + ' / ' + ctx.finBRL(rAtraso2.emAtrasoTotal));
     check('mordida — pagou, some do atraso na mesma hora',
       ctx.finResumoMes({ cadastro: CAD, pagamentos: PAG }, '2026-08', { hoje: '2026-08-15' })
-        .emAtrasoTotal === 315304);
+        .emAtrasoTotal === 354004);
 
     // ---- 10) plano DEDUZIDO nunca vira "declarado" ----
     const CAD2 = {
@@ -14747,7 +14767,7 @@ async function main() {
         !/\.catch\(function\([a-z]*\)\{\s*\}\)/.test(
           html.slice(html.indexOf('const CK_FRASE_PRATICA='), html.indexOf('function renderCkInicio('))));
       check('v-14 · a versão carimbada é a desta entrega',
-        /const APP_VERSAO='2026-10-09-28';/.test(html));
+        /const APP_VERSAO='2026-10-09-29';/.test(html));
     }
 
     // ---- v-15: O PLANO SÓ GRAVA NO CONFIRMAR (caso Cookie/Yara, 15/set/2026) --------
@@ -15601,8 +15621,8 @@ async function main() {
           + 'AVISO_COLEIRA_APOS = __bkpC.apos;', ctx);
       }
     } else { check('v-17 · prevCfgCarregar existe', false, 'função não encontrada'); }
-    check('v-24 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-24 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
 
     // ───────── v-19 · o aparelho autorizado que não se perde no iPhone (16/set/2026)
     // Auditoria de 16/set: o iPhone da Leticya gerou DOIS ids em trinta segundos
@@ -15856,8 +15876,8 @@ async function main() {
       String((html.match(/linhaBuscaCadastro\(/g) || []).length));
     check('v-29 · a linha tem estilo próprio: menor, em var(--muted), e quebrando no celular',
       /table\.pel \.pel-busca-sub\{[^}]*font-size:11\.5px[^}]*color:var\(--muted\)[^}]*white-space:normal/.test(html));
-    check('v-29 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-29 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -16159,8 +16179,8 @@ async function main() {
         ctx.vermNumTexto(5) === '5' && ctx.vermNumTexto(0.3) === '0,3' && ctx.vermNumTexto(4.5) === '4,5',
         JSON.stringify([ctx.vermNumTexto(5), ctx.vermNumTexto(0.3)]));
     } else { check('v-30 · vermNumLer existe', false, 'função não encontrada'); }
-    check('v-30 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-30 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -16428,8 +16448,8 @@ async function main() {
       && html.indexOf('A frase pronta não diz a data em que venceu — confira antes de mandar.') > 0
       && html.indexOf("return x.atrasado && String(m.texto||'').indexOf(vencData(x.vence, hoje))<0;") > 0);
 
-    check('v-31 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-31 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   // ===== v-32 · O CALENDÁRIO, A COBRANÇA E A RESPOSTA QUE LANÇA SOZINHA ============
   // Adriana, 21/set/2026, palavra por palavra:
@@ -16902,8 +16922,8 @@ async function main() {
       }
     } else { check('v-32 · vencResponderTipo e dashLancar existem', false, 'função não encontrada'); }
 
-    check('v-32 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-32 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -17331,8 +17351,8 @@ async function main() {
       && /DB\.ref\('daycare\/vagas-pedidos'\)\.on\('value'/.test(html)
       && /try\{ vagasPedCarregar\(\); \}catch\(e\)\{\}/.test(html));
 
-    check('v-33 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-33 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -17648,8 +17668,8 @@ async function main() {
       && /URL\.createObjectURL\(f\)/.test(html) && /URL\.revokeObjectURL\(url\)/.test(html)
       && /createImageBitmap\(f,\{resizeWidth:CK_FOTO_MAX, resizeQuality:'medium', imageOrientation:'from-image'\}\)/.test(html)
       && /if\(bmp && bmp\.close\) bmp\.close\(\)/.test(html));
-    check('v-34 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-34 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -18006,8 +18026,8 @@ async function main() {
       && /if\(\(prev\.motivo\|\|''\)!==\(it\.motivo\|\|''\)\) mud\.push\('para quê'\);/.test(html)
       && ctx.medDiffAcao({ nome: 'Enalapril', horarios: ['17:45'] },
                          { nome: 'Enalapril', horarios: ['17:45'], quando: { ref: 'jantar', rel: 'antes', min: 45 } }) === 'Alterou quando dar');
-    check('v-35 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-35 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -18266,8 +18286,8 @@ async function main() {
       && /delete rQ\.fim_anterior;/.test(html));
     check('v-36 · vigência que não é mais do meio do mês não herda o "para onde voltar"',
       /if\(!regMMConf\) delete novo\.fim_anterior;/.test(html));
-    check('v-36 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-36 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -18484,8 +18504,8 @@ async function main() {
         !/dcLancamentosNaoCasados[\s\S]{0,900}'avaliacao'/.test(html));
     } else { check('v-38 · dashForaDoCadastro existe', false, 'função não encontrada'); }
 
-    check('v-38 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-38 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -18858,8 +18878,8 @@ async function main() {
     check('v-39 · Recebimentos do mês continua somando o avulso pelo det.valor_cent — sem exceção para quem não tem ficha',
       html.indexOf("var o=lista[id]||{}, v=((o.det||{}).valor_cent);") > 0);
 
-    check('v-39 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-39 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -19106,8 +19126,8 @@ async function main() {
       }
     } else { check('v-40 · ocupantesDoDia existe', false, 'função não encontrada'); }
 
-    check('v-40 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-40 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -19556,8 +19576,8 @@ async function main() {
       }
     }
 
-    check('v-41 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-41 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -19760,8 +19780,8 @@ async function main() {
       } finally { Object.keys(bkp42).forEach((k) => { ctx[k] = bkp42[k]; }); }
     }
 
-    check('v-42 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-42 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -20082,8 +20102,8 @@ async function main() {
 
     vm.runInContext('pelCadCache = __bkp43cadG;', ctx);
 
-    check('v-43 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-43 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -20368,8 +20388,8 @@ async function main() {
       }
     } else { check('v-44 · hojeLista existe', false, 'função ausente'); }
 
-    check('v-44 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-44 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -20892,8 +20912,8 @@ async function main() {
       }
     } else { check('v-45 · dashNomePlanilha existe', false, 'função ausente'); }
 
-    check('v-45 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-45 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -21251,8 +21271,8 @@ async function main() {
       html.indexOf("id:'cfgVencAberto'") > 0 && html.indexOf("id:'cfgVencVacinaAgendar'") > 0
       && /aberto:'Olá, \{tutor\}, tudo bem\? /.test(html)
       && /vacina_agendar:'Olá, \{tutor\}, tudo bem\? /.test(html));
-    check('v-46 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-46 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -21600,8 +21620,8 @@ async function main() {
         ctx.prevCorrigePetDe(chave47) === pel47
         && ctx.prevCorrigePetDe(ctx.pelKey(pel47)) === pel47);
 
-      check('v-47 · a versão carimbada desta entrega é a 2026-10-09-28',
-        /const APP_VERSAO='2026-10-09-28';/.test(html));
+      check('v-47 · a versão carimbada desta entrega é a 2026-10-09-29',
+        /const APP_VERSAO='2026-10-09-29';/.test(html));
     } finally {
       ctx.document.getElementById = geOrig47;
       ctx.document.body.dataset.role = papelAntes47;
@@ -22067,8 +22087,8 @@ async function main() {
       && /delete BANHO_RASC\[chave\]; banhoRascGuardar\(\);/.test(html)
       && html.indexOf('Há uma alteração nesta linha que ainda não foi gravada') > 0);
 
-    check('v-48 · a versão carimbada desta entrega é a 2026-10-09-28',
-      /const APP_VERSAO='2026-10-09-28';/.test(html));
+    check('v-48 · a versão carimbada desta entrega é a 2026-10-09-29',
+      /const APP_VERSAO='2026-10-09-29';/.test(html));
   }
   console.log('');
 
@@ -22545,9 +22565,14 @@ async function main() {
       muda644({ renov: { plano: 'Gold' }, renov_hist: { a: { plano: 'Gold' } } }) && muda644({ renov: { plano: 'Gold', valor_plano_cent: 107700 } })
       && !muda644({ renov: { plano: 'Gold', inicio: '2026-07-05' } }) && !muda644({ renov: { plano: 'Gold' }, renov_hist: {} }) && !muda644({ renov: { valor_plano_cent: 0 } }));
     const com644 = Object.keys(cad50 || {}).filter((k) => comDiasMes50.indexOf(k) < 0 && muda644(cad50[k]));
+    // Story 6.73 (S8-P2 — Adriana, 12/10/2026: «sim»): a ficha INATIVA também muda de propósito (continua no mês em que pagou):
+    // sai da comparação com a cópia de antes, como as da 6.36 e da 6.44 (não é bomba-relógio); a conferência dela é a de baixo
+    // (com ela, o resultado é o de antes mais as linhas dela, e nada mais).
+    const inativa673 = (c) => !!(c && c.inativo === 'Sim');
+    const comInat50 = Object.keys(cad50 || {}).filter((k) => comDiasMes50.indexOf(k) < 0 && com644.indexOf(k) < 0 && inativa673(cad50[k]));
     if (cad50 && Object.keys(cad50).length) {
       const cadSem50 = {};
-      Object.keys(cad50).forEach((k) => { if (comDiasMes50.indexOf(k) < 0 && com644.indexOf(k) < 0) cadSem50[k] = cad50[k]; });
+      Object.keys(cad50).forEach((k) => { if (comDiasMes50.indexOf(k) < 0 && com644.indexOf(k) < 0 && comInat50.indexOf(k) < 0) cadSem50[k] = cad50[k]; });
       const r50 = compara50({ cadastro: cadSem50, orcamentos: orc50 || {}, pagamentos: pag50 || null, irmaos: irmaos || {},
         peludinhos: Array.isArray(ctx.PELUDINHOS) ? ctx.PELUDINHOS : [] });
       console.log('  retrato: ' + Object.keys(cad50).length + ' fichas · ' + comDiasMes50.length + ' com dias por mês e ' + com644.length + ' com renovação anterior ou valor gravado (fora da comparação) · ' + r50.linhas + ' linhas conferidas · a receber (tabela do app, hoje 06/10): ' + r50.tot.join(' · '));
@@ -22606,10 +22631,35 @@ async function main() {
       if (sorte50() > 0.92) orcI['o' + i] = { status: um50(['fechado', 'aguardando', 'cancelado']), total_cent: 120000, parcela1_cent: 60000, parcela2_cent: 60000,
         entrada: um50(mesesI) + '-20', status_em: Date.UTC(2026, 3 + Math.floor(sorte50() * 7), 11, 15), criado_em: Date.UTC(2026, 5, 2, 15), pets: [{ nome: nm }] };
     });
-    const rI = compara50({ cadastro: cadI, orcamentos: orcI, pagamentos: pagI, irmaos: irmI, peludinhos: ctx.PELUDINHOS || [] });
-    console.log('  cadastro inventado sobre a lista do app: ' + Object.keys(cadI).length + ' fichas · ' + rI.linhas + ' linhas conferidas · a receber: ' + rI.tot.join(' · '));
+    // Story 6.73 (S8-P2): ANTES, a comparação com a cópia de antes da 6.36 usava o cadastro inventado inteiro (inativas incluídas, fora
+    // de todo mês nas duas contas). DEPOIS, a inativa continua no mês em que pagou (decisão da Adriana, 12/10/2026): a comparação
+    // inteira fica com as fichas ativas (a mesma régua, totais e linhas), e uma segunda conferência, com as inativas, exige que a conta
+    // de hoje seja a de antes MAIS as linhas das inativas no mês do pagamento — nada em «sem como calcular», nos vencidos ou em outro mês.
+    const inatI = Object.keys(cadI).filter((k) => inativa673(cadI[k]));
+    const cadIsem = {}; Object.keys(cadI).forEach((k) => { if (inatI.indexOf(k) < 0) cadIsem[k] = cadI[k]; });
+    const rI = compara50({ cadastro: cadIsem, orcamentos: orcI, pagamentos: pagI, irmaos: irmI, peludinhos: ctx.PELUDINHOS || [] });
+    console.log('  cadastro inventado sobre a lista do app: ' + Object.keys(cadI).length + ' fichas (' + inatI.length + ' inativas, conferidas à parte) · ' + rI.linhas + ' linhas conferidas · a receber: ' + rI.tot.join(' · '));
     check('v-50 · H3 — cadastro inventado sobre a lista do app (sem dias por mês): o finResumoMes de 2026-06 a 2026-10 é IGUAL ao de antes da 6.36, totais e linhas',
-      rI.difs.length === 0 && Object.keys(cadI).length >= 50 && rI.linhas > 300, rI.difs.slice(0, 4).join(' · ') || (Object.keys(cadI).length + ' fichas, ' + rI.linhas + ' linhas'));
+      rI.difs.length === 0 && Object.keys(cadIsem).length >= 50 && rI.linhas > 300 && inatI.length >= 1, rI.difs.slice(0, 4).join(' · ') || (Object.keys(cadIsem).length + ' fichas, ' + rI.linhas + ' linhas, ' + inatI.length + ' inativas'));
+    const difInat = [], somaInat = [];
+    meses50.forEach((m) => {
+      ['2026-10-06', '2026-08-31', ''].forEach((h) => {
+        const dd = { cadastro: cadI, orcamentos: orcI, pagamentos: pagI, irmaos: irmI, peludinhos: ctx.PELUDINHOS || [] };
+        const a = JSON.parse(JSON.stringify(FIN_ANTES50.finResumoMes(dd, m, { hoje: h })));
+        const b = JSON.parse(JSON.stringify(ctx.finResumoMes(dd, m, { hoje: h })));
+        const delas = b.porFILHOt.filter((o) => inatI.indexOf(o.chave) >= 0);
+        const fora = delas.filter((o) => String((cadI[o.chave].renov || {}).inicio || '').slice(0, 7) !== m);
+        const tira = { porFILHOt: b.porFILHOt.filter((o) => inatI.indexOf(o.chave) < 0), inadimplentes: b.inadimplentes, semComoCalcular: b.semComoCalcular };
+        const soma = (k) => delas.reduce((t, o) => t + (o[k] || 0), 0);
+        if (JSON.stringify(tira) !== JSON.stringify({ porFILHOt: a.porFILHOt, inadimplentes: a.inadimplentes, semComoCalcular: a.semComoCalcular })
+          || fora.length || b.aReceberTotal - a.aReceberTotal !== soma('falta') || b.recebidoTotal - a.recebidoTotal !== soma('pago')
+          || b.inadimplenciaTotal !== a.inadimplenciaTotal) difInat.push(m + ' ' + h);
+        if (h === '2026-10-06') somaInat.push(m + ' +' + ctx.finBRL(soma('valor')) + ' (' + delas.length + ')');
+      });
+    });
+    console.log('  S8-P2 no cadastro inventado: ' + inatI.length + ' inativas · o que entra por mês: ' + somaInat.join(' · '));
+    check('v-50 · H3 — S8-P2 (6.73): com as inativas, a conta é a de antes mais as linhas delas no mês do pagamento, e nada mais',
+      difInat.length === 0, difInat.slice(0, 4).join(' · '));
 
     // ---- H5: paridade app × Financeiro (no MESMO sandbox, como na página) -----------------
     if (typeof ctx.renovValorDoPlano === 'function' && typeof ctx.finValorDoPlano === 'function') {

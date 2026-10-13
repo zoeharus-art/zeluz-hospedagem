@@ -1135,10 +1135,20 @@ function finResumoMes(dados, mes, opcoes) {
 
   /* ---------------------------------------------------------- DAY CARE ---- */
   var chaves = Object.keys(cadastro), i, k, c, r, cat, meses, aulas, mensal, valorMes;
+  /* QUEM SAIU (inativo) CONTINUA NO MÊS EM QUE PAGOU (S8-P2, Story 6.73 — Adriana, 12/10/2026:
+     «sim»). Antes: o inativo saía de todo mês, também do mês em que pagou. Agora ele conta só
+     os pagamentos cuja data cai no mês olhado — o plano atual com renov.inicio no mês (se for
+     Auluno) e as renovações anteriores que contam — e nada mais: não entra em «sem como
+     calcular», nem nos vencidos, nem em mês nenhum além do mês do pagamento. A ficha que mudou
+     de chave (movido_para: troca de nome ou de tutor) ou que foi excluída continua fora: o
+     pagamento está na ficha nova (ou a ficha foi apagada) — contar as duas seria contar duas vezes. */
+  var saiuDoDaycare = {}, saiu;
   for (i = 0; i < chaves.length; i++) {
     k = chaves[i];
     c = finObj(cadastro[k]);
-    if (c.inativo === 'Sim') continue;                 /* saiu: não cobra */
+    saiu = (c.inativo === 'Sim');
+    if (saiu && (c.excluido === true || c.movido_para)) continue;   /* mudou de chave ou foi excluída */
+    if (saiu) saiuDoDaycare[k] = true;
     /* RENOVAÇÕES ANTERIORES (6.44): o pagamento de um plano que já foi renovado continua no
        mês em que entrou — mesmo que a categoria de hoje seja outra (virou morador). */
     var histK = finRenovHistContados(c), zh;
@@ -1151,6 +1161,7 @@ function finResumoMes(dados, mes, opcoes) {
     /* Hóspede, avulso e morador não têm mensalidade. Moradores nunca geram
        cobrança (Adriana, 03/ago/2026). Não é buraco de dado: é a regra. */
     if (cat !== 'auluno') continue;
+    if (saiu && finMesDe(r.inicio) !== mes) continue;   /* S8-P2: o plano atual de quem saiu, só no mês do pagamento */
     if (!planos[r.plano]) {
       /* Auluno sem plano lançado: não some, mas também não some da tela. */
       R.semComoCalcular.push({ chave: k, nome: String(c.n || k.split('__')[0]),
@@ -1278,6 +1289,16 @@ function finResumoMes(dados, mes, opcoes) {
       R.porServico.daycare.inadimplencia += mensal;
     }
   }
+
+  /* S8-P2: de quem saiu, só a linha do pagamento do mês — fora de «sem como calcular» e dos vencidos. */
+  var semFica = [], inadFica = [], zs;
+  for (zs = 0; zs < R.semComoCalcular.length; zs++) if (!saiuDoDaycare[R.semComoCalcular[zs].chave]) semFica.push(R.semComoCalcular[zs]);
+  for (zs = 0; zs < R.inadimplentes.length; zs++) {
+    if (saiuDoDaycare[R.inadimplentes[zs].chave]) R.porServico.daycare.inadimplencia -= R.inadimplentes[zs].valorDeUmMes;
+    else inadFica.push(R.inadimplentes[zs]);
+  }
+  R.semComoCalcular = semFica;
+  R.inadimplentes = inadFica;
 
   /* -------------------------------------------------------- AUAULÂNDIA ---- */
   /* O dinheiro da hospedagem é UM por reserva (a linha do financeiro é uma

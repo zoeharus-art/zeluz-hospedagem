@@ -4615,8 +4615,16 @@
          preço muda: mora aqui, nas mãos dela (lei de 22/ago/2026). -->
     <div class="card so-master" id="cardValoresDaycare">
       <h2 style="font-size:19px">Valores do Day Care</h2>
-      <div class="hint">Os dois preços da <strong>diária avulsa</strong> — o dia a mais que o tutor paga, um valor para quem <strong>é matriculado</strong> e outro para quem <strong>não é</strong> — e as <strong>vagas por dia</strong> para reposição + avulso. As mensalidades dos planos (Mensal · Trimestral · Semestral) continuam na tabela comercial. Aqui moram também o preço da escova e os dois números da <strong>dose do vermífugo pelo peso</strong>. Nada é gravado antes do botão <strong>Salvar valores</strong>.</div>
+      <div class="hint">Os dois preços da <strong>diária avulsa</strong> — o dia a mais que o tutor paga, um valor para quem <strong>é matriculado</strong> e outro para quem <strong>não é</strong> — e as <strong>vagas por dia</strong> para reposição + avulso. As mensalidades dos planos (Mensal · Trimestral · Semestral) continuam na tabela comercial, em Configurações › Planos do Day Care. Aqui moram também o preço da escova e os dois números da <strong>dose do vermífugo pelo peso</strong>. Nada é gravado antes do botão <strong>Salvar valores</strong>.</div>
       <div id="cfgValoresWrap" style="margin-top:12px"><div class="hint">Carregando os valores do Day Care&hellip;</div></div>
+    </div>
+    <!-- PLANOS DO DAY CARE (Story 6.73, L11) — a tabela de planos (as 15 mensalidades, o desconto de irmão
+         e o desconto na AuAulândia de cada plano) saiu do código: só a Adriana muda, com a senha dela e o motivo,
+         vendo antes quais meses e quantos reais mudam. O compromisso e o nome do plano não se editam. -->
+    <div class="card so-master" id="cardPlanosDaycare">
+      <h2 style="font-size:19px">Planos do Day Care</h2>
+      <div class="hint">A <strong>mensalidade</strong> de cada plano — Silver (mensal), Gold (trimestral) e Black (semestral) — para 1 a 5 vezes por semana, o <strong>desconto de irmão</strong> no plano e o <strong>desconto na AuAulândia</strong> de quem tem plano. O valor do plano é a mensalidade vezes os meses do tipo. Salvar pede a <strong>senha da Adriana</strong> e o motivo, e mostra antes o que muda nos meses: mês fechado não muda, e o plano que já tem o valor gravado guarda o valor da época. Nada é gravado antes do botão <strong>Salvar a tabela</strong>.</div>
+      <div id="cfgPlanosWrap" style="margin-top:12px"><div class="hint">Carregando a tabela de planos&hellip;</div></div>
     </div>
     <div class="card so-master">
       <h2 style="font-size:19px">Avisos no Telegram</h2>
@@ -5194,13 +5202,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-28"></script>
+<script src="resposta-tutor.js?v=2026-10-09-29"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-28"></script>
+<script src="painel-logica.js?v=2026-10-09-29"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5212,7 +5220,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-28"></script>
+<script src="financeiro-logica.js?v=2026-10-09-29"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -5364,6 +5372,11 @@
       try{ vencCfgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       try{ ckFotosCfgCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       try{ dcValoresCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+      // 6.73 (AC9.1): a tabela de planos salva pela Gestão (nó pequeno, muda uma vez por ano) — um ouvinte, para a tabela nova
+      // chegar a todo aparelho aberto; e os fechamentos e ajustes do Recebimentos (AC5.4: a pergunta da ficha diz quando o mês
+      // está fechado em qualquer aparelho, também no da recepção, que não abre os dashboards).
+      try{ tabelaPlanosOuvir(); }catch(e){ _logLeituraFalhou('daycare/config/tabela-planos (ouvinte)', e); }
+      try{ recFechOuvir(); }catch(e){ _logLeituraFalhou('daycare/recebimentos (ouvinte)', e); }
       // OS IRMÃOS DO BANCO SÓ SE LIGAM AQUI (18/set/2026). O irmaosCarregar() lá embaixo é
       // chamado na carga do script, quando DB ainda é null: ele voltava sem ligar ouvinte
       // nenhum — e, pior, o `var IRMAOS_CACHE={}, IRMAOS_OK=false` que vem DEPOIS zerava o
@@ -21559,6 +21572,8 @@
   // mesmo cálculo) vale aqui também.
   var ORC_EDITANDO=null, ORC_EDIT_ANTES=null;
   function orcMudarDatas(id){
+    // 6.73 (AC9.3): «Mudar as datas» remonta o desconto na AuAulândia pelo plano de hoje — com a tabela de fábrica no lugar da salva, errado
+    if(!planosProntos()){ planosTravaAviso(); return; }
     var o=ORC_LISTA_CACHE[id]||{};
     if(!o.pets||!o.pets.length){ alert('Esta reserva não tem FILHOt salvo — não dá para reabrir. Use "Cancelar reserva" e faça um orçamento novo.'); return; }
     ORC_EDITANDO=id;
@@ -21635,6 +21650,8 @@
     orcRenderAvisoEdicao();
   }
   function orcSalvar(){
+    // 6.73 (AC9.3): o total gravado leva o desconto na AuAulândia do plano — espera a tabela salva chegar
+    if(!planosProntos()){ planosTravaAviso(); return; }
     // Fim de ano sem preço não fecha — e NUNCA em silêncio: a mesma frase da tela aparece
     // aqui, no lugar onde a pessoa apertou (19/set/2026).
     if(ORC_TEMP==='fim'&&orcFaltaPrecoFim()){
@@ -21733,6 +21750,8 @@
   // histórico entra na MESMA escrita da mudança (AC4.3); o FILHOt tirado pelo × devolve a reposição (AC4.5); e a linha
   // do dinheiro acompanha a reserva, um FILHOt de cada vez (orcPlanilhaSincronizar, AC5).
   async function orcSalvarEdicao(){
+    // 6.73 (AC9.3): a edição salva o total com o desconto na AuAulândia do plano de hoje — espera a tabela salva chegar
+    if(!planosProntos()){ planosTravaAviso(); return; }
     var id=ORC_EDITANDO, antes=ORC_EDIT_ANTES||{}, C=ORC_CALC;
     var st=document.getElementById('orcSalvoStatus');
     if(!id||!C){ return; }
@@ -27193,7 +27212,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-28';
+  const APP_VERSAO='2026-10-09-29';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -30332,16 +30351,71 @@
   const DESC_PET_HOSP=5;
   let planosCfg=null;   // vem do Firebase (config editável); null = usar padrão
   function planos(){ return planosCfg||PLANOS_PADRAO; }
+  // ===== 6.73 (L11) — A TABELA DE PLANOS SALVA PELA GESTÃO ===========================
+  // Configurações › Planos do Day Care grava daycare/config/tabela-planos (um nó próprio: o
+  // daycare/config/planos é a lista dos planos DO DIA, lida inteira pela Escala e plano do dia).
+  // A tabela lida vai para planosCfg — a mesma variável de sempre —, juntando com PLANOS_PADRAO
+  // o nome, o compromisso e as parcelas (a área protegida lê o compromisso pela turma do dia:
+  // ele nunca se edita). O desconto de irmão do plano passa por uma função só, descontosPlano().
+  // Sem o nó no banco, tudo é a tabela de fábrica de 2026, igual a antes.
+  // A trava: depois que o app PEDIU a tabela ao banco e antes de ela chegar, nada que grava valor
+  // (o Confirmar, o orçamento) nem o quadro do dinheiro anda — gravaria o preço de fábrica no lugar
+  // do salvo. Antes do pedido (as provas que não ligam o banco), não há trava.
+  var descontosCfg=null;     // {2, 3} salvos; null = DESC_PET_PLANO
+  var TABELA_PLANOS={pedida:false, chegou:false, erro:null, v:null};
+  var PLANOS_TRAVA_FRASE='A tabela de planos ainda não chegou neste aparelho. Espere uns segundos e toque de novo. Nada foi gravado.';
+  function descontosPlano(){ return descontosCfg||DESC_PET_PLANO; }
+  function planosProntos(){ return !TABELA_PLANOS.pedida || TABELA_PLANOS.chegou; }
+  // Por que a trava está de pé, numa frase (minúscula, para entrar no meio de outra): a tabela ainda chegando, ou a leitura
+  // dela que FALHOU neste aparelho (o ouvinte respondeu com erro: a frase diz, e «Tentar de novo» liga o ouvinte outra vez).
+  function planosTravaMotivo(){
+    if(TABELA_PLANOS.erro) return 'não consegui ler a tabela de planos neste aparelho ('+zErroMotivo(TABELA_PLANOS.erro, 'banco', '', {leitura:true})+'): toque em «Tentar de novo»';
+    return 'a tabela de planos ainda não chegou neste aparelho';
+  }
+  function planosLeituraFalhou(){ return (typeof TABELA_PLANOS!=='undefined' && TABELA_PLANOS.erro)?true:false; }
+  // O aviso das portas que gravam valor pela tabela (o Confirmar, o meio do mês, o orçamento): chegando, espere; falhou, tente de novo.
+  function planosTravaAviso(){
+    if(TABELA_PLANOS.erro){
+      return zPergunta('NÃO CONSEGUI LER A TABELA DE PLANOS', ['Não consegui ler a tabela de planos neste aparelho ('+zErroMotivo(TABELA_PLANOS.erro, 'banco', '', {leitura:true})+').',
+        'Sem ela, o valor sairia pela tabela de fábrica. Nada foi gravado.'], {sim:'Tentar de novo', nao:'Agora não'})
+        .then(function(sim){ if(sim) tabelaPlanosTentar(); return false; });
+    }
+    zAlertao('A TABELA DE PLANOS AINDA NÃO CHEGOU', [PLANOS_TRAVA_FRASE], {botao:'Entendi'});
+    return Promise.resolve(false);
+  }
+  // Um percentual inteiro de 0 a 50 (o desconto de irmão e o da AuAulândia); senão, null.
+  function planosPct(v){ var n=(typeof v==='string' && /^\d+$/.test(v))?parseInt(v,10):v; return (typeof n==='number' && isFinite(n) && n===Math.round(n) && n>=0 && n<=50)?n:null; }
+  // A tabela do banco, conferida campo a campo: valor de mensalidade inteiro e maior que zero (centavos), o percentual de 0 a 50.
+  // O que não passa fica com o de fábrica (o nó só é gravado pelo cartão, com a mesma régua).
+  function tabelaPlanosAplicar(v){
+    TABELA_PLANOS.v=(v && typeof v==='object')?v:null;
+    if(!TABELA_PLANOS.v){ planosCfg=null; descontosCfg=null; return; }
+    var cfg={};
+    Object.keys(PLANOS_PADRAO).forEach(function(k){
+      var F=PLANOS_PADRAO[k], S=(v[k] && typeof v[k]==='object')?v[k]:{}, sv=(S.valores && typeof S.valores==='object')?S.valores:{}, vals={};
+      [1,2,3,4,5].forEach(function(n){ var x=sv[n]; vals[n]=(typeof x==='number' && x>0 && x===Math.round(x))?x:F.valores[n]; });
+      var off=planosPct(S.hospOff);
+      cfg[k]={rotulo:F.rotulo, compromisso:F.compromisso, parcelas:F.parcelas, hospOff:(off===null)?F.hospOff:off, valores:vals};
+    });
+    planosCfg=cfg;
+    var d=(v.descontoIrmao && typeof v.descontoIrmao==='object')?v.descontoIrmao:{}, d2=planosPct(d[2]), d3=planosPct(d[3]);
+    descontosCfg=(d2!==null && d3!==null && (d2>0 || d3>0))?{2:d2, 3:d3}:null;
+  }
   // valores em centavos para não ter erro de ponto flutuante
   function fmtCent(c){ return 'R$ '+(c/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   // Aulas da ROTINA (6.30): só é usada em contexto de plano (aba Plano, Confirmar, meio do mês,
   // Renovação) — nunca para "quem vem hoje". Para ficha sem dias por mês, rotina = hoje.
   function nAulasDe(p){ const d=pelDias(p,'rotina')||[]; return Math.min(5,Math.max(1,d.length))||1; }
   // mensalidade com desconto do Nº do peludinho na família (2º=7%, 3º+=12%)
+  // 6.73 (AC9.2): a MESMA conta do desconto do finMensalidade (financeiro-logica.js) — do 3º FILHOt em diante, o desconto do 3º;
+  // 0% vale 0%; os dois em 0% voltam à tabela de fábrica (o Financeiro faz assim). Tela e cobrança não podem discordar.
   function mensalidade(planoKey, aulas, ordemPet){
     const pl=planos()[planoKey]; if(!pl) return 0;
     const base=pl.valores[aulas]||0;
-    const pct=DESC_PET_PLANO[ordemPet]|| (ordemPet>=3?12:0);
+    let d=descontosPlano(); if(!d[2] && !d[3]) d=DESC_PET_PLANO;
+    const nO=parseInt(ordemPet,10), o=(nO>=1)?nO:1;
+    const cent=function(x){ return (typeof x==='number' && isFinite(x))?Math.round(x):((typeof x==='string' && /^-?\d+$/.test(x))?parseInt(x,10):0); };
+    const pct=cent((d[o]!==undefined)?d[o]:(o>=3?d[3]:0));
     return Math.round(base*(100-pct)/100);
   }
   // ===== VALORES DO DAY CARE (Adriana, 18/set/2026) ==================================
@@ -31501,9 +31575,10 @@
          +((atual.vig_inicio||atual.inicio)?fmtBR(atual.vig_inicio||atual.inicio):'—')+' → '+(atual.fim?fmtBR(atual.fim):'—'),
        'VOLTA: '+(plAnt.rotulo||ant.plano||'—')+' · '+renovAulasRotulo(ant)+' · '
          +((ant.vig_inicio||ant.inicio)?fmtBR(ant.vig_inicio||ant.inicio):'—')+' → '+(ant.fim?fmtBR(ant.fim):'—')];
-    if(pelInativo(pD)) linhasD.push(nomeD+' está '+(planoEhFemea(pD)?'inativa':'inativo')+': pela regra de hoje, o Recebimentos não muda (quem saiu não entra na conta).');
+    // 6.73 (S8-P2, Adriana, 12/10/2026: «sim»): quem saiu continua no Recebimentos do mês em que pagou — o efeito do inativo é
+    // a mesma conta do ativo (antes: «pela regra de hoje, o Recebimentos não muda (quem saiu não entra na conta)»).
     // 2ª rodada (REL-004): «o mês do plano que volta não muda» só quando o mês dele não está no efeito (a correção que volta muda).
-    else if(efD){
+    if(efD){
       const mesVolta=/^\d{4}-\d{2}-\d{2}$/.test(String(ant.inicio||''))?String(ant.inicio).slice(0,7):'';
       const naoMuda=!!mesVolta && !efD.some(function(m){ return m.mes===mesVolta; });
       linhasD.push(efD.length?(planoEfeitoLinha(efD, k)+(naoMuda?'. O mês do plano que volta não muda: ele já contava como renovação anterior e passa a contar como o plano atual.':'.')):'No Recebimentos: nenhum mês muda de valor.');
@@ -31766,6 +31841,8 @@
     // régua do Desfazer (renovPodeDesfazer). Antes, a linha do histórico era gravada e só o porteiro
     // do setPelExtra barrava — e a tela ainda dizia «PLANO GRAVADO».
     if(!renovPodeDesfazer()){ corrBarrar('confirmar o plano', corrQuemPode('ver-plano'), {alvo:pelKey(pelAtual), pet:pelNome(pelAtual)}); return; }
+    // 6.73 (AC9.3): o Confirmar grava o valor do plano (valor_plano_cent) pela tabela — com a de fábrica no lugar da salva, gravaria errado
+    if(!planosProntos()){ planosTravaAviso(); return; }
     const ex=pelExtra(pelAtual), gravado=renovDe(ex), r=renovEdit(ex);
     if(!r.plano){ avisoEscolhaPlano(); return; }
     const aulas=nAulasDe(pelAtual);
@@ -31791,7 +31868,7 @@
       const vC=renovValorDoPlano(r.plano, dm, r.ordemPet||1);
       if(vC.falta>=0){
         const plF=planos()[r.plano]||{};
-        if(avisar) faltaC('planoMes_'+vC.falta, 'A tabela de planos não tem valor para '+(plF.rotulo||r.plano)+' de '+dm[vC.falta].length+'x por semana — confira a tabela comercial.');
+        if(avisar) faltaC('planoMes_'+vC.falta, 'A tabela de planos não tem valor para '+(plF.rotulo||r.plano)+' de '+dm[vC.falta].length+'x por semana — confira a tabela comercial em Configurações › Planos do Day Care.');
         return false;
       }
       if(dm.every(function(m){ return m.join(',')===dm[0].join(','); })){
@@ -32182,7 +32259,7 @@
       const mens=mensalidade(r.plano, aulas, ordem);
       // Tabela sem preço para esta faixa não vira conta em R$ 0,00 calada: a tela diz onde arrumar.
       if(!(mens>0)){ pendentes.push({chave:chave, nome:nome,
-        falta:'a tabela de planos não tem valor para '+(pl.rotulo||r.plano)+' de '+aulas+'x por semana — confira a tabela comercial'}); return; }
+        falta:'a tabela de planos não tem valor para '+(pl.rotulo||r.plano)+' de '+aulas+'x por semana — confira a tabela comercial em Configurações › Planos do Day Care'}); return; }
       const c=mmDiariasRestantes(ini, dias, fer);
       prontos.push({chave:chave, nome:nome, pet:q, plano:r.plano, planoRotulo:pl.rotulo||r.plano,
         compromisso:pl.compromisso||'', aulas:aulas, ordem:ordem,
@@ -32351,6 +32428,9 @@
     if(typeof canEditPel==='function' && !canEditPel()){
       return corrBarrar('registrar como o tutor vai pagar o meio do mês (mexe em cobrança)', corrQuemPode('editar-peludinho'), {alvo:pelKey(pelAtual), pet:pelNome(pelAtual)});
     }
+    // 6.73 (QA, REQ-002): o meio do mês grava a mensalidade, as diárias e o total pela tabela — com a de fábrica no lugar da salva
+    // (a salva ainda chegando, ou a leitura dela falhando), gravaria o valor errado; a mesma trava do Confirmar (AC9.3)
+    if(!planosProntos()){ planosTravaAviso(); return; }
     const ex=pelExtra(pelAtual);
     const D=mmDados(pelAtual);
     const ms=D.conta.membros;
@@ -32671,13 +32751,15 @@
     fam.forEach(function(x){ olha(cad[x]); olha(cadD[x]); });
     var carteira=!(typeof CARTEIRA_CARREGADA!=='undefined' && CARTEIRA_CARREGADA===false);
     var base={peludinhos:(typeof PELUDINHOS!=='undefined')?PELUDINHOS:[], irmaos:irm, orcamentos:fontes?(REC_FONTES.orc||{}):{}, pagamentos:null,
-      planos:(typeof planos==='function')?planos():null, descontoIrmao:(typeof DESC_PET_PLANO!=='undefined')?DESC_PET_PLANO:null};
+      planos:(typeof planos==='function')?planos():null, descontoIrmao:(typeof descontosPlano==='function')?descontosPlano():null};
     var hoje=(typeof hojeISO==='function')?hojeISO():'';
     var avulsas=function(mes){ return (typeof REC_AVULSO!=='undefined' && REC_AVULSO && REC_AVULSO.ok===true && REC_AVULSO.mes===mes && planoFonteFresca(REC_AVULSO.quando, janela))?(Number(REC_AVULSO.total_cent)||0):null; };
     var rotuloDe=function(mes){ return !carteira?null:((fontes && avulsas(mes)!==null && typeof recQuebra==='function')?'quadro':'planos'); };
+    // 6.73 (AC6.4): o «Total de {mês} no Recebimentos» é o do quadro — com os ajustes com motivo do mês (quando os fechamentos chegaram)
+    var ajustes=function(mes){ return (typeof recAjustesSoma==='function' && typeof REC_FECH!=='undefined' && REC_FECH.ok===true)?recAjustesSoma(mes):0; };
     var soma=function(R, rot, mes){ var t=0, por={};
       ((R||{}).porFILHOt||[]).forEach(function(o){ if(o.servico==='auaulandia') return; t+=(o.valor||0); por[o.chave]=(por[o.chave]||0)+(o.valor||0); });
-      if(rot==='quadro') t=recQuebra(R).total+avulsas(mes);
+      if(rot==='quadro') t=recQuebra(R).total+avulsas(mes)+ajustes(mes);
       return {t:(rot?t:null), por:por}; };
     var out=[];
     Object.keys(meses).sort().forEach(function(mes){
@@ -32712,8 +32794,16 @@
   // As frases do efeito, sempre com o nome do número: «Total dos planos do Day Care em outubro de 2026: R$ 1.077,00 → R$ 0,00»
   // (ou «Total de outubro de 2026 no Recebimentos: …», o mesmo número do quadro); quando muda o valor de outro FILHOt (o
   // desconto do irmão), o nome e o valor de cada um entre parênteses. Sem total (a carteira ainda chegando): só os FILHOts.
+  // 6.73 (AC5.4): o mês FECHADO nunca promete que o total fechado cai — o total fechado continua, e a mudança aparece em
+  // «Mudou depois do fechamento» (o quadro mostra a diferença da conta ao vivo).
+  function planoEfeitoFechadoTexto(mes){
+    var f=(typeof recFechadoDe==='function')?recFechadoDe(mes):null;
+    if(!f || !f.fechado) return '';
+    return mesAnoDe(mes+'-01')+' está fechado: o total fechado continua '+recBRL(Number((f.ev||{}).total_cent)||0)+'; a mudança aparece em «Mudou depois do fechamento»';
+  }
   function planoEfeitoTexto(ef, k){
     return (ef||[]).map(function(m){
+      var fch=planoEfeitoFechadoTexto(m.mes); if(fch) return fch;
       var mes=mesAnoDe(m.mes+'-01');
       var outros=m.quem.filter(function(q){ return q.chave!==k; }), eu=m.quem.filter(function(q){ return q.chave===k; })[0];
       var cada=function(q, comMes){ return q.nome+(comMes?(' em '+mes):'')+': '+recBRL(q.de)+' → '+recBRL(q.para); };
@@ -32732,10 +32822,9 @@
     return (pl.rotulo||o.plano||'—')+(pl.compromisso?(' · '+pl.compromisso):'')+' · '+renovAulasRotulo(o);
   }
   function planoPeriodo(o){ o=o||{}; var ini=o.vig_inicio||o.inicio; return (ini?fmtBR(ini):'—')+' → '+(o.fim?fmtBR(o.fim):'—'); }
-  // O FILHOt inativo (a regra de hoje, S8-P2): o pagamento dele já não entra em mês nenhum.
-  function planoFraseInativo(p, oQue){
-    return pelNome(p)+' está '+(planoEhFemea(p)?'inativa':'inativo')+': pela regra de hoje, '+oQue+' já não entra no Recebimentos. A anulação fica registrada para quando a regra mudar.';
-  }
+  // 6.73 (S8-P2, Adriana, 12/10/2026: «sim»): o FILHOt inativo continua no Recebimentos do mês em que pagou; anular, reabrir e
+  // desfazer o pagamento dele mostram o efeito pela mesma conta do ativo. (A frase «pela regra de hoje, … já não entra no
+  // Recebimentos», a planoFraseInativo da 6.71, saiu com a regra antiga.)
   // Depois do cartaz: o «pronto» fecha (quem chamou mostra o resultado); a recusa e a falha trocam o
   // «NADA FOI GRAVADO» genérico pela frase da tela.
   function planoFecharCartaz(){
@@ -32779,8 +32868,7 @@
     patch['renov_hist/'+hid]=Object.assign({}, linha, {anulacoes:{}}); patch['renov_hist/'+hid].anulacoes[aid]={acao:'anular', ts:ts};
     var ef=planoEfeitoNoRecebimento(p, planoFichaDepois(pelCadCache[k]||ex, patch));
     var paga='O pagamento de '+data+' ('+rot+(v?(', '+recBRL(v)):'')+')';
-    var cas=[pelInativo(p)?planoFraseInativo(p, 'este pagamento')
-      :(ef===null?(paga+' sai do Recebimentos do mês dele.')
+    var cas=[(ef===null?(paga+' sai do Recebimentos do mês dele.')
       :(ef.length?(paga+' sai da conta — '+planoEfeitoTexto(ef, k)+'.'):(paga+' não muda o Recebimentos: nenhum mês muda de valor.')))];
     cas.push(nome+' fica sem plano lançado: aparece em «sem plano» na Renovação de planos e em «fora do total» no Recebimentos.');
     var h0=renovHistValidos(ex)[0];
@@ -32841,8 +32929,7 @@
     vivas.forEach(function(x){ aids[x._id]=planoIdNovo(k, 'renov_hist/'+x._id+'/anulacoes'); patch['renov_hist/'+x._id+'/anulacoes/'+aids[x._id]]={acao:'anular', ts:ts}; });
     var ef=planoEfeitoNoRecebimento(p, planoFichaDepois(pelCadCache[k]||ex, patch));
     var paga='O pagamento de '+data+(v?(' ('+recBRL(v)+')'):'');
-    var f1=pelInativo(p)?planoFraseInativo(p, 'este pagamento')
-      :(ef===null?(paga+' sai do Recebimentos do mês dele.')
+    var f1=(ef===null?(paga+' sai do Recebimentos do mês dele.')
       :(ef.length?(paga+' sai da conta — '+planoEfeitoTexto(ef, k)+'.'):(paga+' não muda o Recebimentos: nenhum mês muda de valor.')));
     var virou=planoVirouRotulo(o);
     if(/^virou /.test(virou)) f1+=' É o plano que saiu quando a ficha '+virou+': o tutor pagou por ele. Anule só se o pagamento não existiu.';
@@ -32885,8 +32972,7 @@
     mortas.forEach(function(x){ aids[x._id]=planoIdNovo(k, 'renov_hist/'+x._id+'/anulacoes'); patch['renov_hist/'+x._id+'/anulacoes/'+aids[x._id]]={acao:'reabrir', ts:ts}; });
     var ef=planoEfeitoNoRecebimento(p, planoFichaDepois(pelCadCache[k]||ex, patch));
     var paga='O pagamento de '+data+(v?(' ('+recBRL(v)+')'):'');
-    var volta=[pelInativo(p)?(pelNome(p)+' está '+(planoEhFemea(p)?'inativa':'inativo')+': pela regra de hoje, este pagamento continua fora do Recebimentos. A reabertura fica registrada.')
-      :(ef===null?(paga+' volta a contar no Recebimentos do mês dele.')
+    var volta=[(ef===null?(paga+' volta a contar no Recebimentos do mês dele.')
       :(ef.length?(paga+' volta a contar — '+planoEfeitoTexto(ef, k)+'.'):(paga+' volta a contar, sem mudar o valor de nenhum mês.'))),
       'A anulação continua guardada, com quem anulou e por quê.'];
     var recusa='', quem=corrQuemAgora();
@@ -32927,8 +33013,7 @@
     var ef=planoEfeitoNoRecebimento(p, planoFichaDepois(pelCadCache[k]||ex, patch));
     var paga='O pagamento de '+data+(v?(' ('+recBRL(v)+')'):'');
     var linhasVolta=['O plano volta a ser o atual: '+rot+' · '+planoPeriodo(o)+' · pago em '+data+(v?(' · '+recBRL(v)):'')+'.',
-      pelInativo(p)?(nome+' está '+(planoEhFemea(p)?'inativa':'inativo')+': pela regra de hoje, este pagamento continua fora do Recebimentos.')
-        :(ef===null?(paga+' volta a contar no Recebimentos do mês dele.'):(ef.length?(paga+' volta a contar — '+planoEfeitoTexto(ef, k)+'.'):(paga+' volta a contar, sem mudar o valor de nenhum mês.'))),
+      (ef===null?(paga+' volta a contar no Recebimentos do mês dele.'):(ef.length?(paga+' volta a contar — '+planoEfeitoTexto(ef, k)+'.'):(paga+' volta a contar, sem mudar o valor de nenhum mês.'))),
       'A anulação e esta reabertura ficam guardadas em «Voltaram a valer», na aba Plano.'];
     var recusa='', quem=corrQuemAgora();
     var feito=function(reg){
@@ -33055,6 +33140,325 @@
     return r;
   }
 
+  // ===== 6.73 (G06) — «JÁ COBREI» E «NÃO RENOVA» NA RENOVAÇÃO DE PLANOS ==============================================
+  // "O app está engessado, tudo preciso entrar no Claude para alterar." (Adriana, 09/out/2026). A tela existe para COBRAR a
+  // renovação: quem já foi cobrado fica à vista, e quem avisou que não renova sai da cobrança (sem inativar, sem mudar a
+  // categoria). A RÉGUA É UMA SÓ (renovCobrancaDe, pura, sobre a ficha em memória): a Renovação (a lista, os grupos, o filtro
+  // e os números), a aba Plano e o Painel da Supervisão leem a mesma. As cobranças moram NA FICHA e só crescem:
+  //   daycare/cadastro/{k}/renov_contatos/{id} = {acao:'cobrou'|'desfez'|'nao_renova'|'reabriu', ciclo, plano, por, resposta,
+  //     nota, motivo, alvo, ts, quem, papel, login, registro}
+  // O CICLO é o fim da vigência do plano cobrado (renov.fim): o plano novo (outro fim) começa sem marca; «Desfazer a última
+  // renovação» devolve o fim antigo, e as marcas daquele ciclo voltam a valer. As funções recebem o FILHOt (o índice do
+  // PELUDINHOS ou a chave), nunca a posição na lista desta tela: a mesa da Amanda (6.79) chama as mesmas.
+  var RENOV_CANAIS=['WhatsApp', 'Telefone', 'Pessoalmente'];
+  var RENOV_RESPOSTAS=[{v:'sem_resposta', t:'Ainda não respondeu'}, {v:'vai_renovar', t:'Vai renovar'}, {v:'vai_pensar', t:'Vai pensar'}, {v:'nao_renova', t:'Não renova'}];
+  function renovRespostaTexto(v){ var x=RENOV_RESPOSTAS.filter(function(o){ return o.v===v; })[0]; return x?x.t:''; }
+  // PURA: a régua da cobrança. ciclo = o fim da vigência de agora; cobrancas = as do ciclo que não foram desfeitas (da mais velha
+  // à mais nova); naoRenova = a marca mais nova do ciclo que não foi reaberta (ou null); todos = o histórico inteiro.
+  function renovCobrancaDe(ex){
+    var r=renovDe(ex||{}), pl=planos()[r.plano], ciclo=(pl && /^\d{4}-\d{2}-\d{2}$/.test(String(r.fim||'')))?String(r.fim):'';
+    var C=(ex && ex.renov_contatos && typeof ex.renov_contatos==='object')?ex.renov_contatos:{};
+    var L=Object.keys(C).map(function(id){ return Object.assign({}, C[id]||{}, {_id:id}); })
+      .sort(function(a,b){ var x=Number(a.ts)||0, y=Number(b.ts)||0; return (x!==y)?(x-y):((a._id<b._id)?-1:((a._id>b._id)?1:0)); });
+    var desfeitas={}, reabertas={};
+    L.forEach(function(o){ if(o.acao==='desfez' && o.alvo) desfeitas[o.alvo]=o; if(o.acao==='reabriu' && o.alvo) reabertas[o.alvo]=o; });
+    var cobrancas=ciclo?L.filter(function(o){ return o.acao==='cobrou' && String(o.ciclo||'')===ciclo && !desfeitas[o._id]; }):[];
+    var nrs=ciclo?L.filter(function(o){ return o.acao==='nao_renova' && String(o.ciclo||'')===ciclo && !reabertas[o._id]; }):[];
+    return {ciclo:ciclo, cobrancas:cobrancas, naoRenova:nrs.length?nrs[nrs.length-1]:null, naoRenovaValendo:nrs, todos:L, desfeitas:desfeitas, reabertas:reabertas};
+  }
+  // Os «Não renova» que valem no ciclo de agora (normalmente um só; dois quando dois aparelhos gravaram ao mesmo tempo).
+  function renovNaoRenovaValendo(cob){ return ((cob||{}).naoRenovaValendo||[]).slice(); }
+  // O plano tem vigência a cobrar (em dia, vencendo ou vencido)? Sem plano, morador, avulso e hóspede, não.
+  function renovTemVigencia(ex){ var st=statusRenov(ex||{}); return !!renovCobrancaDe(ex).ciclo && (st.estado==='ok' || st.estado==='vence' || st.estado==='vencido'); }
+  // «10/10 às 10:00» a partir do carimbo.
+  function renovDiaHora(ts){ var q=renovQuandoBR(Number(ts)||0); return (q && q!=='—')?(q.slice(0,5)+q.slice(10)):''; }
+  function renovCobrancaTexto(o){
+    o=o||{}; var resp=renovRespostaTexto(o.resposta);
+    return 'Cobrado em '+renovDiaHora(o.ts)+' por '+String(o.quem||'-')+' ('+String(o.por||'-')+')'+(resp?(': '+resp.charAt(0).toLowerCase()+resp.slice(1)):'')
+      +(o.nota?(' — «'+String(o.nota)+'»'):'');
+  }
+  function renovNaoRenovaTexto(p, o){
+    o=o||{}; var rg=o.registro||{};
+    return pelNome(p)+' — avisou em '+renovDiaHora(o.ts)+', por '+String(rg.por||'-')+': '+recMotivoDe(rg);
+  }
+  // O FILHOt a partir do que a tela tem: o índice do PELUDINHOS, a chave da ficha ou o próprio FILHOt.
+  function renovAlvo(x){
+    var L=(typeof PELUDINHOS!=='undefined' && Array.isArray(PELUDINHOS))?PELUDINHOS:[];
+    if(typeof x==='number') return L[x]||null;
+    if(typeof x==='string') return L.filter(function(p){ return pelKey(p)===x; })[0]||null;
+    return (x && typeof x==='object' && (x.n!=null || x.tutor!=null))?x:null;
+  }
+  function renovPlanoCurto(r){ var pl=planos()[(r||{}).plano]||{}; return (pl.rotulo||String((r||{}).plano||'—'))+(pl.compromisso?(' · '+pl.compromisso):''); }
+  function renovCobNovoId(k){ return planoIdNovo(k, 'renov_contatos'); }
+  // Depois de gravar: a Renovação e a ficha aberta se redesenham com a régua de novo.
+  function renovCobRedesenhar(k){
+    try{ if(typeof renderRenovacao==='function') renderRenovacao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    try{ if(pelAtual && pelKey(pelAtual)===k){ var box=document.getElementById('renovCobrancaFicha'); if(box) box.outerHTML=renovCobrancaFichaHTML(pelExtra(pelAtual), pelAtual); } }
+    catch(e){} /* silencioso de propósito: redesenho de tela — a ficha se redesenha na próxima abertura */
+  }
+  // ---- «JÁ COBREI»: a pergunta na tela (o molde do «Mandei» da 6.55, sem senha; nunca janela nativa) ---------------------
+  var RENOV_COBRAR=null;
+  var RENOV_COB_ESTILO='width:100%;box-sizing:border-box;margin-top:6px;padding:12px;min-height:48px;border:2px solid var(--z-blue);border-radius:12px;font-family:inherit;font-size:16px;font-weight:600;color:var(--z-blue);background:var(--z-white)';
+  function renovCobrarAbrir(x){
+    var p=renovAlvo(x);
+    if(!p){ zAlertao('NÃO ACHEI ESTE FILHOt', ['Atualize a tela e tente de novo.', 'Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve({ok:false, recusa:true}); }
+    var nome=pelNome(p)||p.n||'este FILHOt', k=pelKey(p);
+    if(!renovPodeDesfazer()) return Promise.resolve(corrBarrar('registrar a cobrança da renovação', corrQuemPode('ver-plano'), {alvo:k, pet:nome}));
+    var ex=pelExtra(p), r=renovDe(ex);
+    if(!renovTemVigencia(ex)){ zAlertao('NÃO HÁ PLANO PARA COBRAR', [nome+' não tem plano com vigência (sem plano, avulso, morador ou só hospedagem).', 'Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve({ok:false, recusa:true}); }
+    if(RENOV_COBRAR && RENOV_COBRAR.passo==='gravando'){ zAlertao('ESPERE A OUTRA GRAVAÇÃO', ['Outra cobrança ainda está gravando: espere a confirmação do banco e toque de novo. Nada foi gravado.'], {botao:'Entendi'}); return Promise.resolve({ok:false, ocupado:true}); }
+    renovCobrarFechar();
+    return new Promise(function(res){
+      RENOV_COBRAR={p:p, k:k, nome:nome, ciclo:String(r.fim), plano:String(r.plano||''), rot:renovPlanoCurto(r), passo:'pergunta', aviso:'', por:'', resposta:'', nota:'', fim:res};
+      renovCobrarDesenhar();
+    });
+  }
+  function renovCobrarHTML(S){
+    var opc=function(lista, v){ return '<option value="">— escolha —</option>'+lista.map(function(o){ var val=(typeof o==='string')?o:o.v, t=(typeof o==='string')?o:o.t;
+      return '<option value="'+escAttr(val)+'"'+((val===v)?' selected':'')+'>'+esc(t)+'</option>'; }).join(''); };
+    var bt=function(qual, txt, fundo){ return '<button type="button" style="width:100%;min-height:48px;'+(fundo?('background:'+fundo+';color:var(--z-cream);border:0'):'background:var(--z-white);color:var(--z-blue);border:2px solid var(--z-blue)')
+      +';border-radius:14px;font-family:inherit;font-weight:800;font-size:16px;padding:12px;cursor:pointer;white-space:normal" onclick="renovCobrarToque(\''+qual+'\')">'+esc(txt)+'</button>'; };
+    var corpo='', bts='';
+    if(S.passo==='gravando'){ corpo='<div>Gravando… espere a confirmação do banco.</div>'; }
+    else {
+      corpo='<div style="font-size:15px">A renovação do plano '+esc(S.rot)+' de '+esc(S.nome)+', que vence em '+esc(fmtBR(S.ciclo))+'. Registre como foi a conversa: fica na Renovação de planos e na aba Plano, com o seu nome e a hora.</div>'
+        +'<label for="renovCobPor" style="display:block;margin-top:14px;font-size:15px;font-weight:800">Como você falou com o tutor?</label>'
+        +'<select id="renovCobPor" style="'+RENOV_COB_ESTILO+'">'+opc(RENOV_CANAIS, S.por)+'</select>'
+        +'<label for="renovCobResp" style="display:block;margin-top:12px;font-size:15px;font-weight:800">O que o tutor respondeu?</label>'
+        +'<select id="renovCobResp" style="'+RENOV_COB_ESTILO+'">'+opc(RENOV_RESPOSTAS, S.resposta)+'</select>'
+        +'<label for="renovCobNota" style="display:block;margin-top:12px;font-size:15px;font-weight:800">O que o tutor disse (opcional, até 200 letras)</label>'
+        +'<textarea id="renovCobNota" rows="3" maxlength="200" style="'+RENOV_COB_ESTILO+';resize:vertical">'+esc(S.nota||'')+'</textarea>'
+        +(S.aviso?('<div role="alert" style="margin-top:10px;color:var(--crm-critico);font-weight:800">'+esc(S.aviso)+'</div>'):'');
+      bts=bt('registrar', 'Registrar a cobrança', 'var(--z-blue)')+bt('cancelar', 'Cancelar — não mexer em nada', '');
+    }
+    return '<div style="background:var(--z-cream);border-radius:20px;max-width:580px;width:100%;box-sizing:border-box;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;max-height:92vh;display:flex;flex-direction:column">'
+      +'<div style="background:var(--z-blue);color:var(--z-cream);padding:16px 20px;font-weight:800;font-size:21px;line-height:1.2;overflow-wrap:anywhere">Já cobrei — '+esc(S.nome)+'</div>'
+      +'<div style="padding:16px 20px;overflow:auto;color:var(--z-blue);font-size:16px;line-height:1.5;font-weight:600;overflow-wrap:anywhere">'+corpo+'</div>'
+      +(bts?('<div style="padding:0 20px 20px;display:flex;flex-direction:column;gap:9px">'+bts+'</div>'):'')+'</div>';
+  }
+  function renovCobrarDesenhar(){
+    var S=RENOV_COBRAR, d=null;
+    try{ d=document.getElementById('renovCobBox'); }catch(e){ d=null; } /* silencioso de propósito: sem a página, não há o que desenhar */
+    if(!S){ try{ if(d && typeof d.remove==='function') d.remove(); }catch(e){} /* silencioso de propósito: a pergunta já saiu da página */ return; }
+    try{
+      if(!d){ d=document.createElement('div'); d.id='renovCobBox';
+        d.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(16,10,8,.78);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;font-family:Poppins,system-ui,-apple-system,sans-serif';
+        document.body.appendChild(d); }
+      d.innerHTML=renovCobrarHTML(S);
+    }catch(e){} /* silencioso de propósito: enfeite de tela — o estado da pergunta (RENOV_COBRAR) continua certo */
+  }
+  function renovCobrarFechar(res){
+    var S=RENOV_COBRAR; RENOV_COBRAR=null; renovCobrarDesenhar();
+    if(S && S.fim){ var f=S.fim; S.fim=null; f(res||{ok:false, cancelado:true}); }
+  }
+  function renovCobrarLer(id){ try{ var el=document.getElementById(id); return (el && typeof el.value==='string')?el.value:''; }catch(e){ return ''; } /* silencioso de propósito: sem o campo, vale o vazio */ }
+  // O toque nos botões da pergunta. `dados` (opcional) traz as respostas sem ler a página.
+  function renovCobrarToque(qual, dados){
+    var S=RENOV_COBRAR; if(!S) return Promise.resolve(null);
+    if(qual==='cancelar'){ if(S.passo!=='gravando') renovCobrarFechar(); return Promise.resolve(null); }
+    if(qual!=='registrar' || S.passo!=='pergunta') return Promise.resolve(null);
+    dados=dados||{};
+    S.por=String(('por' in dados)?dados.por:renovCobrarLer('renovCobPor')).trim();
+    S.resposta=String(('resposta' in dados)?dados.resposta:renovCobrarLer('renovCobResp')).trim();
+    S.nota=String(('nota' in dados)?dados.nota:renovCobrarLer('renovCobNota')).trim();
+    if(RENOV_CANAIS.indexOf(S.por)<0){ S.aviso='Escolha como você falou com o tutor (WhatsApp, telefone ou pessoalmente). Nada foi gravado.'; renovCobrarDesenhar(); return Promise.resolve({ok:false, onde:'por'}); }
+    if(!renovRespostaTexto(S.resposta)){ S.aviso='Escolha o que o tutor respondeu. Nada foi gravado.'; renovCobrarDesenhar(); return Promise.resolve({ok:false, onde:'resposta'}); }
+    if(S.nota.length>200){ S.aviso='O que o tutor disse passa de 200 letras ('+S.nota.length+'): encurte. Nada foi gravado.'; renovCobrarDesenhar(); return Promise.resolve({ok:false, onde:'nota'}); }
+    return renovCobrarGravar(S);
+  }
+  async function renovCobrarGravar(S){
+    // o papel conferido de novo na função que grava (uma tela velha aberta, ou o console)
+    if(!renovPodeDesfazer()){ renovCobrarFechar({ok:false, barrou:true}); return corrBarrar('registrar a cobrança da renovação', corrQuemPode('ver-plano'), {alvo:S.k, pet:S.nome}); }
+    var q=corrQuemAgora(), id=renovCobNovoId(S.k);
+    var reg={acao:'cobrou', ciclo:S.ciclo, plano:S.plano, por:S.por, resposta:S.resposta, nota:S.nota, ts:q.ts, quem:(typeof quemSou==='function')?quemSou():q.login, papel:q.papel, login:q.login};
+    var patch={}; patch['renov_contatos/'+id]=reg;
+    S.passo='gravando'; S.aviso=''; renovCobrarDesenhar();
+    var pr=Promise.resolve(setPelExtra(S.p, patch, {soDepoisDoOk:true}));
+    var feito=function(){
+      try{ if(typeof audit==='function') audit('renovacao-cobrada', S.nome+' — '+renovCobrancaTexto(reg)+' (renovação do plano '+S.rot+' que vence em '+fmtBR(S.ciclo)+')', Object.assign({alvo:S.k, pet:S.nome}, corrQuemMeta(q))); }
+      catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+      renovCobRedesenhar(S.k);
+    };
+    var r=await corrComPrazo(pr, CORR_PRAZO, CORR_PRAZO_ERRO);
+    if(r && r.semResposta){
+      pr.then(function(r2){ if(r2 && r2.ok) feito(); });
+      renovCobrarFechar({ok:false, semResposta:true});
+      zAlertao('O BANCO AINDA NÃO CONFIRMOU', ['Passaram '+Math.round(CORR_PRAZO/1000)+' segundos e o banco ainda não respondeu.', 'Confira na Renovação de planos se a cobrança entrou antes de registrar de novo.'], {botao:'Entendi'});
+      return {ok:false, semResposta:true};
+    }
+    if(!(r && r.ok)){
+      renovCobrarFechar({ok:false, erro:(r||{}).erro});
+      zAlertao('A COBRANÇA NÃO FOI REGISTRADA', [zErroFrase(zErroInicial(zErroMotivo((r||{}).erro, 'banco', '', {agora:true}))), 'Nada mudou.'], {botao:'Entendi'});
+      return {ok:false, erro:(r||{}).erro};
+    }
+    feito();
+    renovCobrarFechar({ok:true, reg:reg, id:id});
+    if(S.resposta==='nao_renova'){
+      // AC1.2: com a resposta «Não renova», a cobrança fica gravada e o cartaz do «Não renova» abre (cancelado, fica só a cobrança)
+      renovNaoRenovaAbrir(S.p, {cobrada:renovCobrancaTexto(reg)});
+    } else zAlertao('COBRANÇA REGISTRADA', [S.nome+': '+renovCobrancaTexto(reg)+'.'], {ok:true, botao:'Fechar'});
+    return {ok:true, reg:reg, id:id};
+  }
+  // ---- «DESFAZER ESTA COBRANÇA» (marquei por engano, no FILHOt errado): o cartaz «anular», a senha da própria pessoa ----
+  async function renovCobrancaDesfazerAbrir(x, id){
+    var p=renovAlvo(x);
+    if(!p){ zAlertao('NÃO ACHEI ESTE FILHOt', ['Atualize a tela e tente de novo.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var nome=pelNome(p)||p.n||'este FILHOt', k=pelKey(p);
+    if(!renovPodeDesfazer()) return corrBarrar('desfazer a cobrança da renovação', corrQuemPode('ver-plano'), {alvo:k, pet:nome});
+    var ex=pelExtra(p), cob=renovCobrancaDe(ex), o=cob.todos.filter(function(c){ return c._id===id && c.acao==='cobrou'; })[0];
+    if(!o || cob.desfeitas[id]){ zAlertao('ESTA COBRANÇA NÃO ESTÁ VALENDO', ['Ela já foi desfeita, ou não existe mais: atualize a tela.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var unica=(cob.cobrancas.length===1 && cob.cobrancas[0]._id===id);
+    var cas=[nome+': '+renovCobrancaTexto(o)+'.'];
+    if(unica) cas.push(nome+' sai de «Já cobrados» e volta para «Ainda não cobrados» em «a cobrar agora».');
+    else if(o.ciclo===cob.ciclo) cas.push('As outras cobranças deste ciclo continuam valendo: '+nome+' continua em «Já cobrados».');
+    var quem=corrQuemAgora();
+    var r=await corrAbrir({acao:'anular', nivel:'propria', capacidade:'ver-plano', titulo:'Desfazer esta cobrança — '+nome, botao:'Desfazer esta cobrança', tituloOk:'Cobrança desfeita',
+      oque:'a cobrança da renovação de '+nome+' ('+renovDiaHora(o.ts)+', '+String(o.por||'-')+')', original:{caminho:'daycare/cadastro/'+k+'/renov_contatos/'+id, id:id},
+      estado:'cobrança registrada', cascata:cas,
+      gravar:function(reg){
+        if(!renovPodeDesfazer()) return corrBarrar('desfazer a cobrança da renovação', corrQuemPode('ver-plano'), {alvo:k, pet:nome});
+        quem=corrQuemAgora();
+        var patch={}; patch['renov_contatos/'+renovCobNovoId(k)]={acao:'desfez', alvo:id, ciclo:String(o.ciclo||''), ts:reg.ts, registro:reg};
+        var gr=Promise.resolve(setPelExtra(p, patch, {soDepoisDoOk:true}));
+        gr.then(function(x2){ if(x2 && x2.ok){
+          try{ if(typeof audit==='function') audit('renovacao-cobranca-desfeita', nome+' — desfeita a cobrança de '+renovDiaHora(o.ts)+' ('+String(o.por||'-')+'), assinado por '+String(reg.por||'-')+': '+String(reg.motivo||''), Object.assign({alvo:k, pet:nome}, corrQuemMeta(quem))); }
+          catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+          renovCobRedesenhar(k); } });
+        return gr;
+      }});
+    return r;
+  }
+  // ---- «NÃO RENOVA» com o que o tutor disse, e «REABRIR» (a senha da própria pessoa) --------------------------------------
+  async function renovNaoRenovaAbrir(x, op){
+    op=op||{};
+    var p=renovAlvo(x);
+    if(!p){ zAlertao('NÃO ACHEI ESTE FILHOt', ['Atualize a tela e tente de novo.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var nome=pelNome(p)||p.n||'este FILHOt', k=pelKey(p), fem=planoEhFemea(p);
+    if(!renovPodeDesfazer()) return corrBarrar('marcar «Não renova»', corrQuemPode('ver-plano'), {alvo:k, pet:nome});
+    var ex=pelExtra(p), r=renovDe(ex), cob=renovCobrancaDe(ex);
+    if(!renovTemVigencia(ex)){ zAlertao('NÃO HÁ PLANO PARA RENOVAR', [nome+' não tem plano com vigência (sem plano, avulso, morador ou só hospedagem).', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    if(cob.naoRenova){ zAlertao('JÁ ESTÁ EM «NÃO RENOVA»', [renovNaoRenovaTexto(p, cob.naoRenova)+'.', 'Para voltar à cobrança, use «Reabrir».'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var ciclo=cob.ciclo, rot=renovPlanoCurto(r);
+    var info=[];
+    if(op.cobrada) info.push('Cobrança registrada: '+op.cobrada+'. Agora, o «Não renova»:');
+    info.push(nome+' sai de «a cobrar agora» e vai para «Não renova». O plano continua valendo até '+fmtBR(ciclo)+', porque já foi pago: nada muda no Recebimentos.');
+    info.push('Não renova não inativa nem muda a categoria. Se '+(fem?'ela':'ele')+' continua vindo como '+(fem?'avulsa':'avulso')+', troque a categoria na ficha. Se não vem mais, use «Saiu do Day Care — inativar» na aba Plano: quem sai continua no Recebimentos do mês em que pagou.');
+    info.push('No motivo, escreva o que o tutor disse.');
+    var quem=corrQuemAgora(), recusa='';
+    var pr=corrAbrir({acao:'corrigir', nivel:'propria', capacidade:'ver-plano', titulo:'Não renova — '+nome, botao:'Gravar «Não renova»', tituloOk:'Registrado',
+      oque:'a renovação do plano de '+nome+' ('+rot+', até '+fmtBR(ciclo)+')', original:{caminho:'daycare/cadastro/'+k+'/renov_contatos', id:''},
+      campos:[{c:'renovacao', rotulo:'Renovação de '+nome, valor:'a cobrar', opcoes:['a cobrar', 'não renova']}],
+      camposTexto:'Escolha «não renova» e toque em «Continuar».', info:info,
+      validar:function(v){ return (String((v||[])[0]||'')==='não renova')?'':'Escolha «não renova» para continuar. Nada foi gravado.'; },
+      gravar:function(reg){
+        if(!renovPodeDesfazer()) return corrBarrar('marcar «Não renova»', corrQuemPode('ver-plano'), {alvo:k, pet:nome});
+        quem=corrQuemAgora();
+        // 6.73 (QA, REL-001): relê a ficha antes de gravar — com o cartaz aberto, outro aparelho pode ter marcado «Não renova» no
+        // mesmo ciclo (dois registros prenderiam o FILHOt) ou o plano pode ter mudado
+        return planoReler(p).then(function(rl){
+          if(!rl.ok) return {ok:false, erro:rl.erro};
+          var cobB=renovCobrancaDe(rl.ficha);
+          if(cobB.ciclo!==ciclo){ recusa='O plano de '+nome+' mudou em outro aparelho enquanto o cartaz estava aberto. Nada foi gravado: confira.'; return {ok:false, erro:recusa}; }
+          if(cobB.naoRenova){ recusa='Outro aparelho já marcou «Não renova» para '+nome+' agora há pouco ('+renovNaoRenovaTexto(p, cobB.naoRenova)+'). Nada foi gravado.'; return {ok:false, erro:recusa}; }
+          var patch={}; patch['renov_contatos/'+renovCobNovoId(k)]={acao:'nao_renova', ciclo:ciclo, plano:String(r.plano||''), motivo:recMotivoDe(reg), ts:reg.ts, registro:reg};
+          var gr=Promise.resolve(setPelExtra(p, patch, {soDepoisDoOk:true}));
+          gr.then(function(x2){ if(x2 && x2.ok){
+            try{ if(typeof audit==='function') audit('renovacao-nao-renova', nome+' — o tutor avisou que não renova o plano '+rot+' (até '+fmtBR(ciclo)+'), registrado por '+String(reg.por||'-')+': '+String(reg.motivo||''), Object.assign({alvo:k, pet:nome}, corrQuemMeta(quem))); }
+            catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+            renovCobRedesenhar(k); } });
+          return gr;
+        });
+      }});
+    // vai direto ao «Antes → Depois» (a pessoa pode voltar e mudar o campo no próprio cartaz)
+    try{ corrToque('continuar', {valores:['não renova']}); }catch(e){} /* silencioso de propósito: sem o passo direto, o cartaz abre no campo */
+    var rr=await pr;
+    if(recusa) planoFalhaTela('O «NÃO RENOVA» NÃO FOI GRAVADO', recusa, rr, 'Nada mudou.');
+    if(recusa) renovCobRedesenhar(k);
+    return rr;
+  }
+  async function renovNaoRenovaReabrirAbrir(x, id){
+    var p=renovAlvo(x);
+    if(!p){ zAlertao('NÃO ACHEI ESTE FILHOt', ['Atualize a tela e tente de novo.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var nome=pelNome(p)||p.n||'este FILHOt', k=pelKey(p);
+    if(!renovPodeDesfazer()) return corrBarrar('reabrir o «Não renova»', corrQuemPode('ver-plano'), {alvo:k, pet:nome});
+    var ex=pelExtra(p), cob=renovCobrancaDe(ex), o=cob.todos.filter(function(c){ return c._id===id && c.acao==='nao_renova'; })[0];
+    if(!o || cob.reabertas[id]){ zAlertao('ESTE «NÃO RENOVA» NÃO ESTÁ VALENDO', ['Ele já foi reaberto, ou não existe mais: atualize a tela.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var st=statusRenov(ex), volta=[(st.estado==='ok')?(nome+' volta para «em dia» ('+st.label+'), e para «a cobrar agora» quando faltarem 15 dias.'):(nome+' volta para «a cobrar agora» ('+st.label+').')];
+    // 6.73 (QA, REL-001): o «Reabrir» fecha TODOS os «Não renova» que valem no ciclo (dois aparelhos podem ter gravado um cada)
+    var outros=renovNaoRenovaValendo(cob).filter(function(x){ return x._id!==id; });
+    if(outros.length) volta.push('Também '+(outros.length===1?'reabre o outro «Não renova» deste ciclo':('reabre os outros '+outros.length+' «Não renova» deste ciclo'))+' ('+outros.map(function(x){ return renovNaoRenovaTexto(p, x); }).join('; ')+').');
+    var quem=corrQuemAgora(), recusa='';
+    var rr=await corrAbrir({acao:'reabrir', nivel:'propria', capacidade:'ver-plano', titulo:'Reabrir — '+nome+' volta à cobrança', botao:'Reabrir', tituloOk:'Reaberto',
+      oque:'«Não renova» de '+nome+' ('+renovDiaHora(o.ts)+')', original:{caminho:'daycare/cadastro/'+k+'/renov_contatos/'+id, id:id},
+      estado:'não renova', paraEstado:'na cobrança da renovação, pela régua de sempre', volta:volta,
+      gravar:function(reg){
+        if(!renovPodeDesfazer()) return corrBarrar('reabrir o «Não renova»', corrQuemPode('ver-plano'), {alvo:k, pet:nome});
+        quem=corrQuemAgora();
+        // relê a ficha: os «Não renova» que valem AGORA no ciclo (o de agora e o de outro aparelho), cada um com o seu «reabriu»
+        return planoReler(p).then(function(rl){
+          if(!rl.ok) return {ok:false, erro:rl.erro};
+          var vale=renovNaoRenovaValendo(renovCobrancaDe(rl.ficha)).filter(function(x){ return String(x.ciclo||'')===String(o.ciclo||''); });
+          if(!vale.length){ recusa='Outro aparelho já reabriu o «Não renova» de '+nome+' agora há pouco. Nada foi gravado: confira.'; return {ok:false, erro:recusa}; }
+          var patch={};
+          vale.forEach(function(x, i){ patch['renov_contatos/'+renovCobNovoId(k)]={acao:'reabriu', alvo:x._id, ciclo:String(x.ciclo||''), ts:(Number(reg.ts)||0)+i, registro:reg}; });
+          var gr=Promise.resolve(setPelExtra(p, patch, {soDepoisDoOk:true}));
+          gr.then(function(x2){ if(x2 && x2.ok){
+            try{ if(typeof audit==='function') audit('renovacao-nao-renova-reaberta', nome+' — voltou à cobrança da renovação ('+(vale.length===1?('o «Não renova» de '+renovDiaHora(vale[0].ts)+' reaberto'):(vale.length+' «Não renova» do ciclo reabertos'))+'), assinado por '+String(reg.por||'-')+': '+String(reg.motivo||''), Object.assign({alvo:k, pet:nome}, corrQuemMeta(quem))); }
+            catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+            renovCobRedesenhar(k); } });
+          return gr;
+        });
+      }});
+    if(recusa){ planoFalhaTela('O «NÃO RENOVA» NÃO FOI REABERTO', recusa, rr, 'Nada mudou.'); renovCobRedesenhar(k); }
+    return rr;
+  }
+  // ---- A ABA PLANO: o «Já cobrei» junto da mensagem «Plano finalizou», a marca «Não renova» e o histórico ----------------
+  function renovCobrancaFichaHTML(ex, p){
+    var cob=renovCobrancaDe(ex||{}), pode=renovPodeDesfazer(), vig=renovTemVigencia(ex||{}), nome=pelNome(p)||p.n||'', k=pelKey(p), jk=jsAspas(k);
+    var h='<div id="renovCobrancaFicha" style="margin-top:8px;overflow-wrap:anywhere">';
+    if(vig){
+      var u=cob.cobrancas.length?cob.cobrancas[cob.cobrancas.length-1]:null;
+      if(u) h+='<div class="hint renov-cob-ult" style="font-weight:700;color:var(--z-blue)">'+esc(renovCobrancaTexto(u))+(cob.cobrancas.length>1?(' · '+cob.cobrancas.length+' cobranças neste ciclo'):'')+'</div>';
+      if(cob.naoRenova) h+='<div class="hint renov-nr" style="margin-top:4px;font-weight:700;color:var(--crm-critico)">Não renova: '+esc(renovNaoRenovaTexto(p, cob.naoRenova))+'</div>';
+      if(pode){
+        h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">'
+          +'<button type="button" class="btn" style="min-height:44px;padding:9px 14px;font-size:13.5px;font-weight:800;background:var(--z-blue);color:var(--z-cream);border:0;border-radius:12px" onclick="renovCobrarAbrir(\''+jk+'\')">Já cobrei</button>'
+          +(cob.naoRenova
+            ?('<button type="button" class="btn" style="min-height:44px;padding:9px 14px;font-size:13.5px;font-weight:800;background:var(--z-white);color:var(--z-blue);border:2px solid var(--z-blue);border-radius:12px" onclick="renovNaoRenovaReabrirAbrir(\''+jk+'\',\''+jsAspas(cob.naoRenova._id)+'\')">Reabrir (volta à cobrança)</button>')
+            :('<button type="button" class="btn" style="min-height:44px;padding:9px 14px;font-size:13.5px;font-weight:800;background:var(--z-white);color:var(--crm-critico);border:2px solid var(--crm-critico);border-radius:12px" onclick="renovNaoRenovaAbrir(\''+jk+'\')">Não renova</button>'))
+          +'</div>';
+      }
+    }
+    var itens=cob.todos.filter(function(o){ return o.acao==='cobrou' || o.acao==='nao_renova'; });
+    if(itens.length){
+      h+='<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:800;color:var(--muted);font-size:13px;min-height:44px;display:flex;align-items:center">Cobranças da renovação ('+itens.length+')</summary>'
+        +itens.slice().reverse().map(function(o){
+          var cic='ciclo que vence em '+(o.ciclo?fmtBR(o.ciclo):'—');
+          if(o.acao==='cobrou'){
+            var dz=cob.desfeitas[o._id];
+            if(dz) return corrRiscadoHTML(Object.assign({}, dz.registro||{}, {acao:'anular', rotulo:'Desfeita', oque:renovCobrancaTexto(o)+' · '+cic}), '');
+            return '<div style="border-top:1px solid var(--line);padding:8px 0;font-size:13px;color:var(--z-blue)"><div style="font-weight:700">'+esc(renovCobrancaTexto(o))+'</div><div>'+esc(cic)+'</div>'
+              +(pode?('<button type="button" class="btn" style="margin-top:6px;min-height:44px;padding:8px 14px;font-size:13px;font-weight:800;background:var(--z-white);color:var(--crm-critico);border:2px solid var(--crm-critico);border-radius:12px" onclick="renovCobrancaDesfazerAbrir(\''+jk+'\',\''+jsAspas(o._id)+'\')">Desfazer esta cobrança</button>'):'')+'</div>';
+          }
+          var ra=cob.reabertas[o._id];
+          if(ra) return corrRiscadoHTML(Object.assign({}, ra.registro||{}, {acao:'reabrir', rotulo:'Reaberto', oque:'Não renova — '+renovNaoRenovaTexto(p, o)+' · '+cic}), '');
+          return '<div style="border-top:1px solid var(--line);padding:8px 0;font-size:13px;color:var(--z-blue)"><div style="font-weight:700">Não renova — '+esc(renovNaoRenovaTexto(p, o))+'</div><div>'+esc(cic)+'</div></div>';
+        }).join('')+'</details>';
+    }
+    return h+'</div>';
+  }
+  // ---- O Dashboard da Adriana: a parte dos «planos que venceram sem renovação» de quem avisou que não renova (AC3.2) ----
+  // A conta não muda (o finResumoMes fica como está, S8-P13): só a parte, pela mesma régua.
+  function renovNaoRenovaParte(inadimplentes){
+    var cad=(typeof pelCadCache!=='undefined' && pelCadCache)?pelCadCache:{}, n=0, cent=0;
+    (inadimplentes||[]).forEach(function(o){
+      if(!o || o.servico!=='daycare') return;
+      var c=cad[o.chave];
+      if(c && renovCobrancaDe(c).naoRenova){ n++; cent+=Math.round(Number(o.valorDeUmMes)||0); }
+    });
+    return {n:n, cent:cent};
+  }
+
   // ---- TELA "Renovação de Planos" (sidebar) ----
   // Lista quem está com plano vencido/vencendo primeiro. A consultora abre a ficha para renovar.
   // A tela existe para a consultora COBRAR a renovação. Por isso abre já filtrada em "a cobrar
@@ -33073,7 +33477,8 @@
     if(!Array.isArray(PELUDINHOS)) return;
     const ehTipo=renovFiltro.indexOf('tipo:')===0;
     const tipoAlvo=ehTipo?renovFiltro.slice(5):'';
-    const ativos=PELUDINHOS.map(function(p,i){ const ex=pelExtra(p); return {p:p,i:i,ex:ex,st:statusRenov(ex)}; })
+    // 6.73 (AC3.1): a régua da cobrança de cada FILHOt (renovCobrancaDe) — a mesma da aba Plano e do Painel da Supervisão
+    const ativos=PELUDINHOS.map(function(p,i){ const ex=pelExtra(p); return {p:p,i:i,ex:ex,st:statusRenov(ex),cob:renovCobrancaDe(ex)}; })
       .filter(function(o){ return !pelInativo(o.p); });
     // Nos filtros de COBRANÇA a lista é só de quem tem plano a renovar — hospedagem, avulso e
     // moradores não têm mensalidade para vencer. Mas quando a pessoa clica em "Moradores" ou
@@ -33092,10 +33497,14 @@
         +'<b style="color:'+cor+'">'+n+'</b> '+rot+'</button>'; };
       const nSit=ehTipo?ativos.filter(function(o){ return ['auaulandia','avulso','morador'].indexOf(o.st.estado)<0; }):itens;
       const cSit={vencido:0,vence:0,sem:0,ok:0}; nSit.forEach(function(o){ cSit[o.st.estado]++; });
-      fl.innerHTML=bt('cobrar','a cobrar agora',cSit.vencido+cSit.vence,'var(--crm-critico)')
+      // 6.73 (AC2.4): quem avisou que não renova sai de «a cobrar agora» (e do número) e vai para «Não renova» (o botão só aparece com alguém nele)
+      const nNR=nSit.filter(function(o){ return !!o.cob.naoRenova; }).length;
+      const nCobrar=nSit.filter(function(o){ return (o.st.estado==='vencido'||o.st.estado==='vence') && !o.cob.naoRenova; }).length;
+      fl.innerHTML=bt('cobrar','a cobrar agora',nCobrar,'var(--crm-critico)')
         +bt('ok','em dia',cSit.ok,'var(--crm-ok)')
         +bt('sem','sem plano',cSit.sem,'var(--z-blue)')
-        +bt('todos','todos',nSit.length,'var(--z-gold-deep)');
+        +bt('todos','todos',nSit.length,'var(--z-gold-deep)')
+        +((nNR>0 || renovFiltro==='naorenova')?bt('naorenova','não renova',nNR,'var(--crm-critico)'):'');
       // Quebra por tipo de cliente — agora CLICÁVEL: toca e a lista abaixo mostra quem são
       // (Adriana, 11/ago/2026). Antes eram etiquetas mudas com um número.
       try{
@@ -33113,12 +33522,14 @@
     const visiveis=itens.filter(function(o){
       if(ehTipo) return true;                       // já filtrado pelo tipo na montagem
       if(renovFiltro==='todos') return true;
-      if(renovFiltro==='cobrar') return o.st.estado==='vencido'||o.st.estado==='vence';
+      if(renovFiltro==='cobrar') return (o.st.estado==='vencido'||o.st.estado==='vence') && !o.cob.naoRenova;
+      if(renovFiltro==='naorenova') return !!o.cob.naoRenova;
       if(renovFiltro==='sem') return o.st.estado==='sem';
       return o.st.estado==='ok';
     });
     const vazio={cobrar:'Ninguém para cobrar agora — nenhum plano vencido ou vencendo nos próximos 15 dias.',
-      ok:'Nenhum plano em dia no momento.', sem:'Todos os peludinhos ativos têm plano lançado.', todos:'Nenhum peludinho ativo.'};
+      ok:'Nenhum plano em dia no momento.', sem:'Todos os peludinhos ativos têm plano lançado.', todos:'Nenhum peludinho ativo.',
+      naorenova:'Ninguém em «Não renova»: nenhum tutor avisou que não renova o plano de agora.'};
     if(ehTipo){
       const titulo=document.getElementById('renovTipoTit');
       if(titulo){ titulo.style.display='block';
@@ -33127,15 +33538,41 @@
     } else { const t=document.getElementById('renovTipoTit'); if(t) t.style.display='none'; }
     if(!visiveis.length){ el.innerHTML=avisoCarteiraCarregando()+'<div class="hint" style="padding:16px 2px">'+(CARTEIRA_CARREGADA?(ehTipo?('Nenhum peludinho em "'+(TIPO_ROTULO[tipoAlvo]||tipoAlvo)+'" no momento.'):vazio[renovFiltro])                     :'A lista chega assim que o banco responder.')+'</div>'; return; }
     const clsSt={vencido:'vd-venc',vence:'vd-perto',sem:'vd-sem',ok:'vd-ok'};
-    el.innerHTML=avisoCarteiraCarregando()+'<div class="renov-list">'+visiveis.map(function(o){ const r=renovDe(o.ex);
+    // 6.73 (AC1.1, AC2.1): em «a cobrar agora», «Já cobrei» e «Não renova» na linha (o toque no botão não abre a ficha; no resto
+    // da linha, abre, como sempre); em «Não renova», o que o tutor disse e «Reabrir». O FILHOt vai pelo índice do PELUDINHOS.
+    const pode=renovPodeDesfazer();
+    const btL=function(fn, txt, cor, extra){ return '<button type="button" class="btn" style="min-height:44px;padding:8px 14px;font-size:13px;font-weight:800;border-radius:12px;'
+      +(cor?('background:var(--z-white);color:'+cor+';border:2px solid '+cor):'background:var(--z-blue);color:var(--z-cream);border:0')+'" onclick="event.stopPropagation();'+fn+'('+extra+')">'+txt+'</button>'; };
+    const linha=function(o){ const r=renovDe(o.ex);
       const periodo=((r.vig_inicio||r.inicio)&&r.fim)?(fmtBR(r.vig_inicio||r.inicio)+' a '+fmtBR(r.fim)):(r.fim?('até '+fmtBR(r.fim)):'sem vigência lançada');
+      let cobH='';
+      if(renovFiltro==='cobrar'){
+        const u=o.cob.cobrancas.length?o.cob.cobrancas[o.cob.cobrancas.length-1]:null;
+        const dentro=(u?('<div class="renov-cob-ult" style="font-size:12.5px;font-weight:700;color:var(--z-blue)">'+esc(renovCobrancaTexto(u))+(o.cob.cobrancas.length>1?(' · '+o.cob.cobrancas.length+' cobranças neste ciclo'):'')+'</div>'):'')
+          +(pode?('<div style="display:flex;gap:8px;flex-wrap:wrap">'+btL('renovCobrarAbrir', 'Já cobrei', '', o.i)+btL('renovNaoRenovaAbrir', 'Não renova', 'var(--crm-critico)', o.i)+'</div>'):'');
+        if(dentro) cobH='<div class="renov-cob" style="flex-basis:100%;display:flex;flex-direction:column;gap:6px">'+dentro+'</div>';
+      } else if(renovFiltro==='naorenova' && o.cob.naoRenova){
+        cobH='<div class="renov-cob" style="flex-basis:100%;display:flex;flex-direction:column;gap:6px">'
+          +'<div class="renov-nr" style="font-size:12.5px;font-weight:700;color:var(--crm-critico)">'+esc(renovNaoRenovaTexto(o.p, o.cob.naoRenova))+'</div>'
+          +(pode?('<div style="display:flex;gap:8px;flex-wrap:wrap">'+btL('renovNaoRenovaReabrirAbrir', 'Reabrir', 'var(--z-blue)', o.i+',\''+jsAspas(o.cob.naoRenova._id)+'\'')+'</div>'):'')
+          +'</div>';
+      }
       return '<div class="renov-item" onclick="abrirPeludinhoRenov('+o.i+')">'
         +'<div class="renov-nome">'+escAttr(pelNome(o.p))+' <span class="pel-obs">'+escAttr(pelGet(o.p,'raca')||'')+'</span>'
         +'<div class="renov-tutor">'+escAttr(pelGet(o.p,'tutor')||'tutor a confirmar')+'</div></div>'
         +'<div class="renov-meta">'+(r.plano?escAttr(r.plano)+' · '+(renovDiasMesValido(r)?escAttr(renovMesesDoPlano(r).map(function(m){ return m.dias.length+'x'; }).join(', ')):(nAulasDe(o.p)+'x')):'plano a definir')
         +'<div class="renov-per">'+periodo+'</div></div>'
-        +'<span class="vd '+clsSt[o.st.estado]+'">'+o.st.label+'</span></div>';
-    }).join('')+'</div>';
+        +'<span class="vd '+clsSt[o.st.estado]+'">'+o.st.label+'</span>'+cobH+'</div>';
+    };
+    // 6.73 (AC1.4): «a cobrar agora» em dois grupos — «Ainda não cobrados» primeiro, «Já cobrados» depois —, cada um na ordem de hoje
+    let corpo;
+    if(renovFiltro==='cobrar' && !ehTipo){
+      const nao=visiveis.filter(function(o){ return !o.cob.cobrancas.length; }), ja=visiveis.filter(function(o){ return o.cob.cobrancas.length>0; });
+      const tit=function(t){ return '<div class="renov-grupo" style="font-size:13px;font-weight:800;color:var(--muted);margin-top:6px">'+t+'</div>'; };
+      corpo=tit('Ainda não cobrados ('+nao.length+')')+nao.map(linha).join('')
+        +tit('Já cobrados ('+ja.length+')')+(ja.length?ja.map(linha).join(''):'<div class="hint" style="padding:2px">Ninguém cobrado ainda neste ciclo.</div>');
+    } else corpo=visiveis.map(linha).join('');
+    el.innerHTML=avisoCarteiraCarregando()+'<div class="renov-list">'+corpo+'</div>';
   }
   function abrirPeludinhoRenov(i){ pelOrigem='renovacao'; irParaView('ficha'); abrirPeludinho(i);
     setTimeout(function(){ try{ const bt=Array.prototype.find.call(document.querySelectorAll('.subtab2'), function(b){ return (b.getAttribute('onclick')||'').indexOf("'ps-plano'")>=0; }); if(bt) pelSubtab(bt,'ps-plano'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 30); }
@@ -41916,7 +42353,7 @@
   // ===== STORY 6.71 (AC8) — A SAÍDA E A VOLTA DO DAY CARE, UMA FUNÇÃO CADA ==================
   // O botão «Saiu do Day Care — inativar» / «↩ Reativar (voltou)», o seletor antigo «Saiu do Day Care?»
   // e o «Voltou» de Relatórios › Inativos passam pelas mesmas duas funções: a pergunta, o motivo, a data
-  // e o tipo; a linha do dinheiro na pergunta de inativar (a regra de hoje, S8-P2, à vista); as mensagens
+  // e o tipo; a linha do dinheiro na pergunta de inativar (a S8-P2 à vista: desde a 6.73, quem sai continua no mês em que pagou); as mensagens
   // na tela (zAlertao), nunca em janela nativa; «foi inativado» e «Voltou» só com o ok do banco. A volta
   // limpa a saída e a guarda em saidas, com o motivo da volta; no mesmo dia, «Desfazer a volta».
   function saidaHojeBR(){ var d=new Date(), p2=function(x){ return String(x).padStart(2,'0'); }; return p2(d.getDate())+'/'+p2(d.getMonth()+1)+'/'+d.getFullYear(); }
@@ -41925,11 +42362,18 @@
     return isNaN(d.getTime())?'':(d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()));
   }
   // A linha do dinheiro na pergunta de inativar (AC8.2): o efeito no Recebimentos pela mesma conta do quadro.
-  // Sem pagamento no período olhado, nenhuma linha.
+  // 6.73 (S8-P2, Adriana, 12/10/2026: «sim»): quem sai continua no Recebimentos do mês em que pagou — inativar não muda mês
+  // nenhum, e a pergunta diz isso quando o FILHOt tem pagamento que conta (antes: «Pela regra de hoje, quem sai não entra na
+  // conta do mês: …», com o mês que caía). Sem pagamento no período olhado (ef nulo: sem o módulo do dinheiro), nenhuma linha.
   function saidaEfeitoLinha(p){
     var k=pelKey(p), base=(typeof pelCadCache!=='undefined' && pelCadCache[k])||pelExtra(p)||{};
     var ef=planoEfeitoNoRecebimento(p, planoFichaDepois(base, {inativo:'Sim'}));
-    if(!ef || !ef.length) return '';
+    if(!ef) return '';
+    if(!ef.length){
+      var cont=renovHistContaIds(base)||{}, rr=base.renov||{}, hh=base.renov_hist||{}, iso=/^\d{4}-\d{2}-\d{2}$/;
+      var paga=iso.test(String(rr.inicio||'')) || Object.keys(hh).some(function(id){ return cont[id] && iso.test(String((hh[id]||{}).inicio||'')); });
+      return paga?'No Recebimentos, nada muda: quem sai continua contando no mês em que pagou.':'';
+    }
     var conta=renovHistContaIds(base)||{}, r=base.renov||{}, h=base.renov_hist||{};
     var datas=function(mes){
       var ds=[]; if(String(r.inicio||'').slice(0,7)===mes) ds.push(String(r.inicio));
@@ -41937,7 +42381,7 @@
       return ds.sort().map(fmtBR);
     };
     // 2ª rodada (REQ-001): o total com nome, o mesmo da pergunta do anular (planoEfeitoTexto), e a data de cada pagamento
-    return 'Pela regra de hoje, quem sai não entra na conta do mês: '+ef.map(function(m){
+    return 'No Recebimentos, ao inativar: '+ef.map(function(m){
       var ds=datas(m.mes);
       return planoEfeitoTexto([m], k)+(ds.length?(' ('+(ds.length>1?'pagamentos de ':'pagamento de ')+mmJuntar(ds)+')'):'');
     }).join('; ')+'.';
@@ -42965,13 +43409,14 @@
 
       <div class="ppanel2 so-sensivel" id="ps-plano"><div class="card">
         <h2 style="font-size:20px">Plano</h2>
-        <div class="hint">Planos DayCare 2026. A tabela é por mês (a mensalidade); o valor do plano é a mensalidade vezes os meses do tipo (1 no mensal, 3 no trimestral, 6 no semestral), pago à vista. Desconto: 2º peludinho 7%, 3º 12%.</div>
+        <div class="hint">Planos DayCare 2026. A tabela é por mês (a mensalidade); o valor do plano é a mensalidade vezes os meses do tipo (1 no mensal, 3 no trimestral, 6 no semestral), pago à vista. Desconto: 2º peludinho ${descontosPlano()[2]}%, 3º ${descontosPlano()[3]}%.</div>
         ${blocoPlano(ex,p)}
         <h3 class="cad-sub">Mensagens para o tutor</h3>
         <div class="renov-msgs">
           <div class="renov-msg"><div class="renov-msg-tit">Plano finalizou &mdash; oferecer renovação</div>
             <textarea class="gest-txt" readonly>${escAttr(msgPlanoFinalizou(p,ex))}</textarea>
-            <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button></div>
+            <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button>
+            ${renovCobrancaFichaHTML(ex,p)}</div>
           <div class="renov-msg"><div class="renov-msg-tit">Renovação confirmada</div>
             <textarea class="gest-txt" readonly>${escAttr(msgRenovado(p,ex))}</textarea>
             <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button></div>
@@ -67731,6 +68176,7 @@
       if(typeof cfgFotosRender==='function') cfgFotosRender();
       if(typeof cfgValoresRender==='function') cfgValoresRender();
       if(typeof dcValoresCarregar==='function') dcValoresCarregar();
+      if(typeof cfgPlanosAbrir==='function') cfgPlanosAbrir();   // 6.73 (AC7): o cartão «Planos do Day Care» e «Tabelas anteriores»
       if(typeof cfgEntradaRender==='function') cfgEntradaRender();
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
   }
@@ -68315,6 +68761,344 @@
       _logFalhaGrav('daycare/config/valores (cfgValoresSalvar)', e);
       diz('❌ Não salvou: '+((e&&e.message)||e),'var(--crm-critico)');
     });
+  }
+  // ===== CONFIGURAÇÕES › PLANOS DO DAY CARE (Story 6.73, L11) =========================================================
+  // "Preço muda todo ano" (o comentário do PLANOS_PADRAO, desde 2026): a tabela de planos saiu do código. As 15 mensalidades
+  // (Silver · mensal, Gold · trimestral, Black · semestral, de 1 a 5 vezes por semana), o desconto do 2º e do 3º FILHOt da
+  // família no plano e o desconto na AuAulândia de cada plano. «Salvar a tabela» abre o cartaz «corrigir» da 6.57 com cada
+  // valor que mudou, o efeito nos meses ANTES da senha (o mês fechado não muda; o plano com valor gravado não muda), o motivo
+  // e a senha da Adriana (S8-P9: «só adriana»). Uma gravação só: a tabela (daycare/config/tabela-planos, inteira) e o histórico
+  // (daycare/config/tabela-planos-historico/{id} = {antes, depois, motivo, registro, efeito, fechados}). O compromisso, o nome
+  // e as chaves dos planos não se editam (a área protegida lê o compromisso pela turma do dia); nem as parcelas (sem uso).
+  var TABELA_HIST=null;          // o histórico (lido ao abrir Configurações)
+  var CFG_PLANOS_DESENHO=null;   // a tabela que o cartão desenhou (para não apagar o que a Gestão está digitando)
+  var PLANOS_ROT_N=['', '1x', '2x', '3x', '4x', '5x'];
+  // O ouvinte da tabela (o nó tem menos de 1 KB e muda uma vez por ano): a tabela nova chega a todo aparelho aberto.
+  function tabelaPlanosOuvir(){
+    if(!DB) return;
+    TABELA_PLANOS.pedida=true;
+    DB.ref('daycare/config/tabela-planos').on('value', function(s){
+      tabelaPlanosAplicar((s && typeof s.val==='function')?s.val():null);
+      TABELA_PLANOS.chegou=true; TABELA_PLANOS.erro=null;
+      try{ if(document.getElementById('cfgPlanosWrap') && !cfgPlanosSujo()) cfgPlanosRender(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+      try{ if(typeof recRedesenhar==='function') recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    }, function(e){ TABELA_PLANOS.erro=e; _logLeituraFalhou('daycare/config/tabela-planos (a tabela de planos)', e);
+      try{ if(typeof recRedesenhar==='function') recRedesenhar(); }catch(x){} /* silencioso de propósito: redesenho de tela */ });
+  }
+  // «Tentar de novo» (a leitura da tabela falhou neste aparelho): o Firebase desliga o ouvinte que deu erro; liga outro.
+  function tabelaPlanosTentar(){
+    if(!planosLeituraFalhou()) return false;
+    TABELA_PLANOS.erro=null;
+    try{ tabelaPlanosOuvir(); }catch(e){ TABELA_PLANOS.erro=e; _logLeituraFalhou('daycare/config/tabela-planos (tentar de novo)', e); }
+    try{ if(typeof recRedesenhar==='function') recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    return true;
+  }
+  // A tabela como o cartão a trata: {Silver:{valores:{1..5}, hospOff}, Gold, Black, descontoIrmao:{2, 3}}.
+  function tabelaPlanosDe(P, D){
+    var T={};
+    Object.keys(PLANOS_PADRAO).forEach(function(k){ var pl=(P||{})[k]||PLANOS_PADRAO[k], v={};
+      [1,2,3,4,5].forEach(function(n){ v[n]=Number((pl.valores||{})[n])||0; });
+      T[k]={valores:v, hospOff:Number(pl.hospOff)||0}; });
+    T.descontoIrmao={2:Number((D||{})[2])||0, 3:Number((D||{})[3])||0};
+    return T;
+  }
+  function tabelaPlanosAtual(){ return tabelaPlanosDe(planos(), descontosPlano()); }
+  function tabelaPlanosFabrica(){ return tabelaPlanosDe(PLANOS_PADRAO, DESC_PET_PLANO); }
+  // A tabela no formato do planos() (com o nome, o compromisso e as parcelas de fábrica), para a conta do efeito.
+  function tabelaPlanosParaPlanos(T){
+    var P={};
+    Object.keys(PLANOS_PADRAO).forEach(function(k){ var F=PLANOS_PADRAO[k], S=(T||{})[k]||{};
+      P[k]={rotulo:F.rotulo, compromisso:F.compromisso, parcelas:F.parcelas, hospOff:Number(S.hospOff)||0, valores:Object.assign({}, S.valores||F.valores)}; });
+    return P;
+  }
+  // PURA: as linhas da tabela, cada uma com o texto que o cartaz e o rastro mostram.
+  function tabelaPlanosLinhas(T){
+    var out=[];
+    Object.keys(PLANOS_PADRAO).forEach(function(k){ [1,2,3,4,5].forEach(function(n){
+      out.push({c:k+'_'+n, rotulo:PLANOS_PADRAO[k].rotulo+' · '+n+'x por semana', texto:fmtCent(Number((T[k]||{}).valores[n])||0)}); }); });
+    out.push({c:'irmao_2', rotulo:'2º FILHOt da família', texto:(Number((T.descontoIrmao||{})[2])||0)+'%'});
+    out.push({c:'irmao_3', rotulo:'3º FILHOt da família em diante', texto:(Number((T.descontoIrmao||{})[3])||0)+'%'});
+    Object.keys(PLANOS_PADRAO).forEach(function(k){ out.push({c:k+'_off', rotulo:'Desconto na AuAulândia, '+PLANOS_PADRAO[k].rotulo, texto:(Number((T[k]||{}).hospOff)||0)+'%'}); });
+    return out;
+  }
+  function tabelaPlanosMudancas(A, B){
+    var LA=tabelaPlanosLinhas(A), LB=tabelaPlanosLinhas(B);
+    return LB.filter(function(b, i){ return b.texto!==LA[i].texto; }).map(function(b){ var a=LA.filter(function(x){ return x.c===b.c; })[0]||{}; return {c:b.c, rotulo:b.rotulo, de:a.texto, para:b.texto}; });
+  }
+  // A régua de um campo de percentual (o desconto de irmão e o da AuAulândia): inteiro de 0 a 50.
+  function cfgPlanosPct(t){ var s=String(t==null?'':t).replace(/%/g,'').trim(); return /^\d{1,2}$/.test(s)?planosPct(parseInt(s,10)):null; }
+  // Lê o cartão; o erro sai na própria tela (a régua dos campos, AC7.3).
+  function cfgPlanosLer(){
+    var val=function(id){ var el=document.getElementById(id); return (el && typeof el.value==='string')?el.value:''; };
+    var T={}, frase='';
+    Object.keys(PLANOS_PADRAO).forEach(function(k){
+      var v={};
+      [1,2,3,4,5].forEach(function(n){ var c=acertoLerReal(val('cfgPl_'+k+'_'+n)); if(!frase && (c===null || !(c>0))) frase='O valor de «'+PLANOS_PADRAO[k].rotulo+' · '+n+'x por semana» precisa ser maior que zero, em reais (por exemplo: '+acertoReaisTexto(PLANOS_PADRAO[k].valores[n])+'). Nada foi salvo.'; v[n]=c; });
+      var off=cfgPlanosPct(val('cfgPlOff_'+k));
+      if(!frase && off===null) frase='O desconto na AuAulândia do '+PLANOS_PADRAO[k].rotulo+' precisa ser um número inteiro de 0 a 50 (%). Nada foi salvo.';
+      T[k]={valores:v, hospOff:off};
+    });
+    var d2=cfgPlanosPct(val('cfgPlIrmao_2')), d3=cfgPlanosPct(val('cfgPlIrmao_3'));
+    if(!frase && d2===null) frase='O desconto do 2º FILHOt da família precisa ser um número inteiro de 0 a 50 (%). Nada foi salvo.';
+    if(!frase && d3===null) frase='O desconto do 3º FILHOt da família em diante precisa ser um número inteiro de 0 a 50 (%). Nada foi salvo.';
+    if(!frase && d2===0 && d3===0) frase='Com os dois descontos em 0%, a conta do Financeiro voltaria aos 7% e 12% de fábrica. Deixe pelo menos um deles maior que zero. Nada foi salvo.';
+    if(frase) return {frase:frase};
+    T.descontoIrmao={2:d2, 3:d3};
+    return {T:T};
+  }
+  // O que a Gestão digitou e ainda não salvou (o redesenho não apaga).
+  function cfgPlanosSujo(){
+    if(!CFG_PLANOS_DESENHO || !document.getElementById('cfgPl_Silver_1')) return false;
+    var L=cfgPlanosLer(); if(L.frase) return true;
+    return tabelaPlanosMudancas(CFG_PLANOS_DESENHO, L.T).length>0;
+  }
+  // «Hoje vale …» embaixo de cada grupo, com de quem é a tabela.
+  function cfgPlanosOrigem(){
+    var v=TABELA_PLANOS.v;
+    if(!v) return 'ainda é a tabela de fábrica de 2026';
+    return 'salva por '+String(v.quem||'-')+(v.ts?(' em '+renovQuandoBR(Number(v.ts)).slice(0,10)):'');
+  }
+  function cfgPlanosRender(T){
+    var w=document.getElementById('cfgPlanosWrap'); if(!w) return;
+    var A=tabelaPlanosAtual(); T=T||A; CFG_PLANOS_DESENHO=JSON.parse(JSON.stringify(T));
+    var orig=cfgPlanosOrigem(), inp='width:100%;box-sizing:border-box;min-height:44px';
+    var h='';
+    Object.keys(PLANOS_PADRAO).forEach(function(k){
+      var F=PLANOS_PADRAO[k], cap=F.compromisso.charAt(0).toUpperCase()+F.compromisso.slice(1);
+      h+='<div style="margin-top:12px;padding-top:11px;border-top:1px solid var(--line)"><div class="cad-lb" style="font-weight:800">'+esc(F.rotulo)+' · '+esc(F.compromisso)+' — a mensalidade, por quantas vezes na semana</div>'
+        +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;margin-top:6px">'
+        +[1,2,3,4,5].map(function(n){ return '<label style="display:block;font-size:12.5px;font-weight:700;color:var(--z-blue)">'+n+'x por semana<input class="cad-in" id="cfgPl_'+k+'_'+n+'" inputmode="decimal" style="'+inp+'" value="'+escAttr(acertoReaisTexto(T[k].valores[n]))+'"></label>'; }).join('')
+        +'<label style="display:block;font-size:12.5px;font-weight:700;color:var(--z-blue)">Desconto na AuAulândia (%)<input class="cad-in" id="cfgPlOff_'+k+'" inputmode="numeric" style="'+inp+'" value="'+escAttr(String(T[k].hospOff))+'"></label>'
+        +'</div><div class="hint" style="margin-top:4px">'+esc(cap)+': hoje vale '+esc([1,2,3,4,5].map(function(n){ return n+'x '+fmtCent(A[k].valores[n]); }).join(' · '))+'; desconto na AuAulândia '+A[k].hospOff+'% — '+esc(orig)+'.</div></div>';
+    });
+    h+='<div style="margin-top:12px;padding-top:11px;border-top:1px solid var(--line)"><div class="cad-lb" style="font-weight:800">Desconto de irmão no plano (a Família Multiespécie com mais de um FILHOt no Day Care)</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:6px">'
+      +'<label style="display:block;font-size:12.5px;font-weight:700;color:var(--z-blue)">2º FILHOt da família (%)<input class="cad-in" id="cfgPlIrmao_2" inputmode="numeric" style="'+inp+'" value="'+escAttr(String(T.descontoIrmao[2]))+'"></label>'
+      +'<label style="display:block;font-size:12.5px;font-weight:700;color:var(--z-blue)">3º FILHOt em diante (%)<input class="cad-in" id="cfgPlIrmao_3" inputmode="numeric" style="'+inp+'" value="'+escAttr(String(T.descontoIrmao[3]))+'"></label>'
+      +'</div><div class="hint" style="margin-top:4px">Hoje vale: 2º FILHOt '+A.descontoIrmao[2]+'%, 3º em diante '+A.descontoIrmao[3]+'% — '+esc(orig)+'. Os dois nunca ficam em 0% ao mesmo tempo.</div></div>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
+      +'<button type="button" class="btn btn-gold" style="min-height:44px" onclick="cfgPlanosSalvar()">Salvar a tabela</button>'
+      +'<button type="button" class="btn" style="min-height:44px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="cfgPlanosFabrica()">Voltar à tabela de fábrica</button></div>'
+      +'<div id="cfgPlanosSt" class="hint" style="margin-top:6px"></div>'
+      +'<div id="cfgPlanosHist">'+cfgPlanosHistHTML()+'</div>';
+    w.innerHTML=h;
+  }
+  // Ao abrir Configurações: o cartão e «Tabelas anteriores» (lido uma vez).
+  function cfgPlanosAbrir(){
+    cfgPlanosRender();
+    if(!DB) return Promise.resolve(false);
+    return DB.ref('daycare/config/tabela-planos-historico').once('value').then(function(s){
+      TABELA_HIST=((s && typeof s.val==='function')?s.val():null)||{};
+      var hb=document.getElementById('cfgPlanosHist'); if(hb) hb.innerHTML=cfgPlanosHistHTML();
+      return true;
+    }).catch(function(e){ _logLeituraFalhou('daycare/config/tabela-planos-historico (Tabelas anteriores)', e); return false; });
+  }
+  // «Voltar à tabela de fábrica» só PREENCHE os campos (quem grava é o «Salvar a tabela»).
+  function cfgPlanosFabrica(){
+    cfgPlanosRender(tabelaPlanosFabrica());
+    CFG_PLANOS_DESENHO=tabelaPlanosAtual();   // o que está no cartão é rascunho até o «Salvar a tabela»
+    var st=document.getElementById('cfgPlanosSt');
+    if(st){ st.style.color='var(--z-blue)'; st.textContent='Os campos voltaram à tabela de fábrica de 2026. Nada foi salvo: confira e toque em «Salvar a tabela».'; }
+  }
+  async function cfgPlanosSalvar(){
+    // a linha de estado é achada a cada frase: o cartão se redesenha depois de salvar (a de antes sai da página)
+    var diz=function(t, cor){ var st=document.getElementById('cfgPlanosSt'); if(st){ st.style.color=cor; st.textContent=t; } };
+    // AC7.2: a Supervisão vê o cartão, mas não salva — conferido na função
+    if(!podePapel('gestao-role', papelDoCorpo())) return corrBarrar('mudar a tabela de planos do Day Care', corrQuemPode('gestao-role'), {tela:'config'});
+    var L=cfgPlanosLer();
+    if(L.frase){ diz(L.frase, 'var(--crm-critico)'); return {ok:false, aviso:L.frase}; }
+    if(!tabelaPlanosMudancas(tabelaPlanosAtual(), L.T).length){ diz('Nada mudou: a tabela é a mesma de agora. Nada foi salvo.', 'var(--z-blue)'); return {ok:false, nada:true}; }
+    diz('', 'var(--z-blue)');
+    return tabelaPlanosAbrir(L.T, null);
+  }
+  // As leituras do efeito, relidas agora: os fechamentos (daycare/recebimentos), os vínculos de irmãos e a tabela salva.
+  function tabelaPlanosLeituras(){
+    if(!DB) return Promise.resolve({ok:false, erro:new Error('banco reconectando')});
+    var pega=function(c){ var pr; try{ pr=Promise.resolve(DB.ref(c).once('value')); }catch(e){ pr=Promise.reject(e); }
+      return pr.then(function(s){ return {ok:true, v:(s && typeof s.val==='function')?s.val():null}; }, function(e){ _logLeituraFalhou(c+' (a tabela de planos)', e); return {ok:false, erro:e}; }); };
+    return corrComPrazo(Promise.all([pega('daycare/recebimentos'), pega('daycare/irmaos'), pega('daycare/config/tabela-planos')]).then(function(r){
+      var ruim=r.filter(function(x){ return !x.ok; })[0];
+      return ruim?{ok:false, erro:ruim.erro}:{ok:true, fech:r[0].v||{}, irm:r[1].v||{}, tab:r[2].v};
+    }), CORR_PRAZO, CORR_PRAZO_ERRO);
+  }
+  // Os meses fechados, pelos eventos lidos (o evento mais novo de cada mês).
+  function tabelaPlanosFechados(fech){
+    var out={};
+    Object.keys(fech||{}).forEach(function(mes){ var ev=((fech[mes]||{}).eventos)||{}, u=null, uid='';
+      Object.keys(ev).forEach(function(id){ var x=ev[id]||{}, t=Number(x.ts)||0; if(!u || t>(Number(u.ts)||0) || (t===(Number(u.ts)||0) && id>uid)){ u=x; uid=id; } });
+      if(u && u.acao==='fechou') out[mes]=Number(u.total_cent)||0; });
+    return out;
+  }
+  // PURA (sobre a memória e o que foi relido): o EFEITO DA TABELA NOVA NOS MESES (AC8.2) — pela mesma finResumoMes, com o
+  // cadastro inteiro e os irmãos, a tabela e os descontos de antes e os de depois, em todo mês que tem pagamento de plano
+  // (o plano de agora ou uma renovação anterior); só o Day Care (as reservas não usam a tabela). Cada mês que muda, com o
+  // total dos planos do Day Care antes e depois e cada FILHOt; e se o mês está fechado.
+  function tabelaPlanosEfeito(nova, irm, fechados){
+    var cad=(typeof pelCadCache!=='undefined' && pelCadCache)?pelCadCache:{}, meses={}, iso=/^\d{4}-\d{2}-\d{2}$/, hoje=(typeof hojeISO==='function')?hojeISO():'';
+    Object.keys(cad).forEach(function(k){ var c=cad[k]||{}, r=c.renov||{}, h=c.renov_hist||{};
+      if(iso.test(r.inicio||'')) meses[String(r.inicio).slice(0,7)]=1;
+      Object.keys(h).forEach(function(id){ var o=h[id]||{}; if(iso.test(o.inicio||'')) meses[String(o.inicio).slice(0,7)]=1; }); });
+    var base={cadastro:cad, peludinhos:(typeof PELUDINHOS!=='undefined')?PELUDINHOS:[], irmaos:irm||{}, orcamentos:{}, pagamentos:null};
+    var Pa=planos(), Da=descontosPlano(), Pb=tabelaPlanosParaPlanos(nova), Db=nova.descontoIrmao;
+    var soma=function(R){ var t=0, por={}; ((R||{}).porFILHOt||[]).forEach(function(o){ if(o.servico==='auaulandia') return; t+=(o.valor||0); por[o.chave]=(por[o.chave]||0)+(o.valor||0); }); return {t:t, por:por}; };
+    var out=[];
+    Object.keys(meses).sort().forEach(function(mes){
+      var a=soma(finResumoMes(Object.assign({planos:Pa, descontoIrmao:Da}, base), mes, {hoje:hoje}));
+      var b=soma(finResumoMes(Object.assign({planos:Pb, descontoIrmao:Db}, base), mes, {hoje:hoje}));
+      if(a.t===b.t && JSON.stringify(a.por)===JSON.stringify(b.por)) return;
+      var quem=[];
+      Object.keys(Object.assign({}, a.por, b.por)).sort().forEach(function(c){ var de=a.por[c]||0, para=b.por[c]||0;
+        if(de!==para) quem.push({chave:c, nome:planoNomeDaChave(c, cad[c]), de:de, para:para}); });
+      out.push({mes:mes, antes:a.t, depois:b.t, quem:quem, fechado:Object.prototype.hasOwnProperty.call(fechados||{}, mes), quadro:tabelaPlanosQuadroDe(mes, Pb, Db)});
+    });
+    return out;
+  }
+  // 6.73 (QA, OBS-03): o «Total de {mês} no Recebimentos» antes e depois da tabela nova — o MESMO número do quadro —, quando este
+  // aparelho sabe o quadro inteiro daquele mês: as fontes lidas há menos de um minuto, as diárias avulsas DAQUELE mês também, e os
+  // fechamentos e os ajustes lidos (a tabela só muda os planos; a hospedagem, as avulsas e os ajustes entram iguais dos dois lados).
+  // Sem isso, null: o cartaz mostra o «Total dos planos do Day Care», com o nome, e diz que o resto do mês não muda.
+  function tabelaPlanosQuadroDe(mes, Pb, Db){
+    try{
+      if(typeof recTrava!=='function' || recTrava()) return null;
+      var jan=(typeof planoJanelaQuadro==='function')?planoJanelaQuadro():0;
+      if(!planoFonteFresca(REC_FONTES.quando, jan)) return null;
+      if(!(REC_AVULSO && REC_AVULSO.ok===true && REC_AVULSO.mes===mes && planoFonteFresca(REC_AVULSO.quando, jan))) return null;
+      if(REC_FECH.ok!==true) return null;
+      var extra=(Number(REC_AVULSO.total_cent)||0)+recAjustesSoma(mes);
+      var dep=finResumoMes({cadastro:(typeof pelCadCache!=='undefined')?pelCadCache:{}, peludinhos:(typeof PELUDINHOS!=='undefined')?PELUDINHOS:[],
+        irmaos:REC_FONTES.irm||{}, orcamentos:REC_FONTES.orc||{}, pagamentos:null, planos:Pb, descontoIrmao:Db}, mes, {hoje:(typeof hojeISO==='function')?hojeISO():''});
+      return {antes:recQuebra(recResumoDoMes(mes)).total+extra, depois:recQuebra(dep).total+extra};
+    }catch(e){ return null; } /* silencioso de propósito: sem o quadro inteiro, o cartaz mostra o total dos planos, com o nome */
+  }
+  // «agosto e setembro de 2026» (o ano uma vez por grupo).
+  function tabelaPlanosMesesTexto(ms){
+    var porAno={}; ms.slice().sort().forEach(function(m){ var a=m.slice(0,4); (porAno[a]=porAno[a]||[]).push(MES_NOME[parseInt(m.slice(5,7),10)-1]); });
+    return mmJuntar(Object.keys(porAno).sort().map(function(a){ return mmJuntar(porAno[a])+' de '+a; }));
+  }
+  // As linhas do cartaz (AC8.1), antes da senha.
+  function tabelaPlanosEfeitoInfo(ef){
+    var abertos=ef.filter(function(m){ return !m.fechado; }), fech=ef.filter(function(m){ return m.fechado; }), out=[];
+    if(abertos.length){
+      out.push('Mudam (mês aberto, plano sem valor gravado):');
+      abertos.forEach(function(m){ var quem=m.quem.map(function(q){ return q.nome+': '+recBRL(q.de)+' → '+recBRL(q.para); }).join('; '), rot=mesAnoDe(m.mes+'-01');
+        // com a hospedagem, as diárias avulsas ou os ajustes no mês, o número do quadro (quando este aparelho o sabe inteiro)
+        if(m.quadro && m.quadro.antes!==m.antes) out.push(rot+' — Total de '+rot+' no Recebimentos: '+recBRL(m.quadro.antes)+' → '+recBRL(m.quadro.depois)+' (os planos do Day Care: '+recBRL(m.antes)+' → '+recBRL(m.depois)+'; '+quem+').');
+        else out.push(rot+' — Total dos planos do Day Care: '+recBRL(m.antes)+' → '+recBRL(m.depois)+' ('+quem+').'); });
+      if(abertos.some(function(m){ return !m.quadro; }))
+        out.push('O «Total dos planos do Day Care» é só a parte dos planos: a hospedagem, as diárias avulsas e os ajustes do mês não mudam com a tabela; no quadro «Recebimentos do mês», o total do mês muda a mesma diferença.');
+    }
+    if(fech.length) out.push('Não mudam (mês fechado): '+tabelaPlanosMesesTexto(fech.map(function(m){ return m.mes; }))+'. O total fechado continua; a diferença aparece em «Mudou depois do fechamento», no quadro do mês.');
+    if(!abertos.length && !fech.length) out.push('Nenhum mês passado muda.');
+    out.push('Não mudam: os planos confirmados desde 07/10/2026 guardam o valor da época (valor gravado).');
+    out.push('Daqui para a frente: o próximo Confirmar de cada plano, o convite ao trimestral da mensagem «Plano finalizou» e o desconto na AuAulândia dos orçamentos novos usam a tabela nova; num orçamento já feito, o desconto muda se alguém tocar «Mudar as datas», porque ela remonta o plano de hoje de cada FILHOt.');
+    return out;
+  }
+  // O cartaz da tabela (o «Salvar a tabela» e o «Voltar a esta tabela»): as leituras do efeito relidas, o efeito antes da senha.
+  async function tabelaPlanosAbrir(nova, voltouDe){
+    // a linha de estado é achada a cada frase: o cartão se redesenha depois de salvar (a de antes sai da página)
+    var diz=function(t, cor){ var st=document.getElementById('cfgPlanosSt'); if(st){ st.style.color=cor; st.textContent=t; } };
+    var falta=[];
+    if(typeof finResumoMes!=='function') falta.push('o módulo do dinheiro (financeiro-logica.js) não carregou com a página');
+    if(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA) falta.push('a carteira do banco ainda não chegou neste aparelho');
+    if(!planosProntos()) falta.push(planosTravaMotivo());
+    var LR=falta.length?null:await tabelaPlanosLeituras();
+    if(LR && !LR.ok) falta.push('não consegui ler os fechamentos, os irmãos e a tabela salva ('+zErroMotivo(LR.erro, 'banco', '', {leitura:true})+')');
+    if(falta.length){ var t0='Ainda não dá para salvar: '+falta.join('; ')+'. Nada foi salvo.'; diz(t0, 'var(--crm-critico)'); zAlertao('AINDA NÃO DÁ PARA SALVAR A TABELA', [t0], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var antesT=tabelaPlanosAtual();
+    if(planoCanon(tabelaPlanosDe(LR.tab?tabelaPlanosParaPlanos(LR.tab):PLANOS_PADRAO, (LR.tab && LR.tab.descontoIrmao)?LR.tab.descontoIrmao:DESC_PET_PLANO))!==planoCanon(antesT)){
+      var t1='A tabela mudou em outro aparelho depois que esta tela abriu. Nada foi salvo: abra Configurações de novo e confira.'; diz(t1, 'var(--crm-critico)'); zAlertao('A TABELA MUDOU EM OUTRO APARELHO', [t1], {botao:'Entendi'}); return {ok:false, recusa:true};
+    }
+    var fechados=tabelaPlanosFechados(LR.fech), alvo=JSON.parse(JSON.stringify(nova)), ef=tabelaPlanosEfeito(alvo, LR.irm, fechados);
+    var mud=tabelaPlanosMudancas(antesT, alvo), recusa='', quem=corrQuemAgora();
+    var gravar=function(reg){ quem=corrQuemAgora(); return tabelaPlanosGravar(alvo, antesT, reg, voltouDe, fechados, ef).then(function(x){ if(x && x.recusa) recusa=String(x.recusa); return x; }); };
+    var r;
+    if(!voltouDe){
+      var campos=mud.map(function(m){ return {c:m.c, rotulo:m.rotulo, valor:m.de}; }), novos=mud.map(function(m){ return m.para; });
+      var p=corrAbrir({acao:'corrigir', nivel:'adriana', adrianaOque:'muda a tabela de planos', capacidade:'gestao-role', titulo:'Mudar a tabela de planos do Day Care', botao:'Salvar a tabela', tituloOk:'Tabela salva',
+        oque:'a tabela de planos do Day Care', original:{caminho:'daycare/config/tabela-planos', id:'tabela-planos'}, campos:campos, info:tabelaPlanosEfeitoInfo(ef),
+        camposTexto:'As linhas que você mudou. Os valores em reais (399,00); os descontos, em número inteiro (8).',
+        validar:function(v){
+          var t=JSON.parse(JSON.stringify(alvo)), problema='';
+          campos.forEach(function(c, i){
+            if(problema) return;
+            var x=String((v||[])[i]==null?'':(v||[])[i]).trim(), m;
+            if((m=/^irmao_([23])$/.exec(c.c))){ var pi=cfgPlanosPct(x); if(pi===null) problema='O desconto de irmão precisa ser um número inteiro de 0 a 50 (%).'; else t.descontoIrmao[+m[1]]=pi; }
+            else if((m=/^(Silver|Gold|Black)_off$/.exec(c.c))){ var po=cfgPlanosPct(x); if(po===null) problema='O desconto na AuAulândia precisa ser um número inteiro de 0 a 50 (%).'; else t[m[1]].hospOff=po; }
+            else if((m=/^(Silver|Gold|Black)_([1-5])$/.exec(c.c))){ var cv=acertoLerReal(x); if(cv===null || !(cv>0)) problema='O valor de «'+c.rotulo+'» precisa ser maior que zero, em reais.'; else t[m[1]].valores[+m[2]]=cv; }
+          });
+          if(problema) return problema+' Nada foi gravado.';
+          if(!(t.descontoIrmao[2]>0) && !(t.descontoIrmao[3]>0)) return 'Com os dois descontos em 0%, a conta do Financeiro voltaria aos 7% e 12% de fábrica. Deixe pelo menos um deles maior que zero.';
+          alvo=t; ef=tabelaPlanosEfeito(alvo, LR.irm, fechados);
+          return {info:tabelaPlanosEfeitoInfo(ef)};
+        },
+        gravar:gravar});
+      // vai direto ao «Antes → Depois» com o que a tela tem (a pessoa pode voltar e mudar os campos no próprio cartaz)
+      try{ corrToque('continuar', {valores:novos}); }catch(e){} /* silencioso de propósito: sem o passo direto, o cartaz abre nos campos */
+      r=await p;
+    } else {
+      var h0=(TABELA_HIST||{})[voltouDe]||{}, r0=h0.registro||{};
+      r=await corrAbrir({acao:'reabrir', nivel:'adriana', adrianaOque:'muda a tabela de planos', capacidade:'gestao-role', titulo:'Voltar a uma tabela de planos anterior', botao:'Voltar a esta tabela', tituloOk:'Tabela de volta',
+        oque:'a tabela de planos do Day Care (a usada até '+String(r0.quando||'')+')', original:{caminho:'daycare/config/tabela-planos-historico/'+voltouDe, id:String(voltouDe)},
+        estado:'a tabela de agora', paraEstado:'a tabela usada até '+String(r0.quando||''),
+        volta:mud.map(function(m){ return m.rotulo+': '+m.de+' → '+m.para; }).concat(tabelaPlanosEfeitoInfo(ef)), gravar:gravar});
+    }
+    if(r && r.ok){ cfgPlanosRender(); diz('Tabela salva: vale para o mês aberto (plano sem valor gravado) e para todo plano novo. Mês fechado não muda.', 'var(--crm-ok)'); }
+    else if(r && !r.ok && !r.cancelado && !r.ocupado && !r.semResposta && !r.barrou) planoFalhaTela('A TABELA NÃO FOI SALVA', recusa, r, 'A tabela continua como estava.');
+    return r;
+  }
+  // AC7.4, AC8.4: a gravação única (a tabela inteira e o histórico), depois de reler os fechamentos e a tabela salva.
+  async function tabelaPlanosGravar(nova, antesT, reg, voltouDe, fechados, ef){
+    if(!podePapel('gestao-role', papelDoCorpo())) return corrBarrar('mudar a tabela de planos do Day Care', corrQuemPode('gestao-role'), {tela:'config'});
+    reg=reg||{};
+    // 6.73 (S8-P9, Adriana: «só adriana»): a função que grava confere de novo quem assinou
+    if(!corrRegDaAdriana(reg)) return {ok:false, erro:'só a Adriana assina a tabela de planos'};
+    var LR=await tabelaPlanosLeituras();
+    if(!LR.ok) return {ok:false, erro:LR.erro};
+    if(JSON.stringify(tabelaPlanosFechados(LR.fech))!==JSON.stringify(fechados))
+      return {ok:false, recusa:'Os meses mudaram enquanto a tabela estava aberta. Nada foi gravado: confira o cartaz de novo.', erro:'os meses mudaram'};
+    if(planoCanon(tabelaPlanosDe(LR.tab?tabelaPlanosParaPlanos(LR.tab):PLANOS_PADRAO, (LR.tab && LR.tab.descontoIrmao)?LR.tab.descontoIrmao:DESC_PET_PLANO))!==planoCanon(antesT))
+      return {ok:false, recusa:'A tabela mudou em outro aparelho depois que esta tela abriu. Nada foi gravado: abra Configurações de novo e confira.', erro:'a tabela mudou'};
+    var ts=Number(reg.ts)||Date.now(), hid=recNovoId('daycare/config/tabela-planos-historico');
+    var no={Silver:nova.Silver, Gold:nova.Gold, Black:nova.Black, descontoIrmao:nova.descontoIrmao, ts:ts, quem:String(reg.por||'-')};
+    var h={antes:antesT, depois:JSON.parse(JSON.stringify(nova)), motivo:recMotivoDe(reg), registro:reg,
+      efeito:ef.filter(function(m){ return !m.fechado; }).map(function(m){ return {mes:m.mes, antes:m.antes, depois:m.depois, quem:m.quem.map(function(q){ return {nome:q.nome, de:q.de, para:q.para}; })}; }),
+      fechados:ef.filter(function(m){ return m.fechado; }).map(function(m){ return m.mes; })};
+    if(voltouDe) h.voltou_de=String(voltouDe);
+    var up={}; up['daycare/config/tabela-planos']=no; up['daycare/config/tabela-planos-historico/'+hid]=h;
+    await DB.ref().update(up);
+    tabelaPlanosAplicar(no); TABELA_PLANOS.chegou=true;
+    TABELA_HIST=Object.assign({}, TABELA_HIST||{}); TABELA_HIST[hid]=h;
+    var mud=tabelaPlanosMudancas(antesT, nova).map(function(m){ return m.rotulo+': '+m.de+' → '+m.para; });
+    try{ if(typeof audit==='function') audit(voltouDe?'tabela-planos-voltou':'tabela-planos', (voltouDe?'voltou a uma tabela de planos anterior: ':'mudou a tabela de planos do Day Care: ')+mud.join('; ')+' — motivo: '+String(reg.motivo||'')+', assinado por '+String(reg.por||'-'),
+      {antes:tabelaPlanosLinhas(antesT).map(function(l){ return l.rotulo+': '+l.texto; }).join(' · '), depois:tabelaPlanosLinhas(nova).map(function(l){ return l.rotulo+': '+l.texto; }).join(' · '), assinou:String(reg.por||'')}); }
+    catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+    try{ if(typeof recRedesenhar==='function') recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    return {ok:true};
+  }
+  // AC9.4: «Tabelas anteriores (N)», fechado: cada versão com quando, quem, o motivo, os valores e o efeito registrado.
+  function cfgPlanosHistHTML(){
+    var H=TABELA_HIST||{}, ks=Object.keys(H).sort(function(a,b){ return (Number(((H[b]||{}).registro||{}).ts)||0)-(Number(((H[a]||{}).registro||{}).ts)||0); });
+    if(!ks.length) return '';
+    var resumo=function(T){ return tabelaPlanosLinhas(tabelaPlanosDe(tabelaPlanosParaPlanos(T||{}), (T||{}).descontoIrmao||DESC_PET_PLANO)).map(function(l){ return l.rotulo+': '+l.texto; }).join(' · '); };
+    return '<details style="margin-top:12px"><summary style="cursor:pointer;font-weight:800;color:var(--muted);font-size:13.5px;padding:8px 0;min-height:44px">Tabelas anteriores ('+ks.length+')</summary>'
+      +ks.map(function(k){
+        var h=H[k]||{}, r=h.registro||{}, efs=Array.isArray(h.efeito)?h.efeito:[], fch=Array.isArray(h.fechados)?h.fechados:[];
+        return '<div style="border-top:1px solid var(--line);padding:10px 0;font-size:13px;color:var(--z-blue);overflow-wrap:anywhere">'
+          +'<div style="font-weight:800">Usada até '+esc(r.quando||'')+' — trocada por '+esc(r.por||'-')+(r.papel?(' ('+esc(corrPapelNome(r.papel))+')'):'')+(h.voltou_de?' (voltando a uma tabela anterior)':'')+'</div>'
+          +'<div>Motivo: '+esc(recMotivoDe(h)||recMotivoDe(r))+'</div>'
+          +'<div style="margin-top:3px">'+esc(resumo(h.antes))+'</div>'
+          +'<div style="margin-top:3px">Efeito registrado: '+esc(efs.length?efs.map(function(m){ return mesAnoDe(String(m.mes)+'-01')+' '+recBRL(Number(m.antes)||0)+' → '+recBRL(Number(m.depois)||0); }).join('; '):'nenhum mês aberto mudou')
+          +(fch.length?('; meses fechados que não mudaram: '+esc(tabelaPlanosMesesTexto(fch))):'')+'.</div>'
+          +'<div style="margin-top:6px"><button type="button" class="btn" style="min-height:44px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="cfgPlanosVoltarAbrir(\''+jsAspas(k)+'\')">Voltar a esta tabela</button></div></div>';
+      }).join('')+'</details>';
+  }
+  async function cfgPlanosVoltarAbrir(hid){
+    if(!podePapel('gestao-role', papelDoCorpo())) return corrBarrar('voltar a uma tabela de planos anterior', corrQuemPode('gestao-role'), {tela:'config'});
+    var h=(TABELA_HIST||{})[hid];
+    if(!h || !h.antes){ zAlertao('TABELA NÃO ENCONTRADA', ['Atualize a tela e tente de novo.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var alvo=tabelaPlanosDe(tabelaPlanosParaPlanos(h.antes), h.antes.descontoIrmao||DESC_PET_PLANO);
+    if(!tabelaPlanosMudancas(tabelaPlanosAtual(), alvo).length){ zAlertao('ESTA JÁ É A TABELA DE AGORA', ['Nada para voltar.'], {botao:'Entendi'}); return {ok:false, nada:true}; }
+    return tabelaPlanosAbrir(alvo, hid);
   }
   // ===== CONFIGURAÇÕES › MENSAGEM DE ENTRADA (Adriana, 15/set/2026) =================
   function cfgEntradaRender(){
@@ -70082,6 +70866,16 @@
     'acerto-lote-pago':'Pagou várias noites de uma vez (lote)', 'acerto-lote-desfeito':'Desfez o lote de pagamento das plantonistas',
     'acerto-valor':'Valor à mão de uma noite (acerto das plantonistas)', 'acerto-noite-corrigida':'Corrigiu a noite do acerto (FILHOts, dobra ou plantonistas)',
     'acerto-sem-plantao':'Noite sem plantão (acerto das plantonistas)', 'acerto-plantao-dia':'Plantão de dia (acerto das plantonistas)'
+  });
+  // ===== 6.73 — a cobrança da renovação, o fechamento do mês e a tabela de planos na Linha do tempo (AC12) ==============
+  // Num acréscimo próprio, para a junção com as outras stories não pisar no fim do objeto.
+  Object.assign(ACAO_LABEL, {
+    'renovacao-cobrada':'Registrou a cobrança da renovação do plano', 'renovacao-cobranca-desfeita':'Desfez a cobrança da renovação do plano',
+    'renovacao-nao-renova':'O tutor avisou que não renova o plano', 'renovacao-nao-renova-reaberta':'Voltou à cobrança da renovação («Não renova» reaberto)',
+    'recebimentos-mes-fechado':'Fechou o mês do Recebimentos', 'recebimentos-mes-reaberto':'Reabriu o mês do Recebimentos',
+    'recebimentos-ajuste':'Lançou um ajuste no Recebimentos', 'recebimentos-ajuste-anulado':'Anulou um ajuste do Recebimentos',
+    'recebimentos-ajuste-reaberto':'Reabriu um ajuste do Recebimentos', 'tabela-planos':'Mudou a tabela de planos do Day Care',
+    'tabela-planos-voltou':'Voltou a uma tabela de planos anterior'
   });
   // editor de janelas de horário (só Gestão)
   function abrirAuditCfg(){ const el=document.getElementById('painelCfg'); if(!el) return;
@@ -72994,7 +73788,8 @@
   // auditoria do dia, com o antes e o depois) só sai com o ok.
   //   op = {acao:'corrigir'|'anular'|'reabrir', titulo, oque, tela, original:{caminho, id},
   //         campos:[{c, rotulo, valor, grande}], cascata:[texto], estado, paraEstado, volta:[texto],
-  //         nivel:'propria'|'gestao', capacidade, telaConcedida, gravar:function(reg) → Promise<{ok, erro}>}
+  //         nivel:'propria'|'gestao'|'adriana' (6.73: só a senha da Adriana), adrianaOque, capacidade, telaConcedida,
+  //         gravar:function(reg) → Promise<{ok, erro}>}
   //   corrAbrir(op) → Promise<{ok, cancelado, semResposta, erro, reg}>
   // 6.58 (o remédio, 10/out/2026) — quatro acréscimos, todos opcionais (quem não os usa vê o cartaz de sempre):
   //   op.aviso        — uma frase fixa, em vermelho, no passo de conferir («Se a dose FOI dada, não anule…»);
@@ -73236,7 +74031,39 @@
     if(op.titulo) return String(op.titulo);
     return ({corrigir:'Corrigir ', anular:'Anular ', reabrir:'Reabrir '}[op.acao]||'Corrigir ')+String(op.oque||'');
   }
-  function corrNivelSenha(op){ return (op.nivel==='gestao')?'gestao-role':String(op.capacidade||''); }
+  function corrNivelSenha(op){ return (op.nivel==='gestao' || op.nivel==='adriana')?'gestao-role':String(op.capacidade||''); }
+  // ===== SÓ A SENHA DA ADRIANA (6.73, S8-P7, P8, P9 e P11 — Adriana, 12/10/2026: «só adriana») ==============================
+  // Fechar e reabrir o mês do Recebimentos, mudar a tabela de planos e lançar, anular ou reabrir o ajuste com motivo assinam SÓ
+  // com a senha da Adriana — não com qualquer senha da Gestão (a Márcia não assina estas). O cartaz usa op.nivel:'adriana': a
+  // régua de sempre (corrAssinar: senha vazia, de ninguém, de posto, de quem não é da Gestão) e, depois dela, a identidade: a
+  // senha é a da identidade fixa da Adriana (souAdriana) — conferida e esquecida, como toda senha. Monitor nunca sobrescreve uma
+  // senha fixa (senhasRuntime), então ninguém do Time vira a Adriana pela senha.
+  function corrSenhaDaAdriana(senha){
+    var s=String(senha==null?'':senha).trim(); if(!s) return false;
+    // Junção com a 6.76: primeiro a régua única da senha (senhaQuem, a mesma do corrAssinar). O que ela recusa — a provisória ainda
+    // não trocada, a senha do código de quem já trocou, a do código sem o banco e sem a cópia, a de quem foi desativado e a linha
+    // igual à de fábrica — também não é a Adriana.
+    var q=null; try{ q=(typeof senhaQuem==='function')?senhaQuem(s):null; }catch(e){ q=null; } /* silencioso de propósito: sem a régua, ninguém é a Adriana */
+    if(!q) return false;
+    // e depois a identidade: a senha trocada e guardada no banco (6.76) da identidade da Adriana, e não a provisória…
+    if(typeof senhaFixaPelaGuardada==='function'){ var f=senhaFixaPelaGuardada(s); if(f) return !f.provisoria && !!(f.perfil && f.perfil.souAdriana===true); }
+    // …ou a senha do código dela, enquanto não foi trocada (o senhasRuntime da 6.76 tira do mapa a do código de quem trocou)
+    var m=null; try{ m=((typeof senhasRuntime==='function')?senhasRuntime():{})[s]; }catch(e){ m=null; } /* silencioso de propósito: sem o mapa das senhas, ninguém é a Adriana */
+    return !!(m && m.souAdriana===true);
+  }
+  // O nome e o papel com que a Adriana assina (os da identidade fixa dela), para a função que grava conferir o registro.
+  function corrAdrianaPerfil(){
+    var achar=function(m){ var ks=Object.keys(m||{}); for(var i=0;i<ks.length;i++){ var u=m[ks[i]]; if(u && u.souAdriana===true && u.nome) return {nome:String(u.nome), papel:String(u.role||'')}; } return null; };
+    var a=null; try{ a=achar((typeof senhasRuntime==='function')?senhasRuntime():{}); }catch(e){ a=null; } /* silencioso de propósito: sem o mapa, vale a lista fixa */
+    if(!a){ try{ a=achar(SENHAS); }catch(e){ a=null; } } /* silencioso de propósito: sem a lista fixa, ninguém assina como a Adriana */
+    return a;
+  }
+  // A função que grava confere de novo: o registro foi assinado pela Adriana (o nome e o papel da identidade fixa dela).
+  function corrRegDaAdriana(reg){ var a=corrAdrianaPerfil(); return !!(a && reg && String(reg.por||'')===a.nome && String(reg.papel||'')===a.papel); }
+  function corrSoAdrianaFrase(op, nome){
+    op=op||{};
+    return 'Só a Adriana '+String(op.adrianaOque||('assina '+(CORR_OQUE_ASSINA[op.acao]||'isto')))+(nome?(': essa senha é de '+nome):'')+'. Nada foi gravado.';
+  }
   var CORR_CAMPO_ESTILO='width:100%;box-sizing:border-box;margin-top:6px;padding:12px;min-height:48px;border:2px solid var(--z-blue);border-radius:12px;font-family:inherit;font-size:16px;font-weight:600;color:var(--z-blue);background:var(--z-white)';
   // fundo vazio = o botão de contorno (Cancelar): branco, com o texto e a borda no azul da marca
   function corrBotaoHTML(qual, txt, fundo){
@@ -73279,12 +74106,12 @@
         +'<div style="margin-top:8px">A volta é um registro novo: o que foi decidido antes continua guardado, com quem, quando e o motivo.</div>';
       corpo+=info;   // 6.59
       if(op.aviso) corpo+='<div role="alert" style="margin-top:10px;padding:10px 12px;border-radius:12px;border:2px solid var(--crm-critico);color:var(--crm-critico);font-weight:800">'+esc(op.aviso)+'</div>';
-      var gestao=(op.nivel==='gestao');
+      var gestao=(op.nivel==='gestao'), adriana=(op.nivel==='adriana');   // 6.73: «só a Adriana»
       corpo+='<label for="corrMotivo" style="display:block;margin-top:14px;font-size:15px;font-weight:800">Motivo (pelo menos 4 palavras)</label>'
         +'<textarea id="corrMotivo" rows="3" style="'+CORR_CAMPO_ESTILO+';resize:vertical">'+esc(S.motivo||'')+'</textarea>'
-        +'<label for="corrSenha" style="display:block;margin-top:12px;font-size:15px;font-weight:800">'+(gestao?'Senha da Gestão':'Sua senha')+'</label>'
+        +'<label for="corrSenha" style="display:block;margin-top:12px;font-size:15px;font-weight:800">'+(adriana?'Senha da Adriana':gestao?'Senha da Gestão':'Sua senha')+'</label>'
         +'<input id="corrSenha" type="password" autocomplete="off" value="" style="'+CORR_CAMPO_ESTILO+'">'
-        +'<div style="margin-top:6px;font-size:14px;color:var(--z-blue-soft)">Quem assina: '+esc(corrQuemPode(corrNivelSenha(op), gestao?'':op.telaConcedida)+((!gestao && op.assinaNome)?(', ou '+op.assinaNome+', que registrou'):''))+'. O app grava o nome de quem assinou, nunca a senha.</div>'
+        +'<div style="margin-top:6px;font-size:14px;color:var(--z-blue-soft)">Quem assina: '+esc(adriana?'só a Adriana':(corrQuemPode(corrNivelSenha(op), gestao?'':op.telaConcedida)+((!gestao && op.assinaNome)?(', ou '+op.assinaNome+', que registrou'):'')))+'. O app grava o nome de quem assinou, nunca a senha.</div>'
         +aviso;
       bts=corrBotaoHTML('confirmar', op.botao||((op.acao==='anular' && op.genero==='f')?'Anular (lançada por engano)':CORR_BOTAO[op.acao])||'Gravar', (op.acao==='anular')?'var(--crm-critico)':'var(--z-blue)')
         +(corrComCampos(op)?corrBotaoHTML('voltar', 'Voltar e mudar os campos', 'var(--z-blue)'):'')+cancelar;
@@ -73374,8 +74201,11 @@
     S.motivo=motivo;
     var mv=motivoQuatroPalavras(motivo);
     if(!mv.ok){ S.aviso=mv.erro; corrDesenhar(); return {ok:false, onde:'motivo'}; }
-    var gestao=(op.nivel==='gestao');
-    var ass=corrAssinar(senha, corrNivelSenha(op), CORR_OQUE_ASSINA[op.acao]||'isto', {tela:gestao?'':op.telaConcedida, nome:gestao?'':op.assinaNome});
+    var gestao=(op.nivel==='gestao'), adriana=(op.nivel==='adriana');
+    var ass=corrAssinar(senha, corrNivelSenha(op), CORR_OQUE_ASSINA[op.acao]||'isto', adriana?{semPapel:function(n){ return corrSoAdrianaFrase(op, n); }}
+      :{tela:gestao?'':op.telaConcedida, nome:gestao?'':op.assinaNome});
+    // 6.73 (S8-P7 a P11): no cartaz «só a Adriana», a senha da Gestão que não é a da Adriana não assina
+    if(adriana && ass.ok && !corrSenhaDaAdriana(senha)) ass={ok:false, nome:'', papel:'', erro:corrSoAdrianaFrase(op, ass.nome)};
     senha='';
     if(!ass.ok){ S.aviso=ass.erro; corrDesenhar(); return {ok:false, onde:'senha'}; }
     var reg=corrRegistro(op, S.mud, ass, motivo, Date.now()), mud=(S.mud||[]).slice();
@@ -82560,6 +83390,266 @@
   function coEnviarWhats(){ window.open('https://wa.me/?text='+encodeURIComponent(coResumoTexto()),'_blank'); }
 
   /* ====================================================================================
+   * O BLOCO DO FECHAMENTO — as gravações do quadro «Recebimentos do mês» (Story 6.73, K07)
+   *
+   * "Teria que somar quanto a gente recebeu do plano no mês para poder finalizar os recebimentos
+   *  do mês, o que foi fechado, para a gente bater com o outro sistema." (Adriana, 07/out/2026)
+   *
+   * O quadro «Recebimentos do mês» (o mesmo nos Dashboards da Adriana e da Márcia) desenha e lê; as
+   * gravações dele moram AQUI, fora das fatias que o harness confere como «só observa» e fora da fatia do
+   * «Lançar pagamento» (que só lê com once e só grava em daycare/pagamentos) — o molde do vagasEncaixesCardHTML da 6.61: «Fechar o mês», «Reabrir o mês», «Lançar um ajuste», «Anular» e
+   * «Reabrir» o ajuste. Todas com a senha da Adriana (S8-P7, P8 e P11: «só adriana») e o motivo, pelo cartaz da
+   * 6.57; o papel conferido de novo em cada função que grava; a releitura do mês antes de gravar;
+   * «Mês fechado», «Mês reaberto», «Ajuste lançado» e o rastro só com o ok do banco. Nada é apagado
+   * nem sobrescrito: o estado do mês é o evento mais novo; o ajuste anulado é um registro novo.
+   * ================================================================================== */
+  // O ouvinte dos fechamentos e dos ajustes de todos os meses (o nó é pequeno: o corpo de cada fechamento
+  // mora em daycare/recebimentos-linhas e só desce quando o mês abre). Ele leva o estado do mês a todo
+  // aparelho — também ao da recepção, cuja pergunta de inativar, de anular e de trocar a categoria diz
+  // quando o mês está fechado (AC5.4).
+  function recFechOuvir(){
+    if(!DB) return;
+    DB.ref('daycare/recebimentos').on('value', function(s){
+      REC_FECH={ok:true, v:((s && typeof s.val==='function')?s.val():null)||{}, quando:Date.now(), vivo:true};
+      try{ recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    }, function(e){
+      REC_FECH={ok:false, v:null, quando:Date.now(), vivo:false};
+      _logLeituraFalhou('daycare/recebimentos (os fechamentos e os ajustes do Recebimentos)', e);
+      try{ recRedesenhar(); }catch(e2){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    });
+  }
+  // Uma chave nova debaixo de um caminho, sem gravar nada (push() sem valor só gera a chave).
+  function recNovoId(caminho){
+    var local='x'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    try{ var r=DB?DB.ref(caminho).push():null; return (r && r.key)?String(r.key):local; }
+    catch(e){ return local; } /* silencioso de propósito: sem o banco, a chave nasce aqui (a gravação vai falhar e dizer) */
+  }
+  // O nó de um mês como está NO BANCO agora (a releitura antes de gravar): {ok, v} ou {ok:false, erro}.
+  function recMesReler(mes){
+    if(!DB) return Promise.resolve({ok:false, erro:new Error('banco reconectando')});
+    var pr; try{ pr=Promise.resolve(DB.ref('daycare/recebimentos/'+mes).once('value')); }catch(e){ pr=Promise.reject(e); }
+    return corrComPrazo(pr.then(function(s){ return {ok:true, v:((s && typeof s.val==='function')?s.val():null)||{}}; }, function(e){ return {ok:false, erro:e}; }), CORR_PRAZO, CORR_PRAZO_ERRO);
+  }
+  // A memória deste aparelho depois do ok (o ouvinte traz o mesmo logo depois): o caminho relativo ao mês.
+  function recAplicarLocal(mes, caminho, v){
+    if(REC_FECH.ok!==true) return;
+    var base=Object.assign({}, REC_FECH.v||{}); base[mes]=JSON.parse(JSON.stringify(base[mes]||{}));
+    var ps=String(caminho).split('/'), o=base[mes];
+    for(var i=0;i<ps.length-1;i++){ if(!o[ps[i]] || typeof o[ps[i]]!=='object') o[ps[i]]={}; o=o[ps[i]]; }
+    o[ps[ps.length-1]]=JSON.parse(JSON.stringify(v));
+    REC_FECH=Object.assign({}, REC_FECH, {v:base});
+  }
+  // O total do quadro de um mês ABERTO, agora (o mesmo do recCardHTML: planos e reservas + diárias avulsas lidas + ajustes).
+  function recTotalAoVivo(mes){
+    if(recTrava()) return null;
+    var av=(REC_AVULSO.ok && REC_AVULSO.mes===mes)?REC_AVULSO.total_cent:0;
+    return recQuebra(recResumoDoMes(mes)).total+av+recAjustesSoma(mes);
+  }
+  // Depois do cartaz: o mesmo fecho das telas da 6.71 (a recusa com a frase da tela; o erro do banco pelo zErroMotivo).
+  function recFalhaTela(titulo, recusa, r, comoEstava){
+    if(r && !r.ok && !r.cancelado && !r.ocupado && !r.semResposta && !r.barrou) planoFalhaTela(titulo, recusa, r, comoEstava);
+  }
+  function recSoGestao(oque){ return podePapel('gestao-role', papelDoCorpo())?null:corrBarrar(oque, corrQuemPode('gestao-role'), {tela:'recebimentos'}); }
+  // 6.73 (S8-P7, P8 e P11 — Adriana, 12/10/2026: «só adriana»): a função que grava confere de novo que o registro foi assinado
+  // pela Adriana (o cartaz já recusou qualquer outra senha); quem vê o quadro e abre o cartaz continua a Gestão e a Diretoria.
+  function recSoAdriana(oque, reg){ return corrRegDaAdriana(reg)?null:corrBarrar(oque, 'só a Adriana, com a senha dela', {tela:'recebimentos'}); }
+  // AC4.2: NADA PELA METADE — antes do cartaz, todas as leituras do quadro (relidas agora): a carteira, os orçamentos e os
+  // irmãos, as diárias avulsas DAQUELE mês, a tabela de planos e os fechamentos e ajustes. Devolve o que falta.
+  async function recFecharLeituras(mes){
+    var falta=[], rot=recMesRotulo(mes);
+    if(typeof finResumoMes!=='function') falta.push('o módulo do dinheiro (financeiro-logica.js) não carregou com a página');
+    if(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA) falta.push('a carteira do banco ainda não chegou neste aparelho');
+    if(!planosProntos()) falta.push(planosTravaMotivo());
+    var ok=false; try{ ok=await recFontesLer(true); }catch(e){ ok=false; _logLeituraFalhou('as fontes do quadro (Fechar o mês)', e); }
+    if(!ok) falta.push('os orçamentos e os vínculos de irmãos não foram lidos');
+    try{ await recAvulsoLer(mes); }catch(e){ _logLeituraFalhou('as diárias avulsas (Fechar o mês)', e); }
+    if(!(REC_AVULSO.ok && REC_AVULSO.mes===mes)) falta.push('as diárias avulsas de '+rot+' ainda não foram lidas');
+    if(REC_FECH.ok!==true) falta.push('os fechamentos e os ajustes de '+rot+' não foram lidos');
+    return falta;
+  }
+  // ===== «FECHAR O MÊS» (AC4) =============================================================
+  async function recFecharAbrir(mes){
+    mes=String(mes||''); var rot=recMesRotulo(mes);
+    var b=recSoGestao('fechar o mês do Recebimentos'); if(b) return b;
+    var hoje=recMesDeHoje();
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes) || !(hoje && mes<hoje)){ zAlertao('O MÊS AINDA NÃO TERMINOU', ['O mês só fecha depois que termina.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var falta=await recFecharLeituras(mes);
+    if(falta.length){ zAlertao('AINDA NÃO DÁ PARA FECHAR', ['Ainda não dá para fechar: '+falta.join('; ')+'.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    if(recMesFechado(mes)){ zAlertao('ESTE MÊS JÁ ESTÁ FECHADO', [rot+' já está fechado: o quadro mostra o fechamento.', 'Nada foi gravado.'], {botao:'Entendi'}); try{ recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */ return {ok:false, recusa:true}; }
+    // o corpo: exatamente o que o quadro mostra, com as mesmas leituras (o quadro se redesenha com elas)
+    var C=recFechamentoCorpo(recResumoDoMes(mes), mes);
+    try{ recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela — o cartaz já tem o número */
+    var nRes=C.linhas.filter(function(x){ return String(x.chave||'').indexOf('orc:')===0; }).length, nPl=C.linhas.length-nRes;
+    var info=['Fechar '+rot+' com '+recBRL(C.total_cent)+': '+pmPlural(nPl, 'plano', 'planos')+', '+pmPlural(nRes, 'reserva', 'reservas')+', '+pmPlural(C.avulso.n, 'diária avulsa', 'diárias avulsas')+' e '+pmPlural(C.ajustes.length, 'ajuste', 'ajustes')+'.',
+      'Depois de fechado, o quadro de '+rot+' mostra estes números. Se alguém mexer numa ficha depois, o quadro mostra a diferença em «Mudou depois do fechamento», mas o total fechado não muda.',
+      'Para mudar o total, reabra o mês (a senha da Adriana e o motivo).'];
+    if(C.fora.length) info.push(pmPlural(C.fora.length, 'ficha fica', 'fichas ficam')+' fora do total por falta de dado: '+mmJuntar(C.fora.map(function(x){ return x.nome; }))+' (veja «Ver FILHOt por FILHOt»).');
+    var visto=planoCanon(recNoDoMes(mes)), recusa='', quem=corrQuemAgora();
+    var pr=corrAbrir({acao:'corrigir', nivel:'adriana', adrianaOque:'fecha o mês', capacidade:'gestao-role', titulo:'Fechar '+rot, botao:'Fechar '+rot, tituloOk:'Mês fechado',
+      oque:'o Recebimentos de '+rot, original:{caminho:'daycare/recebimentos/'+mes, id:mes},
+      campos:[{c:'estado', rotulo:'O mês de '+rot, valor:'aberto', opcoes:['aberto', 'fechado']}],
+      camposTexto:'Escolha «fechado» e toque em «Continuar».', info:info,
+      validar:function(v){ return (String((v||[])[0]||'')==='fechado')?'':'Escolha «fechado» para continuar. Nada foi gravado.'; },
+      gravar:async function(reg){
+        var b2=recSoGestao('fechar o mês do Recebimentos')||recSoAdriana('fechar o mês do Recebimentos', reg); if(b2) return b2;
+        quem=corrQuemAgora();
+        var rl=await recMesReler(mes);
+        if(!rl.ok) return {ok:false, erro:rl.erro};
+        if(planoCanon(rl.v)!==visto){
+          var ev=(rl.v && rl.v.eventos)||{}, ult=null; Object.keys(ev).forEach(function(id){ var x=ev[id]||{}; if(!ult || (Number(x.ts)||0)>=(Number(ult.ts)||0)) ult=x; });
+          recusa=(ult && ult.acao==='fechou')?('Outro aparelho fechou '+rot+' agora há pouco. Nada foi gravado: confira.')
+            :('Os ajustes ou o fechamento de '+rot+' mudaram em outro aparelho enquanto o cartaz estava aberto. Nada foi gravado: confira.');
+          return {ok:false, erro:recusa};
+        }
+        // o carimbo do evento novo nunca fica atrás do mais novo que já está lá (um aparelho com o relógio atrasado reabriria «antes»)
+        var mx=0; Object.keys((rl.v && rl.v.eventos)||{}).forEach(function(id){ var t=Number(((rl.v.eventos||{})[id]||{}).ts)||0; if(t>mx) mx=t; });
+        var ts=Math.max(Number(reg.ts)||Date.now(), mx+1), cid=recNovoId('daycare/recebimentos-linhas/'+mes), eid=recNovoId('daycare/recebimentos/'+mes+'/eventos');
+        var corpo=Object.assign({}, C, {fechado_em:ts, registro:reg});
+        var ev2={acao:'fechou', total_cent:C.total_cent, linhas:cid, motivo:recMotivoDe(reg), registro:reg, ts:ts};
+        var up={}; up['daycare/recebimentos-linhas/'+mes+'/'+cid]=corpo; up['daycare/recebimentos/'+mes+'/eventos/'+eid]=ev2;
+        await DB.ref().update(up);
+        recAplicarLocal(mes, 'eventos/'+eid, ev2);
+        REC_CORPO[mes+'/'+cid]={lendo:false, ok:true, v:recCorpoNorm(corpo)};
+        try{ if(typeof audit==='function') audit('recebimentos-mes-fechado', rot+' fechado com '+recBRL(C.total_cent)+' ('+pmPlural(nPl, 'plano', 'planos')+', '+pmPlural(nRes, 'reserva', 'reservas')+', '+pmPlural(C.avulso.n, 'diária avulsa', 'diárias avulsas')+', '+pmPlural(C.ajustes.length, 'ajuste', 'ajustes')+'), assinado por '+String(reg.por||'-')+': '+String(reg.motivo||''), Object.assign({mes:mes, total_cent:C.total_cent}, corrQuemMeta(quem))); }
+        catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+        try{ recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela — o fechamento já foi gravado */
+        return {ok:true};
+      }});
+    // vai direto ao «Antes → Depois» (aberto → fechado), com as linhas do que é guardado
+    try{ corrToque('continuar', {valores:['fechado']}); }catch(e){} /* silencioso de propósito: sem o passo direto, o cartaz abre no campo */
+    var r=await pr;
+    recFalhaTela('O MÊS NÃO FOI FECHADO', recusa, r, 'O mês continua aberto.');
+    return r;
+  }
+  // ===== «REABRIR O MÊS» (AC5.3) ==========================================================
+  async function recReabrirAbrir(mes){
+    mes=String(mes||''); var rot=recMesRotulo(mes);
+    var b=recSoGestao('reabrir o mês do Recebimentos'); if(b) return b;
+    var F=recFechadoDe(mes);
+    if(!F || !F.fechado){ zAlertao('ESTE MÊS NÃO ESTÁ FECHADO', [rot+' não está fechado: o quadro já mostra a conta ao vivo.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var ev=F.ev, rg=ev.registro||{}, tot=Number(ev.total_cent)||0, vivo=recTotalAoVivo(mes);
+    var volta=['O quadro de '+rot+' volta à conta ao vivo'+((vivo===null)?'.':(' (hoje: '+recBRL(vivo)+').')),
+      'O fechamento de '+String(rg.quando||'')+' ('+recBRL(tot)+', por '+String(rg.por||'-')+') fica guardado em «Fechamentos de '+rot+'».',
+      'Para fechar de novo, toque em «Fechar '+rot+'»: fica um fechamento novo, e o de agora continua guardado.'];
+    var recusa='', quem=corrQuemAgora();
+    var r=await corrAbrir({acao:'reabrir', nivel:'adriana', adrianaOque:'reabre o mês', capacidade:'gestao-role', titulo:'Reabrir '+rot, botao:'Reabrir '+rot, tituloOk:'Mês reaberto',
+      oque:'o fechamento de '+rot+' ('+recBRL(tot)+', '+String(rg.quando||'')+')', original:{caminho:'daycare/recebimentos/'+mes+'/eventos/'+ev._id, id:String(ev._id)},
+      estado:'fechado com '+recBRL(tot), paraEstado:'aberto (a conta ao vivo)', volta:volta,
+      gravar:async function(reg){
+        var b2=recSoGestao('reabrir o mês do Recebimentos')||recSoAdriana('reabrir o mês do Recebimentos', reg); if(b2) return b2;
+        quem=corrQuemAgora();
+        var rl=await recMesReler(mes);
+        if(!rl.ok) return {ok:false, erro:rl.erro};
+        var evs=(rl.v && rl.v.eventos)||{}, ult=null, uid='';
+        Object.keys(evs).forEach(function(id){ var x=evs[id]||{}, t=Number(x.ts)||0; if(!ult || t>(Number(ult.ts)||0) || (t===(Number(ult.ts)||0) && id>uid)){ ult=x; uid=id; } });
+        if(uid!==String(ev._id) || !ult || ult.acao!=='fechou'){ recusa='O fechamento de '+rot+' mudou em outro aparelho enquanto o cartaz estava aberto. Nada foi gravado: confira.'; return {ok:false, erro:recusa}; }
+        var ts=Math.max(Number(reg.ts)||Date.now(), (Number(ult.ts)||0)+1), eid=recNovoId('daycare/recebimentos/'+mes+'/eventos');
+        var ev2={acao:'reabriu', motivo:recMotivoDe(reg), registro:reg, ts:ts};
+        var up={}; up['daycare/recebimentos/'+mes+'/eventos/'+eid]=ev2;
+        await DB.ref().update(up);
+        recAplicarLocal(mes, 'eventos/'+eid, ev2);
+        try{ if(typeof audit==='function') audit('recebimentos-mes-reaberto', rot+' reaberto (o fechamento de '+String(rg.quando||'')+' com '+recBRL(tot)+' fica guardado), assinado por '+String(reg.por||'-')+': '+String(reg.motivo||''), Object.assign({mes:mes}, corrQuemMeta(quem))); }
+        catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+        try{ recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+        return {ok:true};
+      }});
+    recFalhaTela('O MÊS NÃO FOI REABERTO', recusa, r, 'O mês continua fechado.');
+    return r;
+  }
+  // ===== «LANÇAR UM AJUSTE» COM MOTIVO (AC6) ==============================================
+  // Só em mês aberto; o ajuste é do quadro de conferência com o outro sistema: não entra no finResumoMes nem no
+  // Financeiro da Adriana. «Somar ao mês» / «Tirar do mês», o valor em R$ (maior que zero, com centavos) e o que é.
+  var REC_AJ_SENTIDO={'Somar ao mês':'somar', 'Tirar do mês':'tirar'};
+  function recAjustePode(mes){
+    var rot=recMesRotulo(mes), hoje=recMesDeHoje();
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes) || (hoje && mes>hoje)) return 'Este mês ainda não começou: não há o que ajustar.';
+    if(REC_FECH.ok!==true) return 'Os fechamentos e os ajustes de '+rot+' ainda não chegaram neste aparelho: abra o quadro de novo em instantes.';
+    if(recMesFechado(mes)) return rot+' está fechado. Para ajustar, reabra o mês.';
+    var m=recTrava(); if(m) return 'Ainda não sei o total de '+rot+': '+m+'.';
+    return '';
+  }
+  async function recAjusteAbrir(mes){
+    mes=String(mes||''); var rot=recMesRotulo(mes);
+    var b=recSoGestao('lançar um ajuste no Recebimentos'); if(b) return b;
+    var nao=recAjustePode(mes);
+    if(nao){ zAlertao('NÃO DÁ PARA LANÇAR O AJUSTE AGORA', [nao, 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var antes=recTotalAoVivo(mes), alvo=null, recusa='', quem=corrQuemAgora(), visto=planoCanon(recNoDoMes(mes).eventos);
+    var r=await corrAbrir({acao:'corrigir', nivel:'adriana', adrianaOque:'lança ajuste no Recebimentos', capacidade:'gestao-role', titulo:'Lançar um ajuste em '+rot, botao:'Lançar o ajuste', tituloOk:'Ajuste lançado',
+      oque:'um ajuste no Recebimentos de '+rot, original:{caminho:'daycare/recebimentos/'+mes+'/ajustes', id:''},
+      campos:[{c:'sentido', rotulo:'Somar ou tirar', valor:'— escolha —', opcoes:['— escolha —', 'Somar ao mês', 'Tirar do mês']},
+        {c:'valor', rotulo:'Valor (em R$, com centavos — por exemplo 170,00)', valor:''},
+        {c:'descricao', rotulo:'O que é', valor:'', grande:true}],
+      camposTexto:'Diga se o ajuste soma ou tira do mês, o valor e o que é (por exemplo: «diária avulsa da Lua lançada sem valor»). O motivo e a senha da Adriana vêm no passo seguinte.',
+      validar:function(v){
+        v=v||[]; var sentido=REC_AJ_SENTIDO[String(v[0]||'')], cent=acertoLerReal(v[1]), desc=String(v[2]||'').trim();
+        if(!sentido) return 'Escolha se o ajuste soma ou tira do mês. Nada foi gravado.';
+        if(cent===null || !(cent>0)) return 'O valor precisa ser maior que zero, em reais (por exemplo: 170,00). Nada foi gravado.';
+        if(desc.length<3) return 'Escreva o que é o ajuste (pelo menos 3 letras). Nada foi gravado.';
+        alvo={sentido:sentido, valor_cent:cent, descricao:desc};
+        var depois=antes+recAjusteValor(alvo);
+        return {info:[rot+': '+recBRL(antes)+' → '+recBRL(depois)]};
+      },
+      gravar:async function(reg){
+        var b2=recSoGestao('lançar um ajuste no Recebimentos')||recSoAdriana('lançar um ajuste no Recebimentos', reg); if(b2) return b2;
+        if(!alvo) return {ok:false, erro:'o ajuste não chegou'};
+        quem=corrQuemAgora();
+        var rl=await recMesReler(mes);
+        if(!rl.ok) return {ok:false, erro:rl.erro};
+        if(planoCanon((rl.v||{}).eventos)!==visto){ recusa='Outro aparelho fechou ou reabriu '+rot+' agora há pouco. Nada foi gravado: confira.'; return {ok:false, erro:recusa}; }
+        var ts=Number(reg.ts)||Date.now(), id=recNovoId('daycare/recebimentos/'+mes+'/ajustes');
+        var aj={sentido:alvo.sentido, valor_cent:alvo.valor_cent, descricao:alvo.descricao, motivo:recMotivoDe(reg), registro:reg, ts:ts};
+        var up={}; up['daycare/recebimentos/'+mes+'/ajustes/'+id]=aj;
+        await DB.ref().update(up);
+        recAplicarLocal(mes, 'ajustes/'+id, aj);
+        try{ if(typeof audit==='function') audit('recebimentos-ajuste', rot+' — '+((alvo.sentido==='tirar')?'tirou ':'somou ')+recBRL(alvo.valor_cent)+': '+alvo.descricao+', assinado por '+String(reg.por||'-')+': '+String(reg.motivo||''), Object.assign({mes:mes, valor_cent:recAjusteValor(alvo)}, corrQuemMeta(quem))); }
+        catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+        try{ recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+        return {ok:true};
+      }});
+    recFalhaTela('O AJUSTE NÃO FOI LANÇADO', recusa, r, 'O mês continua como estava.');
+    return r;
+  }
+  // «Anular este ajuste» e «Reabrir»: um registro novo em ajustes/{id}/anulacoes (o da 6.57); nada é apagado.
+  async function recAjusteAnularAbrir(id, mes){ return recAjusteMarcar(String(id||''), String(mes||''), 'anular'); }
+  async function recAjusteReabrirAbrir(id, mes){ return recAjusteMarcar(String(id||''), String(mes||''), 'reabrir'); }
+  async function recAjusteMarcar(id, mes, acao){
+    var rot=recMesRotulo(mes), oqueB=(acao==='anular')?'anular um ajuste do Recebimentos':'reabrir um ajuste do Recebimentos';
+    var b=recSoGestao(oqueB); if(b) return b;
+    var nao=recAjustePode(mes);
+    if(nao){ zAlertao((acao==='anular')?'NÃO DÁ PARA ANULAR O AJUSTE AGORA':'NÃO DÁ PARA REABRIR O AJUSTE AGORA', [nao, 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var a=recAjustesDoMes(mes).filter(function(x){ return x._id===id; })[0];
+    if(!a){ zAlertao('NÃO ACHEI ESTE AJUSTE', ['Atualize a tela e tente de novo.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    if((acao==='anular')===a.anulado){ zAlertao((acao==='anular')?'ESTE AJUSTE JÁ ESTÁ ANULADO':'ESTE AJUSTE ESTÁ VALENDO', [(acao==='anular')?'Ele já está riscado, fora do total. Para voltar a contar, use «Reabrir».':'Ele já conta no total do mês.', 'Nada foi gravado.'], {botao:'Entendi'}); return {ok:false, recusa:true}; }
+    var antes=recTotalAoVivo(mes), depois=antes+((acao==='anular')?-recAjusteValor(a):recAjusteValor(a));
+    var efeito=rot+': '+recBRL(antes)+' → '+recBRL(depois)+'.', recusa='', quem=corrQuemAgora(), visto=planoCanon((recNoDoMes(mes).ajustes||{})[id]), vistoEv=planoCanon(recNoDoMes(mes).eventos);
+    var op={nivel:'adriana', adrianaOque:(acao==='anular')?'anula ajuste do Recebimentos':'reabre ajuste do Recebimentos', capacidade:'gestao-role', original:{caminho:'daycare/recebimentos/'+mes+'/ajustes/'+id, id:id}, oque:recAjusteTexto(a)+' ('+recBRL(recAjusteValor(a))+')',
+      gravar:async function(reg){
+        var b2=recSoGestao(oqueB)||recSoAdriana(oqueB, reg); if(b2) return b2;
+        quem=corrQuemAgora();
+        var rl=await recMesReler(mes);
+        if(!rl.ok) return {ok:false, erro:rl.erro};
+        var noBanco=((rl.v||{}).ajustes||{})[id];
+        if(planoCanon((rl.v||{}).eventos)!==vistoEv){ recusa='Outro aparelho fechou ou reabriu '+rot+' agora há pouco. Nada foi gravado: confira.'; return {ok:false, erro:recusa}; }
+        if(planoCanon(noBanco)!==visto){ recusa='Este ajuste mudou em outro aparelho enquanto o cartaz estava aberto. Nada foi gravado: confira.'; return {ok:false, erro:recusa}; }
+        var reg2=planoRegDepois(reg, (noBanco||{}).anulacoes), aid=recNovoId('daycare/recebimentos/'+mes+'/ajustes/'+id+'/anulacoes');
+        var up={}; up['daycare/recebimentos/'+mes+'/ajustes/'+id+'/anulacoes/'+aid]=reg2;
+        await DB.ref().update(up);
+        recAplicarLocal(mes, 'ajustes/'+id+'/anulacoes/'+aid, reg2);
+        try{ if(typeof audit==='function') audit((acao==='anular')?'recebimentos-ajuste-anulado':'recebimentos-ajuste-reaberto', rot+' — '+((acao==='anular')?'anulado':'reaberto')+' o ajuste «'+String(a.descricao||'')+'» ('+recBRL(recAjusteValor(a))+'), assinado por '+String(reg.por||'-')+': '+String(reg.motivo||''), Object.assign({mes:mes}, corrQuemMeta(quem))); }
+        catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+        try{ recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+        return {ok:true};
+      }};
+    var r;
+    if(acao==='anular') r=await corrAbrir(Object.assign(op, {acao:'anular', titulo:'Anular este ajuste', botao:'Anular este ajuste', tituloOk:'Ajuste anulado', estado:'valendo',
+      cascata:[efeito, 'O ajuste fica riscado, fora do total, com «Reabrir».']}));
+    else r=await corrAbrir(Object.assign(op, {acao:'reabrir', titulo:'Reabrir este ajuste', botao:'Reabrir este ajuste', tituloOk:'Ajuste reaberto', estado:'anulado (fora do total)',
+      paraEstado:'valendo (entra no total do mês)', volta:[efeito]}));
+    recFalhaTela((acao==='anular')?'O AJUSTE NÃO FOI ANULADO':'O AJUSTE NÃO FOI REABERTO', recusa, r, 'O ajuste continua como estava.');
+    return r;
+  }
+
+  /* ====================================================================================
    * LANÇAR PAGAMENTO — o recebimento vira registro (v-10, 07/set/2026)
    *
    * A tela que alimenta o nó daycare/pagamentos/{AAAA-MM}/{id} — o MESMO nó que o
@@ -82611,7 +83701,7 @@
       orcamentos:{},          // a tela é dos PLANOS; a reserva de hospedagem tem a tela dela
       pagamentos:LP_CACHE.pag||null,
       planos:(typeof planos==='function')?planos():null,
-      descontoIrmao:(typeof DESC_PET_PLANO!=='undefined')?DESC_PET_PLANO:null
+      descontoIrmao:(typeof descontosPlano==='function')?descontosPlano():null
     };
   }
 
@@ -87079,8 +88169,8 @@
       raiz.innerHTML = poSaudacaoHTML((eu && eu!=='-')?eu:'Operação', T.total)
         + poCaixasHTML(T)
         +'<p class="pm-nota"><strong>Este painel observa.</strong> Cada quadro abre a tela onde a senhora decide. '
-        +'A única exceção é <strong>Pedidos de encaixe</strong>: o botão «Autorizar» é a decisão, e é só sua — '
-        +'por isso ele pergunta antes e já lança.</p>'
+        +'A única exceção é <strong>Pedidos de encaixe</strong>, entre os pedidos do dia: o botão «Autorizar» é a decisão, e é só sua — '
+        +'por isso ele pergunta antes e já lança. No dinheiro, o quadro <strong>Recebimentos do mês</strong> grava daqui mesmo «Fechar o mês», «Reabrir o mês» e os ajustes com motivo, sempre com a senha da Adriana e o rastro.</p>'
         + poAreaHTML('DAY CARE','Pedidos de encaixe',
             'Dias que estouraram o limite de vagas e esperam a sua palavra.', PO_IC_ALERTA)
         +'<div id="poCardEncaixes" style="display:contents">'+vagasEncaixesCardHTML()+'</div>'
@@ -87312,16 +88402,24 @@
   }
   // Os planos a cobrar, pela MESMA régua da tela de Renovação (statusRenov): vencido e
   // "vence em até 15 dias". Sem a carteira do banco, não afirma nada (null).
+  // 6.73 (AC3.1): e pela mesma régua da cobrança (renovCobrancaDe): quem avisou que não renova sai da lista; quem já foi
+  // cobrado neste ciclo ganha «cobrado» (o dia e a hora da última cobrança).
   function paDadosPlanos(){
     if(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA) return null;
     var out=[];
     (typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).forEach(function(p){
       if(typeof pelInativo==='function'&&pelInativo(p)) return;
-      var st=(typeof statusRenov==='function')?statusRenov(typeof pelExtra==='function'?pelExtra(p):{}):null;
+      var ex=(typeof pelExtra==='function')?pelExtra(p):{};
+      var st=(typeof statusRenov==='function')?statusRenov(ex):null;
       if(!st) return;
-      if(st.estado==='vencido'||st.estado==='vence')
-        out.push({nome:(typeof pelNome==='function'?(pelNome(p)||''):(p.n||'')), label:st.label,
-                  vencido:st.estado==='vencido', dias:(st.dias==null?0:st.dias)});
+      if(st.estado==='vencido'||st.estado==='vence'){
+        var cob=(typeof renovCobrancaDe==='function')?renovCobrancaDe(ex):null;
+        if(cob && cob.naoRenova) return;
+        var it={nome:(typeof pelNome==='function'?(pelNome(p)||''):(p.n||'')), label:st.label,
+                  vencido:st.estado==='vencido', dias:(st.dias==null?0:st.dias)};
+        if(cob && cob.cobrancas.length) it.cobrado=renovDiaHora(cob.cobrancas[cob.cobrancas.length-1].ts);
+        out.push(it);
+      }
     });
     out.sort(function(a,b){ return a.dias-b.dias; });
     return out;
@@ -87431,7 +88529,7 @@
     if(f.planos==null) lendo.push('a carteira de planos');
     else f.planos.forEach(function(p){
       pend.push({area:'Planos', tom:(p.vencido?'critico':'ouro'), titulo:p.nome+' — '+p.label,
-        sub:'vez da Central: cobrar a renovação com o tutor', view:'renovacao', ts:0});
+        sub:(p.cobrado?('cobrado em '+p.cobrado+' · '):'')+'vez da Central: cobrar a renovação com o tutor', view:'renovacao', ts:0});
     });
     // 7 · Cadastro sem o essencial
     if(f.cadastro==null) lendo.push('o cadastro');
@@ -87722,7 +88820,9 @@
    * calculou e o harness já provou (porFILHOt). Se a régua do dinheiro mudar, ela muda lá
    * — e este quadro acompanha sozinho, nos dois dashboards, no mesmo instante.
    *
-   * ESTE QUADRO SÓ OBSERVA: não existe uma única gravação neste bloco.
+   * O DESENHO DESTE QUADRO NÃO GRAVA: não existe uma única gravação neste bloco. Desde a 6.73, o quadro tem botões que
+   * gravam — «Fechar o mês», «Reabrir o mês» e os ajustes com motivo —, e as gravações moram no BLOCO DO FECHAMENTO, fora
+   * deste (antes do «LANÇAR PAGAMENTO»): aqui o quadro só as chama por onclick, só lê com once e não usa janela nativa.
    * ================================================================================== */
 
   var REC_MES='';                                   // '' = o mês de hoje
@@ -87814,6 +88914,309 @@
   // mesma leitura duas vezes.
   function recGuardarFontes(orc, irm){ REC_FONTES={quando:Date.now(), orc:orc||{}, irm:irm||{}}; }
 
+  /* ===== 6.73 (K07) — O MÊS FECHADO, «MUDOU DEPOIS DO FECHAMENTO» E OS AJUSTES COM MOTIVO ================
+   * "Teria que somar quanto a gente recebeu do plano no mês para poder finalizar os recebimentos do mês, o que
+   *  foi fechado, para a gente bater com o outro sistema." (Adriana, 07/out/2026, Story 6.44)
+   * O que mora AQUI é o desenho e as leituras (nada grava). As gravações — «Fechar o mês», «Reabrir o mês»,
+   * «Lançar um ajuste», «Anular» e «Reabrir» o ajuste — moram no bloco do fechamento, fora das fatias que o
+   * harness confere como «só observa» (o molde do vagasEncaixesCardHTML da 6.61); o quadro só as chama por onclick.
+   *   daycare/recebimentos/{AAAA-MM}/eventos/{id}     = {acao:'fechou'|'reabriu', total_cent, linhas:{id do corpo}, motivo, registro, ts}
+   *   daycare/recebimentos/{AAAA-MM}/ajustes/{id}     = {sentido:'somar'|'tirar', valor_cent, descricao, motivo, registro, ts, anulacoes}
+   *   daycare/recebimentos-linhas/{AAAA-MM}/{id}      = o corpo: exatamente o que o quadro mostrava (lido só quando o mês abre)
+   * O estado do mês é o do evento mais novo. Nada é apagado nem sobrescrito.
+   * REC_FECH.ok: null = ninguém entregou os fechamentos (o quadro fica exatamente como antes da 6.73); false = a leitura
+   * falhou (o quadro diz que não conseguiu conferir, sem «Fechar» nem «Lançar um ajuste»); true = lidos. */
+  var REC_FECH={ok:null, v:null, quando:0, vivo:false};
+  var REC_CORPO={};      // 'AAAA-MM/id' → {lendo, ok, v}: o corpo de cada fechamento, lido uma vez, quando o mês abre
+  // A terceira fonte do quadro (os fechamentos e os ajustes de todos os meses), entregue por quem leu: x = {ok, v}.
+  // Com o ouvinte do app no ar (recFechOuvir), a cópia dele é a mais nova e fica.
+  function recGuardarFechamentos(x){
+    if(REC_FECH.vivo && REC_FECH.ok===true) return;
+    var ok=!!(x && x.ok===true);
+    REC_FECH={ok:ok, v:ok?((x.v && typeof x.v==='object')?x.v:{}):null, quando:Date.now(), vivo:false};
+  }
+  function recNoDoMes(mes){ var v=(REC_FECH.ok===true && REC_FECH.v)?REC_FECH.v[mes]:null; return (v && typeof v==='object')?v:{}; }
+  // Os eventos do mês, do mais velho ao mais novo (o carimbo; no empate, a chave).
+  function recEventosDoMes(mes){
+    var ev=recNoDoMes(mes).eventos||{};
+    return Object.keys(ev).map(function(id){ return Object.assign({_id:id}, ev[id]||{}); })
+      .sort(function(a,b){ var x=Number(a.ts)||0, y=Number(b.ts)||0; return (x!==y)?(x-y):((a._id<b._id)?-1:((a._id>b._id)?1:0)); });
+  }
+  // PURA: o estado do mês. null = os fechamentos não chegaram neste aparelho.
+  function recFechadoDe(mes){
+    if(REC_FECH.ok!==true) return null;
+    var L=recEventosDoMes(mes), u=L.length?L[L.length-1]:null, f=!!(u && u.acao==='fechou');
+    return {fechado:f, ev:f?u:null, eventos:L};
+  }
+  function recMesFechado(mes){ var f=recFechadoDe(mes); return !!(f && f.fechado); }
+  // O ajuste está anulado quando o registro mais novo de anulacoes é «anular» (o molde da 6.71).
+  function recAjusteAnulado(a){
+    var an=(a && a.anulacoes && typeof a.anulacoes==='object')?a.anulacoes:{}, u=null;
+    Object.keys(an).forEach(function(id){ var t=Number((an[id]||{}).ts)||0; if(!u || t>u.t || (t===u.t && id>u.id)) u={t:t, id:id, acao:String((an[id]||{}).acao||'')}; });
+    return !!(u && u.acao==='anular');
+  }
+  // Os ajustes do mês, na ordem em que foram lançados, cada um com o _id e se está anulado.
+  function recAjustesDoMes(mes){
+    var aj=recNoDoMes(mes).ajustes||{};
+    return Object.keys(aj).map(function(id){ var a=aj[id]||{}; return Object.assign({}, a, {_id:id, anulado:recAjusteAnulado(a)}); })
+      .sort(function(a,b){ var x=Number(a.ts)||0, y=Number(b.ts)||0; return (x!==y)?(x-y):((a._id<b._id)?-1:((a._id>b._id)?1:0)); });
+  }
+  // O valor do ajuste com o sinal: «Tirar do mês» é negativo.
+  function recAjusteValor(a){ var v=Math.round(Number((a||{}).valor_cent)||0); return ((a||{}).sentido==='tirar')?-v:v; }
+  function recAjustesValidos(mes){ return recAjustesDoMes(mes).filter(function(a){ return !a.anulado; }); }
+  function recAjustesSoma(mes){ return recAjustesValidos(mes).reduce(function(t, a){ return t+recAjusteValor(a); }, 0); }
+  // O MOTIVO de um registro, como texto (o que a pessoa escreveu no cartaz da 6.57 — o fechamento, o ajuste, o «Não renova», a
+  // tabela —, ou a frase do Financeiro sobre a ficha fora do total): DADO, nunca um erro do banco. Lido por uma função só.
+  function recMotivoDe(x){ return String(((x||{}).motivo)||''); }
+  // «Ajuste — {o que é}: {motivo}, por {quem} em {quando}» — a linha da lista e do Excel.
+  function recAjusteTexto(a){
+    var r=(a && a.registro)||{};
+    return 'Ajuste — '+String((a||{}).descricao||'')+': '+recMotivoDe(r)+', por '+String(r.por||'-')+' em '+String(r.quando||'');
+  }
+  // As linhas do quadro com a chave de cada uma (a ficha, ou orc:{id} na reserva): a MESMA lista do recLinhasDoMes, na mesma ordem
+  // (cada linha é a do recLinhasDoMes; a ordem, a dele), para o fechamento guardar e a comparação juntar pela chave.
+  function recLinhasComChave(resumo){
+    var L=((resumo||{}).porFILHOt||[]).map(function(o){ var x=recLinhasDoMes({porFILHOt:[o]})[0]; x.chave=String(o.chave||''); return x; });
+    L.sort(function(a,b){
+      if(a.grupo!==b.grupo) return a.grupo-b.grupo;
+      if(a.data!==b.data) return a.data<b.data?-1:1;
+      return a.nome.localeCompare(b.nome, 'pt', {sensitivity:'base'});
+    });
+    return L;
+  }
+  // PURA (sobre a memória): o CORPO do fechamento — exatamente o que o quadro de {mes} mostra agora: as linhas por tipo e as
+  // quantidades, as linhas «FILHOt por FILHOt», as diárias avulsas, os ajustes válidos, as fichas fora do total, os pagamentos
+  // anulados (6.71), a tabela de planos e os descontos usados, e o total (planos e reservas + diárias avulsas + ajustes).
+  function recFechamentoCorpo(resumo, mes){
+    var q=recQuebra(resumo), avLidos=!!(REC_AVULSO.ok && REC_AVULSO.mes===mes), por={}, tab={};
+    REC_TIPOS.forEach(function(t){ var L=q.linhas[t.k]||{}; por[t.k]={valor:L.valor||0, quantos:L.quantos||0, deTabela:L.deTabela||0}; });
+    var aj=recAjustesValidos(mes), ajSoma=aj.reduce(function(t, a){ return t+recAjusteValor(a); }, 0);
+    var P=planos(); Object.keys(P).forEach(function(k){ tab[k]={valores:Object.assign({}, P[k].valores||{}), hospOff:Number(P[k].hospOff)||0}; });
+    var d=descontosPlano();
+    return {mes:mes, porTipo:por, planos_cent:q.total, deTabela:q.deTabela, semComoCalcular:q.semComoCalcular,
+      linhas:recLinhasComChave(resumo).map(function(x){ return {chave:x.chave, nome:x.nome, tutor:x.tutor, oque:x.oque, quando:x.quando, data:x.data, valor:x.valor, obs:x.obs}; }),
+      avulso:{lidos:avLidos, n:avLidos?REC_AVULSO.n:0, total_cent:avLidos?REC_AVULSO.total_cent:0, semValor:avLidos?REC_AVULSO.semValor:0},
+      ajustes:aj.map(function(a){ var r=a.registro||{}; return {id:a._id, sentido:a.sentido, valor_cent:Math.round(Number(a.valor_cent)||0), descricao:String(a.descricao||''),
+        texto:recAjusteTexto(a), valor:recAjusteValor(a)}; }),
+      ajustes_cent:ajSoma,
+      fora:((resumo||{}).semComoCalcular||[]).map(function(o){ var f=recForaDoMes({semComoCalcular:[o]})[0]||{}; return {chave:String(o.chave||''), nome:f.nome||'', motivo:f.motivo||''}; }),
+      anulados:recAnuladosDoMes(mes).map(function(x){ return {nome:x.nome, data:x.data, texto:recAnuladoTexto(x)}; }),
+      tabela:tab, descontos:{2:Number(d[2])||0, 3:Number(d[3])||0},
+      total_cent:q.total+(avLidos?REC_AVULSO.total_cent:0)+ajSoma};
+  }
+  // O corpo como veio do banco (o banco não guarda lista vazia: a lista que falta é vazia).
+  function recCorpoNorm(C){
+    C=(C && typeof C==='object')?C:{};
+    var lista=function(x){ return Array.isArray(x)?x.filter(Boolean):((x && typeof x==='object')?Object.keys(x).sort(function(a,b){ return Number(a)-Number(b); }).map(function(k){ return x[k]; }).filter(Boolean):[]); };
+    var o=Object.assign({}, C);
+    o.linhas=lista(C.linhas); o.ajustes=lista(C.ajustes); o.fora=lista(C.fora); o.anulados=lista(C.anulados);
+    o.porTipo=(C.porTipo && typeof C.porTipo==='object')?C.porTipo:{};
+    o.avulso=Object.assign({lidos:false, n:0, total_cent:0, semValor:0}, C.avulso||{});
+    return o;
+  }
+  // A razão de uma linha que saiu da conta (AC5.2), quando o app sabe: a troca de nome ou de tutor, o pagamento anulado, fora do
+  // total, a ficha excluída, a categoria que deixou de ser Auluno, a ficha que não está mais na carteira.
+  function recRazaoSaiu(g, V){
+    var cad=(typeof pelCadCache!=='undefined' && pelCadCache)?pelCadCache:{}, c=cad[g.chave]||null;
+    // 3ª rodada (REQ-001): a ficha que trocou de chave e não tem pagamento na mesma data na chave nova
+    if(c && c.movido_para){ var kv=recChaveViva(g.chave, cad), cv=cad[kv]||{}; return 'mudou de nome ou de tutor: agora «'+String(cv.n||kv.split('__')[0]||'')+'»'; }
+    if((V.anulados||[]).some(function(x){ return x.data===g.data && x.nome===g.nome; })) return 'pagamento anulado';
+    var f=(V.fora||[]).filter(function(x){ return x.chave===g.chave; })[0];
+    if(f) return 'fora do total: '+recMotivoDe(f);
+    // 4ª rodada (re-gate 3, REQ-003): com a S8-P2, inativo sozinho não tira linha nenhuma do mês em que pagou — «inativo» não é
+    // razão. Saem: a ficha inativa e EXCLUÍDA (finResumoMes: a inativa excluída está apagada; a ativa excluída continua contando,
+    // como na base) e o plano ATUAL da ficha cuja categoria deixou de ser Auluno (a renovação anterior continua no mês em que foi
+    // paga, qualquer que seja a categoria de hoje).
+    if(c && c.inativo==='Sim' && c.excluido===true){ var em=Number(c.excluidoEm)||0; return 'ficha excluída'+(em?(' em '+renovQuandoBR(em).slice(0,10)):''); }
+    var rc=c?recRazaoCategoria(g, c, cad):''; if(rc) return rc;
+    if(String(g.chave||'').indexOf('orc:')!==0 && !c) return 'a ficha não está mais na carteira com esta chave';
+    return '';
+  }
+  // 4ª rodada (REQ-003): «virou Morador(a) Zêluz» (ou Hóspede (AuAulândia), Auluno Avulso) — só para a linha do plano ATUAL (a data
+  // da linha é a do pagamento: o renov.inicio), com a mesma dedução de categoria do financeiro-logica.js (finCategoria).
+  function recRazaoCategoria(g, c, cad){
+    var cat=(typeof finCategoria==='function')?finCategoria(g.chave, cad):String((c||{}).categoria||'auluno');
+    if(!cat || cat==='auluno') return '';
+    if(String(((c||{}).renov||{}).inicio||'')!==String((g||{}).data||'')) return '';
+    var rot=CATEGORIAS.filter(function(x){ return x.k===cat; })[0];
+    return 'virou '+(rot?rot.t:cat);
+  }
+  // PURA: «MUDOU DEPOIS DO FECHAMENTO» — a conta ao vivo (V) × a guardada (G), linha a linha, cada uma com o antes e o depois.
+  // Junta pela chave da linha e pela data (a ficha pode ter dois pagamentos no mês: a renovação anterior e o plano atual); a
+  // reserva da AuAulândia, só pela chave orc:{id} (o Financeiro dá uma linha por reserva no mês, e «Mudar as datas» muda a data
+  // dela). A 2ª passada é SÓ para a ficha que TROCOU DE CHAVE (troca de nome ou de tutor, 6.75), e a chave guardada não tem mais
+  // linha na conta ao vivo. Dois jeitos de trocar de chave:
+  //  · a troca como o app grava (renomearCadastroPel, e a 6.75): a chave antiga FICA no cadastro, com excluido:true e movido_para
+  //    (a 6.75 põe também inativo:'Sim'). A cadeia do movido_para é seguida até a chave viva, e a linha guardada junta com a linha ao
+  //    vivo DESSA chave na mesma data; se o plano ou o valor mudaram junto, a linha mostra o antes e o depois (3ª rodada, REQ-001);
+  //  · a chave que sumiu do cadastro: junta pela data, pelo «o quê» e pelo valor com uma linha cuja chave não existia no fechamento.
+  // A ficha que continua no cadastro SEM movido_para (só inativada, só excluída) não trocou de chave: ela e outra ficha que entrou
+  // com o mesmo plano, a mesma data e o mesmo valor aparecem as duas (QA da 6.73, REQ-001: «fora» e «Nova», nunca «Nada mudou»).
+  function recChaveViva(k, cad){
+    k=String(k||''); cad=cad||{};
+    var vistos={};
+    while(k && !vistos[k] && cad[k] && cad[k].movido_para){ vistos[k]=true; k=String(cad[k].movido_para); }
+    return k;
+  }
+  function recDiferencas(G, V){
+    G=recCorpoNorm(G); V=recCorpoNorm(V);
+    var gl=G.linhas, vl=V.linhas, usado={}, par=[], troca=[], out=[], naConta={}, noFechamento={};
+    var cad=(typeof pelCadCache!=='undefined' && pelCadCache)?pelCadCache:{};
+    vl.forEach(function(v){ naConta[String(v.chave||'')]=true; });
+    gl.forEach(function(g){ noFechamento[String(g.chave||'')]=true; });
+    var ficha=function(c){ c=String(c||''); return !!c && c.indexOf('orc:')!==0; };
+    gl.forEach(function(g, gi){ par[gi]=-1; var orc=(String(g.chave||'').indexOf('orc:')===0);
+      for(var i=0;i<vl.length;i++) if(!usado[i] && vl[i].chave===g.chave && (orc || vl[i].data===g.data)){ usado[i]=true; par[gi]=i; break; } });
+    gl.forEach(function(g, gi){
+      if(par[gi]>=0 || !ficha(g.chave) || naConta[g.chave]) return;
+      var noCad=Object.prototype.hasOwnProperty.call(cad, g.chave), viva=noCad?recChaveViva(g.chave, cad):'';
+      if(noCad && viva===g.chave) return;   // continua no cadastro sem movido_para: saiu, não trocou de chave
+      for(var i=0;i<vl.length;i++){
+        if(usado[i]) continue;
+        if(viva){ if(vl[i].chave===viva && vl[i].data===g.data){ usado[i]=true; par[gi]=i; troca[gi]=true; break; } }
+        else if(ficha(vl[i].chave) && !noFechamento[vl[i].chave] && vl[i].data===g.data && vl[i].oque===g.oque && vl[i].valor===g.valor){ usado[i]=true; par[gi]=i; break; }
+      }
+    });
+    var tab=(typeof TABELA_PLANOS!=='undefined' && TABELA_PLANOS.v)?TABELA_PLANOS.v:null, tabTs=tab?(Number(tab.ts)||0):0;
+    gl.forEach(function(g, gi){
+      var j=par[gi], cab=g.nome+' — '+g.oque+' · '+g.quando+': ';
+      if(j<0){ var rz=recRazaoSaiu(g, V); out.push(cab+recBRL(g.valor)+' → fora'+(rz?(' ('+rz+')'):'')); return; }
+      var v=vl[j], outroPlano=!!troca[gi] && v.oque!==g.oque;
+      if(v.valor===g.valor && !outroPlano) return;
+      var porTabela=(tabTs && tabTs>(Number(G.fechado_em)||0) && /valor pela tabela/.test(String(v.obs||'')));
+      // a ficha que trocou de chave: o depois diz o nome e o plano de agora quando um dos dois mudou
+      var depois=(troca[gi] && (outroPlano || v.nome!==g.nome))?(v.nome+' — '+v.oque+' · '+v.quando+': '):'';
+      out.push(cab+recBRL(g.valor)+' → '+depois+recBRL(v.valor)+(porTabela?(' (a tabela de planos mudou em '+renovQuandoBR(tabTs).slice(0,10)+')'):''));
+    });
+    vl.forEach(function(v, i){ if(!usado[i]) out.push('Nova: '+v.nome+' — '+v.oque+' · '+v.quando+': '+recBRL(v.valor)); });
+    if(G.avulso.lidos && V.avulso.lidos && V.avulso.total_cent!==G.avulso.total_cent)
+      out.push('Diárias avulsas com valor: '+recBRL(G.avulso.total_cent)+' → '+recBRL(V.avulso.total_cent));
+    var aoVivo=V.planos_cent+(V.avulso.lidos?V.avulso.total_cent:G.avulso.total_cent)+V.ajustes_cent;
+    return {linhas:out, aoVivo:aoVivo, dif:aoVivo-(Number(G.total_cent)||0), avulsoLido:!!V.avulso.lidos};
+  }
+  // O corpo de um fechamento: lido uma vez, quando o mês abre no quadro, e guardado na memória.
+  function recCorpoLer(mes, id){
+    var k=mes+'/'+id, C=REC_CORPO[k];
+    if(C && (C.lendo || C.ok)) return Promise.resolve(false);
+    if(!DB) return Promise.resolve(false);
+    REC_CORPO[k]={lendo:true, ok:false, v:null};
+    var caminho='daycare/recebimentos-linhas/'+mes+'/'+id;
+    return DB.ref(caminho).once('value').then(function(s){
+      var v=(s && typeof s.val==='function')?s.val():null;
+      REC_CORPO[k]=v?{lendo:false, ok:true, v:recCorpoNorm(v)}:{lendo:false, ok:false, v:null, vazio:true, quando:Date.now()};
+      return true;
+    }).catch(function(e){ _logLeituraFalhou(caminho+' (Recebimentos do mês)', e); REC_CORPO[k]={lendo:false, ok:false, v:null, quando:Date.now()}; return true; });
+  }
+  // 6.73 (QA, OBS-01): a leitura do corpo que falhou é refeita sem recarregar o app — pelo «Tentar de novo» do quadro, ou sozinha
+  // quando o quadro se desenha de novo e a falha tem mais de 30 segundos (o redesenho logo depois da falha não relê: sem laço).
+  function recCorpoTentar(mes, id){ delete REC_CORPO[String(mes)+'/'+String(id)]; try{ recRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */ return true; }
+  // A linha de um tipo (o mesmo desenho da conta ao vivo), para o quadro do mês fechado.
+  function recTipoLinhaHTML(t, L, rot){
+    return '<div class="pm-li"><div class="pm-li-txt"><b>'+esc(t.rot)+'</b><span>'+esc(t.sub)+' &middot; '
+      +esc(L.quantos===0?('ninguém em '+rot):pmPlural(L.quantos, t.un[0], t.un[1]))
+      +(L.deTabela>0?(' &middot; '+L.deTabela+' com a data vinda da planilha antiga'):'')
+      +'</span></div><span class="pm-li-fim rec-val">'+esc(recBRL(L.valor||0))+'</span></div>';
+  }
+  // «Ajustes com motivo (N)» — a linha do quadro (a soma entra no Total do mês) e a lista, com «Anular» e «Reabrir» no mês aberto.
+  function recAjustesLinhaHTML(validos){
+    var soma=validos.reduce(function(t, a){ return t+recAjusteValor(a); }, 0);
+    return '<div class="pm-li rec-ajustes"><div class="pm-li-txt"><b>Ajustes com motivo ('+validos.length+')</b><span>lançados com a senha da Adriana, cada um com o motivo — entram no total do mês</span></div>'
+      +'<span class="pm-li-fim rec-val">'+esc(recBRL(soma))+'</span></div>';
+  }
+  function recAjustesListaHTML(mes, todos, aberto){
+    if(!todos.length) return '';
+    var jm=jsAspas(mes);
+    return '<details class="rec-ajustes-lista" style="margin-top:8px"><summary style="cursor:pointer;font-size:13.5px;font-weight:800;color:var(--z-blue);min-height:44px;display:flex;align-items:center">Ajustes de '+esc(recMesRotulo(mes))+' ('+todos.length+')</summary><div class="pm-lista">'
+      +todos.map(function(a){
+        var ja=jsAspas(a._id);
+        if(a.anulado){
+          var an=a.anulacoes||{}, ult=null; Object.keys(an).forEach(function(id){ var r=an[id]||{}; if(!ult || (Number(r.ts)||0)>=(Number(ult.ts)||0)) ult=r; });
+          return '<div class="pm-li rec-ajuste-anulado"><div class="pm-li-txt">'+corrRiscadoHTML(Object.assign({}, ult||{}, {acao:'anular', oque:recAjusteTexto(a)+' ('+recBRL(recAjusteValor(a))+')'}), aberto?('recAjusteReabrirAbrir(\''+ja+'\',\''+jm+'\')'):'')+'<span>fora do total</span></div></div>';
+        }
+        return '<div class="pm-li"><div class="pm-li-txt"><b>'+esc(recAjusteTexto(a))+'</b>'
+          +(aberto?('<span><button type="button" class="pm-bt" style="min-height:44px;margin-top:6px" onclick="recAjusteAnularAbrir(\''+ja+'\',\''+jm+'\')">Anular este ajuste</button></span>'):'<span>Para ajustar, reabra o mês.</span>')
+          +'</div><span class="pm-li-fim rec-val">'+esc(recBRL(recAjusteValor(a)))+'</span></div>';
+      }).join('')+'</div></details>';
+  }
+  // «Fechamentos de julho (N)»: cada fechamento com quem, quando, o total e o motivo, e as reaberturas.
+  function recFechamentosHTML(mes, F){
+    var L=(F && F.eventos)||[];
+    if(!L.length) return '';
+    var nF=L.filter(function(e){ return e.acao==='fechou'; }).length;
+    return '<details class="rec-fechamentos" style="margin-top:8px"><summary style="cursor:pointer;font-size:13.5px;font-weight:800;color:var(--z-blue);min-height:44px;display:flex;align-items:center">Fechamentos de '+esc(recMesRotulo(mes))+' ('+nF+')</summary><div class="pm-lista">'
+      +L.slice().reverse().map(function(e){
+        var r=e.registro||{};
+        return '<div class="pm-li"><div class="pm-li-txt"><b>'+esc((e.acao==='fechou')?('Fechado com '+recBRL(Number(e.total_cent)||0)):'Reaberto')+' — '+esc(r.quando||'')+', por '+esc(r.por||'-')+'</b><span>Motivo: '+esc(recMotivoDe(r))+'</span></div></div>';
+      }).join('')+'</div></details>';
+  }
+  // Os botões do mês aberto (o quadro só os chama; quem grava confere o papel e a assinatura da Adriana de novo).
+  function recAcoesHTML(mes, F){
+    var hoje=recMesDeHoje(), rot=recMesRotulo(mes), jm=jsAspas(mes);
+    return '<div class="pm-acao rec-fech-acoes" style="margin-top:10px">'
+      +((hoje && mes<hoje)?('<button type="button" class="pm-bt" style="min-height:44px" onclick="recFecharAbrir(\''+jm+'\')">Fechar '+esc(rot)+'</button>')
+        :'<span class="pm-rot">O mês só fecha depois que termina.</span>')
+      +'<button type="button" class="pm-bt" style="min-height:44px" onclick="recAjusteAbrir(\''+jm+'\')">Lançar um ajuste</button>'
+      +'</div>'+recFechamentosHTML(mes, F);
+  }
+  // O QUADRO DO MÊS FECHADO (AC5.1): os números guardados, «Mudou depois do fechamento» e «Reabrir o mês». Sem o corpo, nada de total.
+  function recFechadoHTML(mes, F){
+    var ev=F.ev||{}, r=ev.registro||{}, rot=recMesRotulo(mes), k=mes+'/'+String(ev.linhas||''), C=REC_CORPO[k];
+    if(C && !C.ok && !C.lendo && (Date.now()-(Number(C.quando)||0))>30000){ delete REC_CORPO[k]; C=undefined; }
+    var h='<div class="pm-lista"><div class="pm-li rec-fechado"><span class="pm-badge pm-b-ok">fechado</span><div class="pm-li-txt"><b>Fechado em '+esc(r.quando||'')+' por '+esc(r.por||'-')+': '+esc(recMotivoDe(r))+'</b>'
+      +'<span>Estes são os números guardados no fechamento. O que mudou depois aparece em «Mudou depois do fechamento»; o total fechado não muda.</span></div></div>';
+    if(!C || C.lendo){
+      if(!C && ev.linhas){ try{ recCorpoLer(mes, String(ev.linhas)).then(function(m){ if(m) recRedesenhar(); }); }catch(e){ _logLeituraFalhou('o fechamento do mês (Recebimentos do mês)', e); } }
+      return h+'<div class="pm-li"><span class="pm-badge pm-b-atencao">ainda lendo</span><div class="pm-li-txt"><b>Lendo o fechamento de '+esc(rot)+'…</b>'
+        +'<span>O total fechado aparece assim que ele chegar. Um total pela metade é pior do que nenhum.</span></div></div></div>';
+    }
+    if(!C.ok){
+      return h+'<div class="pm-li"><span class="pm-badge pm-b-atencao">sem leitura</span><div class="pm-li-txt"><b>Não consegui ler o fechamento de '+esc(rot)+'.</b>'
+        +'<span>Nenhum total foi mostrado no lugar dele. Toque em «Tentar de novo».</span></div></div></div>'
+        +'<div class="pm-acao"><button type="button" class="pm-bt" style="min-height:44px" onclick="recCorpoTentar(\''+jsAspas(mes)+'\',\''+jsAspas(String(ev.linhas||''))+'\')">Tentar de novo</button></div>';
+    }
+    var G=C.v;
+    REC_TIPOS.forEach(function(t){ var L=G.porTipo[t.k]||{valor:0, quantos:0, deTabela:0}; if(t.k==='semtipo' && !L.quantos) return; h+=recTipoLinhaHTML(t, L, rot); });
+    h+='<div class="pm-li"><div class="pm-li-txt"><b>Diária avulsa</b><span>'+esc(pmPlural(G.avulso.n||0, 'diária', 'diárias'))+' com valor registrado no fechamento'
+      +((G.avulso.semValor||0)>0?(' &middot; '+G.avulso.semValor+' sem valor registrado ficaram de fora'):'')+'</span></div>'
+      +'<span class="pm-li-fim rec-val">'+esc(recBRL(G.avulso.total_cent||0))+'</span></div>';
+    if(G.ajustes.length) h+=recAjustesLinhaHTML(G.ajustes.map(function(a){ return {valor_cent:a.valor_cent, sentido:a.sentido}; }));
+    h+='<div class="pm-li rec-total"><div class="pm-li-txt"><b>Total de '+esc(rot)+' (fechado)</b><span>o número guardado no fechamento — o mesmo da lista e do Excel</span></div>'
+      +'<span class="pm-li-fim rec-val rec-val-total">'+esc(recBRL(Number(G.total_cent)||0))+'</span></div></div>';
+    h+=recListaFechadaHTML(G, mes);
+    var V=recFechamentoCorpo(recResumoDoMes(mes), mes), D=recDiferencas(G, V);
+    h+='<details class="rec-mudou" style="margin-top:10px"'+(D.linhas.length?' open':'')+'><summary style="cursor:pointer;font-size:13.5px;font-weight:800;color:var(--z-blue);min-height:44px;display:flex;align-items:center">Mudou depois do fechamento ('+D.linhas.length+')</summary><div class="pm-lista">'
+      +(D.linhas.length
+        ?(D.linhas.map(function(t){ return '<div class="pm-li rec-mudou-li"><div class="pm-li-txt"><span>'+esc(t)+'</span></div></div>'; }).join('')
+          +'<div class="pm-li"><div class="pm-li-txt"><b>A conta ao vivo hoje daria '+esc(recBRL(D.aoVivo))+' (diferença de '+esc(recBRL(D.dif))+').</b>'
+          +(D.avulsoLido?'':'<span>As diárias avulsas do mês ainda estão chegando: nesta conta, ficam as do fechamento.</span>')+'</div></div>')
+        :'<div class="pm-li"><div class="pm-li-txt"><span>Nada mudou desde o fechamento.</span></div></div>')
+      +'</div></details>';
+    if(G.ajustes.length) h+='<p class="pm-rot" style="margin-top:6px">Para ajustar, reabra o mês.</p>';
+    h+='<div class="pm-acao rec-fech-acoes" style="margin-top:10px"><button type="button" class="pm-bt" style="min-height:44px" onclick="recReabrirAbrir(\''+jsAspas(mes)+'\')">Reabrir '+esc(rot)+'</button></div>'
+      +recFechamentosHTML(mes, F);
+    return h;
+  }
+  // A lista «FILHOt por FILHOt» do mês fechado: a guardada, com o mesmo total.
+  function recListaFechadaHTML(G, mes){
+    var rot=recMesRotulo(mes);
+    var h='<details class="rec-lista" style="margin-top:10px"'+(REC_LISTA_ABERTA?' open':'')+' ontoggle="REC_LISTA_ABERTA=this.open"><summary style="cursor:pointer;font-size:13.5px;font-weight:800;color:var(--z-blue);min-height:44px;display:flex;align-items:center">Ver FILHOt por FILHOt ('+G.linhas.length+') — guardado no fechamento</summary>'
+      +'<div class="pm-lista">';
+    if(!G.linhas.length) h+='<div class="pm-li"><div class="pm-li-txt"><span>Nenhum plano pago nem reserva em '+esc(rot)+'.</span></div></div>';
+    G.linhas.forEach(function(x){
+      h+='<div class="pm-li rec-li-filhot"><div class="pm-li-txt"><b>'+esc(x.nome)+'</b><span>'+esc(x.tutor||'tutor a confirmar')+' &middot; '+esc(x.oque)+' &middot; '+esc(x.quando)
+        +(x.obs?(' &middot; '+esc(x.obs)):'')+'</span></div><span class="pm-li-fim rec-val">'+esc(recBRL(x.valor))+'</span></div>';
+    });
+    if(G.avulso.lidos && G.avulso.n>0) h+='<div class="pm-li"><div class="pm-li-txt"><b>Diárias avulsas</b><span>'+esc(pmPlural(G.avulso.n,'diária lançada','diárias lançadas'))+' com valor em '+esc(rot)+'</span></div>'
+      +'<span class="pm-li-fim rec-val">'+esc(recBRL(G.avulso.total_cent))+'</span></div>';
+    G.ajustes.forEach(function(a){ h+='<div class="pm-li rec-li-ajuste"><div class="pm-li-txt"><b>'+esc(a.texto||'')+'</b><span>ajuste com motivo</span></div><span class="pm-li-fim rec-val">'+esc(recBRL(Number(a.valor)||0))+'</span></div>'; });
+    h+='<div class="pm-li rec-total"><div class="pm-li-txt"><b>Total da lista</b><span>igual ao total do quadro</span></div>'
+      +'<span class="pm-li-fim rec-val rec-lista-total">'+esc(recBRL(Number(G.total_cent)||0))+'</span></div>';
+    G.fora.forEach(function(x){ h+='<div class="pm-li rec-li-fora"><div class="pm-li-txt"><b>'+esc(x.nome)+' — fora do total</b><span>'+esc(recMotivoDe(x))+'</span></div></div>'; });
+    G.anulados.forEach(function(x){ h+='<div class="pm-li rec-li-anulado"><div class="pm-li-txt"><b>'+esc(x.texto||'')+'</b><span>fora do total: não soma no Recebimentos</span></div></div>'; });
+    return h+'</div><div class="pm-acao" style="margin-top:8px"><button type="button" class="pm-bt rec-baixar" onclick="recBaixarExcel(this)">Baixar Excel de '+esc(rot)+'</button></div>'
+      +'<div class="pm-nota rec-baixar-status" style="display:none"></div></details>';
+  }
+
   /* ===== AS DIÁRIAS AVULSAS DO MÊS (Adriana, 21/set/2026) ===========================
    * Até 20/set o app sabia QUEM veio de avulso, nunca QUANTO se cobrou — e por isso a linha
    * não entrava na soma. Desde a versão de 21/set todo avulso lançado pelo Dia extra guarda
@@ -87884,7 +89287,11 @@
       return DB.ref(caminho).once('value').then(function(s){ return {ok:true, v:s.val()}; })
         .catch(function(e){ _logLeituraFalhou(caminho+' (Recebimentos do mês)', e); return {ok:false, v:null}; });
     };
-    return Promise.all([pega('auaulandia/orcamentos'), pega('daycare/irmaos')]).then(function(r){
+    // 6.73 (AC5.5): a terceira fonte — os fechamentos e os ajustes de todos os meses — vem junto (o corpo de cada fechamento
+    // não: ele só desce quando o mês abre). Com o ouvinte do app no ar, a cópia dele já é a mais nova.
+    var vivo=!!(REC_FECH.vivo && REC_FECH.ok===true);
+    return Promise.all([pega('auaulandia/orcamentos'), pega('daycare/irmaos'), vivo?Promise.resolve(null):pega('daycare/recebimentos')]).then(function(r){
+      if(r[2]) recGuardarFechamentos(r[2]);
       if(!r[0].ok||!r[1].ok) return false;      // faltou leitura: o quadro não afirma nada
       recGuardarFontes(r[0].v||{}, r[1].v||{});
       return true;
@@ -87897,6 +89304,8 @@
   function recTrava(){
     if(typeof finResumoMes!=='function') return 'o módulo do dinheiro (financeiro-logica.js) não carregou com a página';
     if(typeof CARTEIRA_CARREGADA!=='undefined' && !CARTEIRA_CARREGADA) return 'a carteira do banco ainda não chegou neste aparelho';
+    // 6.73 (AC9.3): pedida ao banco e ainda não chegada, a tabela de planos de fábrica daria outro número
+    if(typeof planosProntos==='function' && !planosProntos()) return planosTravaMotivo();
     if(!REC_FONTES.quando) return 'os orçamentos e os vínculos de irmãos ainda não chegaram';
     return '';
   }
@@ -87909,7 +89318,7 @@
       orcamentos:REC_FONTES.orc||{},
       pagamentos:null,
       planos:(typeof planos==='function')?planos():null,
-      descontoIrmao:(typeof DESC_PET_PLANO!=='undefined')?DESC_PET_PLANO:null
+      descontoIrmao:(typeof descontosPlano==='function')?descontosPlano():null
     }, mes, {hoje:(typeof hojeISO==='function')?hojeISO():''});
   }
 
@@ -87928,8 +89337,14 @@
       return h+'<div class="pm-lista"><div class="pm-li"><span class="pm-badge pm-b-atencao">ainda lendo</span>'
         +'<div class="pm-li-txt"><b>Ainda não sei dizer.</b>'
         +'<span>'+esc(motivo)+'. Um total pela metade é pior do que nenhum — abra a tela de novo em instantes.</span>'
-        +'</div></div></div></article>';
+        +'</div></div></div>'
+        // 6.73 (QA, OBS-02): a leitura da tabela falhou neste aparelho — o botão liga o ouvinte de novo (quem lê é o bloco da tabela)
+        +((typeof planosLeituraFalhou==='function' && planosLeituraFalhou())?'<div class="pm-acao"><button type="button" class="pm-bt" style="min-height:44px" onclick="tabelaPlanosTentar()">Tentar de novo</button></div>':'')
+        +'</article>';
     }
+    // 6.73 (AC5.1): com os fechamentos entregues, o mês FECHADO mostra o que foi guardado no fechamento, não a conta ao vivo
+    var F=recFechadoDe(mes);
+    if(F && F.fechado) return h+recFechadoHTML(mes, F)+'</article>';
     var resumo=recResumoDoMes(mes), q=recQuebra(resumo), av=recAvulsosNaCarteira();
     h+='<div class="pm-lista">';
     REC_TIPOS.forEach(function(t){
@@ -87964,19 +89379,27 @@
       +'</span></div>'
       +'<span class="pm-li-fim rec-val'+(avLidos?'':' rec-val-sem')+'">'+esc(avLidos?fmtCent(avSoma):(fmtCent(avCent)+' cada'))+'</span>'
       +'</div>';
+    // 6.73 (AC6.4): os ajustes com motivo do mês aberto entram no total (só com os fechamentos entregues; sem eles, como antes)
+    var ajT=F?recAjustesDoMes(mes):[], ajV=ajT.filter(function(a){ return !a.anulado; });
+    var ajSoma=ajV.reduce(function(t, a){ return t+recAjusteValor(a); }, 0);
+    if(ajV.length) h+=recAjustesLinhaHTML(ajV);
     h+='<div class="pm-li rec-total">'
       +'<div class="pm-li-txt"><b>Total de '+esc(rot)+'</b><span>a soma das linhas com valor acima'
       +(avLidos?', com as diárias avulsas lançadas de 21/09/2026 em diante':' — as diárias avulsas ainda não entraram')
+      +(ajV.length?', e os ajustes com motivo':'')
       +'</span></div>'
-      +'<span class="pm-li-fim rec-val rec-val-total">'+esc(finBRL(q.total+avSoma))+'</span>'
+      +'<span class="pm-li-fim rec-val rec-val-total">'+esc(finBRL(q.total+avSoma+ajSoma))+'</span>'
       +'</div></div>';
-    h+=recListaHTML(resumo, mes, avLidos);
+    h+=recListaHTML(resumo, mes, avLidos, F?ajV:null);
     h+='<p class="pm-nota"><strong>De onde vem cada valor.</strong> Os planos saem da data do pagamento lançada na ficha de cada FILHOt, na Renovação de planos, com o período inteiro caindo no mês do pagamento. A hospedagem sai dos orçamentos fechados. '
       +(q.deTabela>0?('<strong>'+q.deTabela+'</strong> '+(q.deTabela===1?'ficha traz':'fichas trazem')+' a data vinda da planilha antiga, e não de alguém da Central dizendo que recebeu. '):'')
       +(q.semComoCalcular>0?('<strong>'+q.semComoCalcular+'</strong> '+(q.semComoCalcular===1?'ficha ficou':'fichas ficaram')+' de fora por falta de dado na própria ficha. '):'')
-      +'Isto é o que a casa LANÇOU, não o extrato do banco.</p>'
-      +'</article>';
-    return h;
+      +'Isto é o que a casa LANÇOU, não o extrato do banco.</p>';
+    // 6.73 (K07): «Fechar o mês» e «Lançar um ajuste» (quem grava é o bloco do fechamento); a leitura dos fechamentos que falhou
+    // deixa a conta ao vivo, dizendo isso, sem os botões. Sem os fechamentos entregues, o quadro fica como era.
+    if(REC_FECH.ok===false) h+='<p class="pm-nota rec-fech-sem"><strong>Não consegui conferir se '+esc(rot)+' está fechado: esta é a conta ao vivo.</strong></p>';
+    else if(F) h+=recAjustesListaHTML(mes, ajT, true)+recAcoesHTML(mes, F);
+    return h+'</article>';
   }
 
   /* ===== FILHOt POR FILHOt (Story 6.44 — Adriana, 07/out/2026) =========================
@@ -88046,9 +89469,10 @@
   function recPluralLinhas(n){ return n+(n===1?' linha':' linhas'); }
   // O mesmo formatador do quadro (finBRL não depende do idioma do aparelho — o tablet antigo).
   function recBRL(c){ return (typeof finBRL==='function')?finBRL(c):fmtCent(c); }
-  function recListaHTML(resumo, mes, avLidos){
+  // 6.73 (AC6.4): aj = os ajustes válidos do mês aberto (cada um com o valor; o «Total da lista» continua igual ao do quadro)
+  function recListaHTML(resumo, mes, avLidos, aj){
     var L=recLinhasDoMes(resumo), F=recForaDoMes(resumo), rot=recMesRotulo(mes);
-    var soma=L.reduce(function(t,x){ return t+x.valor; }, 0)+(avLidos?REC_AVULSO.total_cent:0);
+    var soma=L.reduce(function(t,x){ return t+x.valor; }, 0)+(avLidos?REC_AVULSO.total_cent:0)+(aj||[]).reduce(function(t, a){ return t+recAjusteValor(a); }, 0);
     var h='<details class="rec-lista" style="margin-top:10px"'+(REC_LISTA_ABERTA?' open':'')+' ontoggle="REC_LISTA_ABERTA=this.open"><summary style="cursor:pointer;font-size:13.5px;font-weight:800;color:var(--z-blue);min-height:44px;display:flex;align-items:center">Ver FILHOt por FILHOt ('+L.length+') — para bater com o outro sistema</summary>'
       +'<div class="pm-lista">';
     if(!L.length) h+='<div class="pm-li"><div class="pm-li-txt"><span>Nenhum plano pago nem reserva em '+esc(rot)+'.</span></div></div>';
@@ -88060,6 +89484,7 @@
     });
     if(avLidos && REC_AVULSO.n>0) h+='<div class="pm-li"><div class="pm-li-txt"><b>Diárias avulsas</b><span>'+esc(pmPlural(REC_AVULSO.n,'diária lançada','diárias lançadas'))+' com valor em '+esc(rot)+'</span></div>'
       +'<span class="pm-li-fim rec-val">'+esc(recBRL(REC_AVULSO.total_cent))+'</span></div>';
+    (aj||[]).forEach(function(a){ h+='<div class="pm-li rec-li-ajuste"><div class="pm-li-txt"><b>'+esc(recAjusteTexto(a))+'</b><span>ajuste com motivo</span></div><span class="pm-li-fim rec-val">'+esc(recBRL(recAjusteValor(a)))+'</span></div>'; });
     h+='<div class="pm-li rec-total"><div class="pm-li-txt"><b>Total da lista</b><span>igual ao total do quadro</span></div>'
       +'<span class="pm-li-fim rec-val rec-lista-total">'+esc(recBRL(soma))+'</span></div>';
     F.forEach(function(x){
@@ -88092,16 +89517,38 @@
     var st=recStatusDe(el);
     var motivo=recTrava();
     if(motivo){ if(st){ st.style.display='block'; st.textContent='Ainda não dá para baixar: '+motivo+'.'; } return; }
-    var resumo=recResumoDoMes(mes), L=recLinhasDoMes(resumo), F=recForaDoMes(resumo);
+    // 6.73 (AC5.1): o mês FECHADO baixa o que foi guardado, com «FECHADO em …» no título e, depois do TOTAL (o total fechado),
+    // as linhas de «Mudou depois do fechamento», fora do total
+    var FE=recFechadoDe(mes), tituloX='Recebimentos de '+rot, L, linhas, soma;
+    if(FE && FE.fechado){
+      var evX=FE.ev||{}, rgX=evX.registro||{}, CX=REC_CORPO[mes+'/'+String(evX.linhas||'')];
+      if(!CX || !CX.ok){ if(st){ st.style.display='block'; st.textContent=(CX && !CX.lendo)?('Ainda não dá para baixar: não consegui ler o fechamento de '+rot+'. Toque em «Tentar de novo» no quadro.'):('Ainda não dá para baixar: lendo o fechamento de '+rot+'.'); } return; }
+      var G=CX.v; L=G.linhas;
+      tituloX+=' — FECHADO em '+String(rgX.quando||'')+' por '+String(rgX.por||'-');
+      linhas=L.map(function(x){ return [x.nome, x.tutor, x.oque, x.quando, recBRL(x.valor), x.obs]; });
+      if(G.avulso.lidos && G.avulso.n>0) linhas.push(['Diárias avulsas', '', pmPlural(G.avulso.n,'diária lançada','diárias lançadas')+' com valor', rot, recBRL(G.avulso.total_cent), '']);
+      G.ajustes.forEach(function(a){ linhas.push(['Ajuste', '', String(a.texto||''), rot, recBRL(Number(a.valor)||0), 'ajuste com motivo']); });
+      linhas.push(['TOTAL', '', '', '', recBRL(Number(G.total_cent)||0), 'o total fechado — igual ao total do quadro Recebimentos de '+rot]);
+      G.fora.forEach(function(x){ linhas.push([x.nome, '', 'FORA DO TOTAL', '', '', recMotivoDe(x)]); });
+      G.anulados.forEach(function(x){ linhas.push([x.nome, '', 'ANULADO — FORA DO TOTAL', fmtBR(x.data), '', String(x.texto||'')]); });
+      var DX=recDiferencas(G, recFechamentoCorpo(recResumoDoMes(mes), mes));
+      DX.linhas.forEach(function(t){ linhas.push(['Mudou depois do fechamento', '', 'FORA DO TOTAL', '', '', t]); });
+      if(DX.linhas.length) linhas.push(['Mudou depois do fechamento', '', 'FORA DO TOTAL', '', '', 'a conta ao vivo hoje daria '+recBRL(DX.aoVivo)+' (diferença de '+recBRL(DX.dif)+')']);
+    } else {
+    var resumo=recResumoDoMes(mes), F=recForaDoMes(resumo);
+    L=recLinhasDoMes(resumo);
     var avLidos=(REC_AVULSO.ok && REC_AVULSO.mes===mes);
-    var linhas=L.map(function(x){ return [x.nome, x.tutor, x.oque, x.quando, recBRL(x.valor), x.obs]; });
-    var soma=L.reduce(function(t,x){ return t+x.valor; }, 0);
+    linhas=L.map(function(x){ return [x.nome, x.tutor, x.oque, x.quando, recBRL(x.valor), x.obs]; });
+    soma=L.reduce(function(t,x){ return t+x.valor; }, 0);
     if(avLidos && REC_AVULSO.n>0){ linhas.push(['Diárias avulsas', '', pmPlural(REC_AVULSO.n,'diária lançada','diárias lançadas')+' com valor', rot, recBRL(REC_AVULSO.total_cent), '']); soma+=REC_AVULSO.total_cent; }
     if(!avLidos) linhas.push(['Diárias avulsas', '', 'ainda não lidas — fora do total', rot, '', 'abra o quadro de novo em instantes e baixe outra vez']);
+    // 6.73 (AC6.4): os ajustes com motivo do mês aberto, cada um com o valor, dentro do TOTAL (com os fechamentos entregues)
+    if(FE) recAjustesValidos(mes).forEach(function(a){ linhas.push(['Ajuste', '', recAjusteTexto(a), rot, recBRL(recAjusteValor(a)), 'ajuste com motivo']); soma+=recAjusteValor(a); });
     linhas.push(['TOTAL', '', '', '', recBRL(soma), 'igual ao total do quadro Recebimentos de '+rot]);
     F.forEach(function(x){ linhas.push([x.nome, '', 'FORA DO TOTAL', '', '', x.motivo]); });
     recAnuladosDoMes(mes).forEach(function(x){ linhas.push([x.nome, '', 'ANULADO — FORA DO TOTAL', fmtBR(x.data), '', recAnuladoTexto(x)]); });   // 6.71 (AC2.5)
-    var html=relTabelaHTML('Recebimentos de '+rot,
+    }
+    var html=relTabelaHTML(tituloX,
       recPluralLinhas(L.length)+' (planos e reservas) · regime de caixa: o plano inteiro no mês da data do pagamento · gerado em '+new Date().toLocaleString('pt-BR'),
       ['FILHOt','Tutor','O quê','Data','Valor','Observação'], linhas);
     var nome='Zeluz-recebimentos-'+mes+'.xls';
@@ -88155,8 +89602,10 @@
    *   4. Auditoria viva — as gravações que falharam hoje (rastro 'gravacao-FALHOU' da
    *      auditoria + o bolso local que ainda não subiu), com o caminho ao Painel do Dia.
    *
-   * ESTE PAINEL SÓ OBSERVA. Não existe uma única gravação daqui — cada quadro abre a
-   * tela onde se decide, e é lá que fica o rastro de quem fez.
+   * O DESENHO DESTE PAINEL NÃO GRAVA. Cada quadro abre a tela onde se decide, e é lá que fica
+   * o rastro de quem fez — com uma exceção desde a 6.73: o quadro «Recebimentos do mês» tem
+   * «Fechar o mês», «Reabrir o mês» e os ajustes com motivo, que gravam com a senha da Adriana e
+   * o rastro. Essas gravações moram no BLOCO DO FECHAMENTO, fora desta fatia; daqui, só o onclick.
    *
    * DINHEIRO NUNCA SAI PELA METADE: os números do financeiro só aparecem com a carteira
    * inteira lida (CARTEIRA_CARREGADA), os vínculos de irmãos lidos (IRMAOS_OK) e os
@@ -88187,7 +89636,7 @@
       orcamentos:orcamentos||{},
       pagamentos:pagamentos||null,
       planos:(typeof planos==='function')?planos():null,
-      descontoIrmao:(typeof DESC_PET_PLANO!=='undefined')?DESC_PET_PLANO:null
+      descontoIrmao:(typeof descontosPlano==='function')?descontosPlano():null
     }, mes, {hoje:hoje});
   }
   // As gravações que falharam no dia: o rastro que _logFalhaGrav deixa na auditoria
@@ -88311,8 +89760,11 @@
     h+='<div class="pm-li"><span class="pm-badge '+(r.emAtrasoTotal>0?'pm-b-atencao':'pm-b-ok')+'">atraso</span>'
       +'<div class="pm-li-txt"><b>'+esc(finBRL(r.emAtrasoTotal))+' do "a receber" já venceu.</b>'
       +'<span>É recorte do valor acima, não uma soma nova.</span></div></div>';
+    // 6.73 (AC3.2): a parte de quem avisou que não renova, pela régua da cobrança — a conta não muda (S8-P13)
+    var nr=(typeof renovNaoRenovaParte==='function')?renovNaoRenovaParte(r.inadimplentes):{n:0, cent:0};
     h+='<div class="pm-li"><span class="pm-badge '+(r.inadimplenciaTotal>0?'pm-b-atencao':'pm-b-ok')+'">vencidos</span>'
-      +'<div class="pm-li-txt"><b>'+esc(finBRL(r.inadimplenciaTotal))+' em planos que venceram sem renovação.</b>'
+      +'<div class="pm-li-txt"><b>'+esc(finBRL(r.inadimplenciaTotal))+' em planos que venceram sem renovação.'
+      +(nr.n?(' Destes, '+esc(finBRL(nr.cent))+' são de '+(nr.n===1?'1 FILHOt cujo tutor avisou que não renova.':(nr.n+' FILHOts cujos tutores avisaram que não renovam.'))):'')+'</b>'
       +'<span>População à parte — não há vigência neste mês, então NÃO está no "a receber".</span></div></div>';
     if(r.propostasAbertas.quantas>0)
       h+='<div class="pm-li"><span class="pm-badge pm-b-info">propostas</span>'
@@ -88386,9 +89838,11 @@
       pdirPega('daycare/plano-do-dia/'+dia),
       pdirPega('daycare/config/planos'),
       pEmp,
-      pdirPega('daycare/irmaos')
+      pdirPega('daycare/irmaos'),
+      // 6.73 (AC5.5): os fechamentos e os ajustes do quadro «Recebimentos do mês» (a terceira fonte dele)
+      pdirPega('daycare/recebimentos')
     ]).then(function(r){
-      var d={dia:dia, chamada:r[0], aud:r[1], orc:r[2], pag:r[3], planoDia:r[4], planosCfg:r[5], emp:r[6], irm:r[7]};
+      var d={dia:dia, chamada:r[0], aud:r[1], orc:r[2], pag:r[3], planoDia:r[4], planosCfg:r[5], emp:r[6], irm:r[7], rec:r[8]};
       PDIR_CACHE={quando:Date.now(), dia:dia, dados:d};
       return d;
     }).catch(function(e){ _logLeituraFalhou('Painel da Diretoria (leitura geral)', e); return null; });
@@ -88411,7 +89865,7 @@
     if(!eu||eu==='-') eu='Diretoria';
     if(!DB){
       raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Sem conexão com o banco agora</h3>'
-        +'<p class="pm-sub">Assim que a rede voltar, abra esta tela de novo. Este painel só observa — nada aqui grava.</p></div>';
+        +'<p class="pm-sub">Assim que a rede voltar, abra esta tela de novo. O que já foi registrado está guardado.</p></div>';
       return;
     }
     raiz.innerHTML=pdirSaudacaoHTML(eu)
@@ -88420,7 +89874,7 @@
     pdirLer(forcar===true).then(function(d){
       if(!d){
         raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui ler o dia agora</h3>'
-          +'<p class="pm-sub">Nada foi perdido — este painel só observa. Abra a tela de novo em instantes.</p></div>';
+          +'<p class="pm-sub">Nada foi perdido. Abra a tela de novo em instantes.</p></div>';
         return;
       }
       var carteiraLida=!(typeof CARTEIRA_CARREGADA!=='undefined'&&!CARTEIRA_CARREGADA);
@@ -88467,10 +89921,19 @@
       } else if(!carteiraLida||!irmaosLidos){
         finHTML='<article class="pm-card pm-rv"><h3 class="pm-tit">Ainda lendo a carteira</h3>'
           +'<p class="pm-sub">Os números do dinheiro só aparecem com o cadastro inteiro e os vínculos de irmãos lidos — um total pela metade é pior do que nenhum. Abra a tela de novo em instantes.</p></article>';
+      } else if(typeof planosProntos==='function' && !planosProntos()){
+        // 6.73 (AC9.3): a trava do quadro, aqui também — a tabela de planos de fábrica no lugar da salva daria outro número
+        finHTML=(typeof planosLeituraFalhou==='function' && planosLeituraFalhou())
+          ?('<article class="pm-card pm-rv"><h3 class="pm-tit">Não consegui ler a tabela de planos neste aparelho</h3>'
+            +'<p class="pm-sub">Sem ela, os valores dos planos sairiam pela tabela de fábrica — um número errado é pior do que nenhum. Toque em «Tentar de novo» e abra a tela de novo em instantes.</p>'
+            +'<div class="pm-acao"><button type="button" class="pm-bt" style="min-height:44px" onclick="tabelaPlanosTentar()">Tentar de novo</button></div></article>')
+          :('<article class="pm-card pm-rv"><h3 class="pm-tit">A tabela de planos ainda não chegou neste aparelho</h3>'
+            +'<p class="pm-sub">Sem ela, os valores dos planos sairiam pela tabela de fábrica — um número errado é pior do que nenhum. Abra a tela de novo em instantes.</p></article>');
       } else {
         // As MESMAS duas fontes que o quadro "Recebimentos do mês" precisa. Aqui elas já
         // desceram: entregar em vez de reler é o que impede a casa de pagar duas vezes.
         recGuardarFontes(d.orc.v||{}, d.irm.v||{});
+        recGuardarFechamentos(d.rec);   // 6.73 (AC5.5): e a terceira, os fechamentos e os ajustes
         var fin=pdirFinResumo(mes, PDIR_DIA, d.orc.v||{}, d.pag.v||null, d.irm.v||{});
         var temPag=!!(d.pag.v&&Object.keys(d.pag.v).length);
         finHTML=pdirFinHTML(fin, temPag, mesRotulo);
@@ -88485,7 +89948,7 @@
                         hospedes:(C?C.total:null),
                         feitos:(C?C.feitos:null),
                         pend:pend})
-        +'<p class="pm-nota"><strong>Este painel só observa.</strong> Nenhum quadro daqui grava coisa alguma: cada um abre a tela onde a senhora decide — e lá fica o rastro de quem fez.</p>'
+        +'<p class="pm-nota">Quase todos os quadros abrem a tela onde a senhora decide, e lá fica o rastro de quem fez. O quadro «Recebimentos do mês» grava daqui mesmo, sempre com a senha da Adriana e o rastro: «Fechar o mês», «Reabrir o mês» e os ajustes com motivo.</p>'
         + poAreaHTML('AS MESAS','Os painéis de todos','A mesa das Consultoras, a da Supervisão, a da Operação e a fatia do monitor — com os números vivos de cada uma.', PO_IC_PATA)
         + pdirAtalhosHTML(a)
         + poAreaHTML('FINANCEIRO','O dinheiro de '+mesRotulo,'A conta inteira vem do módulo do financeiro, provado no harness: a receber por serviço, recebido, os maiores valores e o que a conta não cobre.', PDIR_IC_MOEDA)
