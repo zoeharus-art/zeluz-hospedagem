@@ -23423,7 +23423,9 @@ provaAsync('6.56 AC4 — «Reabrir» do Day Care reabre de verdade (antes escrev
     assert.ok(!run('__esc656').some((e) => /auaulandia\/estadias/.test(e[1])), 'não escreve mais na estadia');
     // a ocorrência da hospedagem continua no caminho de sempre
     run(`zPergunta=function(){ return Promise.resolve(true); };`);
+    run(`__poe656('auaulandia/estadias/E1/ocorrencias/o1', {texto:'mancando', quem:'Giulia', ts:1, avisadoTutor:{acao:'liguei para a tutora', assinatura:'Bia', desfecho:'tutor', quando:'09/10 09:00', ts:2}});`);   // 6.67: palco
     await run(`ocorrReabrir('E1__o1')`); await espera656();
+    if (run("typeof CORR_ATUAL!=='undefined' && !!CORR_ATUAL")) { await run(`corrToque('confirmar', {motivo:'a tutora ainda não respondeu nada', senha:'9102'})`); await espera656(); }   // 6.67: palco (o cartaz)
     assert.ok(run('__esc656').some((e) => e[1] === 'auaulandia/estadias/E1/ocorrencias/o1/avisadoTutor'), 'hospedagem: igual a antes');
   } finally { run(SOLTA656); }
 });
@@ -26895,7 +26897,7 @@ const SEGUNDA648 = { mesaAtencaoTratei: 1, hospResponderMesmo: 1, salvarFoto: 1,
   ciSalvar: 2, ciSubstituirExistente: 2, __ciGravar: 3, ciFichaAoTelegram: 3, ciFichaObrigatoria: 4, ciFichaLinhasFalha: 1,
   ciBaixarFichaPdf: 1, reemitirFichaPdf: 1, hospConfirmarAntecipada: 1, hospConfirmarBaixa: 1, hospSalvarDatas: 1, _hospGravarNova: 1,
   hospTrocarGravar: 6, hospExcluirGravar: 6, hospCorrContar: 1, hospCorrHtml: 1, cfConfirmarRacao: 1, cfConfirmarComida: 1,
-  cfAddOcorrencia: 1, cfRemoverOcorrencia: 1, cfFecharConferencia: 1, empAvisarAtrasoNoTelegram: 1, empStatusGrupo: 1, empReenviarGrupo: 1,
+  cfAddOcorrencia: 1, cfFecharConferencia: 1, empAvisarAtrasoNoTelegram: 1, empStatusGrupo: 1, empReenviarGrupo: 1,
   empAvisar: 1, empAvisarDia: 1, empDispensarDia: 1, coFecharEtapa1: 1, coFinalizar: 1, coGerarPDF: 1,
   lpGravar: 1, lpEstornar: 1, pmCardAvisos: 1, pdSalvarEscala: 1, pdSalvarPlano: 1, pdEscolherPlano: 1,
   poProblemasDoDia: 1,
@@ -26983,7 +26985,12 @@ const DADO648 = { repExtratoRotulo: 2, repConferirHTML: 1, repExtratoDesmarcada:
   // desfeita, a marca desmarcada e a que veio de outro FILHOt). Nenhum erro: o erro do banco vai para gravacao-FALHOU e, na tela,
   // pelo zErroMotivo (o cartaz da 6.57, o «NÃO FOI SALVO» e o «NÃO FOI MARCADO» desta story).
   prevCorrQuadroHTML: 1, pendMarcasHTML: 1, pendHistTexto: 1, pendComoFechou: 1, pendTirarMedAbrir: 1, pendDesfazerResolucaoGravar: 1,
-  algFichaDesfazerGravar: 1, iaRevRestaurarGravar: 1, algUrgCorrecaoTexto: 1, escovaUltDesfazerHTML: 1, algFichaEntradaHTML: 1, algHistLinhas: 6 };
+  algFichaDesfazerGravar: 1, iaRevRestaurarGravar: 1, algUrgCorrecaoTexto: 1, escovaUltDesfazerHTML: 1, algFichaEntradaHTML: 1, algHistLinhas: 6,
+  // 6.67 (o Plantão, a Conferência e o check-out: funções novas, fora das três telas da 6.48): o .motivo de DADO — o motivo que a
+  // pessoa escreveu no cartaz da 6.57 (reg.motivo), levado à linha de correção do relatório ao grupo da Gestão (relCorrecaoAoGrupo,
+  // relAnularGravar), às versões e às assinaturas anteriores do relatório (relCorrHTML) e o motivo do × do Plantão na linha do tirado
+  // em dia anterior (removidoAnteriorHTML). O erro do banco vai para gravacao-FALHOU e, na tela, pelo zErroMotivo do cartaz da 6.57.
+  relCorrecaoAoGrupo: 1, relAnularGravar: 1, relCorrHTML: 2, removidoAnteriorHTML: 2 };
 const VARRE648_CORPO = (texto, EXCECAO) => {
   const linhas = texto.split('\n');
   // balanceia a partir de i (logo depois do "(" aberto); devolve o índice depois do ")" que fecha
@@ -39707,7 +39714,9 @@ provaAsync('6.65 P22 (AC13, AC14, guarda) — a área protegida, as permissões,
   igual(agora, BASE, 'as funções que não mudam');
   const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
   igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN('JSON.stringify(PERM)')), runN('VERMIF_PROX')],
-    [155, '5bac486c669007ec', 'f79140b1c2844dd5', 120], 'a área protegida (nomes e texto), as permissões e os 120 dias');
+    // 6.67: a PERM ganhou 'lancar-manual-plantao', 'trabalha-plantao' e 'conferir-checkin' (a story manda as três capacidades
+    // novas: AC1.1, AC2.2 e «quem confere»); as outras capacidades, a área protegida e os 120 dias não mudaram (a 6.67 P34 confere).
+    [155, '5bac486c669007ec', '02898b691c0a839c', 120], 'a área protegida (nomes e texto), as permissões e os 120 dias');
   const src = fs.readFileSync(APP, 'utf8');
   const i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
   igual([h(src.slice(i, j)), h(src.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
@@ -41401,15 +41410,15 @@ provaAsync('6.66 P23 (AC7.4) — a estadia encerrada pela baixa: «Mudar datas»
   }
   igual(res.map((x) => [x[0], x[1], x[2], x[3]]), res.map((x) => [[['AS DATAS NÃO MUDAM POR AQUI', x[4]], ['AS DATAS NÃO MUDAM POR AQUI', x[4]]], [], null, 'encerrada']), JSON.stringify(res));
 });
-provaAsync('6.66 P24 (AC7.5, guarda) — a estadia finalizada (check-out feito): «Mudar datas» como hoje — pergunta se reabre e reabre com as datas novas (a 6.67 traz «Reabrir o check-out»)', async () => {
+provaAsync('6.66 P24 (AC7.5, guarda; trocada pela 6.67 AC12.7) — a estadia finalizada (check-out feito): «Mudar datas» não reabre — nada é gravado e a tela manda «Reabrir o check-out» (a guarda da 6.66 dizia «como hoje, até a 6.67»)', async () => {
   const r = await hosp666(EST666({ status: 'finalizada', checkout: { ts: T658(9, 9, 0), quem: 'Gestora Teste' }, saida: '2026-10-09' }), async () => {
     run(`__el657['hospEdIni']={value:'2026-10-08'}; __el657['hospEdFim']={value:'2026-10-13'}; __zp657=[];`);
     await run(`hospSalvarDatas('${EID666}')`); await espera659();
     // a resposta do cartaz (no código novo; na base não há cartaz e a gravação já aconteceu)
     if (run("typeof CORR_ATUAL!=='undefined' && !!CORR_ATUAL")) { await assina658('s-bia', MOT_DATAS666); await espera659(); }
-    return { perg: J658('__zp657').map((z) => z[0]), e: db658(EP666) };
+    return { perg: J658('__zp657').map((z) => z[0]), za: J658('__za657').map((z) => [z[0], (z[1] || [])[0]]), e: db658(EP666) };
   });
-  igual([r.perg, r.e.status, r.e.saida], [['Esta hospedagem está marcada como encerrada'], 'ativa', '2026-10-13'], JSON.stringify(r));
+  igual([r.perg, r.za[0], r.e.status, r.e.saida], [[], ['AS DATAS NÃO MUDAM POR AQUI', 'Esta hospedagem teve check-out em 09/10/2026. Para ela voltar, use «Reabrir o check-out».'], 'finalizada', '2026-10-09'], JSON.stringify(r));
 });
 provaAsync('6.76 × publicadas · 6.66 — «Desfazer a baixa» da hospedagem (na junção): a senha certa assina; a provisória ainda não trocada, a senha do código sem o banco e sem a cópia e a de quem foi desativado são recusadas, cada uma com a sua frase e sem gravar nada', async () => {
   let r = null;
@@ -43325,13 +43334,22 @@ provaAsync('6.70 P36 (AC13, AC14, guarda) — a área protegida e o #v-daycare i
   vm.runInContext(extractMainScript(fs.readFileSync(APP, 'utf8')), ctxN, { filename: 'index.html#script', timeout: 15000 });
   const runN = (c) => vm.runInContext(c, ctxN);
   const h = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
-  const BASE = { acertoHospedesNaNoite: '3ae93e994c46ac7a', acertoPernoitesNaNoite: '9be7a595bdba90cd', acertoCarregarPernoites: '6cfa53a0c43961b5', acertoQuemPelaAssinatura: '21994d0474f36070',
+  // 6.67 (junção com a 6.70, 12/out/2026): a acertoPernoitesNaNoite ganhou as duas linhas das marcas da 6.67 — o tirado com `devolvido`
+  // («Trazer de volta») não tira, e o lançamento com `movidoPara` (o dia mudado) não conta: vale o novo. Antes: '9be7a595bdba90cd' (a da
+  // 788fb9e); depois: 'b669eb67f9c850ec'. Por quê: sem elas, o FILHOt trazido de volta não contaria naquela noite e o lançamento
+  // movido contaria nas noites velhas e nas novas. Sem as duas linhas, o texto é o da base byte a byte (a «6.67 × 6.70 · D» confere);
+  // a noite não paga conta certo, a paga e a fechada não mudam e, sem as marcas, o acerto é o da 6.70: «6.67 × 6.70 · A» a «· E».
+  const BASE = { acertoHospedesNaNoite: '3ae93e994c46ac7a', acertoPernoitesNaNoite: 'b669eb67f9c850ec', acertoCarregarPernoites: '6cfa53a0c43961b5', acertoQuemPelaAssinatura: '21994d0474f36070',
     acertoAgruparNomes: 'd683509dddcd1fa2', acertoDeduzirQuem: 'a519d2015c5b21cd', acertoMarcarDobras: '67d82dcec9a47b77', plantOficial: '50a122f535002174', plantChave: 'a09ff8cb1da82b18',
     plantEhDuplo: 'e4192bc3a2b37243', plantPartes: 'dc2819ea9c684a47', acertoPessoasDa: '0fd80154d09d5f28', plantEquipe: '1c42bacc68c8a740', poCardAcerto: '84480709fff49824' };
   const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h(runN('String(' + n + ')')); });
   igual(agora, BASE, 'as funções que não mudam');
   const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
-  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN('JSON.stringify(PERM)'))], [155, '5bac486c669007ec', 'f79140b1c2844dd5']);
+  // 6.67 (junção): a PERM ganhou 'lancar-manual-plantao', 'trabalha-plantao' e 'conferir-checkin' (as três capacidades novas da 6.67).
+  // Antes: a PERM inteira, 'f79140b1c2844dd5'; depois: a PERM sem as três, que continua 'f79140b1c2844dd5' (nenhuma capacidade de antes
+  // mudou). Por quê: esta guarda é das capacidades que a 6.70 não podia mexer; a PERM inteira, com as três, é a da 6.65 P22
+  // ('02898b691c0a839c'), e a sem as três também é conferida na 6.67 P34.
+  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; return JSON.stringify(c); })()"))], [155, '5bac486c669007ec', 'f79140b1c2844dd5']);
   const src = fs.readFileSync(APP, 'utf8');
   const i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
   igual([h(src.slice(i, j)), (src.match(/por\[p\]\.total\+=v; por\[p\]\.noites\+\+;/g) || []).length], ['d350ca846ae9d05e', 1]);
@@ -44220,6 +44238,933 @@ provaAsync('6.70 P64 (AC7.2, LOW-R1, r10 do QA) — «Trocar» "carpl" levando a
     igual([db670('config/plantonistas/apelidos/carpl'), db670('acerto-plantao/2026-10-09/quem'), Object.keys(db670('acerto-plantao/2026-10-09/quem_correcoes') || {}).length, h.noitesLevadas || [], h.noitesNaoLevadas],
       ['Carol Teste', 'Ana Teste', 0, [], ['09/10 (ganhou outro nome em outro aparelho: Ana Teste)']]);
     assert.ok(((zaT670(/NEM TODAS AS NOITES FORAM LEVADAS/)[0] || [])[1] || []).join(' ').indexOf('09/10 (ganhou outro nome em outro aparelho: Ana Teste)') >= 0, JSON.stringify(za670()));
+  });
+});
+}
+{
+// ================================================================== 6.67 × 6.70 — a junção: o acerto das plantonistas com as marcas novas da 6.67
+console.log('\n6.67 × 6.70 — O acerto das plantonistas com as marcas da 6.67 («Trazer de volta» marca devolvido; o dia mudado marca movidoPara): a noite não paga conta certo e o desfazer volta ao valor de antes; a paga e a fechada não mudam; sem as marcas, o acerto é o da 6.70; os outros leitores das pernoites');
+// Tudo INVENTADO: as pernoites lançadas à mão da Amora (tutora Lia Teste) e da Cacau (tutor Rui Teste); a Farofa hospedada na noite de
+// 09/10 e a Paçoca na de 07/10; as plantonistas «Teste» da 6.70 (as assinaturas de 07/10 e de 09/10 são da Ana Teste e da Carol Teste).
+// O relógio é o da 6.70 (sábado, 10/10/2026, 10:00; a lista vai de 10/09 a 09/10); as ações da 6.67 são tocadas no Plantão de sexta,
+// 09/10 (o dia da tela), pelas funções de verdade (o ×, o «Trazer de volta» e o cartaz do «Corrigir este lançamento»), e o acerto é
+// relido como a Gestão o vê ao abrir a tela (acertoCarregar de verdade, que relê auaulandia/manuais e auaulandia/removidos).
+// A tabela de sempre: 0 ou 1 FILHOt, R$ 73,00; 2 ou 3, R$ 113,00; 4 ou 5, R$ 143,00 (com a ajuda de custo).
+const QUEM6770 = () => Object.assign(QUEM670(), { '2026-10-07': ASS670('Ana Teste'), '2026-10-09': ASS670('Carol Teste') });
+const EST6770 = () => Object.assign(EST670(), { f: EP670('Farofa', '2026-10-09', '2026-10-10'), g: EP670('Paçoca', '2026-10-07', '2026-10-08') });
+const PERN6770 = (nome, tutor, noites) => ({ nome, tutor, raca: 'SRD', refKey: semAcento670(nome) + '__' + semAcento670(tutor), janta: true, noites,
+  jantar: { comida: 'Ração 60g', onde: 'Armário' }, criadoPor: 'Gestora Teste', criadoTs: T670(10, 4, 9, 0) });
+// o Plantão de 09/10 dentro do palco da 6.70: o dia da tela, a lista e o que a 6.67 chama em volta (guardado e devolvido no fim)
+const PLANT6770 = `__bk6770={sd:selectedDate, hs:hospedes, rh:REMOVIDOS_HOJE, ra:REMOVIDOS_ANTERIORES, rad:REMOVIDOS_ANT_DIA, hea:hospEstadiaAtivaDe, cm:carregarManuais};
+  selectedDate=new __RD657(2026, 9, 9, 10, 0, 0); hospedes=[]; REMOVIDOS_HOJE={}; REMOVIDOS_ANTERIORES=[]; REMOVIDOS_ANT_DIA='x';
+  hospEstadiaAtivaDe=function(){ return null; }; carregarManuais=function(){ return Promise.resolve(); };`;
+const SOLTA6770 = `selectedDate=__bk6770.sd; hospedes=__bk6770.hs; REMOVIDOS_HOJE=__bk6770.rh; REMOVIDOS_ANTERIORES=__bk6770.ra;
+  REMOVIDOS_ANT_DIA=__bk6770.rad; hospEstadiaAtivaDe=__bk6770.hea; carregarManuais=__bk6770.cm;`;
+const com6770 = (cena, fn) => {
+  ctx.__m6770 = (cena && cena.manuais) || {};
+  return com670(Object.assign({ est: EST6770(), quem: QUEM6770() }, cena || {}), async () => {
+    run(PLANT6770);
+    try { await fn(); } finally { run(SOLTA6770); }
+  }, { antes: `acertoCarregarPernoites=__bk670.cp;
+    Object.keys(__m6770).forEach(function(d){ Object.keys(__m6770[d]).forEach(function(k){ __put657('auaulandia/manuais/'+d+'/'+k, __m6770[d][k]); }); });` });
+};
+const rs6770 = (c) => run('fmtCent(' + Number(c) + ')');
+const txt6770 = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&divide;/g, '÷').replace(/\s+/g, ' ').replace(/ ([,.)])/g, '$1').trim();
+// o acerto como a Gestão o vê ao abrir a tela: por noite (de 04/10 a 09/10) os FILHOts, o valor do cartão, a plantonista e o estado;
+// o «A pagar por pessoa» (a mesma conta do Dashboard da Márcia), o Dashboard e a tela
+const EST_ROT6770 = { apagar: 'a pagar', acumulado: 'guardada', pago: 'paga' };
+const ve6770 = async () => {
+  await carrega670(true);
+  const noites = J670(`acertoNoites().filter(function(o){ return o.tipo==='noite' && o.iso>='2026-10-04'; }).map(function(o){
+    return [o.iso, o.pets.join(', '), acertoValorDoCartao(o).total, acertoQuemDoItem(o).nome, o.reg.sem_plantao?'sem plantão':(o.reg.status||'apagar')]; })`)
+    .map(([iso, pets, v, quem, st]) => [iso.slice(8) + '/10', pets, v, quem, EST_ROT6770[st] || st]);
+  const R = J670('acertoTotaisPor(acertoNoites())');
+  const por = {}; R.nomes.forEach((n) => { por[n] = R.por[n].total; });
+  return { noites, por, geral: R.geral, html: lista670(), dash: String(run('poCardAcerto()')) };
+};
+// tolerância zero: o «A pagar por pessoa» é a soma dos cartões em aberto de cada uma, e o Dashboard da Márcia mostra o mesmo número
+const bate6770 = (E, rot) => {
+  const soma = {};
+  J670(`acertoNoites().filter(function(o){ var st=o.reg.status||'apagar'; return st!=='pago' && !o.reg.sem_plantao && !o.reg.anulado; }).map(function(o){ return [acertoValorDoCartao(o).total, acertoPessoasDoItem(o)]; })`)
+    .forEach(([v, ps]) => ps.forEach((p) => { soma[p] = (soma[p] || 0) + v; }));
+  igual(E.por, soma, rot + ': o «A pagar por pessoa» é a soma dos cartões');
+  ['Ana Teste', 'Carol Teste', 'Júlia Teste'].forEach((n) => { if (E.por[n] != null) assert.ok(E.dash.indexOf(rs6770(E.por[n])) >= 0, rot + ': o Dashboard da Márcia mostra ' + n + ' ' + rs6770(E.por[n])); });
+};
+// a linha do Plantão de 09/10 de um lançamento à mão (a que carregarManuais monta), lida do banco de mentira
+const linha6770 = (dia, key) => { const g = `__get657('auaulandia/manuais/${dia}/${key}')`;
+  return `{nome:${g}.nome, tutor:${g}.tutor, raca:'SRD', refKey:${g}.refKey, ini:'P', cor:'#234D67', pernoite:true, hospede:false, manualKey:'${key}', manualDia:'${dia}', janta:true, jantar:${g}.jantar, manualReg:${g}}`; };
+const chave6770 = (dia, nome) => J670(`Object.keys(__get657('auaulandia/manuais/${dia}')||{}).filter(function(k){ var m=__get657('auaulandia/manuais/${dia}/'+k)||{}; return m.nome===${JSON.stringify(nome)} && !m.movidoPara; })`);
+// o × do Plantão (dois toques: o motivo já escrito no cartaz), o «Trazer de volta» (com a pergunta respondida) e o «Corrigir este lançamento» com o dia mudado
+const tira6770 = async (dia, key, motivo) => {
+  run(`hospedes=[${linha6770(dia, key)}]; __b6770={textContent:'✕', dataset:{armed:'1', motivo:${JSON.stringify(motivo)}}, style:{}}; removerHospedeCard(0, __b6770);`); await espera657();
+};
+const traz6770 = async (k) => {
+  run(`REMOVIDOS_HOJE=__get657('auaulandia/removidos/2026-10-09')||{}; __zpq657.push(true);`);
+  await run(`hospTrazerDeVolta(${JSON.stringify(k)}, '2026-10-09')`); await espera657();
+};
+const muda6770 = async (dia, key, novoBR, motivo) => {
+  run(`hospedes=[${linha6770(dia, key)}]; __p6770=manualCorrigirAbrir('${dia}', '${key}');`);
+  continua670([novoBR, String(run(`__get657('auaulandia/manuais/${dia}/${key}').noites`)), 'Ração 60g', 'Armário', '']);
+  await assina670(SENHA657, motivo); const p = passo670(); await fecha670(); return p;
+};
+const acerto6770 = () => J670(`[__get657('auaulandia/acerto-plantao'), __get657('auaulandia/acerto-lotes'), __get657('auaulandia/acerto-plantao-dia')]`);
+const gravouAcerto6770 = () => grav670().filter((e) => /acerto/.test(String(e[1]) + ' ' + JSON.stringify(e[2] || '')));
+const pagas6770 = () => J670(`acertoNoites().filter(function(o){ return (o.reg.status||'')==='pago'; }).map(function(o){ return acertoPagaLinhaHTML(o, false); })`).map(txt6770);
+// a só-uma do «Pagar várias de {nome}»: no cartaz do lote, fica marcada só a noite pedida
+const lote6770 = async (nome, iso) => {
+  run(`acertoLoteAbrir(${JSON.stringify(nome)}); ACERTO_LOTE.itens.forEach(function(x, i){ if(!!x.marcado!==(x.iso==='${iso}')) acertoLoteToque(i); });`);
+  igual(J670('ACERTO_LOTE.itens.filter(function(x){ return x.marcado; }).map(function(x){ return x.iso; })'), [iso], 'no lote, só a noite de ' + iso);
+  pergunta670(true); await run('acertoLotePagar()'); await espera657();
+};
+const S0A6770 = () => [['09/10', 'Farofa, Amora', 11300, 'Carol Teste', 'a pagar'], ['08/10', 'Nelson, Amora', 11300, 'Júlia Teste', 'a pagar'], ['07/10', 'Paçoca', 7300, 'Ana Teste', 'a pagar'],
+  ['06/10', 'Biscoito, Pipoca', 11300, 'Júlia Teste', 'a pagar'], ['05/10', 'Biscoito, Pipoca, Quindim', 11300, 'Carol Teste', 'a pagar'], ['04/10', 'Biscoito, Pipoca', 11300, 'Ana Teste', 'a pagar']];
+
+provaAsync('6.67 × 6.70 · A (noite não paga, «Trazer de volta») — a pernoite da Amora (08 e 09/10) tirada no Plantão de 09/10 sai das duas noites (08/10 Júlia Teste e 09/10 Carol Teste: R$ 113,00 → R$ 73,00); «Trazer de volta» (o registro ganha devolvido) a faz contar de novo nas duas, com o valor da tabela e a plantonista de cada noite (R$ 113,00); tirar de novo (o desfazer) volta exatamente ao valor de antes; o «A pagar por pessoa» e o Dashboard da Márcia acompanham no centavo; nada é gravado no acerto. Sem a linha da junção, a 09/10 ficava em R$ 73,00 com a Amora de volta no Plantão', async () => {
+  await com6770({ manuais: { '2026-10-08': { m1: PERN6770('Amora', 'Lia Teste', 2) } } }, async () => {
+    const S0 = await ve6770();
+    igual(S0.noites, S0A6770(), 'a pernoite conta nas duas noites');
+    bate6770(S0, 'antes');
+    const ac0 = acerto6770(); limpa670();
+    // o × no Plantão de 09/10: o lançamento sai (como sempre) e o registro guarda o lançamento inteiro
+    await tira6770('2026-10-08', 'm1', 'lancei a Amora sem confirmar a reserva');
+    igual([db670('manuais/2026-10-08/m1'), (db670('removidos/2026-10-09/amora__lia teste') || {}).origem], [null, 'manual']);
+    const S1 = await ve6770();
+    const S1esp = S0A6770(); S1esp[0] = ['09/10', 'Farofa', 7300, 'Carol Teste', 'a pagar']; S1esp[1] = ['08/10', 'Nelson', 7300, 'Júlia Teste', 'a pagar'];
+    igual(S1.noites, S1esp, 'tirada: sai das duas noites, a plantonista de cada noite fica');
+    igual([S1.por['Carol Teste'] - S0.por['Carol Teste'], S1.por['Júlia Teste'] - S0.por['Júlia Teste'], S1.por['Ana Teste'] - S0.por['Ana Teste'], S1.por['(sem nome)'] - S0.por['(sem nome)'], S1.geral - S0.geral],
+      [-4000, -4000, 0, 0, -8000], 'só a Carol e a Júlia mudam, R$ 40,00 cada');
+    bate6770(S1, 'tirada');
+    // «Trazer de volta»: o registro fica, com devolvido; o lançamento volta inteiro (as 2 noites)
+    await traz6770('amora__lia teste');
+    const rem = db670('removidos/2026-10-09/amora__lia teste') || {}, k2 = chave6770('2026-10-08', 'Amora');
+    igual([!!rem.devolvido, (rem.devolvido || {}).quem, k2.length, (db670('manuais/2026-10-08/' + k2[0]) || {}).noites], [true, 'Gestora Teste', 1, 2], 'o registro marcado e o lançamento de volta');
+    const S2 = await ve6770();
+    igual(S2.noites, S0A6770(), 'trazida de volta: conta de novo nas duas noites, com o valor e a plantonista de antes');
+    igual([S2.por, S2.geral], [S0.por, S0.geral], 'o «A pagar por pessoa» volta ao de antes no centavo');
+    bate6770(S2, 'trazida de volta');
+    // o desfazer do «Trazer de volta» (o × de novo): exatamente o valor da tirada
+    await tira6770('2026-10-08', k2[0], 'lancei a Amora sem confirmar a reserva');
+    igual(!!(db670('removidos/2026-10-09/amora__lia teste') || {}).devolvido, false, 'o × de novo tira (o registro sem devolvido)');
+    const S3 = await ve6770();
+    igual([S3.noites, S3.por, S3.geral], [S1.noites, S1.por, S1.geral], 'tirada de novo: exatamente o de antes de trazer');
+    bate6770(S3, 'tirada de novo');
+    igual([gravouAcerto6770(), acerto6770()], [[], ac0], 'nada é gravado no acerto: as ações da 6.67 mudam só o Plantão');
+  });
+});
+provaAsync('6.67 × 6.70 · B (noite não paga, o dia mudado) — a pernoite da Amora lançada para 05/10 (2 noites) e corrigida para 08/10 pelo «Corrigir este lançamento» (o antigo com movidoPara, o novo com movidoDe): sai de 05 e 06/10 (05/10 Carol Teste: R$ 143,00 → R$ 113,00) e entra em 08 e 09/10 (Júlia Teste e Carol Teste: R$ 73,00 → R$ 113,00), com a plantonista de cada noite; mudar de volta para 05/10 (o desfazer) volta exatamente ao valor de antes; o «A pagar por pessoa» e o Dashboard da Márcia acompanham no centavo; nada é gravado no acerto. Sem a linha da junção, a Amora contava nas quatro noites', async () => {
+  await com6770({ manuais: { '2026-10-05': { m1: PERN6770('Amora', 'Lia Teste', 2) } } }, async () => {
+    const esp0 = [['09/10', 'Farofa', 7300, 'Carol Teste', 'a pagar'], ['08/10', 'Nelson', 7300, 'Júlia Teste', 'a pagar'], ['07/10', 'Paçoca', 7300, 'Ana Teste', 'a pagar'],
+      ['06/10', 'Biscoito, Pipoca, Amora', 11300, 'Júlia Teste', 'a pagar'], ['05/10', 'Biscoito, Pipoca, Quindim, Amora', 14300, 'Carol Teste', 'a pagar'], ['04/10', 'Biscoito, Pipoca', 11300, 'Ana Teste', 'a pagar']];
+    const S0 = await ve6770();
+    igual(S0.noites, esp0, 'lançada para 05/10: conta em 05 e 06/10');
+    bate6770(S0, 'antes');
+    const ac0 = acerto6770(); limpa670();
+    igual(await muda6770('2026-10-05', 'm1', '08/10/2026', 'a Amora chegou na quinta e foi lançada no dia errado'), 'pronto');
+    const nk = chave6770('2026-10-08', 'Amora');
+    igual([nk.length, (db670('manuais/2026-10-05/m1/movidoPara') || {}).dia, (db670('manuais/2026-10-08/' + nk[0]) || {}).movidoDe, (db670('manuais/2026-10-08/' + nk[0]) || {}).noites],
+      [1, '2026-10-08', { dia: '2026-10-05', id: 'm1' }, 2], 'o antigo com movidoPara, o novo com movidoDe, numa gravação só');
+    const S1 = await ve6770();
+    igual(S1.noites, [['09/10', 'Farofa, Amora', 11300, 'Carol Teste', 'a pagar'], ['08/10', 'Nelson, Amora', 11300, 'Júlia Teste', 'a pagar'], ['07/10', 'Paçoca', 7300, 'Ana Teste', 'a pagar'],
+      ['06/10', 'Biscoito, Pipoca', 11300, 'Júlia Teste', 'a pagar'], ['05/10', 'Biscoito, Pipoca, Quindim', 11300, 'Carol Teste', 'a pagar'], ['04/10', 'Biscoito, Pipoca', 11300, 'Ana Teste', 'a pagar']],
+    'o dia mudado: sai das noites antigas e entra nas novas, com a plantonista de cada noite');
+    igual([S1.por['Carol Teste'] - S0.por['Carol Teste'], S1.por['Júlia Teste'] - S0.por['Júlia Teste'], S1.por['Ana Teste'] - S0.por['Ana Teste'], S1.por['(sem nome)'] - S0.por['(sem nome)']],
+      [1000, 4000, 0, 0], 'Carol: −R$ 30,00 em 05/10 e +R$ 40,00 em 09/10; Júlia: R$ 0,00 em 06/10 e +R$ 40,00 em 08/10');
+    bate6770(S1, 'o dia mudado');
+    // o desfazer: o mesmo cartaz no lançamento novo, de volta para 05/10
+    igual(await muda6770('2026-10-08', nk[0], '05/10/2026', 'a Amora entrou mesmo na segunda, voltei a data'), 'pronto');
+    const nk2 = chave6770('2026-10-05', 'Amora');
+    igual([nk2.length, nk2[0] !== 'm1', (db670('manuais/2026-10-08/' + nk[0] + '/movidoPara') || {}).dia, !!db670('manuais/2026-10-05/m1/movidoPara')], [1, true, '2026-10-05', true], 'nada apagado: os dois movidos ficam marcados');
+    const S2 = await ve6770();
+    igual([S2.noites, S2.por, S2.geral], [S0.noites, S0.por, S0.geral], 'mudado de volta: exatamente o de antes');
+    bate6770(S2, 'mudado de volta');
+    igual([gravouAcerto6770(), acerto6770()], [[], ac0], 'nada é gravado no acerto');
+  });
+});
+provaAsync('6.67 × 6.70 · C1 (noite paga e guardada, o × e o «Trazer de volta») — a Cacau (07, 08 e 09/10) conta nas três noites quando a Gestão paga 07/10 no lote da Ana Teste (R$ 113,00), paga 08/10 a Júlia Teste (R$ 113,00) e guarda 09/10 para a Carol Teste (R$ 113,00); tirada, trazida de volta e tirada de novo no Plantão: nada muda no que foi pago (o banco do acerto, «Já pagas», o lote, quem e quanto); a guardada continua R$ 113,00 no cartão e no «A pagar por pessoa» (a tela só avisa «Atualizar para R$ 73,00», que pede o toque da Gestão); «Desfazer o pagamento» de 08/10 depois do × volta com R$ 113,00, o valor de quando foi paga', async () => {
+  await com6770({ manuais: { '2026-10-07': { m2: PERN6770('Cacau', 'Rui Teste', 3) } } }, async () => {
+    let E = await ve6770();
+    igual(E.noites.slice(0, 3), [['09/10', 'Farofa, Cacau', 11300, 'Carol Teste', 'a pagar'], ['08/10', 'Nelson, Cacau', 11300, 'Júlia Teste', 'a pagar'], ['07/10', 'Paçoca, Cacau', 11300, 'Ana Teste', 'a pagar']]);
+    // a Gestão fecha as três noites pelo caminho da 6.70
+    await lote6770('Ana Teste', '2026-10-07');
+    nome670('2026-10-08', 'Júlia Teste'); await marca670('2026-10-08', 'pago', true);
+    nome670('2026-10-09', 'Carol Teste'); await marca670('2026-10-09', 'acumulado', true);
+    const F = await ve6770();
+    igual(F.noites.slice(0, 3), [['09/10', 'Farofa, Cacau', 11300, 'Carol Teste', 'guardada'], ['08/10', 'Nelson, Cacau', 11300, 'Júlia Teste', 'paga'], ['07/10', 'Paçoca, Cacau', 11300, 'Ana Teste', 'paga']]);
+    const lid = Object.keys(db670('acerto-lotes') || {})[0];
+    const pag0 = pagas6770(), ac0 = acerto6770();
+    igual(pag0, ['08/10/2026 · Júlia Teste (2 FILHOts) R$ 113,00', '07/10/2026 · Ana Teste (2 FILHOts) R$ 113,00']);
+    assert.ok(F.html.indexOf('Lote de 10/10 — Ana Teste — 1 noite — R$ 113,00') >= 0, 'o lote em «Já pagas»');
+    const cartao = (h) => (h.split('avr-card ').filter((x) => x.indexOf('09/10/2026') >= 0)[0] || '');
+    assert.ok(/margin-top:3px">R\$ 113,00/.test(cartao(F.html)) && cartao(F.html).indexOf('Atualizar para') < 0, 'a guardada com R$ 113,00, sem aviso');
+    const conferir = (X, rot, aviso) => {
+      igual([acerto6770(), pagas6770(), X.html.indexOf('Lote de 10/10 — Ana Teste — 1 noite — R$ 113,00') >= 0], [ac0, pag0, true], rot + ': o que foi pago não muda (o banco, «Já pagas» e o lote)');
+      igual([X.por, X.geral, X.noites[0].slice(2)], [F.por, F.geral, [11300, 'Carol Teste', 'guardada']], rot + ': a guardada continua R$ 113,00 da Carol Teste, e ninguém ganha nem perde');
+      const c = txt6770(cartao(X.html));
+      igual(c.indexOf('Este valor foi lançado quando a noite tinha outra lista. Hoje ela tem 1 FILHOt, e o valor certo é R$ 73,00 (está gravado R$ 113,00). Atualizar para R$ 73,00') >= 0, aviso, rot + ': o aviso da 6.70 — ' + c);
+      bate6770(X, rot);
+    };
+    limpa670();
+    await tira6770('2026-10-07', 'm2', 'lancei a Cacau sem confirmar a reserva');
+    const S1 = await ve6770();
+    igual(S1.noites.slice(0, 3).map((x) => x[1]), ['Farofa', 'Nelson', 'Paçoca'], 'tirada: a lista das três noites muda');
+    conferir(S1, 'tirada', true);
+    await traz6770('cacau__rui teste');
+    const S2 = await ve6770();
+    igual(S2.noites.slice(0, 3).map((x) => x[1]), ['Farofa, Cacau', 'Nelson, Cacau', 'Paçoca, Cacau'], 'trazida de volta: a lista volta');
+    conferir(S2, 'trazida de volta', false);
+    await tira6770('2026-10-07', chave6770('2026-10-07', 'Cacau')[0], 'lancei a Cacau sem confirmar a reserva');
+    const S3 = await ve6770();
+    conferir(S3, 'tirada de novo', true);
+    igual(gravouAcerto6770(), [], 'as ações da 6.67 não gravam no acerto');
+    // «Desfazer o pagamento» de 08/10 (a senha da Gestão) depois do ×: volta com a Júlia Teste e R$ 113,00, nunca refeito para R$ 73,00
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-10-08');`); await assina670(SENHA657); await fecha670();
+    const r = db670('acerto-plantao/2026-10-08');
+    igual([r.status, r.quem, r.valor_total_cent, r.hospedes], ['apagar', 'Júlia Teste', 11300, 2], 'o desfeito fica com o nome e o valor de quando foi paga');
+    const S4 = await ve6770();
+    igual([S4.noites[1].slice(2), S4.por['Júlia Teste'] - S3.por['Júlia Teste']], [[11300, 'Júlia Teste', 'a pagar'], 11300], 'de volta à lista e ao «A pagar por pessoa» com R$ 113,00');
+    igual(J670(`[acertoPagoPeloLote(__get657('auaulandia/acerto-plantao/2026-10-07'), '${lid}'), __get657('auaulandia/acerto-plantao/2026-10-07/valor_total_cent')]`), [true, 11300], 'a do lote continua paga');
+  });
+});
+provaAsync('6.67 × 6.70 · C2 (noite paga, guardada e sem plantão, o dia mudado) — a Amora (05 e 06/10) conta quando a Gestão paga 05/10 a Carol Teste (R$ 143,00), marca 06/10 «Não houve plantão», guarda 08/10 para a Júlia Teste (R$ 73,00) e paga 09/10 no lote da Carol Teste (R$ 73,00); o dia mudado para 08/10 e o desfazer (de volta para 05/10): nada muda no que foi pago (o banco do acerto, «Já pagas», o lote); a noite sem plantão continua fora da conta; a guardada continua R$ 73,00 (a tela só avisa «Atualizar para R$ 113,00»); o «A pagar por pessoa» e o Dashboard da Márcia não mudam', async () => {
+  await com6770({ manuais: { '2026-10-05': { m1: PERN6770('Amora', 'Lia Teste', 2) } } }, async () => {
+    nome670('2026-10-05', 'Carol Teste'); await marca670('2026-10-05', 'pago', true);
+    run(`__p670=acertoSemPlantaoAbrir('2026-10-06');`); await assina670(SENHA657); await fecha670();
+    nome670('2026-10-08', 'Júlia Teste'); await marca670('2026-10-08', 'acumulado', true);
+    await lote6770('Carol Teste', '2026-10-09');
+    const F = await ve6770();
+    igual(F.noites.slice(0, 5), [['09/10', 'Farofa', 7300, 'Carol Teste', 'paga'], ['08/10', 'Nelson', 7300, 'Júlia Teste', 'guardada'], ['07/10', 'Paçoca', 7300, 'Ana Teste', 'a pagar'],
+      ['06/10', 'Biscoito, Pipoca, Amora', 11300, 'Júlia Teste', 'sem plantão'], ['05/10', 'Biscoito, Pipoca, Quindim, Amora', 14300, 'Carol Teste', 'paga']]);
+    const pag0 = pagas6770(), ac0 = acerto6770();
+    igual(pag0, ['09/10/2026 · Carol Teste (1 FILHOt) R$ 73,00', '05/10/2026 · Carol Teste (4 FILHOts) R$ 143,00']);
+    const cartao = (h) => (h.split('avr-card ').filter((x) => x.indexOf('08/10/2026') >= 0)[0] || '');
+    const conferir = (X, rot, aviso) => {
+      igual([acerto6770(), pagas6770(), X.html.indexOf('Lote de 10/10 — Carol Teste — 1 noite — R$ 73,00') >= 0, /Noites sem plantão \(1\)/.test(X.html)], [ac0, pag0, true, true], rot + ': o que foi pago e a noite sem plantão não mudam');
+      igual([X.por, X.geral, X.noites[1].slice(2)], [F.por, F.geral, [7300, 'Júlia Teste', 'guardada']], rot + ': a guardada continua R$ 73,00 da Júlia Teste, e ninguém ganha nem perde');
+      const c = txt6770(cartao(X.html));
+      igual(c.indexOf('Este valor foi lançado quando a noite tinha outra lista. Hoje ela tem 2 FILHOts, e o valor certo é R$ 113,00 (está gravado R$ 73,00). Atualizar para R$ 113,00') >= 0, aviso, rot + ': o aviso da 6.70 — ' + c);
+      bate6770(X, rot);
+    };
+    conferir(F, 'antes', false);
+    limpa670();
+    igual(await muda6770('2026-10-05', 'm1', '08/10/2026', 'a Amora chegou na quinta e foi lançada no dia errado'), 'pronto');
+    const S1 = await ve6770();
+    igual(S1.noites.slice(0, 5).map((x) => x[1]), ['Farofa, Amora', 'Nelson, Amora', 'Paçoca', 'Biscoito, Pipoca', 'Biscoito, Pipoca, Quindim'], 'o dia mudado: a lista das noites muda');
+    conferir(S1, 'o dia mudado', true);
+    igual(await muda6770('2026-10-08', chave6770('2026-10-08', 'Amora')[0], '05/10/2026', 'a Amora entrou mesmo na segunda, voltei a data'), 'pronto');
+    const S2 = await ve6770();
+    igual(S2.noites, F.noites, 'mudado de volta: a lista de antes');
+    conferir(S2, 'mudado de volta', false);
+    igual(gravouAcerto6770(), [], 'as ações da 6.67 não gravam no acerto');
+  });
+});
+provaAsync('6.67 × 6.70 · D (sem as marcas novas, o acerto é o da 6.70) — a acertoPernoitesNaNoite da 788fb9e (a de hoje sem as duas linhas da 6.67; o sha-256 é o da 6.70 P36 de antes da junção) contra a de hoje, em 300 retratos com semente (estadias, lançamentos à mão de 1 a 7 noites, tirados do dia, nomes com e sem acento, a moradora, noites pagas, guardadas e sem plantão): sem devolvido e sem movidoPara, as pernoites de cada noite, os FILHOts, o valor de cada cartão, a plantonista, o «A pagar por pessoa», o Dashboard da Márcia e as noites que vêm aí são iguais; com as marcas, o de hoje é a 788fb9e com o tirado devolvido apagado e o lançamento movido apagado (o que o «Trazer de volta» da base fazia)', async () => {
+  await com670({}, async () => {
+    const h = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
+    const fonte = String(run('String(acertoPernoitesNaNoite)'));
+    const L1 = '      if(v && v.devolvido) return;                          // 6.67: trazido de volta — não foi tirado\n';
+    const L2 = '        if(!m.nome || m.movidoPara) return;                 // 6.67: o que mudou de dia vale pelo lançamento novo\n';
+    igual([fonte.split(L1).length, fonte.split(L2).length], [2, 2], 'as duas linhas da 6.67, uma vez cada');
+    ctx.__fb6770 = fonte.replace(L1, '').replace(L2, '        if(!m.nome) return;\n');
+    igual(h(ctx.__fb6770), '9be7a595bdba90cd', 'sem as duas linhas, é a acertoPernoitesNaNoite da 788fb9e');
+    run('__apn788=eval("("+__fb6770+")"); __apnHoje=acertoPernoitesNaNoite;');
+    let s = 0x6770667;
+    const rnd = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const um = (a) => a[Math.floor(rnd() * a.length)];
+    const dia = (d) => { const x = new Date(Date.UTC(2026, 8, 1 + d)); return x.toISOString().slice(0, 10); };   // 01/09 + d
+    const NOMES = [['Amora', 'Lia Teste'], ['amora', 'Lia Teste'], ['Âmora ', 'Lia Teste'], ['Cacau', 'Rui Teste'], ['Nelson', 'Teste'], ['Biscoito', 'Teste'], ['Farofa', 'Ana Teste'], ['Repolho', ''], ['Tâmara', 'Teste'], ['Pipoca', 'Lia Teste']];
+    const retrato = (marcas) => {
+      const est = {}, man = {}, rem = {}, reg = {}, quem = {};
+      for (let i = 0, n = Math.floor(rnd() * 6); i < n; i++) { const [nm] = um(NOMES), e = Math.floor(rnd() * 45); est['e' + i] = { nome: nm, refKey: rnd() < 0.5 ? semAcento670(nm.trim()) + '__teste' : '', entrada: dia(e), saida: rnd() < 0.15 ? '' : dia(e + 1 + Math.floor(rnd() * 5)), status: um(['ativa', 'ativa', 'finalizada', 'cancelada']) }; }
+      for (let i = 0, n = Math.floor(rnd() * 9); i < n; i++) {
+        const d = dia(10 + Math.floor(rnd() * 32)), [nm, tu] = um(NOMES);
+        const m = { nome: rnd() < 0.08 ? '' : nm, tutor: tu, noites: um([1, 2, 3, 7, '2', '0', 'x', undefined, 9]) };
+        if (rnd() < 0.6) m.refKey = semAcento670(nm.trim()) + '__' + semAcento670(tu);
+        if (marcas && rnd() < 0.3) m.movidoPara = { dia: dia(10 + Math.floor(rnd() * 32)), id: 'n' + i };
+        if (rnd() < 0.2) m.movidoDe = { dia: d, id: 'x' + i };
+        (man[d] = man[d] || {})['m' + i] = JSON.parse(JSON.stringify(m));
+      }
+      for (let i = 0, n = Math.floor(rnd() * 5); i < n; i++) {
+        const d = dia(25 + Math.floor(rnd() * 17)), [nm, tu] = um(NOMES), v = rnd() < 0.15 ? { n: nm } : { nome: nm, tutor: tu, origem: um(['manual', 'override']) };
+        if (marcas && rnd() < 0.4) v.devolvido = { quem: 'Gestora Teste', ts: 1 };
+        (rem[d] = rem[d] || {})[rnd() < 0.7 ? semAcento670(nm.trim()) + '__' + semAcento670(tu) : 'k' + i] = v;
+      }
+      for (let i = 0, n = Math.floor(rnd() * 5); i < n; i++) {
+        const d = dia(5 + Math.floor(rnd() * 39)), st = um(['pago', 'acumulado', 'apagar', 'sem']);
+        reg[d] = st === 'sem' ? { sem_plantao: { por: 'Gestora Teste' } } : REG670({ status: st, quem: um(['Carol Teste', 'Júlia Teste', 'Ana Teste']), valor_total_cent: um([7300, 11300, 14300]) });
+        if (rnd() < 0.3 && st !== 'sem') delete reg[d].valor_total_cent;
+      }
+      for (let d = 9; d < 40; d++) if (rnd() < 0.5) quem[dia(d)] = ASS670(um(['Carol Teste', 'Júlia Teste', 'Ana Teste', 'Carpl']));
+      return { est, man, rem, reg, quem };
+    };
+    const semMarcas = (R) => { const X = JSON.parse(JSON.stringify(R));
+      Object.keys(X.man).forEach((d) => Object.keys(X.man[d]).forEach((k) => { if (X.man[d][k].movidoPara) delete X.man[d][k]; }));
+      Object.keys(X.rem).forEach((d) => Object.keys(X.rem[d]).forEach((k) => { if (X.rem[d][k].devolvido) delete X.rem[d][k]; })); return X; };
+    const conta = (R, fn) => {
+      ctx.__r6770 = R;
+      run(`EST_TODAS=JSON.parse(JSON.stringify(__r6770.est)); ACERTO_MANUAIS=JSON.parse(JSON.stringify(__r6770.man)); ACERTO_REMOVIDOS=JSON.parse(JSON.stringify(__r6770.rem));
+        ACERTO_REG=JSON.parse(JSON.stringify(__r6770.reg)); ACERTO_QUEM=JSON.parse(JSON.stringify(__r6770.quem)); acertoPernoitesNaNoite=${fn};`);
+      try {
+        return J670(`(function(){ var noites=acertoNoites(), R=acertoTotaisPor(noites), por={};
+          var pern={}; for(var i=1;i<=30;i++){ var d=orcMaisDias('${DIA670}', -i); pern[d]=acertoPernoitesNaNoite(d); }
+          return {pern:pern, noites:noites.map(function(o){ return [o.id, o.tipo, o.n, o.pets, acertoValorDoCartao(o).total, acertoQuemDoItem(o).nome, !!o.antiga]; }),
+            por:R.por, geral:R.geral, dash:poCardAcerto(), vem:poNoites('${DIA670}', 7).map(function(x){ return [x.iso, x.n, x.pets]; })}; })()`);
+      } finally { run('acertoPernoitesNaNoite=__apnHoje;'); }
+    };
+    let iguais = 0, comMarca = 0, mudouComMarca = 0;
+    for (let i = 0; i < 300; i++) {
+      const R = retrato(false);
+      const a = conta(R, '__apnHoje'), b = conta(R, '__apn788');
+      igual(a, b, 'retrato ' + i + ' sem marcas: ' + JSON.stringify(R).slice(0, 400));
+      iguais++;
+    }
+    for (let i = 0; i < 300; i++) {
+      const R = retrato(true), X = semMarcas(R);
+      const a = conta(R, '__apnHoje'), b = conta(X, '__apn788'), c = conta(R, '__apn788');
+      igual(a, b, 'retrato ' + i + ' com marcas: ' + JSON.stringify(R).slice(0, 400));
+      comMarca++; if (JSON.stringify(a) !== JSON.stringify(c)) mudouComMarca++;
+    }
+    igual([iguais, comMarca, mudouComMarca > 30], [300, 300, true], 'as marcas mudam o acerto em ' + mudouComMarca + ' dos 300 retratos (a prova tem dente)');
+    igual(String(run('String(acertoPernoitesNaNoite)')), fonte, 'a função de hoje de volta');
+  });
+});
+provaAsync('6.67 × 6.70 · E (os outros leitores das pernoites) — a falta automática das 12h do Day Care (faltaDormiuAqui, que decide a falta que vira reposição no Extrato): quem foi trazido de volta dormiu aqui, e o lançamento com o dia mudado vale pelas datas novas; o aviso do check-in («o Plantão JÁ lançou a pernoite»): o movido não avisa, o novo avisa; o Painel da Márcia (poNoites, as noites que vêm aí, pela acertoHospedesNaNoite): a pernoite mudada de hoje para segunda sai de hoje e de amanhã e entra em segunda e terça; nenhum deles grava nada', async () => {
+  await com670({}, async () => {
+    // a falta: a noite de 09/10 (ontem, para a falta de 10/10)
+    const F = (man, rem) => J670(`faltaDormiuAqui('2026-10-09', {}, ${JSON.stringify(man)}, ${JSON.stringify(rem)}, {})`);
+    const AM = PERN6770('Amora', 'Lia Teste', 2), CA = PERN6770('Cacau', 'Rui Teste', 1);
+    igual(F({ '2026-10-08': { m1: AM }, '2026-10-09': { m2: CA } }, {}).pk, { 'amora__lia teste': 'Amora', 'cacau__rui teste': 'Cacau' }, 'as duas dormiram aqui');
+    igual(F({ '2026-10-08': { m1: AM }, '2026-10-09': { m2: CA } }, { '2026-10-09': { 'cacau__rui teste': { nome: 'Cacau', tutor: 'Rui Teste', origem: 'manual' } } }).pk, { 'amora__lia teste': 'Amora' }, 'a tirada do dia não dormiu');
+    igual(F({ '2026-10-08': { m1: AM }, '2026-10-09': { m2: CA } }, { '2026-10-09': { 'cacau__rui teste': { nome: 'Cacau', tutor: 'Rui Teste', origem: 'manual', devolvido: { quem: 'Gestora Teste', ts: 1 } } } }).pk,
+      { 'amora__lia teste': 'Amora', 'cacau__rui teste': 'Cacau' }, 'a trazida de volta dormiu aqui (sem falta automática)');
+    igual(F({ '2026-10-08': { m1: Object.assign({}, AM, { movidoPara: { dia: '2026-10-11', id: 'n1' } }) }, '2026-10-11': { n1: Object.assign({}, AM, { movidoDe: { dia: '2026-10-08', id: 'm1' } }) } }, {}).pk, {},
+      'o dia mudado para 11/10: não dormiu em 09/10 (a falta automática vale)');
+    igual(F({ '2026-10-04': { m1: Object.assign({}, AM, { movidoPara: { dia: '2026-10-09', id: 'n1' } }) }, '2026-10-09': { n1: Object.assign({}, AM, { noites: 1, movidoDe: { dia: '2026-10-04', id: 'm1' } }) } }, {}).pk,
+      { 'amora__lia teste': 'Amora' }, 'o dia mudado para 09/10: dormiu aqui pelo lançamento novo');
+    // o aviso do check-in de hoje (10/10)
+    run(`__bkci6770={h:ciHosp}; __el657.ciPernoiteDup={innerHTML:'x'}; ciHosp={nome:'Amora', tutor:'Lia Teste'};`);
+    try {
+      run(`__put657('auaulandia/manuais/2026-10-10/m1', ${JSON.stringify(Object.assign({}, AM, { movidoPara: { dia: '2026-10-12', id: 'n1' } }))});`);
+      run('ciChecarPernoiteJaLancada()'); await espera657();
+      igual(run('__el657.ciPernoiteDup.innerHTML'), '', 'o movido para segunda não avisa hoje');
+      run(`__put657('auaulandia/manuais/2026-10-10/n2', ${JSON.stringify(Object.assign({}, AM, { movidoDe: { dia: '2026-10-07', id: 'x' } }))});`);
+      run('ciChecarPernoiteJaLancada()'); await espera657();
+      assert.ok(/O Plantão JÁ lançou a pernoite de Amora hoje/.test(String(run('__el657.ciPernoiteDup.innerHTML'))), 'o lançamento novo de hoje avisa');
+    } finally { run('ciHosp=__bkci6770.h;'); }
+    // o Painel da Márcia: as noites que vêm aí (hoje, 10/10, e os três dias seguintes)
+    run(`ACERTO_MANUAIS={'2026-10-10':{m1:${JSON.stringify(Object.assign({}, AM, { movidoPara: { dia: '2026-10-12', id: 'n1' } }))}}, '2026-10-12':{n1:${JSON.stringify(Object.assign({}, AM, { movidoDe: { dia: '2026-10-10', id: 'm1' } }))}}}; ACERTO_REMOVIDOS={};`);
+    igual(J670(`poNoites('${DIA670}', 4).map(function(x){ return [x.iso, x.n, x.pets.join(', ')]; })`), [['2026-10-10', 0, ''], ['2026-10-11', 0, ''], ['2026-10-12', 1, 'Amora'], ['2026-10-13', 1, 'Amora']],
+      'a Márcia escala pelas datas novas');
+    igual(grav670(), [], 'nenhum leitor grava');
+  });
+});
+// ================================================================== 6.67 × 6.70 — as correções da conferência do QA da junção (Quinn, 12/out/2026)
+// REL-005 (médio, dinheiro): a tela do acerto lia as pernoites só ao abrir, e o «Paguei», o «Guardar» e o lote congelavam o valor da
+// lista velha. Agora a noite que congela o valor tem a lista relida antes (acertoListaConferir): o valor confirmado que mudou recusa, e
+// nada é gravado; no lote, nenhuma noite, com quais mudaram e quais não; «Já pagas» avisa quando a lista de hoje dá outro valor, sem
+// mexer no valor pago. REL-006 (baixo): o dia mudado do «Corrigir este lançamento» marca o movidoPara do antigo numa transação, que
+// recusa se ele já mudou de dia, e só então cria o novo. TEST-003 (baixo): as provas do QA (`qa667j/ataque6770.js`) vêm para cá, com
+// o nome «6.67 × 6.70 · QA J0N» e o texto dele; a J02 e a J06, que afirmavam os achados, invertidas depois das correções.
+// Tabela de sempre (ACERTO_PADRAO): até 1 FILHOt por pessoa, R$ 60,00; até 3, R$ 100,00; até 6, R$ 130,00; até 10, R$ 150,00; mais, R$ 180,00;
+// mais R$ 13,00 de ajuda de custo por pessoa. Dobra (24 h): a faixa em dobro, a ajuda uma vez. Dupla: FILHOts ÷ 2 por pessoa, o valor é de CADA UMA.
+const QJ_noite = (iso) => J670(`(function(){ var o=acertoNoites().filter(function(x){ return x.tipo==='noite' && x.iso==='${iso}'; })[0];
+  if(!o) return null; var Q=acertoQuemDoItem(o); return [o.pets.join(', '), acertoValorDoCartao(o).total, Q.nome, Q.quantas, o.reg.status||'apagar']; })()`);
+const QJ_cartao = (html, ddmm) => txt6770((html.split('avr-card ').filter((x) => x.indexOf(ddmm + '/2026') >= 0)[0] || ''));
+const QJ_AVISO = (n, certo, gravado) => `Este valor foi lançado quando a noite tinha outra lista. Hoje ela tem ${n} FILHOt${n === 1 ? '' : 's'}, e o valor certo é ${certo} (está gravado ${gravado}). Atualizar para ${certo}`;
+// as frases das correções
+const LISTA_MUDOU = (de, para, nada) => `A lista desta noite mudou em outro aparelho (${de} → ${para}). ${nada || 'Nada foi pago'}: confira e toque de novo.`;
+const JA_MUDOU_DIA = 'Este lançamento já mudou de dia em outro aparelho. Nada foi gravado: atualize a tela.';
+const AVISO_PAGA = (n, m, vt, pago) => `Hoje a lista desta noite tem ${n} FILHOt${n === 1 ? '' : 's'} (foi paga com ${m}): pela tabela de hoje, daria ${vt}. O valor pago (${pago}) não muda; para acertar, «Desfazer o pagamento» pede a senha da Gestão.`;
+// «Já pagas» como a tela mostra (as linhas e os avisos, em texto)
+const jaPagas6770 = (html) => { const i = html.indexOf('Já pagas ('); return i < 0 ? '' : txt6770(html.slice(i, html.indexOf('Ver o mês anterior', i))); };
+
+provaAsync('6.67 × 6.70 · QA J01 (ordem inversa: a ação da 6.67 antes de pagar) — a Amora (08 e 09/10) é tirada; a Gestão paga 08/10 à Júlia Teste e guarda 09/10 para a Carol Teste com R$ 73,00 (1 FILHOt); trazida de volta, a paga e a guardada ficam com R$ 73,00 (a guardada com o aviso «Atualizar para R$ 113,00»); o «Desfazer o pagamento» volta a 08/10 com R$ 73,00, Júlia Teste e 1 FILHOt, com o mesmo aviso; só o toque da Gestão («Atualizar», dois toques) leva a R$ 113,00, e a conta da Júlia sobe R$ 40,00 no centavo', async () => {
+  await com6770({ manuais: { '2026-10-08': { m1: PERN6770('Amora', 'Lia Teste', 2) } } }, async () => {
+    const S0 = await ve6770();
+    // à mão: 08/10 = Nelson + Amora = 2 → faixa até 3: R$ 100,00 + R$ 13,00 = R$ 113,00 (Júlia, pela assinatura «Carpl»); 09/10 = Farofa + Amora = 2 → R$ 113,00 (Carol)
+    igual(S0.noites.slice(0, 2), [['09/10', 'Farofa, Amora', 11300, 'Carol Teste', 'a pagar'], ['08/10', 'Nelson, Amora', 11300, 'Júlia Teste', 'a pagar']]);
+    await tira6770('2026-10-08', 'm1', 'lancei a Amora sem confirmar a reserva');
+    const S1 = await ve6770();
+    // à mão: 1 FILHOt em cada → faixa até 1: R$ 60,00 + R$ 13,00 = R$ 73,00
+    igual(S1.noites.slice(0, 2), [['09/10', 'Farofa', 7300, 'Carol Teste', 'a pagar'], ['08/10', 'Nelson', 7300, 'Júlia Teste', 'a pagar']]);
+    nome670('2026-10-08', 'Júlia Teste'); await marca670('2026-10-08', 'pago', true);
+    nome670('2026-10-09', 'Carol Teste'); await marca670('2026-10-09', 'acumulado', true);
+    const r8 = db670('acerto-plantao/2026-10-08'), r9 = db670('acerto-plantao/2026-10-09');
+    igual([r8.status, r8.quem, r8.valor_total_cent, r8.hospedes, r8.pets, r9.status, r9.quem, r9.valor_total_cent, r9.hospedes],
+      ['pago', 'Júlia Teste', 7300, 1, ['Nelson'], 'acumulado', 'Carol Teste', 7300, 1], 'pagas e guardadas com a Amora fora: R$ 73,00 e 1 FILHOt');
+    const F = await ve6770(), ac0 = acerto6770(), pag0 = pagas6770();
+    igual(pag0, ['08/10/2026 · Júlia Teste (1 FILHOt) R$ 73,00']);
+    limpa670();
+    await traz6770('amora__lia teste');
+    const S2 = await ve6770();
+    igual(S2.noites.slice(0, 2).map((x) => x[1]), ['Farofa, Amora', 'Nelson, Amora'], 'a lista volta nas duas noites');
+    igual([acerto6770(), pagas6770(), gravouAcerto6770()], [ac0, pag0, []], 'a paga não muda (R$ 73,00, 1 FILHOt, Júlia Teste) e nada é gravado no acerto');
+    igual([S2.noites[0].slice(2), S2.por, S2.geral], [[7300, 'Carol Teste', 'guardada'], F.por, F.geral], 'a guardada e o «A pagar por pessoa» não mudam');
+    assert.ok(QJ_cartao(S2.html, '09/10').indexOf(QJ_AVISO(2, 'R$ 113,00', 'R$ 73,00')) >= 0, QJ_cartao(S2.html, '09/10'));
+    bate6770(S2, 'trazida de volta');
+    // «Desfazer o pagamento» de 08/10 (senha da Gestão): volta com o valor e o nome de quando foi paga — nunca refeito
+    run(`__p670=acertoDesfazerPagamentoAbrir('2026-10-08');`); await assina670(SENHA657); await fecha670();
+    const d8 = db670('acerto-plantao/2026-10-08');
+    igual([d8.status, d8.quem, d8.valor_total_cent, d8.hospedes], ['apagar', 'Júlia Teste', 7300, 1]);
+    const S3 = await ve6770();
+    igual([S3.noites[1].slice(2), S3.por['Júlia Teste'] - S2.por['Júlia Teste'], S3.geral - S2.geral], [[7300, 'Júlia Teste', 'a pagar'], 7300, 7300], 'de volta à conta com R$ 73,00');
+    assert.ok(QJ_cartao(S3.html, '08/10').indexOf(QJ_AVISO(2, 'R$ 113,00', 'R$ 73,00')) >= 0, QJ_cartao(S3.html, '08/10'));
+    bate6770(S3, 'pagamento desfeito');
+    // só o toque da Gestão muda o valor: «Atualizar para R$ 113,00», dois toques
+    limpa670(); run(`__btqj={textContent:'Atualizar para R$ 113,00', style:{}, dataset:{}};`);
+    run(`acertoRecalcular('2026-10-08', __btqj)`); await espera657();
+    igual([grav670().length, run('__btqj.dataset.armed')], [0, '1'], 'o 1º toque só arma');
+    run(`acertoRecalcular('2026-10-08', __btqj)`); await espera657();
+    const u8 = db670('acerto-plantao/2026-10-08');
+    igual([u8.valor_total_cent, u8.valor_anterior_cent, u8.hospedes, u8.quem, u8.status], [11300, 7300, 2, 'Júlia Teste', 'apagar']);
+    const S4 = await ve6770();
+    // à mão: R$ 113,00 − R$ 73,00 = R$ 40,00 a mais para a Júlia; a Carol (guardada, sem toque) fica igual
+    igual([S4.por['Júlia Teste'] - S3.por['Júlia Teste'], S4.por['Carol Teste'] - S3.por['Carol Teste'], S4.geral - S3.geral], [4000, 0, 4000]);
+    bate6770(S4, 'atualizada');
+  });
+});
+
+provaAsync('6.67 × 6.70 · QA J02 (dois aparelhos: a Gestão paga com a tela do acerto já aberta enquanto o Plantão tira ou traz de volta; era [ACHADO] REL-005, invertida depois da correção) — o «Paguei» relê a lista da noite antes de congelar o valor: com a Amora tirada em outro aparelho, 08/10 confirmada com R$ 113,00 e 2 FILHOts é RECUSADA («A lista desta noite mudou em outro aparelho (R$ 113,00 → R$ 73,00). Nada foi pago: confira e toque de novo.»), nada é gravado no acerto e a tela já mostra 1 FILHOt e R$ 73,00; o 2º toque pergunta e paga R$ 73,00 com 1 FILHOt; com a Amora trazida de volta em outro aparelho, 09/10 confirmada com R$ 73,00 é recusada (R$ 73,00 → R$ 113,00) e o 2º toque paga R$ 113,00 com 2 FILHOts. Reaberta, «Já pagas» avisa só na 08/10, paga antes de ela voltar (hoje daria R$ 113,00), sem mudar o valor pago', async () => {
+  await com6770({ manuais: { '2026-10-08': { m1: PERN6770('Amora', 'Lia Teste', 2) } } }, async () => {
+    const S0 = await ve6770();
+    igual(S0.noites.slice(0, 2).map((x) => [x[1], x[2]]), [['Farofa, Amora', 11300], ['Nelson, Amora', 11300]], 'a tela do acerto aberta');
+    const ac0 = acerto6770();
+    // o Plantão (outro aparelho) tira a Amora; esta tela não relê as pernoites: o cartão de 08/10 ainda diz 2 FILHOts e R$ 113,00
+    await tira6770('2026-10-08', 'm1', 'lancei a Amora sem confirmar a reserva');
+    igual(QJ_noite('2026-10-08').slice(0, 2), ['Nelson, Amora', 11300], 'a tela velha');
+    limpa670(); nome670('2026-10-08', 'Júlia Teste'); const r1 = await marca670('2026-10-08', 'pago', true);
+    igual(J670('__zp657').map((z) => z[0]), ['Pagar a noite de 08/10/2026 a Júlia Teste: R$ 113,00?'], 'a pessoa confirmou R$ 113,00');
+    // à mão: 1 FILHOt → R$ 60,00 + R$ 13,00 = R$ 73,00
+    igual([r1.ok, r1.recusado, zaT670(/NADA FOI GRAVADO/).map((z) => z[1])], [false, true, [[LISTA_MUDOU('R$ 113,00', 'R$ 73,00')]]]);
+    igual([acerto6770(), gravouAcerto6770()], [ac0, []], 'nada é gravado no acerto');
+    igual(QJ_noite('2026-10-08').slice(0, 2), ['Nelson', 7300], 'a tela já relida: 1 FILHOt e R$ 73,00');
+    // o 2º toque: a pergunta com R$ 73,00 e o pagamento com a lista de agora
+    limpa670(); nome670('2026-10-08', 'Júlia Teste'); const r2 = await marca670('2026-10-08', 'pago', true);
+    const g8 = db670('acerto-plantao/2026-10-08');
+    igual([J670('__zp657').map((z) => z[0]), r2.ok, g8.status, g8.quem, g8.valor_total_cent, g8.hospedes, g8.pets], [['Pagar a noite de 08/10/2026 a Júlia Teste: R$ 73,00?'], true, 'pago', 'Júlia Teste', 7300, 1, ['Nelson']]);
+    // o espelho: trazida de volta em outro aparelho, com esta tela ainda sem ela (09/10 = Farofa, R$ 73,00)
+    igual(QJ_noite('2026-10-09').slice(0, 2), ['Farofa', 7300]);
+    await traz6770('amora__lia teste');
+    const ac1 = acerto6770();
+    limpa670(); nome670('2026-10-09', 'Carol Teste'); const r3 = await marca670('2026-10-09', 'pago', true);
+    // à mão: Farofa + Amora = 2 → R$ 100,00 + R$ 13,00 = R$ 113,00
+    igual([r3.ok, zaT670(/NADA FOI GRAVADO/).map((z) => z[1]), acerto6770(), gravouAcerto6770()], [false, [[LISTA_MUDOU('R$ 73,00', 'R$ 113,00')]], ac1, []], 'recusada: nada gravado');
+    limpa670(); nome670('2026-10-09', 'Carol Teste'); const r4 = await marca670('2026-10-09', 'pago', true);
+    const g9 = db670('acerto-plantao/2026-10-09');
+    igual([r4.ok, g9.valor_total_cent, g9.hospedes, g9.pets, g9.quem], [true, 11300, 2, ['Farofa', 'Amora'], 'Carol Teste']);
+    // reaberta: as duas em «Já pagas» com o valor pago; a 08/10 (paga com a Amora fora, antes de ela voltar) avisa que hoje daria R$ 113,00
+    const S1 = await ve6770();
+    igual(pagas6770(), ['09/10/2026 · Carol Teste (2 FILHOts) R$ 113,00', '08/10/2026 · Júlia Teste (1 FILHOt) R$ 73,00'], 'o valor pago fica');
+    igual(jaPagas6770(S1.html), 'Já pagas (2) — R$ 186,00 09/10/2026 · Carol Teste (2 FILHOts) R$ 113,00 Desfazer o pagamento 08/10/2026 · Júlia Teste (1 FILHOt) R$ 73,00 Desfazer o pagamento '
+      + AVISO_PAGA(2, 1, 'R$ 113,00', 'R$ 73,00'));
+    igual([db670('acerto-plantao/2026-10-08').valor_total_cent, db670('acerto-plantao/2026-10-09').valor_total_cent], [7300, 11300], 'o aviso não grava nada');
+  });
+});
+
+provaAsync('6.67 × 6.70 · QA J03 (a virada do mês, com o fuso de Brasília e com o UTC) — a pernoite da Amora lançada para 31/10 (1 noite), com a Farofa hospedada de 31/10 a 02/11: às 23:59 de 01/11 a Gestão paga 31/10 à Carol Teste (2 FILHOts, R$ 113,00); o Plantão muda a Amora para 01/11 às 23:59; a paga de 31/10 fica (R$ 113,00, 2 FILHOts, Carol Teste); à 00:01 de 02/11 a noite de 01/11 entra na lista com a Farofa e a Amora (R$ 113,00, Júlia Teste); o desfazer do dia mudado devolve 01/11 a R$ 73,00. Iguais nos dois fusos', async () => {
+  const tz0 = process.env.TZ;
+  const rodadas = [];
+  try {
+    for (const tz of ['America/Sao_Paulo', 'UTC']) {
+      process.env.TZ = tz;
+      const ms = (d, m, hh, mi) => new Date(2026, m - 1, d, hh, mi, 0).getTime();
+      const relogio = (t) => run(`Date=function(){ var a=Array.prototype.slice.call(arguments); if(!a.length) return new __RD657(${t}); return new (Function.prototype.bind.apply(__RD657,[null].concat(a)))(); };
+        Date.now=function(){ return ${t}; }; Date.prototype=__RD657.prototype; Date.UTC=__RD657.UTC; Date.parse=__RD657.parse;
+        zHojeISO=function(){ var d=new Date(), p=function(x){ return String(x).padStart(2,'0'); }; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }; hojeISO=zHojeISO;`);
+      await com6770({ est: { f: EP670('Farofa', '2026-10-31', '2026-11-02') }, quem: { '2026-10-31': ASS670('Carol Teste'), '2026-11-01': ASS670('Júlia Teste') },
+        manuais: { '2026-10-31': { m1: PERN6770('Amora', 'Lia Teste', 1) } } }, async () => {
+        const R = {};
+        relogio(ms(1, 11, 23, 59)); run(`selectedDate=new __RD657(2026, 10, 1, 23, 59, 0);`);
+        await carrega670(true);
+        R.hoje = run('hojeISO()');
+        R.n31 = QJ_noite('2026-10-31'); R.n01 = QJ_noite('2026-11-01');   // 01/11 ainda não entrou (é a noite de hoje)
+        nome670('2026-10-31', 'Carol Teste'); await marca670('2026-10-31', 'pago', true);
+        const g = db670('acerto-plantao/2026-10-31'); R.paga = [g.status, g.quem, g.valor_total_cent, g.hospedes];
+        // o Plantão muda a Amora para 01/11 às 23:59 (a mesma tela)
+        run(`hospedes=[${linha6770('2026-10-31', 'm1')}]; __p6770=manualCorrigirAbrir('2026-10-31', 'm1');`);
+        continua670(['01/11/2026', '1', 'Ração 60g', 'Armário', '']); await assina670(SENHA657, 'a Amora chegou no domingo e não no sábado'); R.passo = passo670(); await fecha670();
+        R.nk = chave6770('2026-11-01', 'Amora').length;
+        await carrega670(true);
+        R.n31b = QJ_noite('2026-10-31'); R.pagas = pagas6770();
+        // à 00:01 de 02/11: a noite de 01/11 entra na lista
+        relogio(ms(2, 11, 0, 1)); await carrega670(true);
+        R.hoje2 = run('hojeISO()'); R.n01b = QJ_noite('2026-11-01'); R.n31c = QJ_noite('2026-10-31');
+        R.porJ = J670('acertoTotaisPor(acertoNoites()).por')['Júlia Teste'];
+        // o desfazer: de volta para 31/10
+        const k = chave6770('2026-11-01', 'Amora')[0];
+        run(`hospedes=[${linha6770('2026-11-01', k)}]; __p6770=manualCorrigirAbrir('2026-11-01', '${k}');`);
+        continua670(['31/10/2026', '1', 'Ração 60g', 'Armário', '']); await assina670(SENHA657, 'a Amora entrou mesmo no sábado, voltei a data'); await fecha670();
+        await carrega670(true);
+        R.n01c = QJ_noite('2026-11-01'); R.n31d = QJ_noite('2026-10-31');
+        rodadas.push(R);
+      });
+    }
+  } finally { if (tz0 === undefined) delete process.env.TZ; else process.env.TZ = tz0; }
+  const esp = {
+    hoje: '2026-11-01', n31: ['Farofa, Amora', 11300, 'Carol Teste', 1, 'apagar'], n01: null,   // à mão: 2 FILHOts → R$ 100,00 + R$ 13,00
+    paga: ['pago', 'Carol Teste', 11300, 2], passo: 'pronto', nk: 1,
+    n31b: ['Farofa', 11300, 'Carol Teste', 1, 'pago'], pagas: ['31/10/2026 · Carol Teste (2 FILHOts) R$ 113,00'],
+    hoje2: '2026-11-02', n01b: ['Farofa, Amora', 11300, 'Júlia Teste', 1, 'apagar'], n31c: ['Farofa', 11300, 'Carol Teste', 1, 'pago'], porJ: { total: 11300, noites: 1, acum: 0, acumN: 0 },
+    n01c: ['Farofa', 7300, 'Júlia Teste', 1, 'apagar'], n31d: ['Farofa, Amora', 11300, 'Carol Teste', 1, 'pago'] };   // à mão: 1 FILHOt → R$ 60,00 + R$ 13,00
+  igual(rodadas, [esp, esp], 'Brasília e UTC');
+});
+
+provaAsync('6.67 × 6.70 · QA J04 (contas à mão: a dobra e a dupla) — o dia mudado leva a Cacau para 03/10 (a noite da dobra da Ana Teste): 1 FILHOt (R$ 60,00 × 2 + R$ 13,00 = R$ 133,00) → 2 (R$ 100,00 × 2 + R$ 13,00 = R$ 213,00); a Amora (05/10) e a Bolacha (06/10) vão para 07/10, a noite da dupla Ana Teste e Carol Teste com 5 FILHOts (2,5 por pessoa: R$ 113,00 a cada uma): com 6 (3 por pessoa), R$ 113,00; com 7 (3,5), R$ 143,00 a cada uma; 05/10 (Carol) de R$ 143,00 para R$ 113,00 e 06/10 (Júlia) de R$ 113,00 para R$ 113,00', async () => {
+  const est = Object.assign(EST6770(), { h: EP670('Mel', '2026-10-07', '2026-10-08'), i: EP670('Nino', '2026-10-07', '2026-10-08'), j: EP670('Lola', '2026-10-07', '2026-10-08'), k: EP670('Tito', '2026-10-07', '2026-10-08') });
+  const quem = Object.assign(QUEM6770(), { '2026-10-07': ASS670('Ana Teste e Carol Teste', { duasPessoas: true, equipe: ['Ana Teste', 'Carol Teste'], quantas: 2 }) });
+  await com6770({ est, quem, manuais: { '2026-10-02': { c1: PERN6770('Cacau', 'Rui Teste', 1) }, '2026-10-05': { a1: PERN6770('Amora', 'Lia Teste', 1) }, '2026-10-06': { b1: PERN6770('Bolacha', 'Lia Teste', 1) } } }, async () => {
+    await carrega670(true);
+    const por = () => J670('acertoTotaisPor(acertoNoites()).por');
+    const P0 = por();
+    igual([QJ_noite('2026-10-03'), QJ_noite('2026-10-05'), QJ_noite('2026-10-06'), QJ_noite('2026-10-07')], [['Tâmara', 13300, 'Ana Teste', 1, 'apagar'],
+      ['Biscoito, Pipoca, Quindim, Amora', 14300, 'Carol Teste', 1, 'apagar'], ['Biscoito, Pipoca, Bolacha', 11300, 'Júlia Teste', 1, 'apagar'],
+      ['Paçoca, Mel, Nino, Lola, Tito', 11300, 'Ana Teste e Carol Teste', 2, 'apagar']], 'antes: 03/10 com dobra; 05/10 com 4; 06/10 com 3; 07/10 a dupla com 5');
+    igual(await muda6770('2026-10-02', 'c1', '03/10/2026', 'a Cacau dormiu na sexta e não na quinta'), 'pronto');
+    await carrega670(true);
+    igual(QJ_noite('2026-10-03'), ['Tâmara, Cacau', 21300, 'Ana Teste', 1, 'apagar'], 'a dobra com 2 FILHOts: R$ 213,00');
+    igual(await muda6770('2026-10-05', 'a1', '07/10/2026', 'a Amora entrou na quarta e foi lançada na segunda'), 'pronto');
+    await carrega670(true);
+    const P1 = por();
+    igual([QJ_noite('2026-10-05'), QJ_noite('2026-10-07')], [['Biscoito, Pipoca, Quindim', 11300, 'Carol Teste', 1, 'apagar'], ['Paçoca, Mel, Nino, Lola, Tito, Amora', 11300, 'Ana Teste e Carol Teste', 2, 'apagar']]);
+    igual(await muda6770('2026-10-06', 'b1', '07/10/2026', 'a Bolacha entrou na quarta e foi lançada na terça'), 'pronto');
+    await carrega670(true);
+    const P2 = por();
+    igual([QJ_noite('2026-10-06'), QJ_noite('2026-10-07')], [['Biscoito, Pipoca', 11300, 'Júlia Teste', 1, 'apagar'], ['Paçoca, Mel, Nino, Lola, Tito, Amora, Bolacha', 14300, 'Ana Teste e Carol Teste', 2, 'apagar']]);
+    // a conta por pessoa, à mão: Ana: +R$ 80,00 (03/10) + R$ 30,00 (07/10) = +R$ 110,00; Carol: −R$ 30,00 (05/10) + R$ 30,00 (07/10) = R$ 0,00; Júlia: R$ 0,00
+    igual([P2['Ana Teste'].total - P0['Ana Teste'].total, P2['Carol Teste'].total - P0['Carol Teste'].total, P2['Júlia Teste'].total - P0['Júlia Teste'].total], [11000, 0, 0]);
+    igual([P1['Ana Teste'].total - P0['Ana Teste'].total, P1['Carol Teste'].total - P0['Carol Teste'].total], [8000, -3000], 'com 6 na dupla: nada muda na dupla');
+    const E = await ve6770(); bate6770(E, 'a dupla e a dobra');
+    igual(gravouAcerto6770(), [], 'nada é gravado no acerto');
+  });
+});
+
+provaAsync('6.67 × 6.70 · QA J05 (a plantonista pela assinatura e a correção do relatório da 6.67) — a dedução real (acertoQuemPelaAssinatura, sem o palco): 07/10 pela manhã assinada pela Ana Teste e 08/10 pela Júlia Teste; a Gestão guarda 08/10 para a Júlia Teste; a correção do Relatório da Noite (6.67) troca «Quem passou o plantão» para Carol Teste nas duas manhãs: a noite não paga (07/10) passa para a Carol (Ana −R$ 73,00, Carol +R$ 73,00), a guardada (08/10) continua da Júlia, com o valor; e a correção do Relatório do Dia, que leva a assinatura de recebimento para a versão anterior, deixa a noite sem a prova do recebimento (06/10 «(sem nome)») até ela assinar de novo', async () => {
+  await com6770({}, async () => {
+    run(`acertoQuemPelaAssinatura=__bk670.qa; document.body.dataset.role='gestao';`);
+    const R7 = 'auaulandia/relatorios/pacoca__teste__2026-10-08/noite', R8 = 'auaulandia/relatorios/nelson__teste__2026-10-09/noite', D6 = 'auaulandia/relatorios/biscoito__teste__2026-10-06/dia';
+    const NOITE = (passou) => ({ byQ: { 'Como passou a noite?': 'Dormiu bem' }, areas: ['dormiu bem'], byArea: {}, meds: [], sups: [], passou, _ts: T670(10, 8, 7, 0) });
+    put658(R7, NOITE('Ana Teste')); put658(R8, Object.assign(NOITE('Júlia Teste'), { _ts: T670(10, 9, 7, 0) }));
+    put658(D6, { byQ: { 'Fez cocô?': 'Sim' }, areas: [''], byArea: {}, meds: [], sups: [], passou: 'Caio Encãotador Teste', recebeu: 'Júlia Teste', _tsReceb: T670(10, 6, 19, 0), _ts: T670(10, 6, 18, 0) });
+    await carrega670(true);
+    igual([QJ_noite('2026-10-06'), QJ_noite('2026-10-07'), QJ_noite('2026-10-08')], [['Biscoito, Pipoca', 11300, 'Júlia Teste', 1, 'apagar'], ['Paçoca', 7300, 'Ana Teste', 1, 'apagar'], ['Nelson', 7300, 'Júlia Teste', 1, 'apagar']]);
+    nome670('2026-10-08', 'Júlia Teste'); await marca670('2026-10-08', 'acumulado', true);
+    await carrega670(true);
+    const P0 = J670('acertoTotaisPor(acertoNoites()).por');
+    let r = await run(`relCorrigirGravar('noite', 'pacoca__teste__2026-10-08', {nome:'Paçoca'}, Object.assign({}, __get657('${R7}'), {passou:'Carol Teste'}), {por:'Gestora Teste', papel:'gestao', motivo:'o nome da plantonista foi escrito errado', ts:${T670(10, 10, 9, 0)}}, relDiff(__get657('${R7}'), Object.assign({}, __get657('${R7}'), {passou:'Carol Teste'}), 'noite'), null)`);
+    igual(r.ok, true, JSON.stringify(r));
+    r = await run(`relCorrigirGravar('noite', 'nelson__teste__2026-10-09', {nome:'Nelson'}, Object.assign({}, __get657('${R8}'), {passou:'Carol Teste'}), {por:'Gestora Teste', papel:'gestao', motivo:'o nome da plantonista foi escrito errado', ts:${T670(10, 10, 9, 5)}}, relDiff(__get657('${R8}'), Object.assign({}, __get657('${R8}'), {passou:'Carol Teste'}), 'noite'), null)`);
+    igual(r.ok, true, JSON.stringify(r));
+    await carrega670(true);
+    const P1 = J670('acertoTotaisPor(acertoNoites()).por');
+    igual([QJ_noite('2026-10-07'), QJ_noite('2026-10-08')], [['Paçoca', 7300, 'Carol Teste', 1, 'apagar'], ['Nelson', 7300, 'Júlia Teste', 1, 'acumulado']], 'a não paga segue a correção; a guardada fica da Júlia');
+    const tt = (P, n) => (P[n] || { total: 0 }).total;
+    igual([tt(P1, 'Ana Teste') - tt(P0, 'Ana Teste'), tt(P1, 'Carol Teste') - tt(P0, 'Carol Teste'), tt(P1, 'Júlia Teste') - tt(P0, 'Júlia Teste')], [-7300, 7300, 0]);
+    igual(db670('acerto-plantao/2026-10-08').quem, 'Júlia Teste');
+    // a correção do Relatório do Dia de 06/10 leva a assinatura de recebimento para a versão anterior: a noite fica sem prova
+    r = await run(`relCorrigirGravar('dia', 'biscoito__teste__2026-10-06', {nome:'Biscoito'}, relSemAssinatura(Object.assign({}, __get657('${D6}'), {byQ:{'Fez cocô?':'Não'}})), {por:'Gestora Teste', papel:'gestao', motivo:'a resposta foi marcada errada no turno', ts:${T670(10, 10, 9, 10)}}, relDiff(__get657('${D6}'), Object.assign({}, __get657('${D6}'), {byQ:{'Fez cocô?':'Não'}}), 'dia'), null)`);
+    igual(r.ok, true, JSON.stringify(r));
+    const d6 = db657(D6);
+    igual([d6.recebeu || null, Object.values(d6.versoes || {}).map((v) => v.recebeu)], [null, ['Júlia Teste']]);
+    await carrega670(true);
+    igual(QJ_noite('2026-10-06'), ['Biscoito, Pipoca', 11300, '(sem nome)', 1, 'apagar'], 'sem a assinatura de recebimento no nó de agora, a noite fica sem nome até ela assinar de novo');
+  });
+});
+
+provaAsync('6.67 × 6.70 · QA J06 (dois aparelhos mudam o dia do mesmo lançamento ao mesmo tempo; era [ACHADO] REL-006, invertida depois da correção) — os dois aparelhos leem o lançamento antes de um gravar, e o movidoPara do antigo vai numa transação: o primeiro muda a Amora (05/10, 1 noite) para 07/10; o segundo (08/10) é recusado com «Este lançamento já mudou de dia em outro aparelho. Nada foi gravado: atualize a tela.» e não cria lançamento nenhum; a Amora vale numa noite só: à mão, 05/10 4 → 3 FILHOts (Carol Teste −R$ 30,00), 07/10 1 → 2 (Ana Teste +R$ 40,00) e 08/10 continua com 1 (Júlia Teste R$ 0,00)', async () => {
+  await com6770({ manuais: { '2026-10-05': { m1: PERN6770('Amora', 'Lia Teste', 1) } } }, async () => {
+    run(`document.body.dataset.role='gestao';`);
+    await carrega670(true);
+    const P0 = J670('acertoTotaisPor(acertoNoites()).por');
+    limpa670();
+    const reg = (d, ts) => `{depois:{dia:'${d}'}, antes:{dia:'05/10/2026'}, por:'Gestora Teste', papel:'gestao', motivo:'${MOT670}', ts:${ts}}`;
+    const [ra, rb] = await Promise.all([run(`manualCorrigirGravar('2026-10-05', 'm1', ${reg('07/10/2026', 1)})`), run(`manualCorrigirGravar('2026-10-05', 'm1', ${reg('08/10/2026', 2)})`)]);
+    const vivos = (d) => chave6770(d, 'Amora').length;
+    igual([ra.ok, rb.ok, rb.erro, vivos('2026-10-07'), Object.keys(db670('manuais/2026-10-08') || {}).length, (db670('manuais/2026-10-05/m1/movidoPara') || {}).dia],
+      [true, false, JA_MUDOU_DIA, 1, 0, '2026-10-07'], 'só o primeiro gravou');
+    igual([aud670('manual-corrigido').length, (db670('manuais/2026-10-07/' + chave6770('2026-10-07', 'Amora')[0]) || {}).movidoDe], [1, { dia: '2026-10-05', id: 'm1' }]);
+    await carrega670(true);
+    const P1 = J670('acertoTotaisPor(acertoNoites()).por');
+    igual([QJ_noite('2026-10-05')[0], QJ_noite('2026-10-07')[0], QJ_noite('2026-10-08')[0], P1['Ana Teste'].total - P0['Ana Teste'].total, P1['Júlia Teste'].total - P0['Júlia Teste'].total, P1['Carol Teste'].total - P0['Carol Teste'].total],
+      ['Biscoito, Pipoca, Quindim', 'Paçoca, Amora', 'Nelson', 4000, 0, -3000]);
+  });
+});
+
+provaAsync('6.67 × 6.70 · QA J07 (o dia e as noites mudados no mesmo cartaz) — a Amora lançada para 05/10 com 2 noites e corrigida para 08/10 com 1 noite: sai de 05 e 06/10 e entra só em 08/10 (09/10 não muda); à mão: 05/10 Carol Teste R$ 143,00 → R$ 113,00 (−R$ 30,00); 06/10 Júlia Teste R$ 113,00 → R$ 113,00; 08/10 Júlia Teste R$ 73,00 → R$ 113,00 (+R$ 40,00); 09/10 Carol Teste R$ 73,00 → R$ 73,00', async () => {
+  await com6770({ manuais: { '2026-10-05': { m1: PERN6770('Amora', 'Lia Teste', 2) } } }, async () => {
+    const S0 = await ve6770();
+    run(`hospedes=[${linha6770('2026-10-05', 'm1')}]; __p6770=manualCorrigirAbrir('2026-10-05', 'm1');`);
+    continua670(['08/10/2026', '1', 'Ração 60g', 'Armário', '']); await assina670(SENHA657, 'a Amora chegou na quinta e dormiu uma noite só');
+    igual(passo670(), 'pronto'); await fecha670();
+    const nk = chave6770('2026-10-08', 'Amora');
+    igual([nk.length, (db670('manuais/2026-10-08/' + nk[0]) || {}).noites], [1, 1], 'o lançamento novo com 1 noite');
+    const S1 = await ve6770();
+    igual(S1.noites.slice(0, 5), [['09/10', 'Farofa', 7300, 'Carol Teste', 'a pagar'], ['08/10', 'Nelson, Amora', 11300, 'Júlia Teste', 'a pagar'], ['07/10', 'Paçoca', 7300, 'Ana Teste', 'a pagar'],
+      ['06/10', 'Biscoito, Pipoca', 11300, 'Júlia Teste', 'a pagar'], ['05/10', 'Biscoito, Pipoca, Quindim', 11300, 'Carol Teste', 'a pagar']]);
+    igual([S1.por['Carol Teste'] - S0.por['Carol Teste'], S1.por['Júlia Teste'] - S0.por['Júlia Teste'], S1.geral - S0.geral], [-3000, 4000, 1000]);
+    bate6770(S1, 'o dia e as noites mudados');
+    igual(gravouAcerto6770(), [], 'nada é gravado no acerto');
+  });
+});
+
+// ---- as provas das correções (@dev, 12/out/2026) -----------------------------------------------------------------------------
+// O lote da Ana Teste: 03/10 (Tâmara, a dobra do domingo 04/10: R$ 60,00 × 2 + R$ 13,00 = R$ 133,00), 04/10 (Biscoito, Pipoca, Cacau e
+// Bolacha: 4 FILHOts, R$ 130,00 + R$ 13,00 = R$ 143,00) e 07/10 (Paçoca e Amora: 2, R$ 100,00 + R$ 13,00 = R$ 113,00). Total: R$ 389,00.
+const MAN_LOTE6770 = () => ({ '2026-10-07': { m1: PERN6770('Amora', 'Lia Teste', 1) }, '2026-10-04': { c1: PERN6770('Cacau', 'Rui Teste', 1), b1: PERN6770('Bolacha', 'Lia Teste', 1) } });
+const itensLote6770 = () => J670('ACERTO_LOTE ? ACERTO_LOTE.itens.map(function(x){ return [x.iso, x.valor, !!x.marcado]; }) : null');
+
+provaAsync('6.67 × 6.70 · F (REL-005, o lote: nada pela metade) — o cartaz «Pagar várias de Ana Teste» aberto com 03/10 (R$ 133,00), 04/10 (R$ 143,00) e 07/10 (R$ 113,00), R$ 389,00; em outro aparelho, a Amora sai de 07/10: o «Pagar 3 noites» é recusado inteiro, com «A lista da noite de 07/10 (R$ 113,00 → R$ 73,00) mudou em outro aparelho. Nada foi pago: nem esta, nem as outras marcadas (03/10 e 04/10), que não mudaram. Confira e toque de novo.»; nenhuma noite é paga e nada é gravado no acerto; o cartaz continua aberto com 07/10 em R$ 73,00 e o novo toque paga R$ 349,00 numa escrita só. Com duas noites mudadas (a Cacau e a Amora), a frase diz as duas, cada uma com o de antes e o de agora, e a que não mudou; com só a noite mudada marcada, «Nada foi pago: confira e toque de novo.»', async () => {
+  await com6770({ manuais: MAN_LOTE6770() }, async () => {
+    await ve6770();
+    run(`acertoLoteAbrir('Ana Teste');`);
+    igual(itensLote6770(), [['2026-10-03', 13300, true], ['2026-10-04', 14300, true], ['2026-10-07', 11300, true]]);
+    const ac0 = acerto6770();
+    await tira6770('2026-10-07', 'm1', 'lancei a Amora sem confirmar a reserva');
+    limpa670(); pergunta670(true); const r = await run('acertoLotePagar()'); await espera657();
+    igual(J670('__zp657').map((z) => [z[0], z[1]]), [['Pagar 3 noites a Ana Teste: R$ 389,00?', ['Noite de 03/10/2026 — a pagar — R$ 133,00', 'Noite de 04/10/2026 — a pagar — R$ 143,00', 'Noite de 07/10/2026 — a pagar — R$ 113,00']]]);
+    const msg = 'A lista da noite de 07/10 (R$ 113,00 → R$ 73,00) mudou em outro aparelho. Nada foi pago: nem esta, nem as outras marcadas (03/10 e 04/10), que não mudaram. Confira e toque de novo.';
+    igual([r.ok, r.recusado, r.erro, J670('ACERTO_LOTE.aviso')], [false, true, msg, msg]);
+    igual([acerto6770(), gravouAcerto6770(), za670()], [ac0, [], []], 'nenhuma noite paga, nada gravado (o aviso fica no cartaz)');
+    assert.ok(txt6770(run('acertoLoteHTML(ACERTO_LOTE)')).indexOf(msg) >= 0, 'o aviso no cartaz');
+    // à mão: 07/10 com 1 FILHOt → R$ 73,00; o total: R$ 133,00 + R$ 143,00 + R$ 73,00 = R$ 349,00
+    igual(itensLote6770(), [['2026-10-03', 13300, true], ['2026-10-04', 14300, true], ['2026-10-07', 7300, true]], 'o cartaz relido');
+    limpa670(); pergunta670(true); const r2 = await run('acertoLotePagar()'); await espera657();
+    igual([r2.ok, r2.total, J670('__zp657')[0][0]], [true, 34900, 'Pagar 3 noites a Ana Teste: R$ 349,00?']);
+    igual(grav670().map((e) => e[0] + ' ' + e[1]), ['update auaulandia'], 'numa escrita só');
+    const g = ['2026-10-03', '2026-10-04', '2026-10-07'].map((d) => { const x = db670('acerto-plantao/' + d); return [x.status, x.valor_total_cent, x.hospedes, x.quem]; });
+    igual(g, [['pago', 13300, 1, 'Ana Teste'], ['pago', 14300, 4, 'Ana Teste'], ['pago', 7300, 1, 'Ana Teste']]);
+  });
+  // duas noites mudadas no mesmo lote
+  await com6770({ manuais: MAN_LOTE6770() }, async () => {
+    await ve6770();
+    run(`acertoLoteAbrir('Ana Teste');`);
+    const ac0 = acerto6770();
+    await tira6770('2026-10-07', 'm1', 'lancei a Amora sem confirmar a reserva');
+    await tira6770('2026-10-04', 'c1', 'lancei a Cacau sem confirmar a reserva');
+    limpa670(); pergunta670(true); const r = await run('acertoLotePagar()'); await espera657();
+    // à mão: 04/10 com 3 FILHOts → R$ 100,00 + R$ 13,00 = R$ 113,00; 07/10 com 1 → R$ 73,00
+    igual([r.ok, r.erro, acerto6770(), gravouAcerto6770()], [false, 'A lista das noites de 04/10 (R$ 143,00 → R$ 113,00) e 07/10 (R$ 113,00 → R$ 73,00) mudou em outro aparelho. Nada foi pago: nem estas, nem a outra marcada (03/10), que não mudou. Confira e toque de novo.', ac0, []]);
+    igual(itensLote6770(), [['2026-10-03', 13300, true], ['2026-10-04', 11300, true], ['2026-10-07', 7300, true]]);
+    // só a noite mudada marcada
+    run(`acertoLoteFechar(); acertoLoteAbrir('Ana Teste'); ACERTO_LOTE.itens.forEach(function(x, i){ if(x.iso!=='2026-10-04') acertoLoteToque(i); });`);
+    run(`__put657('auaulandia/manuais/2026-10-04/c9', ${JSON.stringify(PERN6770('Cacau', 'Rui Teste', 1))});`);   // a Cacau lançada de novo em outro aparelho
+    limpa670(); pergunta670(true); const r2 = await run('acertoLotePagar()'); await espera657();
+    igual([r2.ok, r2.erro, acerto6770(), gravouAcerto6770()], [false, 'A lista da noite de 04/10 (R$ 113,00 → R$ 143,00) mudou em outro aparelho. Nada foi pago: confira e toque de novo.', ac0, []]);
+  });
+});
+
+provaAsync('6.67 × 6.70 · G (REL-005, a releitura que falha) — com o sistema recusando a leitura de auaulandia/manuais depois que a tela abriu, o «Paguei» de 08/10 (sem valor gravado) e o lote recusam com «Não consegui conferir a lista da noite (das noites) no sistema antes de gravar.», nada é gravado, e a lista da tela fica como estava (a Amora continua em 08/10; nunca a lista vazia); a guardada com valor gravado não precisa da lista e paga normalmente, sem ler as pernoites', async () => {
+  await com6770({ manuais: { '2026-10-08': { m1: PERN6770('Amora', 'Lia Teste', 2) } }, reg: { '2026-10-06': REG670({ status: 'acumulado', quem: 'Júlia Teste', hospedes: 2, pets: ['Biscoito', 'Pipoca'], pets_por_pessoa: 2 }) } }, async () => {
+    await ve6770();
+    const ac0 = acerto6770();
+    run(`__recusaLer670='^auaulandia/manuais$';`);
+    limpa670(); nome670('2026-10-08', 'Júlia Teste'); const r1 = await marca670('2026-10-08', 'pago', true);
+    const z = zaT670(/NÃO FOI GRAVADO/);
+    igual([r1.ok, z.length, (z[0] || [])[1][0], acerto6770(), gravouAcerto6770()], [false, 1, 'Não consegui conferir a lista da noite no sistema antes de gravar.', ac0, []]);
+    assert.ok(/Nada foi gravado/.test(z[0][1].join(' ')) && !/PERMISSION_DENIED/.test(z[0][1].join(' ')), JSON.stringify(z));
+    igual(QJ_noite('2026-10-08').slice(0, 2), ['Nelson, Amora', 11300], 'a lista da tela fica como estava');
+    run(`acertoLoteAbrir('Carol Teste');`);
+    limpa670(); pergunta670(true); const r2 = await run('acertoLotePagar()'); await espera657();
+    igual([r2.ok, (zaT670(/NÃO FOI GRAVADO/)[0] || [])[1][0], acerto6770(), gravouAcerto6770()], [false, 'Não consegui conferir a lista das noites no sistema antes de gravar.', ac0, []]);
+    run(`acertoLoteFechar();`);
+    // a guardada (valor gravado, R$ 113,00): paga sem ler as pernoites
+    limpa670(); nome670('2026-10-06', 'Júlia Teste'); const r3 = await marca670('2026-10-06', 'pago', true);
+    const g6 = db670('acerto-plantao/2026-10-06');
+    igual([r3.ok, g6.status, g6.valor_total_cent, J670('__lei670').filter((l) => /manuais|removidos/.test(l.p)).length], [true, 'pago', 11300, 0]);
+  });
+});
+
+provaAsync('6.67 × 6.70 · H (REL-005, um aparelho só: o que a 6.70 publicou continua) — sem mudança na lista, o «Paguei» de 08/10 com a Amora (2 FILHOts) grava R$ 113,00, 2 FILHOts e o pagamento como sempre; o «Guardar» de 09/10 grava R$ 113,00 e 2 FILHOts; o lote da Carol Teste paga 05/10 e 09/10 numa escrita só; a releitura lê só auaulandia/manuais e auaulandia/removidos, e só para a noite que congela o valor; a guardada com valor gravado e a lista mudada paga o valor gravado (a régua da 6.70), sem recusa; o «Guardar» com a lista mudada recusa com «Nada foi gravado»', async () => {
+  await com6770({ manuais: { '2026-10-08': { m1: PERN6770('Amora', 'Lia Teste', 2) } } }, async () => {
+    await ve6770();
+    limpa670(); nome670('2026-10-08', 'Júlia Teste'); const r1 = await marca670('2026-10-08', 'pago', true);
+    const g8 = db670('acerto-plantao/2026-10-08'), pg = Object.values(g8.pagamentos || {});
+    igual([r1.ok, g8.status, g8.quem, g8.valor_total_cent, g8.valor_base_cent, g8.ajuda_cent, g8.hospedes, g8.pets, g8.status_antes, pg.length, pg[0].valor_cent, pg[0].quem, pg[0].por],
+      [true, 'pago', 'Júlia Teste', 11300, 10000, 1300, 2, ['Nelson', 'Amora'], 'apagar', 1, 11300, 'Júlia Teste', 'Gestora Teste']);
+    igual(J670('__lei670').map((l) => l.p), ['auaulandia/acerto-plantao/2026-10-08', 'auaulandia/manuais', 'auaulandia/removidos'], 'o registro da noite e a lista, uma vez');
+    igual(grav670().map((e) => e[0] + ' ' + e[1]), ['transaction auaulandia/acerto-plantao/2026-10-08', 'update auaulandia'], 'a transação da noite e o índice das abertas (como na 6.70)');
+    limpa670(); nome670('2026-10-09', 'Carol Teste'); const r2 = await marca670('2026-10-09', 'acumulado', true);
+    const g9 = db670('acerto-plantao/2026-10-09');
+    igual([r2.ok, g9.status, g9.valor_total_cent, g9.hospedes, g9.pets], [true, 'acumulado', 11300, 2, ['Farofa', 'Amora']]);
+    // o lote da Carol Teste: 05/10 (Biscoito, Pipoca e Quindim: 3, R$ 113,00) e 09/10 (guardada, R$ 113,00): R$ 226,00
+    run(`acertoLoteAbrir('Carol Teste');`);
+    igual(itensLote6770(), [['2026-10-05', 11300, true], ['2026-10-09', 11300, true]]);
+    limpa670(); pergunta670(true); const r3 = await run('acertoLotePagar()'); await espera657();
+    igual([r3.ok, r3.total, grav670().map((e) => e[0] + ' ' + e[1]), J670('__lei670').filter((l) => /manuais|removidos/.test(l.p)).length], [true, 22600, ['update auaulandia'], 2], 'a 05/10 congela (relê a lista); a 09/10 já tem valor');
+    igual([db670('acerto-plantao/2026-10-05').valor_total_cent, db670('acerto-plantao/2026-10-05').hospedes, db670('acerto-plantao/2026-10-09').valor_total_cent], [11300, 3, 11300]);
+  });
+  await com6770({ manuais: { '2026-10-08': { m1: PERN6770('Amora', 'Lia Teste', 2) } }, reg: { '2026-10-09': REG670({ status: 'acumulado', quem: 'Carol Teste', hospedes: 2, pets: ['Farofa', 'Amora'], pets_por_pessoa: 2 }) } }, async () => {
+    await ve6770();
+    // a Amora sai em outro aparelho; a guardada 09/10 tem R$ 113,00 gravado: o «Paguei» paga o gravado (a régua da 6.70), sem recusa
+    await tira6770('2026-10-08', 'm1', 'lancei a Amora sem confirmar a reserva');
+    limpa670(); nome670('2026-10-09', 'Carol Teste'); const r1 = await marca670('2026-10-09', 'pago', true);
+    igual([r1.ok, db670('acerto-plantao/2026-10-09').valor_total_cent, db670('acerto-plantao/2026-10-09').hospedes, J670('__lei670').filter((l) => /manuais|removidos/.test(l.p)).length], [true, 11300, 2, 0]);
+    // o «Guardar» de 08/10 (sem valor gravado) com a lista mudada: recusa, «Nada foi gravado»
+    limpa670(); nome670('2026-10-08', 'Júlia Teste'); const r2 = await marca670('2026-10-08', 'acumulado', true);
+    igual([r2.ok, zaT670(/NADA FOI GRAVADO/).map((z) => z[1]), db670('acerto-plantao/2026-10-08')], [false, [[LISTA_MUDOU('R$ 113,00', 'R$ 73,00', 'Nada foi gravado')]], null]);
+  });
+});
+
+provaAsync('6.67 × 6.70 · I (REL-005, o aviso em «Já pagas») — a noite paga cuja lista de hoje dá outro valor ganha a linha «Hoje a lista desta noite tem 1 FILHOt (foi paga com 2): pela tabela de hoje, daria R$ 73,00. O valor pago (R$ 113,00) não muda; …», na solta e no lote, e nada é gravado; sem aviso quando a lista muda e o valor não (2 → 3 FILHOts, R$ 113,00), quando só a tabela mudou (a lista é a mesma), na noite com valor à mão e na corrigida pela Gestão', async () => {
+  const LID = 'l' + T670(10, 9, 9, 0);   // a chave do lote é «l» + o momento (a leitura pega os lotes dos últimos 62 dias pela chave)
+  const PAGO = (pets, extra) => REG670(Object.assign({ status: 'pago', quem: 'Júlia Teste', hospedes: pets.length, pets, pets_por_pessoa: pets.length,
+    valor_base_cent: pets.length > 1 ? 10000 : 6000, valor_total_cent: pets.length > 1 ? 11300 : 7300, pagamentos: { p1: { em: T670(10, 9, 9, 0), por: 'Gestora Teste', papel: 'gestao', valor_cent: pets.length > 1 ? 11300 : 7300, quem: 'Júlia Teste' } } }, extra || {}));
+  const reg = { '2026-10-08': PAGO(['Nelson', 'Amora']), '2026-10-09': PAGO(['Farofa', 'Amora'], { quem: 'Carol Teste', pagamentos: { ['lote_' + LID]: { em: T670(10, 9, 9, 0), por: 'Gestora Teste', papel: 'gestao', valor_cent: 11300, quem: 'Carol Teste', lote: LID } } }),
+    '2026-10-06': PAGO(['Biscoito', 'Pipoca'], { valor_manual: { cent: 9000, antes_cent: 11300, tipo: 'Outro', registro: { por: 'Gestora Teste', motivo: MOT670, ts: 1 } }, valor_total_cent: 9000 }),
+    '2026-10-05': PAGO(['Biscoito', 'Pipoca', 'Quindim'], { quem: 'Carol Teste', correcao: { hospedes: 3, quantas: 1, equipe: [], registro: { por: 'Gestora Teste', ts: 1 } } }),
+    // paga com a tabela de outra época (1 FILHOt, R$ 113,00): a lista é a mesma (só a Paçoca) — a tabela mudou, a lista não: sem aviso
+    '2026-10-07': PAGO(['Paçoca'], { quem: 'Ana Teste', valor_base_cent: 10000, valor_total_cent: 11300 }) };
+  const lotes = { [LID]: { em: T670(10, 9, 9, 0), por: 'Gestora Teste', papel: 'gestao', quem: 'Carol Teste', itens: [{ tipo: 'noite', iso: '2026-10-09' }], total_cent: 11300 } };
+  await com6770({ manuais: { '2026-10-08': { m1: PERN6770('Amora', 'Lia Teste', 2) } }, reg, lotes }, async () => {
+    const S0 = await ve6770();
+    igual(/Hoje a lista desta noite/.test(jaPagas6770(S0.html)), false, 'a lista de hoje dá o valor pago: sem aviso');
+    const ac0 = acerto6770();
+    await tira6770('2026-10-08', 'm1', 'lancei a Amora sem confirmar a reserva');
+    // o Plantão (05/10, a noite corrigida) e o valor à mão (06/10) também perdem um FILHOt: sem aviso nelas
+    run(`EST_TODAS.b.saida='2026-10-05';`);
+    const S1 = await ve6770(), jp = jaPagas6770(S1.html);
+    // à mão: 08/10 e 09/10 com 1 FILHOt → R$ 60,00 + R$ 13,00 = R$ 73,00 (pagas com R$ 113,00)
+    igual(jp.split(AVISO_PAGA(1, 2, 'R$ 73,00', 'R$ 113,00')).length - 1, 2, jp);
+    assert.ok(jp.indexOf('Lote de 09/10 — Carol Teste — 1 noite — R$ 113,00 09/10/2026 · Carol Teste (2 FILHOts) R$ 113,00 Desfazer o pagamento ' + AVISO_PAGA(1, 2, 'R$ 73,00', 'R$ 113,00')) >= 0, 'no lote: ' + jp);
+    assert.ok(jp.indexOf('08/10/2026 · Júlia Teste (2 FILHOts) R$ 113,00 Desfazer o pagamento ' + AVISO_PAGA(1, 2, 'R$ 73,00', 'R$ 113,00')) >= 0, 'na solta: ' + jp);
+    igual([(jp.match(/Hoje a lista desta noite/g) || []).length, QJ_noite('2026-10-06')[0], QJ_noite('2026-10-05')[0]], [2, 'Biscoito', 'Biscoito, Quindim'], 'o valor à mão e a corrigida mudaram de lista, sem aviso');
+    igual([acerto6770(), gravouAcerto6770()], [ac0, []], 'o aviso não grava nada');
+    // a lista muda e o valor não: a Amora volta e a Bolacha entra em 08/10 (3 FILHOts, R$ 113,00) — sem aviso em 08/10
+    await traz6770('amora__lia teste');
+    run(`__put657('auaulandia/manuais/2026-10-08/b1', ${JSON.stringify(PERN6770('Bolacha', 'Lia Teste', 1))});`);
+    const S2 = await ve6770(), jp2 = jaPagas6770(S2.html);
+    igual([QJ_noite('2026-10-08')[0], (jp2.match(/Hoje a lista desta noite/g) || []).length], ['Nelson, Amora, Bolacha', 0], jp2);
+  });
+});
+
+provaAsync('6.67 × 6.70 · J (REL-006, a transação do dia mudado) — o cache frio do Firebase (a 1ª rodada vem com null; só a que devolve um valor roda de novo com o banco): o dia muda uma vez; o lançamento tirado no × entre a leitura e a transação: «Este lançamento não existe mais…», nenhum novo; o novo que o banco recusa: o movidoPara do antigo sai, e a Amora continua valendo em 05/10, como estava (o FILHOt nunca some); e se o movidoPara também não sai, a tela diz para avisar a Gestão', async () => {
+  const PREP = `__refJ6770=DB.ref; __txJ6770=0; DB.ref=function(p){ var r=__refJ6770(p); if(String(p)==='auaulandia/manuais/2026-10-05/m1'){ var t=r.transaction;
+    r.transaction=function(fn){ __txJ6770++; if(__modoJ6770==='tirado') __put657(p, null); if(__modoJ6770==='volta-falha' && __txJ6770>1) return Promise.reject(new Error('PERMISSION_DENIED: Permission denied'));
+      if(fn(null)===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return null; }}}); return t.call(r, fn); }; } return r; };`;
+  const reg = (d) => `{depois:{dia:'${d}'}, antes:{dia:'05/10/2026'}, por:'Gestora Teste', papel:'gestao', motivo:'${MOT670}', ts:1}`;
+  const caso = async (modo, recusa) => {
+    let out = null;
+    await com6770({ manuais: { '2026-10-05': { m1: PERN6770('Amora', 'Lia Teste', 1) } } }, async () => {
+      run(`document.body.dataset.role='gestao'; __modoJ6770=${JSON.stringify(modo)}; __lfJ6770=[]; __bkLfJ6770=_logFalhaGrav; _logFalhaGrav=function(o){ __lfJ6770.push(String(o)); };` + PREP);
+      try {
+        if (recusa) run(`__recusa657=${JSON.stringify(recusa)};`);
+        const r = await run(`manualCorrigirGravar('2026-10-05', 'm1', ${reg('07/10/2026')})`);
+        run('__recusa657=null;');
+        out = { ok: r.ok, erro: (typeof r.erro === 'string') ? r.erro : (r.erro ? 'Error' : ''), velho: db670('manuais/2026-10-05/m1'), novos: Object.keys(db670('manuais/2026-10-07') || {}).length,
+          lf: J670('__lfJ6770').length };
+        await carrega670(true);
+        out.n05 = QJ_noite('2026-10-05')[0]; out.n07 = QJ_noite('2026-10-07')[0];
+      } finally { run('DB.ref=__refJ6770; _logFalhaGrav=__bkLfJ6770; __recusa657=null;'); }
+    });
+    return out;
+  };
+  const frio = await caso('frio');
+  igual([frio.ok, frio.velho.movidoPara.dia, frio.novos, frio.n05, frio.n07], [true, '2026-10-07', 1, 'Biscoito, Pipoca, Quindim', 'Paçoca, Amora'], 'o cache frio: muda uma vez');
+  const tirado = await caso('tirado');
+  igual([tirado.ok, tirado.erro, tirado.velho, tirado.novos], [false, 'Este lançamento não existe mais: pode ter sido tirado em outro aparelho. Nada foi gravado.', null, 0]);
+  const recusado = await caso('frio', '^auaulandia/manuais/2026-10-07/');
+  igual([recusado.ok, recusado.erro, !!recusado.velho.movidoPara, recusado.velho.nome, recusado.novos, recusado.lf, recusado.n05, recusado.n07],
+    [false, 'Error', false, 'Amora', 0, 0, 'Biscoito, Pipoca, Quindim, Amora', 'Paçoca'], 'o novo recusado: o antigo volta a valer, como estava');
+  const preso = await caso('volta-falha', '^auaulandia/manuais/2026-10-07/');
+  igual([preso.ok, preso.erro, preso.velho.movidoPara.dia, /^r657_\d+$/.test(preso.velho.movidoPara.id), preso.novos, preso.lf],
+    [false, 'O dia não mudou: o lançamento novo não foi gravado, e o antigo pode ter ficado marcado como mudado. Avise a Gestão: Amora pode não aparecer no Plantão até alguém conferir.', '2026-10-07', true, 0, 1],
+    'o movidoPara não saiu: a tela diz, e o rastro de falha fica');
+});
+
+provaAsync('6.67 × 6.70 · K (um aparelho só: a gravação da 788fb9e × a de hoje, com semente) — a acertoGravarMarcasJob e a acertoPagasHTML sem as linhas da correção (o sha-256 é o da 788fb9e) contra as de hoje, em 80 retratos com semente (pernoites de 1 a 3 noites, com e sem as marcas da 6.67 — o devolvido e o dia mudado —, tirados do dia, noites guardadas com valor e pagas) e de 1 a 4 toques num aparelho só («Paguei», «Guardar», «Voltar para a pagar» e o lote, com noites desmarcadas): as respostas, as perguntas, os avisos na tela, cada gravação, o banco do acerto (as noites, os lotes e o índice) e «Já pagas» (sem a linha nova do aviso, que a · I prova) são iguais. Controle: com uma pernoite tirada em outro aparelho depois que a tela abriu, a de hoje recusa onde a da 788fb9e pagava a lista velha', async () => {
+  await com6770({}, async () => {
+    const h = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
+    const L4 = '    // Junção 6.67 × 6.70 (REL-005 do QA): a noite que congela o valor agora tem a lista relida (o × e o «Trazer de volta» do Plantão e\n'
+      + '    // o dia mudado, em outro aparelho, com esta tela aberta); o valor confirmado que mudou recusa, e nada é gravado (no lote, nenhuma).\n'
+      + '    var lis=await acertoListaConferir(lista, curs, status, op);\n    if(lis) return lis;\n';
+    const fJob = String(run('String(acertoGravarMarcasJob)')), fPag = String(run('String(acertoPagasHTML)'));
+    igual([fJob.split(L4).length, fPag.split('+acertoPagaAvisoHTML(o)').length], [2, 3], 'as linhas da correção, uma vez na gravação e duas em «Já pagas»');
+    ctx.__fj6770 = fJob.replace(L4, ''); ctx.__fp6770 = fPag.split('+acertoPagaAvisoHTML(o)').join('');
+    igual([h(ctx.__fj6770), h(ctx.__fp6770)], ['212c4528e8a3fbce', '16d3762f421e2927'], 'sem as linhas da correção, as da 788fb9e');
+    run('__gmj788=eval("("+__fj6770+")"); __pag788=eval("("+__fp6770+")"); __gmjHoje=acertoGravarMarcasJob; __pagHoje=acertoPagasHTML;');
+    let s = 0x6770667b;
+    const rnd = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const um = (a) => a[Math.floor(rnd() * a.length)];
+    const DIAS = ['2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09'];
+    const NOITES = DIAS.slice(1);
+    const PETS = [['Amora', 'Lia Teste'], ['Cacau', 'Rui Teste'], ['Bolacha', 'Lia Teste'], ['Mel', 'Teste'], ['Tito', 'Teste'], ['Lola', 'Teste']];
+    const PESSOAS = ['Ana Teste', 'Carol Teste', 'Júlia Teste'];
+    const retrato = (i) => {
+      const man = {}, rem = {}, reg = {}, acoes = [];
+      PETS.forEach(([n, t], k) => {
+        if (rnd() < 0.55) {
+          const d = um(DIAS), m = PERN6770(n, t, 1 + Math.floor(rnd() * 3));
+          if (rnd() < 0.15) m.movidoPara = { dia: '2026-10-20', id: 'z' + k };
+          if (rnd() < 0.15) m.movidoDe = { dia: '2026-09-30', id: 'y' + k };
+          (man[d] = man[d] || {})['k' + i + '_' + k] = m;
+          if (rnd() < 0.2) { const dn = um(NOITES); (rem[dn] = rem[dn] || {})[semAcento670(n) + '__' + semAcento670(t)] = Object.assign({ nome: n, tutor: t, origem: 'manual' }, rnd() < 0.5 ? { devolvido: { quem: 'Gestora Teste', ts: 1 } } : {}); }
+        }
+      });
+      NOITES.forEach((d) => {
+        const x = rnd();
+        if (x < 0.15) reg[d] = REG670({ status: 'acumulado', quem: um(PESSOAS), hospedes: 2, pets: ['Biscoito', 'Amora'], pets_por_pessoa: 2 });
+        else if (x < 0.22) reg[d] = REG670({ status: 'pago', quem: um(PESSOAS), hospedes: 3 });
+        else if (x < 0.27) reg[d] = REG670({ status: 'apagar', quem: um(PESSOAS), hospedes: 1, valor_base_cent: 6000, valor_total_cent: 7300 });
+      });
+      const n = 1 + Math.floor(rnd() * 4);
+      for (let k = 0; k < n; k++) {
+        const t = rnd();
+        if (t < 0.45) acoes.push({ t: 'pago', iso: um(NOITES) });
+        else if (t < 0.7) acoes.push({ t: 'acumulado', iso: um(NOITES) });
+        else if (t < 0.8) acoes.push({ t: 'apagar', iso: um(NOITES) });
+        else acoes.push({ t: 'lote', quem: um(PESSOAS), desmarca: rnd() < 0.4 ? 0 : -1 });
+      }
+      const outro = um(Object.keys(man).flatMap((d) => Object.keys(man[d]).filter((k) => !man[d][k].movidoPara).map((k) => 'auaulandia/manuais/' + d + '/' + k)).concat(['']));
+      return { man, rem, reg, acoes, outro };
+    };
+    const roda = async (C, versao, comOutro) => {
+      ctx.__cK6770 = C;
+      run(`['acerto-plantao','acerto-lotes','acerto-abertas','manuais','removidos'].forEach(function(n){ __put657('auaulandia/'+n, null); });
+        Object.keys(__cK6770.man).forEach(function(d){ Object.keys(__cK6770.man[d]).forEach(function(k){ __put657('auaulandia/manuais/'+d+'/'+k, __cK6770.man[d][k]); }); });
+        Object.keys(__cK6770.rem).forEach(function(d){ __put657('auaulandia/removidos/'+d, __cK6770.rem[d]); });
+        Object.keys(__cK6770.reg).forEach(function(d){ __put657('auaulandia/acerto-plantao/'+d, __cK6770.reg[d]); });
+        ACERTO_REG={}; ACERTO_LOTES={}; ACERTO_ABERTAS={}; ACERTO_LOTE=null; ACERTO_GRAVANDO={};
+        ${versao === '788' ? 'acertoGravarMarcasJob=__gmj788; acertoPagasHTML=__pag788;' : 'acertoGravarMarcasJob=__gmjHoje; acertoPagasHTML=__pagHoje;'}`);
+      await carrega670(true); limpa670();
+      if (comOutro && C.outro) run(`__put657(${JSON.stringify(C.outro)}, null);`);   // outro aparelho tira a pernoite; esta tela não relê
+      const out = [];
+      for (const a of C.acoes) {
+        if (a.t === 'lote') {
+          run(`acertoLoteAbrir(${JSON.stringify(a.quem)}); if(ACERTO_LOTE && ${a.desmarca}>=0 && ACERTO_LOTE.itens.length>1) acertoLoteToque(${a.desmarca});`);
+          pergunta670(true); out.push(JSON.stringify(await run('ACERTO_LOTE ? acertoLotePagar() : null') || null)); await espera657();
+          out.push(JSON.stringify(J670('ACERTO_LOTE ? [ACERTO_LOTE.aviso, ACERTO_LOTE.itens.map(function(x){ return [x.iso, x.valor, !!x.marcado]; })] : null')));
+          run('if(ACERTO_LOTE) acertoLoteFechar();');
+        } else {
+          const nome = J670(`(function(){ var o=acertoItemDe('${a.iso}'); return o?acertoQuemDoItem(o).nome:''; })()`);
+          nome670(a.iso, nome === '(sem nome)' ? '' : nome);
+          out.push(JSON.stringify(await marca670(a.iso, a.t, true)));
+        }
+      }
+      // «Já pagas» sem o aviso novo (a · I prova o aviso; aqui, a linha de cada paga e o lote)
+      const html = lista670(), avisos = (html.match(/>Hoje a lista desta noite/g) || []).length;
+      if (versao === 'hoje') nAvisos += avisos;
+      const r = { out, za: za670().map((z) => [z[0], z[1]]), zp: J670('__zp657'), grav: grav670(), jp: jaPagas6770(html.replace(/<div[^>]*>Hoje a lista desta noite[\s\S]*?<\/div>/g, '')),
+        db: J670("[__get657('auaulandia/acerto-plantao'), __get657('auaulandia/acerto-lotes'), __get657('auaulandia/acerto-abertas')]") };
+      return JSON.stringify(r);
+    };
+    const N = 80; let iguais = 0, pagos = 0, difControle = 0, comMarcas = 0, outros = 0, nAvisos = 0;
+    for (let i = 0; i < N; i++) {
+      const C = retrato(i);
+      if (Object.keys(C.man).some((d) => Object.keys(C.man[d]).some((k) => C.man[d][k].movidoPara || C.man[d][k].movidoDe)) || Object.keys(C.rem).length) comMarcas++;
+      const a = await roda(C, '788', false), b = await roda(C, 'hoje', false);
+      if (a === b) iguais++;
+      else { let k = 0; while (k < a.length && a[k] === b[k]) k++; assert.fail('retrato ' + i + ' (um aparelho só) diferente a partir de ' + k + ':\n788: …' + a.slice(Math.max(0, k - 300), k + 300) + '\nhoje: …' + b.slice(Math.max(0, k - 300), k + 300)); }
+      if (/"status":"pago"/.test(a)) pagos++;
+      if (C.outro) { outros++; const c = await roda(C, '788', true), d = await roda(C, 'hoje', true); if (c !== d) difControle++; }
+    }
+    run('acertoGravarMarcasJob=__gmjHoje; acertoPagasHTML=__pagHoje;');
+    igual(iguais, N, 'num aparelho só, iguais');
+    assert.ok(comMarcas >= 30 && pagos >= 40, 'retratos com marcas: ' + comMarcas + '; com noite paga: ' + pagos);
+    assert.ok(difControle >= 5, 'o controle (a pernoite tirada em outro aparelho) muda o resultado em ' + difControle + ' de ' + outros);
+    console.log('      retratos: ' + N + ' (com marcas ' + comMarcas + ', com noite paga ' + pagos + '); controle: ' + difControle + ' de ' + outros + ' diferentes; avisos em «Já pagas» (as pagas da semente com outra lista): ' + nAvisos);
+  });
+});
+
+// ---- o «Atualizar para R$ X» com a lista relida (pedido do coordenador, 12/out/2026: a mesma classe do REL-005) ----------------------
+const BT6770 = (txt) => `{textContent:${JSON.stringify(txt)}, style:{}, dataset:{}}`;
+const ATUALIZAR_MUDOU = (de, para) => `A lista desta noite mudou em outro aparelho (${de} → ${para}). Nada foi gravado: confira e toque de novo.`;
+provaAsync('6.67 × 6.70 · L (REL-005, o «Atualizar para R$ X» com dois aparelhos e num aparelho só) — o botão continua com dois toques (o 1º só arma e mostra «R$ 73,00 → R$ 113,00 (2 FILHOts)»); entre o 2º toque e a gravação, a lista da noite é relida: com a Amora tirada em outro aparelho entre os toques, 08/10 (guardada com R$ 73,00 e 1 FILHOt) é recusada com «A lista desta noite mudou em outro aparelho (R$ 113,00 → R$ 73,00). Nada foi gravado: confira e toque de novo.», nada é gravado e o botão volta; com a Amora trazida de volta entre os toques, 09/10 (guardada com R$ 113,00 e 2 FILHOts) é recusada (R$ 73,00 → R$ 113,00); a leitura que falha recusa («Não consegui conferir a lista da noite…») e nada é gravado; a noite paga continua intocada (nem lê a lista); sem mudança, o 2º toque grava R$ 113,00 e 2 FILHOts. Num aparelho só, a acertoRecalcular da 788fb9e (a de hoje sem as linhas da releitura) e a de hoje gravam igual em 40 retratos com semente; controle: com a pernoite tirada entre os toques, a de hoje recusa onde a da 788fb9e gravava a lista velha', async () => {
+  const G = (st, quem, pets, extra) => REG670(Object.assign({ status: st, quem, hospedes: pets.length, pets, pets_por_pessoa: pets.length,
+    valor_base_cent: pets.length > 1 ? 10000 : 6000, valor_total_cent: pets.length > 1 ? 11300 : 7300 }, extra || {}));
+  await com6770({ manuais: { '2026-10-08': { m1: PERN6770('Amora', 'Lia Teste', 2) } },
+    reg: { '2026-10-08': G('acumulado', 'Júlia Teste', ['Nelson']), '2026-10-09': G('acumulado', 'Carol Teste', ['Farofa', 'Amora']), '2026-10-06': G('pago', 'Júlia Teste', ['Biscoito']) } }, async () => {
+    const S0 = await ve6770();
+    // à mão: 08/10 = Nelson + Amora = 2 → R$ 100,00 + R$ 13,00 = R$ 113,00 (gravado R$ 73,00, 1 FILHOt)
+    assert.ok(QJ_cartao(S0.html, '08/10').indexOf(QJ_AVISO(2, 'R$ 113,00', 'R$ 73,00')) >= 0, QJ_cartao(S0.html, '08/10'));
+    const ac0 = acerto6770();
+    run(`__btL=${BT6770('Atualizar para R$ 113,00')}; acertoRecalcular('2026-10-08', __btL);`); await espera657();
+    igual([run('__btL.dataset.armed'), run('__btL.textContent')], ['1', 'Confirmar — 08/10/2026: R$ 73,00 → R$ 113,00 (2 FILHOts)'], 'o 1º toque só arma');
+    await tira6770('2026-10-08', 'm1', 'lancei a Amora sem confirmar a reserva');   // outro aparelho, com o botão armado
+    limpa670(); run(`acertoRecalcular('2026-10-08', __btL);`); await espera657();
+    // à mão: 1 FILHOt → R$ 60,00 + R$ 13,00 = R$ 73,00
+    igual([zaT670(/NADA FOI GRAVADO/).map((z) => z[1]), grav670(), acerto6770(), run('__btL.dataset.armed'), run('__btL.textContent')],
+      [[[ATUALIZAR_MUDOU('R$ 113,00', 'R$ 73,00')]], [], ac0, '', 'Atualizar para R$ 113,00'], 'recusado: nada gravado, o botão volta');
+    igual(J670('__lei670').map((l) => l.p), ['auaulandia/manuais', 'auaulandia/removidos'], 'a lista relida, uma vez');
+    igual(QJ_noite('2026-10-08').slice(0, 2), ['Nelson', 7300], 'a tela relida: sem «Atualizar» (a lista dá o valor gravado)');
+    // o espelho: 09/10 guardada com R$ 113,00 e 2 FILHOts; sem a Amora, a tela oferece «Atualizar para R$ 73,00»; ela volta entre os toques
+    const S1 = await ve6770();
+    assert.ok(QJ_cartao(S1.html, '09/10').indexOf(QJ_AVISO(1, 'R$ 73,00', 'R$ 113,00')) >= 0, QJ_cartao(S1.html, '09/10'));
+    run(`__btL=${BT6770('Atualizar para R$ 73,00')}; acertoRecalcular('2026-10-09', __btL);`); await espera657();
+    igual(run('__btL.textContent'), 'Confirmar — 09/10/2026: R$ 113,00 → R$ 73,00 (1 FILHOt)');
+    await traz6770('amora__lia teste');
+    const ac1 = acerto6770();
+    limpa670(); run(`acertoRecalcular('2026-10-09', __btL);`); await espera657();
+    igual([zaT670(/NADA FOI GRAVADO/).map((z) => z[1]), grav670(), acerto6770()], [[[ATUALIZAR_MUDOU('R$ 73,00', 'R$ 113,00')]], [], ac1], 'recusado: nada gravado');
+    // a leitura que falha: recusa e não grava
+    await ve6770();
+    run(`__btL=${BT6770('Atualizar para R$ 113,00')}; acertoRecalcular('2026-10-08', __btL); __recusaLer670='^auaulandia/manuais$';`); await espera657();
+    limpa670(); run(`acertoRecalcular('2026-10-08', __btL);`); await espera657();
+    run(`__recusaLer670=null;`);
+    const z = zaT670(/NÃO ATUALIZEI O VALOR/);
+    igual([z.length, (z[0] || [[], []])[1][0], grav670(), acerto6770(), run('__btL.textContent')],
+      [1, 'Não consegui conferir a lista da noite no sistema antes de gravar. O acerto de 08/10/2026 continua como estava: R$ 73,00.', [], ac1, 'Atualizar para R$ 113,00']);
+    assert.ok(!/PERMISSION_DENIED/.test(z[0][1].join(' ')) && /Nada foi gravado/.test(z[0][1].join(' ')), JSON.stringify(z));
+    // a noite paga: intocada, sem ler a lista
+    limpa670(); run(`__btL=${BT6770('Atualizar')}; __btL.dataset.armed='1'; acertoRecalcular('2026-10-06', __btL);`); await espera657();
+    igual([zaT670(/ESTA NOITE JÁ FOI PAGA/).length, grav670(), J670('__lei670').filter((l) => /manuais|removidos/.test(l.p)).length], [1, [], 0]);
+    // sem mudança: o 2º toque grava pela lista relida (à mão: Nelson + Amora = 2 → R$ 113,00)
+    limpa670(); run(`__btL=${BT6770('Atualizar para R$ 113,00')}; acertoRecalcular('2026-10-08', __btL);`); await espera657();
+    run(`acertoRecalcular('2026-10-08', __btL);`); await espera657();
+    const u8 = db670('acerto-plantao/2026-10-08');
+    igual([u8.valor_total_cent, u8.valor_anterior_cent, u8.hospedes, u8.pets, u8.quem, u8.status, Object.keys(u8.valores || {}).length, grav670().map((e) => e[0] + ' ' + e[1])],
+      [11300, 7300, 2, ['Nelson', 'Amora'], 'Júlia Teste', 'acumulado', 1, ['transaction auaulandia/acerto-plantao/2026-10-08']]);
+  });
+  // num aparelho só: a acertoRecalcular da 788fb9e × a de hoje
+  await com6770({}, async () => {
+    const h = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
+    const f = String(run('String(acertoRecalcular)'));
+    const i = f.indexOf('      // Junção 6.67 × 6.70 (REL-005, o «Atualizar»)'), j = f.indexOf('      // 2ª rodada (REL-002): numa transação no nó da noite');
+    assert.ok(i > 0 && j > i, 'o bloco da releitura');
+    ctx.__fr6770 = f.slice(0, i) + f.slice(j);
+    igual([ctx.__fr6770.split('function acertoRecalcular(iso, btn, relido){').length, ctx.__fr6770.split(" && !relido){").length], [2, 2]);
+    ctx.__fr6770 = ctx.__fr6770.replace('function acertoRecalcular(iso, btn, relido){', 'function acertoRecalcular(iso, btn){').replace(" && !relido){", '){');
+    igual(h(ctx.__fr6770), '576b9df60ddef350', 'sem as linhas da releitura, a acertoRecalcular da 788fb9e');
+    run('__ar788=eval("("+__fr6770+")"); __arHoje=acertoRecalcular;');
+    let s = 0x6770ac;
+    const rnd = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const um = (a) => a[Math.floor(rnd() * a.length)];
+    const DIAS = ['2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09'];
+    const PETS = [['Amora', 'Lia Teste'], ['Cacau', 'Rui Teste'], ['Bolacha', 'Lia Teste'], ['Mel', 'Teste'], ['Tito', 'Teste']];
+    const retrato = (k) => {
+      const man = {}, reg = {};
+      PETS.forEach(([n, t], q) => { if (rnd() < 0.6) { const d = um(DIAS); const m = PERN6770(n, t, 1 + Math.floor(rnd() * 3)); if (rnd() < 0.15) m.movidoPara = { dia: '2026-10-20', id: 'z' }; (man[d] = man[d] || {})['k' + k + '_' + q] = m; } });
+      DIAS.slice(1).forEach((d) => { const x = rnd(); const hp = Math.floor(rnd() * 5);
+        if (x < 0.35) reg[d] = REG670({ status: 'acumulado', quem: 'Ana Teste', hospedes: hp, valor_total_cent: um([7300, 11300, 14300]) });
+        else if (x < 0.55) reg[d] = REG670({ status: 'apagar', quem: 'Carol Teste', hospedes: hp, valor_total_cent: um([7300, 11300]) });
+        else if (x < 0.62) reg[d] = REG670({ status: 'pago', quem: 'Júlia Teste' });
+        else if (x < 0.67) reg[d] = REG670({ status: 'acumulado', valor_manual: { cent: 9000, antes_cent: 11300, tipo: 'Outro', registro: { por: 'Gestora Teste', ts: 1 } } }); });
+      const alvo = um(DIAS.slice(1));
+      const outro = um(Object.keys(man).flatMap((d) => Object.keys(man[d]).filter((q) => !man[d][q].movidoPara).map((q) => 'auaulandia/manuais/' + d + '/' + q)).concat(['']));
+      return { man, reg, alvo, outro };
+    };
+    const roda = async (C, versao, comOutro) => {
+      ctx.__cL6770 = C;
+      run(`['acerto-plantao','acerto-abertas','manuais','removidos'].forEach(function(n){ __put657('auaulandia/'+n, null); });
+        Object.keys(__cL6770.man).forEach(function(d){ Object.keys(__cL6770.man[d]).forEach(function(k){ __put657('auaulandia/manuais/'+d+'/'+k, __cL6770.man[d][k]); }); });
+        Object.keys(__cL6770.reg).forEach(function(d){ __put657('auaulandia/acerto-plantao/'+d, __cL6770.reg[d]); });
+        ACERTO_REG={}; acertoRecalcular=${versao === '788' ? '__ar788' : '__arHoje'};`);
+      await carrega670(true); limpa670();
+      run(`__btK=${BT6770('Atualizar')}; acertoRecalcular(${JSON.stringify(C.alvo)}, __btK);`); await espera657();
+      if (comOutro && C.outro) run(`__put657(${JSON.stringify(C.outro)}, null);`);
+      run(`acertoRecalcular(${JSON.stringify(C.alvo)}, __btK);`); await espera657();
+      return JSON.stringify({ bt: J670('[__btK.textContent, __btK.dataset.armed]'), za: za670().map((x) => [x[0], x[1]]), grav: grav670(), db: db670('acerto-plantao') });
+    };
+    const N = 40; let iguais = 0, gravou = 0, dif = 0, outros = 0;
+    try {
+      for (let k = 0; k < N; k++) {
+        const C = retrato(k);
+        const a = await roda(C, '788', false), b = await roda(C, 'hoje', false);
+        if (a === b) iguais++; else { let x = 0; while (x < a.length && a[x] === b[x]) x++; assert.fail('retrato ' + k + ' diferente: 788 …' + a.slice(Math.max(0, x - 200), x + 300) + '\nhoje …' + b.slice(Math.max(0, x - 200), x + 300)); }
+        if (/"transaction"/.test(a)) gravou++;
+        if (C.outro) { outros++; if (await roda(C, '788', true) !== await roda(C, 'hoje', true)) dif++; }
+      }
+    } finally { run('acertoRecalcular=__arHoje;'); }
+    igual(iguais, N, 'num aparelho só, iguais');
+    assert.ok(gravou >= 15 && dif >= 3, 'retratos que gravaram: ' + gravou + '; controle: ' + dif + ' de ' + outros);
+    console.log('      «Atualizar» num aparelho só: ' + N + ' retratos iguais (' + gravou + ' gravaram); controle: ' + dif + ' de ' + outros + ' diferentes');
   });
 });
 }
@@ -48953,7 +49898,10 @@ prova('6.71 P34 (AC12, AC13, guarda) — a área protegida e o #v-daycare idênt
   const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = sha71(runN('String(' + n + ')')); });
   igual(agora, BASE, 'as funções que ficam');
   const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
-  igual([prot.length, sha71(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), sha71(runN('JSON.stringify(PERM)'))], [155, '5bac486c669007ec', 'f79140b1c2844dd5'], 'a área protegida e a PERM');
+  // 6.67 (junção, 12/out/2026): a PERM ganhou 'lancar-manual-plantao', 'trabalha-plantao' e 'conferir-checkin' (as três capacidades novas
+  // da 6.67). Antes: a PERM inteira, 'f79140b1c2844dd5'; depois: a PERM sem as três, que continua 'f79140b1c2844dd5'. Por quê: a 6.71 não
+  // mexe em permissão, e as outras capacidades continuam as da base; a PERM inteira, com as três, é a da 6.65 P22 ('02898b691c0a839c').
+  igual([prot.length, sha71(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), sha71(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; return JSON.stringify(c); })()"))], [155, '5bac486c669007ec', 'f79140b1c2844dd5'], 'a área protegida e a PERM (sem as três capacidades da 6.67)');
   const src = fs.readFileSync(APP, 'utf8'), i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
   igual([sha71(src.slice(i, j)), sha71(src.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
   // o finRenovHistContados de hoje = o da base + a linha da leitura (AC3.1), e nada mais
@@ -53459,7 +54407,19 @@ provaAsync('6.80 P35 (AC13) — nenhuma prova antiga saiu do arquivo nem mudou d
   const h8_680 = (x) => require('crypto').createHash('sha256').update(x).digest('hex').slice(0, 8);
   const BASE680 = '000efdc4001027ad00369a91004e11870066d212007861e100a0450000ea1627011ba6a5014e9ff401773c2f017ae093017fcffd01a3dc9301c6876301d83416020dede30225d24d0234934b02379146025478c5025a9b24026a254902c9248d02daff5503256970032b4e9003437788039a2772039df2cb03a6d5e303adae2e03e9477003ffd03c0408bf68043583480436c65a046d7d3c048629ea049e108304a27f2704addb6604b8066904d397e904fc5509053515d905544e7205896171058beb5d0592bede05cd099405e2d7e405e7c0f805edcb6e061ed89a0621098b06299885063d59510641f99d066ac2e70694eeb506bb1f6e06bca7a406c05c8006d26caf06f259cb06f6c823071383a8072acd3507588ec10760d05e07642d410764a73f076b07e8078088a907a06b2c07a396e207b0eab007f6a47807f9780d0843aabe084fc348086a442f087871540882c57808972cf708c02c770911935e092dd1ff09455daa097b554109e15ac20a04adae0a251ac10a555e5c0a5dba950a74a2d80ac3ad9c0ae528b30afee9170b08bae90b0af8530b0bf6dd0b1c43970ba526de0bc650270bcdd6d10bce853e0bf434f00c129d960c15fd610c1f235a0c2b2ecb0c38e3820c3984420c63f7400c644c620cd5d7550d0b44b00d0c020d0d5eef310d8dcee00d9820280ddd8b690df673100e2109a40e2f41bb0e425fe70e5ea9d90e7e20ec0e8415c70ea012800eb94be80eb9c20a0f2fae8c0f71439a0fa32f6d0fac4cd50fb3c776103bd2e610415e6b104402a0106b65781090c35810ae7f1a10d30aa310d8ccf810eb6f0210fb093d10ff8fbb113d6246115b507d115fd7121175300711a6828211aefff811b5fbaf11bfe93411d323ba12494925128d713912950d3312ad14d212fcc0251304ec301343d00613670f16138f6506139707b0139854f51398f86013da024f14249aea14a2115a14a9afe314c60d6114eb916a14f846c01514a053152cceff154a94181574fb611596e5eb159b3b6b15ae14db15b0c5d015ba768d15bc08e915c4e08915cb98fc15e8b3c215e8f9bd15f02c4515f0728116181758161905ee1619f19c161c0ffa161e9e0c162705801660170c16801a8f1695ab5b16b6f0f716c8207117350d83173680f1173bce751742f3a11751135d1797629f17c3488f17c6efe8180e67c9187a4bea1884e022189f755018e21ef419153b1b193952621953f4f019937a1d19e3e1d619edd7ae1a5659e11a68b1451a7204671abd0be91abe0ff91acd38741ae745c11af338ff1b2373831b35bb861b61698f1b6e62e91bafcc4f1c01d7821c0346cb1c1ba9581c3388a41c448b401ca5ad7e1ca7ed8c1ceab5ba1ced1a6f1d0622971d06940b1d0c843b1d2568cf1d32d3e91d549b861d724ee61d9b91e31dcb146c1dd343bf1defb74b1dfa62341e35cf5a1e5720e11e5b6ab51e6d0cbd1e9cf83c1eba15691ecbfafb1edfff611f0b550b1f130c551f156b861f63770b1f9b34f51fa140a41fa952201fd04a37201071c820256309203cdd392043dd5e2054adcf20bcb7c620c65dc720df244520e6501b20f30f0220f37a3b214b439e2153ea2a2153f70a216376b821861bd92196bac521b884c321c19d7821d1ce1821f895842226fdd0223a4391228069bf22988b6d22a68aa422b1403d22cf5903230b9fc3231d2ea9235994b72372913023787351239b5a2123beeb7223d8aa5423e71ccf23fa91aa2413d6a1243945d8245ab306246298b72467681e24accd7324b2c05c24c4d73524e64fde24f9be9424ffe4292518c7f02535a51f2548e175256134d625c2377225e840d8262da2c32634dc5e2638b7e9264280ad264c853726524c98267215b7267debee2698b71a26a06d0726bd424926e84e7a26f5e4972721e2d12747c017275d52de276ffaf9277b43a0277b880e27e5e1b527ea3d4128061208280dd3d42817cd77285f184228608da028aa7eaa28e2456228ea319f2917612d2959fce42960294129ca9c2f29f50fac29fa631d2a09789c2a0ad2fd2a2ce5332a6fc45b2a79d48c2a7fb3ce2a8585ea2af066792afc9c5e2b2071582b27b7da2b39f9272b43d7982b6988032bccc0e62c1fde982c229ea82c521d9d2c81db9c2cc844f22cdab6de2cf01f452cf557322cf63fc92d07af332d17816a2d2e506e2d4ec87a2d9dcf672dadbd932dc901ef2dcf7cfc2e0d08602e11caca2e1b8b492e1d7ab32e3ddbbf2e442e352e5ac28d2eb98eb02eca66652edaedf02f03c15d2f0b22df2f0ed3802f227e7e2f276fff2f49d0bc2f4affd52f9bebcb2fed444d2feef4c8303eb2ba3041e6543045d0ea30554b353070c93a309e3c7330af2f4430c91f6830ce813730d32d553132b6043161693131bed32831d42a6331eac090326bd7d0326fd658328ab964328db367328f48ad328f5e9832a762ff32bdf06b32bed1e032cbd5d132d6c0ab32dbe3b0330444453308c5a6330e244f332e42223330af76335e007c33618c583362b46a336882c43373c05f3387b2433388ad1133b677b133b7b6d133dc48e733f08bde3405534b3417e90a343da5473446cd97346520bf346536b8346eca2134b7e01e351f049a3562a1493565a3f13565f428356ef738358001cc358dbf5d3595165935a9361f35ab5faa35b9438435bd46e435c24e4e35e88ff335f0f34435f1ad573607ad323615a3cf36271352363e5a023645d65f3648c438366d41b036ad8d2b36b9a88d36cc1cca36cee58f36e94cd03700c65f370cb0f53719f5e33743aa26374bb4d53757cc3837780080378150e43784d4a337a1471537b221c837c0fbb637cdbcf737f349283800bd88380614e3380ec6f1387ec7a43888ce5d38bc8be238da841b38dcf61b38f4b5d43904d8063932a42e3959cfac39686d75397449f83978ccd639acdbb839adc58939c43af039da344d3a14a8543a657ec43a973fc93a983a933a9bf6883a9cf0f63ab6f3663ab965693abd11a53add535b3aecf1c43b0925cd3b1a900a3b31e5a03b481e403b5064c23b6705763bfa449f3bfcd92b3c0f08e23c2c2e473c31e5533c4d022b3c52a62a3c6b10893ca59cc33cb9f7513d0d365f3d340e283d3e497d3d41864b3d4272893d6d2f6f3d902e793d9192ce3d9b2b9a3daec1ad3db302d93dc72ffe3dce200c3de304623e0bbc643e1dc8303e53be363eae49433ec8afb53edffceb3efe2e753f1cb9c93f2f8a2f3f33551b3f551c5c3f6a988a3f938a1d3f98af6e3ff2d9bb401b51a0402908b5403afc30403edcf44053e93a407e44b640807818408a80924099f1b7409a034f409ee78440abffae40b31d4d41005e054168f2c0417eac6041878f7941b4908441c1117641cb153b41ea6fa742044fe842052be0428b921842c93d9f42e551eb42fd72be4355037b437c13e8438b263b43aaa94a43af438543d08a9843d9823e43da9b2e440e4de14429fd9d448fdea244930a3144b05ce044bb34f844f999a14528789a45593fbe455f0d3a456b098c456b10a9458cae5345c130ac45daa7f44615c8134658903f465a122546888dde46abdb4b46bc290346daf22b46f8ff89470a5ffb470f70234718e3ff4749b259478731b94795a04b4799d26147b3eee347bfe62647c050074802489e480fd83748146e72482d14c7482fcbc24848c3df4866f1b14899bbc548dadb0948e1381248e9086149012d6f49b0121a49c47f074a1e7e7d4a29427e4a37092d4a3b288b4a3c06ce4a5c5b194a5e8cfd4a8189424a8561404a9759ea4aa9dbaf4ac76e9e4ac8bea64acdc2724ae734fe4b0de2974b2d00df4b5984c14b6400044b6587904b73df654b8340c24b85b9e54baaac9e4bb6727b4bde78164beca56a4c01b04e4c2c066c4c3c978a4c6f75ff4c850b594c9c58204cb7fcda4cc208134ce455504cf2aeb54d33210f4d3a2fd94d5bc8174d679b614d96f4a94dea9f754df0409c4e0ad4ad4e2e9f614e2fbd144e52a8c24e8c8f8a4ec2740e4ec6ae804ed803d04ede5b0b4efad9964f0363184f11f1524f1a76714f443b4d4fa1e9924fb4eb064fc3f3db4fe4fd1e4ffef29850406a70504820be50604ab950d20ba050eda48250f0075a5118233751188e8a51d40f7b5213408d52171562521d1a7d5224ccf3526417245279f34752805c19529a4ddd52bbb3bf52c4ce5c5327e62a5364b8e85376f4685378d8d253aa70ec53b390b953d3380c53f6ec73541122ad54474c4c5448911254603c17546f6d6a5483049f549e2dd154af35d054bd3e9654c9150d54cbf9a854db2b9a5508619c55119edd5521df715529b0985539781c554f0a1555526da4558d8c6b561c4620562b7cba5678d4e5570a6cdc574452bd5747988957484df6575b7a40577b74cb578f0df457a809c857b32d6757c695bf57d5583857d98cf257f42707580149565804769758195d12582b5f32583321595869fedf5874668a58769b9658b8592a58c8792458cf9aeb592dd3825961fc4c5963734b59838fbc5993c44559a1eddd59bde71959ccf0ed59f904e65a0ed48a5a1012b05a1b04025ab981975abad1765b3c48dd5b4cb9ca5b64036a5b6723285bd4afce5c0ae64c5c1476ca5c6122755c686b725c70709d5c8eacc65cb0b3005cb68ec65cd9d6475ce138965d99891c5db112f95dd1d1bd5dee3d5c5df6e9b85df8d23a5dfaa6305e06e6505e1221675e26c59a5e670c9d5e88d51c5ea47e985eb11fba5ece78405eecd0145ef6ade15f07d6ae5f1c6d335f219e605f315bb65f466c035f4f44b55f6ad08b5f852ad95f9f87715fa913e55fc90ec15fce857a5fceecee5ff5304c603a880f6052011e6072a8b56084e33360ac5aa860b0cf1d60b3f29960c373d360cb864b60e4ddc660e71a6a60e88d4460f99f6c61301eec616bccc56185f49761866f5861895bb26196042961a2eec761ac55b061b8649a61ca9dc261db919e61f4509f61fbbeb06221465c624c0c63625ed7e1626697a7627cbf8862a701f262b1c8fc62c64c3a62d26bed62e38a5d62e5b99262f99db9630229866322aebe63423bc5636a9586636ae10c6374738c638ee52a63b6b7e963ccb30463d9de47640aaf326449611d644a1d7e6455738a645b849364d079fc64e15e1064e9e27464f748a364fc2a2a650157c965399e8165545bcf6557f151656a13bd659f45f16630f2a6663325fe665148b3665c63d0665f465066630dec667d592066a2333a66a5134666a892d166a8f18f66ecc66b66f0102266fdab73672c3264673bd5d36742a3346759673267638c57678c85ad679dda2c67a9c1ea67c945d667daf41167dcb53767ee87a867fa2e0e681d20f1684c07fc686a35fd68739a3c68a4506c68f95b236916c494691a754e692f117f693689896979b5cf69b9084669ead4df69f753326a34e0456a45f9dc6a5279386a76ad4a6a79c1b46a97124a6ab24c536ab69af86abb50ad6afece266b0374a16b0e2bc56b48ec466b98e07b6bb300c66bc00df56bdb60c86bddc9776bdf70af6c140c006c1564086c4e3cc56c57a4186c63e53a6c7c60146c91c2296c953c716c9a12496ce5af7e6cff26366d10249a6d218e346d2d670f6d5e7e2f6d68f4c36d91d27f6da2b03d6dff52a86e0599506e0a79746e0d01746e34f9c66e5e5e9a6e6ca32d6e77f62a6e8f9a656ee1389d6ee655516efbb20e6f016c516f15c96d6f540cf46f578b5f6fcbdf65701529f970683dab70772666707f4240709bf7eb70aa7dd770b6a27e70caea8070d3c7c470ef551c70f5d0da71159451714e2052718c5d5371a233d471b0f76971b74d3371c1705571caa6e071d77b6d71f3c98272080d197230c881723ae3a47255f456729d749c72ea4e7372f6dba97303e01a7316a3be7335f621734459e77379d2327381668e7382de927386f0ee738f7208739f9b3973b580f573bda83073df88937466230774c5de3074c929e374efb71e74fc08dc752e6169754beef4757a85e27591a10175b3584b75b587357667afe976714ae376a5824c76c3084176d41a6076dbfabe77313d0b774af68a775d4a3a77878c81779f1f7877dccf8178350c24787811fa78fa41367909144a790cb5eb790d446b79346b5b7936876c7940aeac79705672797ae1d0797debcb79a8fd307a2114f97a449fb27a4ef25f7a5e80007a6850d77a6c7adf7a74e9a17a7901917aa466c47aab52bf7acd81c87ae496187ae855ab7afc7ae47b363c9e7b50d2a87b69ea827b7b81837b9b33407bac21777bc3e16f7bd86ad87bff0e597c2657e07ca1df2c7ca25bc97cb5e7857ce4016a7d22926d7d362dfd7d468fd17d4a3b907d7b36457da323bd7da5da5b7dbfa1aa7dcc2c037dcc9b857de6cf5b7dfeb4647e1811fb7e33d7d47e449f447e48ac967e65bb3a7e67e5477e68fb147e78c63d7e88937a7e96897f7eb8efdb7eb998d67f146fde7f1563fc7f18c3457f5273aa7f7297a97fa7085b7fd50e267ff19f457ff8fd3d8003f6628018aff8801f69e38021440a8044c18d804799d18092269280acf31880c3908180c8e56580dc5917813e4aa08183781d819a293381d2f3e1821101a082129e4382347cfa824f5c54825160bf826f9900829399ce82a9073d82c0285582e0545282f75834835cf62b835f352d83721d3c83764e2c83796887838b41cb83908ef683a435b883b0a76283da6d468403783c841398e1842f9e1f844ba2af8450e3de84546a258463a40984b30f3084b3429e84c5252984eadc3d853a7bd4854b38808561b7338572886c8574b4ba8594c3ba85d149b085d474a385d7f5888641f203864c705086688d02868d900b869dfbb986c5544d8742c866874bc1d687561e538769bda287a3094487ae6d3a87ccd52c8819ce40884980ee886453a388648b9e8896345788a7fbc488be8dbc88fed7be893fc31b894da7f38951456a89e4a6d28a1eb8008a48383a8a6f9cf78a79debc8a81fe6f8a8349438a83bfa78ac2e11e8b0056ab8b1d62868b5b79d78b66aae78b74aac48b9241098bb3d78a8bb8f1488bb9e4c38bbf6ad18bc81ee08be9c4778c18a2258c3310ac8c38faa38c6c295b8cd4f0598cdeae488cfa3d328cfcb6948d0161528d07f70c8d1663538d2fab308d3d003e8d5be7458d6353c58d6db5b98d7260fe8d82cca48db2b2a48de361968dfceef48e0e32238e6273088e68c6148e8a4a598e8c9eab8e8d64878e95510e8ec2d9218ecbe0fe8ed5b01a8edf04438ef73dd18f5f8d9e8f7971958f7aa0418f99e15b8fa0e7958fa18dd99025b2299039ffd99042bfb8904f82bc905c236f906e3b7e908ca77c9093dcc790a0518090a25f2390a92be390d4da6590d5728d90f1a2fb91385ef7913a6ecc917d46419188196691933bf591abfd2491f8ffbc91fda001921a5bd592255ab492339b04927368ce9274291d92742cbb929ad43e92ab3e1992bcd3d592fd0cf19346a40f934e1433935a031c9391337a939eef9493ab9a2793abce3093e32e8093f1fb2c943f90cd9467f3f2947ec4c994814c1294893676949476f494e657da95765ec8957fcf299595ab3d95b0b91995c7b8e59616e737965255f1968a02219695a5e796c9284a96cbbe9697038069972640ad975bf9ce97616f0d976397b997838da197adf8c197d0897097fda2e7980831b9981e9fa198415bff9848026e984e45ac9879ea0d9883328a9891bf9a9938c7499957ac25997f2579998a8b4a999bf09499afcd4299b2ec059a04367f9a1008509a3c96fd9a9a42b49a9d64fe9aa392e49aa84c429ad44db69aef5ba89b2468299b75f8129b86cb819bb9a7139bce9d739befd9919c486fe39c5118589c641d8e9ca56c099cabadc09cae9ffc9cc9ed279ccc43e59ce8b6a59cfcc0d49cfd42709d1beb6b9d23484e9d33c6049d48687c9d7066fd9da0ce6e9daa50c59df03ba99e0bfd989e304fe59e4c31169e8a15c89e8a3f649ebc4ef99ee79d0b9ee9086d9efc68499f4692809f79d3229fc47ddd9fd42219a02646c4a044c991a05d2a92a05de458a08b9167a0a4e4d4a0a7bf1ea0ba3a1da0bb1282a0be1ddea0c82071a0e6537fa1188257a16c2c96a16cafb1a187d991a1a62fdca1a651fda1b27834a1da5de3a1ece5e5a1f0534ea21ab982a2233549a2276d3ca24660a1a2543160a2587940a26fa144a281b84ba2ab1cf4a2c46766a2c5d864a2d26f2ea2f943d9a3084420a32b8fa5a38230b7a38fc572a3b2e683a3b5ee5da3fe2b88a41a3091a4237b30a4388be8a44f41eca4697268a4ac6b9da4dd8728a4e0f543a4e11edba4f6560ea50e00f8a52b15a5a546a099a5751f31a57c1e1ea59c4bafa5d68113a5e5e63ba5f84f75a60a9617a63f091fa656953fa66579eca6763e85a6a8376ba6af4907a6c0e460a6da4f8ca6e17528a6fa89bca6fb948ba707b5a7a7248c8ea7347e60a73c82eda7579cd1a761384ba770989aa7cf2abaa7d98752a7e05c16a8087a69a809fa8aa8555b01a85f533fa861cca8a86ee955a87039b6a87438caa8a89d5fa8dd4346a8f6bfa5a91f6a5ba929076da9778d12a97aae3ba98e2d4ba99e9b66a9aa9e77a9b1be05a9b2e513a9d486c3a9ee3bb8a9f1cd81a9f38854a9f84ee5aa7b6eb6aa9c40ebaab1039caad49493ab07ba3cab14564aab2c8ae4ab591c29ab5df748ab93c2b1abac98a6abfb3fc7abff6ed2ac2c8846ac545448ac5b1182ac5cfe7fac6efa47ac72cbc5ac73f1c4accb2ffbacea2063acf459a9acf6beeeacfef1a4ad19b63aad1b452ead641455ad88e1ddadd00db4addecff7ae14f48bae2be5c6ae6afc72aeb24c95af1e4e2baf479b34af75ea94af971f3eafa8a30cafceed34afe99dfbafea0954b00fa7dbb02b62bab045b1f6b05f0240b0b47ccab0d8abf4b0e78e74b0ea9b25b0ef6f88b0f169bab0ff05a9b1097590b1216987b1654180b1738f8fb17ac81fb18d2fa8b1b347eab1bbdb62b1c80c56b1e1729db24a4cc6b24f92c7b25fe132b26be0d8b26ce4aeb29183e4b2de3c06b2f5a4c6b3191d89b327c669b33e7e54b34d6e8eb37252e0b3df5f16b409fbb9b4136c77b4387159b43fd89bb442e86eb4a2cf13b4b51cf0b55f2a16b55fcd31b56aa132b575a8b1b5984e5db59b3cccb5a69e50b5b04daeb5e0183eb5f80430b60cff51b61283a7b622471eb62983e9b6352100b66e5554b67d8246b6809a53b6d94eafb6ec5233b6ed86abb70b7c28b71504f5b721b6cbb74253fab7532d31b75c515eb7625dfeb77b8f5bb7c50611b7da93d7b80231a1b81b0338b820f8aab8a1a9bbb8ae39d5b8f85077b92291b0b936d49fb94c7204b960cd92b98f230bb9e4f3a2ba463102ba5453c8ba58e2adba6b3d03ba7b39cdba8912f6baab8255bacd64e0bad60ecebb186d00bb2e2bb5bb8aabe4bb9038c6bbdd00fabbdd4553bbfde432bc0b7f0cbc17918dbc2cee35bc3881c0bc4f3747bc60f0d6bc73b3b9bc82f035bcb4f46bbcca6c6bbce7b207bd0b0af4bd189bbfbd3e935cbd46f053bd6163c4bd969d75bdbf54c8bdf0e14dbdf7827abe14b14bbe370977be6e957fbeacdde2bed5df9fbedd5235bedf9e2ebef3abb2befa8652bf07cdf1bf0c530bbf12db94bf20f306bf23d431bf360091bf3cf1d3bfd4592cbfdc5b2bbfe26e76c009552bc0256070c03e41d5c0a3786cc0af67a2c0daff0fc0eb5f14c116643dc139e82bc13e7a4dc14be551c1b83333c1d3cbe5c1e554b5c1f847a8c21de44dc22d617ac24095adc2632793c2664173c26729e6c28dc2a9c2c20f4bc366adbbc383b275c3e96519c4094ae8c4116156c418e9cbc459e9d2c478be68c4958bd4c4b91ee9c4c7d076c4d1a436c4e6968bc4fcaccbc514021cc5178523c51e39aec52f99f1c5322905c54360c3c55e93ccc57d7aacc586b173c58b11b4c5b7d181c5bdfd2fc5cf1f6ec5cfe4b0c5d28f65c5dbd5eac5e1d78bc5fc95afc6126ae9c61d2c5fc64dc930c64fe051c66b1fe8c67be3c1c6ac78bcc6adeaa2c6f745b0c6f8d58fc736841ec745bd7bc759fe76c75de556c77d719ec79b793cc7c30ba2c7ce3775c80d4563c83651b9c8378025c85ea149c86b96f5c86df1abc87e02b7c87f161ec8af33f4c8cdc919c8f545a4c8ffaae0c9060fc6c9131e26c929e5aac9309a23c96336cec990096ec996104ec997b0dec9b7a93cc9bf28f0c9ff6ee5ca50644bca74de74ca764d7eca785a10ca911be4ca941436cac2aa58cac80900cb1bdad0cb2e4f10cb30f387cb3f0b23cb6603e0cb6ce308cb705cf2cb7ab82ccb895b27cbbd708dcbc60286cbcc60edcc174c6acc1b2cc8cc2d96cbcc3e665dcc47a567cc535d18cc787088cc9fc9feccb75d69ccb9b434cce262f3cd1e7660cd2179bdcd2219b9cd43df6fcd530cf7cd7f1124cd987ff6cd9f64fccdbec7dfcde41e25ce25b35bce27b415ce2990fdce2a7728ce317604ce38bb4ace4cecacce4cfdbbce510151ce7e77c2ce7e7c38ce84d9ecce8b5500cee03c28cf0d5a45cf271573cf534b92cf5c9c04cf5dad61cf60526dcfc94f0dcfd0ff32cfdc47d3cfeb8498d0267504d0451b1dd058abe2d0a2d2a1d0b0c1c2d0de46b2d0e06196d0e26c2ed0eeda24d0fdb49bd12a7ea7d13d8d05d1629231d1755b04d19b7191d19ea0fcd1b6e1ded1bff6cad1c1c0cbd1dd335cd1fddba6d210901ed216b720d23e5ef0d25ab069d27e650fd281b193d2ab04a8d2b27991d2d1b365d2dd5b96d2e4d208d30ed06cd30f5093d32b91b3d33191ded357277cd375d174d37fd2b6d3907e3ed3a09b35d3a2c13bd3a90e04d3b383cdd3c3f3a9d3d422dbd3d9b85fd3e55479d3ea4635d40945f3d4108a50d4673344d47c95b4d4883f32d4b2c2b9d4cb0b1ad50bc982d510dae4d5137c6ed5154f5fd54d30f0d565338bd5ab2e39d5bb2769d5c59886d5d48735d60a40ebd624918cd62a4ae4d632fd95d6719abdd675d8b8d68ce48ad692f5e7d6f33319d743b0c4d74a94dad7609c16d76734bdd76c8ffed771a7ffd778765bd7d11f5ad8143819d84ea1aad852f4d3d8c4445cd8cfc52ad8e89381d8e9b30bd943e96ad977712fd97e358bd97ee5a7d9d104afd9e0e457d9f9a132da0b9eb1da13bdefda163aafda1daabfda21c7ddda27c34eda452435da56af3fda80f3b0dab0640bdad36006dad72cbcdb02e7b6db343e92db36c0fbdb42dfb6db4bc70edb67a66bdb697179db7f1b18db863ae9db87f4ecdbae0753dbb39ad2dbd12307dbf0d12ddc67a95fdc6b9c8ddc919f8cdc98cd69dcae8496dcdb0c9ddcfc6d91dd0796b6dd0c96fddd1b492ddd29e42cdd4d9c95ddf5553fddfbf2c1de058439de0d5519de1dee1bde254aa6de2a2fbcde2ea1acde30b2bade65006fde7aece7dea73c96dea784b0deaa5360deb12cc2ded7bbd9deed555fdef2d5c4def515a0df48e19adf5832bddf5bc1e9df5f1e72df64b81ddfa47a67dfdb50cce001e6fbe02514cbe02febe3e0489f34e0537ef6e072f073e07b0304e0ae3b2ce0c3988de10a9570e11d6d82e128b596e13b47f3e1525006e1b31197e1b393d4e1d3aa77e1d7aecae1d81379e237d413e242d13ce27b57d7e2920835e2a49f63e2c2598de2e62914e2e98cade2f11a6be3308b00e33ece24e38953cfe39afc66e3d192eee40c9bb3e40e5b4de4236a3be42b0a6ae43506c3e43759bae44dde01e49544c5e4c6623de4d19861e4d7833ee4e1c68be4e2651fe4f4cbaee518aea6e51ca01ee546d4cfe555b2b7e56d6e3fe58836c8e59509e3e5cec756e5d5d07ee61f3fa3e63077dbe633295be6465406e66271fee689c821e697d119e6a1b01de6a59faee6b48516e6daf854e7039055e72d4f34e753cbf5e76f2cdde76f8498e781bf92e7c6ec6ae7d3c58ce7dbdb6de7ebb24be7eed183e815da0ce81baa0ee820a361e8b24d35e8c10407e8c57e13e915e1dee91b21f4e952c363e957878ce999e092e9b820bae9d4d588ea29a6c3ea8c8adfeaa91142eb18a893eb378e8deb4d9c7deb5626eceb8497e1eb87de5aeb8af4c0ec058572ec3e290dec55df28ec561223ec619549ec7a77a8ec89fd5feccb4983ed3153aeed325cb9ed495351ed667c04ed6f6943ed752ccbed8fdf21ed94944ceda85a3dedd223d9ede0f224ee09b325ee268ce8ee276465ee4b7b97ee93c2d1eeac87a7eeb80919eebb0275eed4984beee1a442ef08e2bdef135851ef181fb1ef1c67bbef3ca025ef4db6b4ef68a56def74c102ef8bd936ef96b1f3efac9032efd3f704eff72278f0289d44f029556df03489f5f04b2babf04daa37f0a2464af0ab88bcf0ce5569f0f97433f120e985f12ad58cf14353adf14cfd54f1507f94f19ffb42f1a4263ef1c61cc7f1d0c0e4f1ee0c00f2075c51f23590e8f27557d4f2a5cbb0f2aa1a05f2ad61fcf2d9fdb0f2dd2d67f2e9468ef362ed89f39c88d5f3bf6eedf3d8b5e3f3e339e0f4b7bc3df4cda861f4d8b977f4de64a6f5009915f506d17ff535300bf55a482cf56dd5f6f57638e1f57c108ff5a3c65cf5d9712ff5e25843f5ee9ab8f61f29a6f6326060f6446adff649f29ff6555cd5f65dcf32f67d359ff6855fd1f68b6c9df6b21ab4f6f00b58f710ad9df7176c4ef71ecfa7f7741acdf79e7a66f79fdfd6f7a5df56f7a77aa0f7e4d00ff7f8ad44f80fbccaf8135c73f8422189f86a5804f86e332ff8731387f87dbf69f8ba074df92c6de8f94aaaedf94e541cf976073df97911edf9929325f9b653f6f9c8ff11f9e5916ffa091197fa2fb0b3fa6a2e43fa6e7013fa9323a4fab6202dfabb3339fabe96b0fac9b658faece505fb042e4cfb16cc38fb3b0286fb81464bfb81d512fbe572cefbfb3d76fc09bb91fc11a7aefc13b56bfc2604e9fc274e98fc38ae89fc502017fc54f4eefc58d892fc6154d3fc6fa40ffc8b54b9fca84b3ffcb92252fcec5ca3fd20b76ffd30b1fbfd505066fd609794fd66e068fd71288bfdd81ad4fe1e8794fe3252f2fe5f9d0ffea78e8efec2eb66fec3c5c8fed49c5afedecde3ff1a5274ff3e4597ff499fbbff4e72f7ff8c6d17ff950b73ff9a14a0ffb1abc1ffd9d656';
   const tem680 = new Set(tit.map(h8_680)); const base680 = BASE680.match(/.{8}/g);
-  igual([base680.length, new Set(base680).size, base680.filter((h) => !tem680.has(h)).length, tit.length >= 2328], [2328, 2328, 0, true], 'os 2.328 títulos do 788fb9e, um por um');
+  // Junção da 6.67 sobre a 3d6910b (12/out/2026): a 6.67 trocou DE PROPÓSITO uma guarda do 788fb9e (AC12.7: «Mudar datas» na estadia
+  // finalizada não reabre mais; a tela manda «Reabrir o check-out»), e o título dela mudou junto. Antes: os 2.328 conferidos um por um,
+  // nenhum faltando. Depois: os mesmos 2.328 (o conjunto e o número não mudam); os 2.327 que não estão na lista de renomeados abaixo
+  // continuam conferidos um por um, nenhum faltando; cada renomeado é um título do 788fb9e (pelo hash de 8), o título antigo saiu do
+  // arquivo e o novo está nele, uma vez, com a story e o AC que o mudaram. Por quê: só passa o renomeado documentado aqui; qualquer
+  // outro título do 788fb9e que saia ou mude de nome continua derrubando a guarda.
+  const RENOMEADOS680 = [
+    { antigo: 'c9309a23', novo: '6.66 P24 (AC7.5, guarda; trocada pela 6.67 AC12.7) — a estadia finalizada (check-out feito): «Mudar datas» não reabre — nada é gravado e a tela manda «Reabrir o check-out» (a guarda da 6.66 dizia «como hoje, até a 6.67»)', story: '6.67 AC12.7' }];
+  const ren680 = new Set(RENOMEADOS680.map((r) => r.antigo));
+  igual([base680.length, new Set(base680).size, base680.filter((h) => !ren680.has(h) && !tem680.has(h)).length, base680.filter((h) => !ren680.has(h)).length, tit.length >= 2328],
+    [2328, 2328, 0, 2327, true], 'os 2.328 títulos do 788fb9e, um por um (os 2.327 que não estão entre os renomeados documentados)');
+  igual(RENOMEADOS680.map((r) => [r.antigo, base680.includes(r.antigo), tem680.has(r.antigo), tit.filter((t) => t === r.novo).length, h8_680(r.novo) !== r.antigo, r.story]),
+    [['c9309a23', true, false, 1, true, '6.67 AC12.7']], 'o renomeado documentado: do 788fb9e, o título antigo fora do arquivo, o novo dentro (uma vez), com a story e o AC');
   igual((me.match(/\/\/ 6\.80 \(AC[0-9.]+(?:, AC[0-9.]+)*\): /g) || []).length, 6, 'os seis comentários');
 });
 provaAsync('6.80 P36 (AC9) — a Linha do tempo traduz «prevencao-serie-nova-corrigida»; os textos novos escapados, sem emoji e sem as palavras proibidas; nenhuma permissão muda', async () => {
@@ -54199,7 +55159,14 @@ provaAsync('6.76 P14* (AC3.7, caminho 5) — a lista vazia e a ausente: MONITORE
 // ---- AC4 — as permissões (guarda) ----------------------------------------------------------------------------------------------------------
 prova('6.76 P15 (AC4.1, AC4.2, guarda) — as listas de telas (NAV_PAGINAS_ALL, NAV_PAGINAS_FORA) e a PERM idênticas às da base; a Escala continua fora do Time', () => {
   const nav = SRC676.slice(SRC676.indexOf('  const NAV_PAGINAS_ALL=['), SRC676.indexOf('  const NAV_PAGINAS_KEYS='));
-  igual([crypto676.createHash('sha256').update(nav).digest('hex').slice(0, 16), crypto676.createHash('sha256').update(run('JSON.stringify(PERM)')).digest('hex').slice(0, 16)], ['92fcf71818c1108d', 'f79140b1c2844dd5']);
+  // Junção da 6.67 sobre a 3d6910b (12/out/2026): a PERM inteira, antes 'f79140b1c2844dd5' (as 39 capacidades da base), depois
+  // '02898b691c0a839c' (42). Por quê: a 6.67 trouxe três capacidades (lancar-manual-plantao, trabalha-plantao, conferir-checkin); as 39
+  // de antes ficaram iguais — a PERM sem as três continua 'f79140b1c2844dd5' (as mesmas chaves, na mesma ordem, com os mesmos papéis) e
+  // as chaves novas são exatamente as três (a mesma conta da 6.67 P34 e da 6.65 P22).
+  const TRES667 = ['lancar-manual-plantao', 'trabalha-plantao', 'conferir-checkin'];
+  igual([crypto676.createHash('sha256').update(nav).digest('hex').slice(0, 16), crypto676.createHash('sha256').update(run('JSON.stringify(PERM)')).digest('hex').slice(0, 16)], ['92fcf71818c1108d', '02898b691c0a839c']);
+  igual([crypto676.createHash('sha256').update(run(`(function(){ var c=JSON.parse(JSON.stringify(PERM)); ${JSON.stringify(TRES667)}.forEach(function(k){ delete c[k]; }); return JSON.stringify(c); })()`)).digest('hex').slice(0, 16),
+    run('Object.keys(PERM).length'), TRES667.filter((k) => run(`Object.prototype.hasOwnProperty.call(PERM, ${JSON.stringify(k)})`)).length], ['f79140b1c2844dd5', 42, 3], 'as 39 de antes iguais e só as três da 6.67 entraram');
   assert.ok(run("NAV_PAGINAS_KEYS.indexOf('planodia')") < 0 && run('NAV_PAGINAS_FORA').indexOf('Escala e plano do dia (é da Márcia)') >= 0);
 });
 prova('6.76 P16* (AC2.2, AC11) — a régua do Time é a da tela: a assinatura usa a capacidade com os MESMOS três papéis da classe so-master (Gestão, Diretoria, Supervisão), sem capacidade nova', () => {
@@ -56107,14 +57074,28 @@ provaAsync('6.76 × publicadas · todas as portas — na junção, as 63 portas 
     'vagasRetirarAbrir', 'vagasDesautorizarAvulso', 'vagasDesautorizarFechar', 'vagasReabrirAbrir'];
   const DA676 = ['pdExcluirPlanoAbrir', 'pdRestaurarPlanoAbrir', 'timeSalvarAbrir', 'timeDesativarAbrir', 'timeReativarAbrir', 'cfgAparelhoRenomearAbrir', 'cfgAparelhoTirarAbrir',
     'cfgAparelhoDevolverAbrir', 'avisoBarradoPorDeVoltaAbrir'];
+  // Junção da 6.67 sobre a 3d6910b (12/out/2026): antes, as 83 portas (PUB63 + DA660E661 + DA676); depois, as 99, com as 16 da 6.67
+  // (DA667). Por quê: a 6.67 trouxe 16 portas novas do cartaz (o Plantão, a Conferência e o check-out); cada uma foi provada antes, porta
+  // por porta, na «6.67 × 6.76 · as 16 portas da 6.67» (a senha certa assina; a provisória, a do código sem banco e a desativada são
+  // recusadas, sem gravar). A lista continua fechada: uma porta nova, ou uma que deixou de abrir o cartaz, aparece aqui. O título desta
+  // prova fica como foi publicado («as 83»): prova publicada não muda de nome; o número de agora está na mensagem da asserção.
+  const DA667 = ['manualCorrigirAbrir', 'relCorrigirAbrir', 'relAnularAbrir', 'relReabrirAbrir', 'relRetirarAssinaturaAbrir', 'cfPesagemCorrigirAbrir', 'cfPesagemDesfazerAbrir',
+    'cfOcorrCorrigirAbrir', 'cfOcorrEnganoAbrir', 'cfOcorrDesfazerAbrir', 'ocorrHospReabrirAbrir', 'cfReabrirAbrir', 'coBolsaReabrirAbrir', 'coCheckoutReabrirAbrir',
+    'coPontoCorrigirAbrir', 'coPontoEstornarAbrir'];
   igual([PUB63.length, new Set(PUB63).size], [63, 63]);
+  igual([DA667.length, new Set(DA667).size, DA667.filter((n) => PUB63.concat(DA660E661, DA676).includes(n))], [16, 16, []], 'as 16 da 6.67, nenhuma repetida');
   igual(PUB63.filter((n) => !abre.has(n)), [], 'as 63 portas das stories publicadas abrem o cartaz da 6.57');
-  igual([...abre].sort(), PUB63.concat(DA660E661, DA676).sort(), 'as 83 portas do cartaz (uma porta nova, ou uma que deixou de abrir o cartaz, aparece aqui)');
+  igual([...abre].sort(), PUB63.concat(DA660E661, DA676, DA667).sort(), 'as 99 portas do cartaz (uma porta nova, ou uma que deixou de abrir o cartaz, aparece aqui)');
   const cc = run('String(corrConfirmar)');
   assert.ok(cc.indexOf("corrAssinar(senha, corrNivelSenha(op), CORR_OQUE_ASSINA[op.acao]||'isto', {tela:gestao?'':op.telaConcedida, nome:gestao?'':op.assinaNome})") >= 0, 'o cartaz assina só pela corrAssinar');
   igual((cc.match(/corrAssinar\(/g) || []).length, 1, 'uma chamada só');
   // ---- o dinâmico: uma pessoa ativa de cada papel e a desativada. Só a Monitor tem a tela «hoje» concedida, e ela é quem registrou.
-  const PAPEIS = ['gestao', 'diretoria', 'consultora', 'supervisor', 'monitor', 'vet', 'plantonista', 'aprendiz'];
+  // Junção da 6.67 sobre a 3d6910b (12/out/2026): antes, 8 papéis; depois, 9, com a Conferência ('conferencia', o papel do aparelho da
+  // Conferência do check-in, que já existia na base) no fim (as senhas dos 8 de antes não mudam). Por quê: a capacidade nova da 6.67
+  // 'conferir-checkin' começa pela Conferência, e «a senha certa» é a de quem tem o 1º papel da capacidade; sem ela na equipe, a prova
+  // parava em TypeError. As 39 capacidades de antes, com os 8 papéis de antes, passam na junção (conferido antes da troca, por fora);
+  // com a Conferência, cada uma ganha mais uma pessoa errada recusada.
+  const PAPEIS = ['gestao', 'diretoria', 'consultora', 'supervisor', 'monitor', 'vet', 'plantonista', 'aprendiz', 'conferencia'];
   const eq = PAPEIS.map((r, i) => ({ id: 'x' + i, nome: 'Pessoa ' + r.charAt(0).toUpperCase() + r.slice(1) + ' Teste', role: r, senha: String(6201 + i) }));
   const MON = eq.find((p) => p.role === 'monitor'); MON.paginas = ['hoje'];
   eq.push({ id: 'xd', nome: 'Dora Desativada Teste', role: 'gestao', senha: '6299', ativo: false, desativado: { em: '2026-10-09', motivo: 'saiu da casa nesta semana' } });
@@ -56240,7 +57221,14 @@ provaAsync('6.76 × publicadas · QA676J-01 (estático) — todas as portas do c
     'vagasDesautorizarAvulso', 'vagasDesautorizarFechar', 'vagasReabrirAbrir', 'trocaReabrirAbrir', 'avisoEntradaCorrigirAbrir', 'avisoTipoTrocarAbrir', 'vetRemoverReavaliacao', 'pesoCorrAbrir'];
   const DA676 = ['pdExcluirPlanoAbrir', 'pdRestaurarPlanoAbrir', 'timeSalvarAbrir', 'timeDesativarAbrir', 'timeReativarAbrir', 'cfgAparelhoRenomearAbrir', 'cfgAparelhoTirarAbrir',
     'cfgAparelhoDevolverAbrir', 'avisoBarradoPorDeVoltaAbrir'];
-  igual([...abre].sort(), PUB41.concat(FORA18, OUTRAS15, DA676).sort(), 'as portas do cartaz na junção (83)');
+  // Junção da 6.67 sobre a 3d6910b (12/out/2026): antes, as 83 (PUB41 + FORA18 + OUTRAS15 + DA676); depois, as 99, com as 16 da 6.67
+  // (DA667). Por quê: as 16 portas novas da 6.67, provadas antes, uma por uma, na «6.67 × 6.76 · as 16 portas da 6.67»; nenhuma tem régua
+  // de senha própria (a lista da régua, abaixo, continua com as 25). O título fica como foi publicado («as 83»): prova publicada não muda de nome.
+  const DA667 = ['manualCorrigirAbrir', 'relCorrigirAbrir', 'relAnularAbrir', 'relReabrirAbrir', 'relRetirarAssinaturaAbrir', 'cfPesagemCorrigirAbrir', 'cfPesagemDesfazerAbrir',
+    'cfOcorrCorrigirAbrir', 'cfOcorrEnganoAbrir', 'cfOcorrDesfazerAbrir', 'ocorrHospReabrirAbrir', 'cfReabrirAbrir', 'coBolsaReabrirAbrir', 'coCheckoutReabrirAbrir',
+    'coPontoCorrigirAbrir', 'coPontoEstornarAbrir'];
+  igual([DA667.length, new Set(DA667).size], [16, 16]);
+  igual([...abre].sort(), PUB41.concat(FORA18, OUTRAS15, DA676, DA667).sort(), 'as portas do cartaz na junção (99)');
   // o cartaz: a assinatura só pelo corrAssinar, sempre (nenhum campo do op pula a senha)
   const cc = run('String(corrConfirmar)');
   igual([(cc.match(/corrAssinar\(/g) || []).length, /op\.(semSenha|pulaSenha|senhaOk|assinado)\b/.test(cc), cc.indexOf('if(!ass.ok){') > 0 && cc.indexOf('if(!ass.ok){') < cc.indexOf('op.gravar')], [1, false, true]);
@@ -56359,7 +57347,13 @@ provaAsync('6.76 P41 (AC14, AC15, guarda) — a área protegida, o #v-daycare, a
   const runN = (c) => vm.runInContext(c, ctxN);
   const h = (s) => crypto676.createHash('sha256').update(s).digest('hex').slice(0, 16);
   const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
-  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN('JSON.stringify(PERM)'))], [155, '5bac486c669007ec', 'f79140b1c2844dd5']);
+  // Junção da 6.67 sobre a 3d6910b (12/out/2026): a PERM inteira, antes 'f79140b1c2844dd5' (39 capacidades), depois '02898b691c0a839c'
+  // (42). Por quê: as três capacidades da 6.67 (lancar-manual-plantao, trabalha-plantao, conferir-checkin); a área protegida (155, o
+  // texto) não muda. As 39 de antes ficaram iguais: a PERM sem as três continua 'f79140b1c2844dd5', e as chaves novas são só as três.
+  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN('JSON.stringify(PERM)'))], [155, '5bac486c669007ec', '02898b691c0a839c']);
+  igual([h(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; return JSON.stringify(c); })()")),
+    runN('Object.keys(PERM).length'), runN("['lancar-manual-plantao', 'trabalha-plantao', 'conferir-checkin'].filter(function(k){ return Object.prototype.hasOwnProperty.call(PERM, k); }).length")],
+    ['f79140b1c2844dd5', 42, 3], 'as 39 de antes iguais e só as três da 6.67 entraram');
   const i = SRC676.indexOf('id="v-daycare"'), j = SRC676.indexOf('id="v-', i + 10);
   igual([h(SRC676.slice(i, j)), h(SRC676.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
   const corpo = (n) => { const m = new RegExp('\\n  (async )?function ' + n + '\\(').exec(SRC676); const k = m.index + 1; const fl = SRC676.indexOf('\n', k), linha = SRC676.slice(k, fl); const ab = (linha.match(/\{/g) || []).length, fe = (linha.match(/\}/g) || []).length;
@@ -56421,6 +57415,1897 @@ async function x676Orc(R, esp, preparar, chamada, motivo, certa) {
     out.certa = await tenta(certa);
   } finally { R('SENHAS_FIXAS_BANCO=__x676.sfb; MONITORES=__x676.mo;'); }
   return out;
+}
+{
+// ================================================================== 6.67 — a AuAulândia, parte 2: o Plantão, a Conferência e o check-out
+console.log('\n6.67 — O Plantão, a Conferência e o check-out: corrigir o lançamento à mão, o relatório (com a versão anterior), a assinatura de recebimento, o café e o protocolo; a Conferência fechada só de leitura, a pesagem, a ocorrência e as fotos; reabrir a bolsa e o check-out; o ponto uma vez só e os pontos corrigíveis');
+// Tudo INVENTADO: Biscoito (tutora Rita Teste), Pipoca (Lia Teste) e as pessoas «Teste». Relógio FIXO em sexta, 09/10/2026, 10:00
+// (o mesmo das 6.54 a 6.66); o banco de mentira da 6.57 (conta gravações e transações, sabe recusar); a ponte do Telegram de
+// mentira (os grupos da Gestão e de Urgências). As provas marcadas com * na story falham na base 910b143 (v 2026-10-09-20).
+const EST667 = 'est667', EP667 = 'auaulandia/estadias/' + EST667, MES667 = '2026-10';
+const FK667 = 'biscoito__rita teste__2026-10-09', REL667 = 'auaulandia/relatorios/' + FK667;
+const MOT667 = 'a resposta foi marcada errada no turno';
+// a parte da 6.67 do palco (o resto é o arma659): o Telegram e as Urgências de mentira, o relatório do Biscoito sem nada, a Conferência,
+// o Check-out e o placar vazios, e a senha de quem confere (Cora, papel conferencia)
+const ARMA667 = `__bk667={tc:tgCfgPronta, ua:urgAvisar, rpc:relPintarCards, rff:relFaixaFaltando, pag:plantaoAvisoGestao, crn:carregarRiscoNaoComer, cc:coletarCard,
+    rcur:REL_CUR, rdd:REL_DO_DIA, rst:JSON.parse(JSON.stringify(RELSTATE)), cpl:coPlantao, cm:cafeMarcas, ce:cfEstadia, cei:cfEstadiaId, cfc:cfConf, ch:cfHosp,
+    cff:CF_FOTOS, coe:coEstadia, coi:coEstadiaId, cocf:coConf, cof:CO_FALTOU, com:coModo, coh:coHosp, cfe:CF_ESTADIAS, arc:AVISOS_RACAO_CACHE, rpv:RITMO_PT_V, rpa:RITMO_PT_ABERTO,
+    cra:CO_REABRIR_MEIO, rh:REMOVIDOS_HOJE, ra:REMOVIDOS_ANTERIORES, rad:REMOVIDOS_ANT_DIA, sr:senhasRuntime, ohp:OCORR_HOSP_P, hb:hospPodeDesfazer, ro:document.body.dataset.role, rcf:renderCafe, ge:document.getElementById, cpd:null};
+  // o elemento de mentira de cada id que a prova não preparou (fica no mapa: o que a tela escreve, a prova lê), para a prova não depender
+  // do que as provas de antes deixaram no document.getElementById do sandbox
+  document.getElementById=function(id){ if(!Object.prototype.hasOwnProperty.call(__el657, id)) __el657[id]={id:id, style:{}, dataset:{}, value:'', textContent:'', innerHTML:'',
+    checked:false, disabled:false, children:[], classList:{add:function(){}, remove:function(){}, toggle:function(){}, contains:function(){ return false; }},
+    querySelectorAll:function(){ return []; }, querySelector:function(){ return null; }, addEventListener:function(){}, removeEventListener:function(){},
+    setAttribute:function(){}, getAttribute:function(){ return null; }, removeAttribute:function(){}, focus:function(){}, blur:function(){}, scrollIntoView:function(){},
+    closest:function(){ return null; }, appendChild:function(){}, removeChild:function(){}, remove:function(){}, insertAdjacentHTML:function(){}, click:function(){},
+    getBoundingClientRect:function(){ return {top:0, left:0, width:0, height:0}; }, getContext:function(){ return null; }};
+    return __el657[id]; };
+  renderCafe=function(){};
+  __tgCfg667=true; tgCfgPronta=function(){ return Promise.resolve(__tgCfg667?{url:'https://ponte.teste'}:null); };
+  __urg667=[]; urgAvisar=function(c, t, g){ __urg667.push({chave:c, texto:t, grupo:g||'urgencia'}); return Promise.resolve(true); };
+  relPintarCards=function(){}; relFaixaFaltando=function(){}; __pag667=[]; plantaoAvisoGestao=function(t){ __pag667.push(t); }; carregarRiscoNaoComer=function(){};
+  REL_CUR={dia:null, inicio:null, noite:null}; REL_DO_DIA={}; ['dia','inicio','noite'].forEach(function(t){ RELSTATE[t]={passou:'', recebeu:''}; });
+  coPlantao={}; cafeMarcas={}; cfEstadia=null; cfEstadiaId=null; cfConf=null; cfHosp=null; CF_FOTOS=[]; coEstadia=null; coEstadiaId=null; coConf={}; CO_FALTOU={}; coHosp=null;
+  CF_ESTADIAS={}; AVISOS_RACAO_CACHE={}; RITMO_PT_V={mes:'', v:{}}; RITMO_PT_ABERTO=''; CO_REABRIR_MEIO={}; REMOVIDOS_HOJE={}; REMOVIDOS_ANTERIORES=[]; REMOVIDOS_ANT_DIA='x';
+  senhasRuntime=function(){ var m=__bk667.sr(); m['s-cora']={role:'conferencia', nome:'Cora Conferência Teste'}; return m; };
+  ['status-dia','status-inicio','status-noite','status-receb-noite','status-receb-dia','cf-status','cf-racao-status','cf-comida-status','co-status','status-checkout']
+    .forEach(function(id){ __el657[id]={style:{}, textContent:'', innerHTML:'', parentNode:null}; });
+  ['card-dia','card-inicio','card-noite'].forEach(function(id){ __el657[id]={style:{}, querySelectorAll:function(){ return []; }, querySelector:function(){ return null; },
+    classList:{add:function(){}, remove:function(){}, toggle:function(){}, contains:function(){ return false; }}, scrollIntoView:function(){}}; });`;
+const SOLTA667 = `tgCfgPronta=__bk667.tc; urgAvisar=__bk667.ua; relPintarCards=__bk667.rpc; relFaixaFaltando=__bk667.rff; plantaoAvisoGestao=__bk667.pag; carregarRiscoNaoComer=__bk667.crn;
+  coletarCard=__bk667.cc; REL_CUR=__bk667.rcur; REL_DO_DIA=__bk667.rdd; Object.keys(__bk667.rst).forEach(function(t){ RELSTATE[t]=__bk667.rst[t]; }); coPlantao=__bk667.cpl; cafeMarcas=__bk667.cm;
+  cfEstadia=__bk667.ce; cfEstadiaId=__bk667.cei; cfConf=__bk667.cfc; cfHosp=__bk667.ch; CF_FOTOS=__bk667.cff; coEstadia=__bk667.coe; coEstadiaId=__bk667.coi; coConf=__bk667.cocf;
+  CO_FALTOU=__bk667.cof; coModo=__bk667.com; coHosp=__bk667.coh; CF_ESTADIAS=__bk667.cfe; AVISOS_RACAO_CACHE=__bk667.arc; RITMO_PT_V=__bk667.rpv; RITMO_PT_ABERTO=__bk667.rpa;
+  CO_REABRIR_MEIO=__bk667.cra; REMOVIDOS_HOJE=__bk667.rh; REMOVIDOS_ANTERIORES=__bk667.ra; REMOVIDOS_ANT_DIA=__bk667.rad; senhasRuntime=__bk667.sr; OCORR_HOSP_P=__bk667.ohp;
+  hospPodeDesfazer=__bk667.hb; document.body.dataset.role=__bk667.ro; renderCafe=__bk667.rcf; document.getElementById=__bk667.ge;`;
+// os nomes novos desta story vão com typeof no ARMA: as guardas (P12, P15, P31, P33, P34) também rodam na base, onde eles não existem
+const ARMA667B = ARMA667.replace(/(\w+):(REL_CUR|CF_FOTOS|RITMO_PT_V|CO_REABRIR_MEIO|REMOVIDOS_ANTERIORES|REMOVIDOS_ANT_DIA|OCORR_HOSP_P)\b/g, (m, k, v) => k + ':(typeof ' + v + "!=='undefined'?" + v + ':undefined)');
+const com667 = async (fn) => {
+  arma659();
+  try {
+    relogio658(T658(9, 10, 0));
+    run(ARMA667B);
+    try { return await fn(); } finally { try { run(SOLTA667); } catch (e) { /* silencioso de propósito: na base, os nomes novos não existem */ } }
+  } finally { solta659(); }
+};
+const espera667 = async (n) => { for (let i = 0; i < (n || 1500); i++) await Promise.resolve(); };
+const za667 = () => J658('__za657').map((z) => [z[0], z[1]]);
+const tit667 = (re) => za667().filter((z) => re.test(String(z[0] || '')));
+const aud667 = (a) => J658(`__au657.filter(function(x){ return x[0]===${JSON.stringify(a)}; })`);
+const esc667 = (re) => run('__esc657').filter((e) => re.test(String(e[1])) && !/RECUSADO/.test(e[0])).map((e) => e[0] + ' ' + String(e[1]));
+const passo667 = () => run('(typeof CORR_ATUAL!=="undefined" && CORR_ATUAL)?CORR_ATUAL.passo:null');
+const cartaz667 = () => String(run('(typeof CORR_ATUAL!=="undefined" && CORR_ATUAL)?corrCartazHTML(CORR_ATUAL):""') || '');
+const assina667 = async (senha, motivo, n) => { await run(`corrToque('confirmar', {motivo:${JSON.stringify(motivo || MOT667)}, senha:${JSON.stringify(senha)}})`); await espera667(n); return [passo667(), String(run('(typeof CORR_ATUAL!=="undefined" && CORR_ATUAL)?CORR_ATUAL.aviso:""') || '')]; };
+const fecha667 = async () => { run(`if(typeof CORR_ATUAL!=='undefined' && CORR_ATUAL) corrToque('fechar');`); await espera667(200); };
+const txt667 = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+
+// ---- AC1 — o lançamento à mão do Plantão ----------------------------------------------------------------------------------------------------
+// A pernoite de 3 noites da Pipoca, lançada ontem (08/10): hoje (09/10) ela está na janela das noites.
+const PERN667 = (extra) => Object.assign({ nome: 'Pipoca', tutor: 'Lia Teste', raca: 'SRD', refKey: 'pipoca__lia teste', janta: true, noites: 3,
+  jantar: { comida: 'Ração 50g', onde: 'Armário' }, obs: 'busca no domingo', criadoPor: 'Gestora Teste', criadoTs: T658(8, 9, 0) }, extra || {});
+const HOSPPERN667 = () => `hospedes=[{nome:'Pipoca', tutor:'Lia Teste', raca:'SRD', refKey:'pipoca__lia teste', ini:'P', cor:'#234D67', pernoite:true, hospede:false, manualKey:'m1', manualDia:'2026-10-08',
+  janta:true, jantar:{comida:'Ração 50g', onde:'Armário'}, manualReg:__get657('auaulandia/manuais/2026-10-08/m1')}];`;
+provaAsync('6.67 P1 (AC1.1 a AC1.3) — «Corrigir este lançamento» (44 px, só para quem lança) na pernoite de 3 noites lançada ontem: o jantar e o recado mudam no mesmo registro, com correcoes (antes, depois, registro); o dia mudado move o lançamento (movidoPara/movidoDe: o movidoPara do antigo por transação e só depois o novo), e o Plantão de hoje não mostra o antigo; o Encãotador assina com a própria senha, o posto não. Base: não existe', async () => {
+  await com667(async () => {
+    put658('auaulandia/manuais/2026-10-08/m1', PERN667());
+    run(HOSPPERN667() + "document.body.dataset.role='monitor';");
+    const bt = run('manualCorrigirBotaoHTML(hospedes[0])');
+    assert.ok(/>Corrigir este lançamento</.test(bt) && /min-height:44px/.test(bt), bt);
+    run("document.body.dataset.role='plantonista';"); igual(run('manualCorrigirBotaoHTML(hospedes[0])'), '', 'a plantonista não lança à mão: sem o botão');
+    run("document.body.dataset.role='monitor';");
+    run(`__p667=manualCorrigirAbrir('2026-10-08', 'm1');`);
+    igual(J658('CORR_ATUAL.op.campos.map(function(c){ return [c.c, c.valor]; })'), [['dia', '08/10/2026'], ['noites', '3'], ['comida', 'Ração 50g'], ['onde', 'Armário'], ['obs', 'busca no domingo']]);
+    run(`corrToque('continuar', {valores:['08/10/2026', '3', 'Ração 80g', 'Armário', 'busca no domingo à tarde']})`);
+    igual(passo667(), 'conferir');
+    let [p, a] = await assina667('s-posto', 'o tutor mudou a quantidade do jantar'); igual(p, 'conferir'); assert.ok(/posto/.test(a), a);
+    [p] = await assina667('s-caio', 'o tutor mudou a quantidade do jantar'); igual(p, 'pronto');
+    const m = db658('auaulandia/manuais/2026-10-08/m1');
+    igual([m.jantar, m.obs, m.noites, m.criadoPor], [{ comida: 'Ração 80g', onde: 'Armário' }, 'busca no domingo à tarde', 3, 'Gestora Teste']);
+    const c = Object.values(m.correcoes || {});
+    igual([c.length, c[0].antes, c[0].depois, c[0].registro.por, c[0].registro.motivo], [1, { comida: 'Ração 50g', obs: 'busca no domingo' }, { comida: 'Ração 80g', obs: 'busca no domingo à tarde' }, 'Caio Encãotador Teste', 'o tutor mudou a quantidade do jantar']);
+    assert.ok(aud667('manual-corrigido').length === 1 && aud667('registro-corrigido').length === 1, 'o rastro da 6.57 e o próprio');
+    // a lista do Plantão fica com o corrigido (a ficha, o cartão e o × usam o que está nela, sem esperar a planilha)
+    igual([run('hospedes[0].manualReg.obs'), run('hospedes[0].jantar.comida'), run('manualRegistroInteiro(hospedes[0]).obs'), run('manualRegistroInteiro(hospedes[0]).jantar.comida')],
+      ['busca no domingo à tarde', 'Ração 80g', 'busca no domingo à tarde', 'Ração 80g'], 'a lista do Plantão já tem o lançamento corrigido');
+    await fecha667();
+    // mudar o dia (entra no sábado, 10/10): o novo nasce em manuais/2026-10-10 com movidoDe; o antigo ganha movidoPara; nada é apagado
+    run(HOSPPERN667() + `__esc657=[];`);
+    run(`__p667=manualCorrigirAbrir('2026-10-08', 'm1'); corrToque('continuar', {valores:['10/10/2026', '3', 'Ração 80g', 'Armário', 'busca no domingo à tarde']});`);
+    [p] = await assina667('s-caio', 'a pernoite começa no sábado mesmo'); igual(p, 'pronto');
+    const velho = db658('auaulandia/manuais/2026-10-08/m1'), novos = db658('auaulandia/manuais/2026-10-10') || {}, nk = Object.keys(novos);
+    igual([nk.length, velho.nome, velho.movidoPara.dia, velho.movidoPara.id === nk[0], velho.movidoPara.registro.por], [1, 'Pipoca', '2026-10-10', true, 'Caio Encãotador Teste']);
+    igual([novos[nk[0]].movidoDe, novos[nk[0]].noites, novos[nk[0]].jantar.comida, novos[nk[0]].criadoPor, !!novos[nk[0]].correcoes], [{ dia: '2026-10-08', id: 'm1' }, 3, 'Ração 80g', 'Gestora Teste', false]);
+    // Junção 6.67 × 6.70 (REL-006 do QA, 12/out/2026). Antes: ['update auaulandia/manuais'], uma gravação só (o novo e o movidoPara juntos),
+    // sem transação — dois aparelhos mudando o dia ao mesmo tempo liam antes de um gravar e deixavam DOIS lançamentos novos valendo.
+    // Depois: a transação no antigo (o movidoPara, que recusa se ele já mudou de dia ou sumiu) e só então o novo; se o novo não grava, o
+    // movidoPara sai. Por quê: nunca dois lançamentos valendo (a «6.67 × 6.70 · QA J06» e a «· J» provam a recusa, o cache frio e o novo recusado).
+    igual(esc667(/auaulandia\/manuais/), ['transaction auaulandia/manuais/2026-10-08/m1', 'set auaulandia/manuais/2026-10-10/' + nk[0]], 'o movidoPara por transação, depois o novo (nunca dois valendo)');
+    // a leitura do Plantão de hoje (carregarManuais de verdade): o antigo, movido, não aparece; o novo entra só no sábado
+    run(`hospedes=[]; __bkcm667=carregarHospedes; carregarManuais();`); await espera667();
+    igual(J658('hospedes.map(function(h){ return h.nome; })'), [], 'o movido não aparece hoje');
+    // a função que grava confere o papel (a tela velha da plantonista)
+    run("document.body.dataset.role='plantonista';");
+    const r = await run(`manualCorrigirGravar('2026-10-10', '${nk[0]}', {depois:{obs:'x'}, ts:1})`);
+    igual([r.ok, r.barrou], [false, true]);
+  });
+});
+provaAsync('6.67 P2 (AC1.4) — o × de uma pernoite de 3 noites guarda o lançamento INTEIRO em removidos (as noites, o jantar, o recado, quem lançou, quando) e o dia em que ele foi lançado. Base: sem as noites, o recado e quem lançou', async () => {
+  await com667(async () => {
+    put658('auaulandia/manuais/2026-10-08/m1', PERN667());
+    run(HOSPPERN667() + `hospEstadiaAtivaDe=function(){ return null; }; __b667={textContent:'✕', dataset:{armed:'1', motivo:'lancei a Pipoca no dia errado'}, style:{}};`);
+    run('removerHospedeCard(0, __b667)'); await espera667();
+    const rem = (db658('auaulandia/removidos/2026-10-09') || {})[run('hospRemKey(hospedes[0])')] || {};
+    igual([rem.origem, rem.manualDia, rem.manualKey, rem.registro.noites, rem.registro.obs, rem.registro.jantar, rem.registro.criadoPor, rem.registro.criadoTs, rem.registro.nome],
+      ['manual', '2026-10-08', 'm1', 3, 'busca no domingo', { comida: 'Ração 50g', onde: 'Armário' }, 'Gestora Teste', T658(8, 9, 0), 'Pipoca'], JSON.stringify(rem));
+    igual(db658('auaulandia/manuais/2026-10-08/m1'), null, 'o lançamento sai do dia (como sempre)');
+  });
+});
+provaAsync('6.67 P3 (AC1.5) — a pernoite de 3 noites tirada ontem aparece na faixa de hoje («tirado em 08/10 por …»); «Trazer de volta» recria com as 3 noites, o jantar e o recado, e o registro de removidos ganha `devolvido` (não é apagado); o devolvido não tira mais ninguém do Plantão; o tirado hoje continua como sempre. Base: só os de hoje, recria com uma noite', async () => {
+  await com667(async () => {
+    const REG = PERN667();
+    put658('auaulandia/removidos/2026-10-08/pipoca__lia teste', { nome: 'Pipoca', tutor: 'Lia Teste', quem: 'Caio Encãotador Teste', ts: T658(8, 21, 0), motivo: 'lancei a Pipoca no dia errado',
+      origem: 'manual', manualDia: '2026-10-08', manualKey: 'm1', registro: REG });
+    // a pura: a de 08/10 com 3 noites cobre hoje; a de uma noite, não (já foi); a devolvida, não
+    // (a de uma noite lançada ontem ainda está no Plantão antes do corte das 11:30, como no carregarManuais; depois do corte, não)
+    const pura = (corte) => J658(`removidosDevolviveis({'2026-10-08':{a:{origem:'manual', manualDia:'2026-10-08', registro:{noites:3}}, b:{origem:'manual', manualDia:'2026-10-08', registro:{noites:1}},
+      c:{origem:'manual', manualDia:'2026-10-08', registro:{noites:3}, devolvido:{quem:'x', ts:1}}, d:{origem:'override'}, e:{origem:'manual', manualDia:'2026-10-08', registro:{noites:3}}}}, '2026-10-09', ${corte}, {e:true}).map(function(x){ return x.k; })`);
+    igual([pura(true), pura(false)], [['a', 'b'], ['a']], 'a tirada hoje (e) aparece pela faixa de hoje');
+    run(`hospPodeDesfazer=function(){ return true; };`);
+    await run('carregarRemovidosAnteriores()'); await espera667();
+    igual(J658('REMOVIDOS_ANTERIORES.map(function(x){ return [x.dia, x.k]; })'), [['2026-10-08', 'pipoca__lia teste']]);
+    const lin = txt667(run('removidoAnteriorHTML(REMOVIDOS_ANTERIORES[0])'));
+    assert.ok(/tirado em 08\/10 por Caio Encãotador Teste/.test(lin) && /Trazer de volta/.test(lin) && /\(3 noites desde 08\/10\)/.test(lin), lin);   // 2ª rodada (DOC-001): «3 noites», sem «noite(s)»
+    run(`__zpq657=[true];`);
+    await run(`hospTrazerDeVolta('pipoca__lia teste', '2026-10-08')`); await espera667();
+    const r = db658('auaulandia/removidos/2026-10-08/pipoca__lia teste');
+    igual([!!r, r && r.devolvido && r.devolvido.quem], [true, 'Gestora Teste'], 'o registro fica, marcado como devolvido');
+    const vol = Object.values(db658('auaulandia/manuais/2026-10-08') || {});
+    igual([vol.length, vol[0].noites, vol[0].obs, vol[0].jantar, vol[0].criadoPor], [1, 3, 'busca no domingo', { comida: 'Ração 50g', onde: 'Armário' }, 'Gestora Teste'], JSON.stringify(vol));
+    // o 2º toque (ou outro aparelho) não recria em dobro
+    run(`__zpq657=[true];`);
+    await run(`hospTrazerDeVolta('pipoca__lia teste', '2026-10-08')`); await espera667();
+    igual(Object.keys(db658('auaulandia/manuais/2026-10-08') || {}).length, 1, 'não recria em dobro');
+    // a leitura do Plantão: o devolvido de HOJE não tira; o tirado hoje (sem devolvido) continua tirando
+    put658('auaulandia/removidos/2026-10-09/pipoca__lia teste', { nome: 'Pipoca', tutor: 'Lia Teste', origem: 'override', devolvido: { quem: 'Gestora Teste', ts: 1 } });
+    run(`hospedes=[]; carregarManuais();`); await espera667();
+    igual(J658('hospedes.map(function(h){ return h.nome; })'), ['Pipoca'], 'devolvido não tira');
+    put658('auaulandia/removidos/2026-10-09/pipoca__lia teste', { nome: 'Pipoca', tutor: 'Lia Teste', origem: 'override' });
+    run(`hospedes=[]; carregarManuais();`); await espera667();
+    igual(J658('hospedes.map(function(h){ return h.nome; })'), [], 'tirado hoje continua tirado');
+  });
+});
+
+// ---- AC2 — o relatório do Plantão ----------------------------------------------------------------------------------------------------------
+const NOITE667 = (extra) => Object.assign({ byQ: { 'Como passou a noite?': 'Dormiu bem', 'Vomitou?': 'Não', 'Bebeu água?': 'Sim', 'med|Apoquel|08:00': 'Sim' },
+  areas: ['dormiu a noite inteira'], byArea: {}, meds: [], sups: [], passou: 'Wandela Teste', _ts: T658(9, 7, 0) }, extra || {});
+// o relatório da noite já passado (o banco e a ficha aberta), e o card da tela com as respostas novas
+const rel667 = (cur) => { put658(REL667 + '/noite', cur); run(`aplicarCard('card-noite', __get657('${REL667}/noite')||{}); __esc657=[]; __au657=[]; __tg658=[]; __urg667=[]; __za657=[];`); };
+const tela667 = (card) => { ctx.__card667 = card; run(`coletarCard=function(){ return JSON.parse(JSON.stringify(__card667)); }; __el657['passou-noite']={value:${JSON.stringify(card.passou || 'Wandela Teste')}, focus:function(){}, scrollIntoView:function(){}, select:function(){}};`); };
+const salva667 = async () => { run(`salvarRelatorioCard('noite')`); await espera667(); };
+provaAsync('6.67 P4 (AC2.1, AC2.3) — a 2ª gravação do relatório já passado abre o cartaz «corrigir» com antes → depois (nada é gravado ainda); sem motivo ou sem senha, nada; com, a versão anterior INTEIRA em versoes e a nova no lugar. O 1º salvamento continua sem cartaz. Base: regrava por cima, sem cartaz', async () => {
+  await com667(async () => {
+    // o 1º salvamento: sem cartaz, direto (como sempre)
+    tela667(NOITE667()); await salva667();
+    igual([passo667(), esc667(/relatorios/)], [null, ['transaction ' + REL667 + '/noite']], 'o 1º salvamento continua direto, sem cartaz (2ª rodada: por transação)');
+    assert.ok(/Plantão passado!/.test(run("__el657['status-noite'].textContent")), run("__el657['status-noite'].textContent"));
+    // a ficha relida e a correção: «Vomitou?» Não → Sim
+    rel667(NOITE667());
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Vomitou?': 'Sim' }), _ts: T658(9, 9, 0) })); await salva667();
+    igual([passo667(), esc667(/relatorios/)], ['conferir', []], 'o cartaz abre no passo de conferir; nada foi gravado');
+    const h = txt667(cartaz667());
+    assert.ok(/Vomitou\?\s*:?\s*«Não» → «Sim»/.test(h), h);
+    let [p, a] = await assina667('s-wandela', 'não'); igual(p, 'conferir'); assert.ok(/palavras/.test(a), a);
+    [p, a] = await assina667('', MOT667); igual(p, 'conferir'); assert.ok(/senha/.test(a), a);
+    igual(esc667(/relatorios/), [], 'sem motivo ou sem senha: nada');
+    [p] = await assina667('s-wandela', MOT667); igual(p, 'pronto');
+    const v = db658(REL667 + '/noite'), vs = Object.values(v.versoes || {});
+    igual([v.byQ['Vomitou?'], v.passou, vs.length, vs[0].byQ['Vomitou?'], vs[0].corrigida.motivo, vs[0].corrigida.registro.por, !!vs[0].versoes], ['Sim', 'Wandela Teste', 1, 'Não', MOT667, 'Wandela Teste', false]);
+    igual(esc667(/relatorios/), ['transaction ' + REL667 + '/noite'], 'uma gravação, por transação');
+    assert.ok(aud667('relatorio-corrigido').length === 1, 'o rastro próprio');
+  });
+});
+provaAsync('6.67 P5 (AC2.2) — quem assina a correção: a Plantonista com a senha pessoal; o posto «Plantonista» não; mudar a confirmação do remédio («deu? Sim/Não») pede a Gestão (a Plantonista é recusada); o aparelho sem o papel do Plantão é barrado antes de abrir. Base: sem cartaz', async () => {
+  await com667(async () => {
+    rel667(NOITE667());
+    tela667(NOITE667({ areas: ['dormiu a noite inteira, roncou'] })); await salva667();
+    let [p, a] = await assina667('s-posto', MOT667); igual(p, 'conferir'); assert.ok(/posto/.test(a), a);
+    [p] = await assina667('s-wandela', MOT667); igual(p, 'pronto', 'a Plantonista com a senha pessoal');
+    await fecha667();
+    // o remédio do turno: a senha da Gestão
+    rel667(db658(REL667 + '/noite'));
+    tela667(NOITE667({ areas: ['dormiu a noite inteira, roncou'], byQ: Object.assign({}, NOITE667().byQ, { 'med|Apoquel|08:00': 'Não' }) })); await salva667();
+    assert.ok(/Senha da Gestão/.test(cartaz667()) && /assina a Gestão/.test(txt667(cartaz667())), txt667(cartaz667()));
+    [p, a] = await assina667('s-wandela', MOT667); igual(p, 'conferir'); assert.ok(/a Gestão ou a Diretoria/.test(a), a);
+    [p] = await assina667(SENHA657, MOT667); igual(p, 'pronto');
+    igual(db658(REL667 + '/noite').byQ['med|Apoquel|08:00'], 'Não');
+    await fecha667();
+    // o aparelho da Consultora (sem o papel do Plantão), no mesmo dia: o cartaz abre (2ª rodada, REQ-001: quem passou corrige no mesmo
+    // dia), mas a senha dela não assina (não passou o plantão nem trabalha no Plantão); a função que grava, chamada direto com a
+    // assinatura dela, é barrada
+    rel667(db658(REL667 + '/noite'));
+    run("document.body.dataset.role='consultora';");
+    tela667(NOITE667({ areas: ['outra coisa escrita'], byQ: Object.assign({}, NOITE667().byQ, { 'med|Apoquel|08:00': 'Não' }) })); await salva667();
+    igual(passo667(), 'conferir', 'no mesmo dia, o cartaz abre (a senha decide)');
+    assert.ok(/Wandela Teste/.test(txt667(cartaz667())), 'quem passou aparece em «Quem assina»');
+    [p, a] = await assina667('s-bia', MOT667); igual(p, 'conferir'); assert.ok(/Bia Consultora Teste/.test(a), a);
+    igual(esc667(/relatorios/).length, 0, 'a Consultora não assina');
+    await fecha667();
+    ctx.__n667 = NOITE667({ areas: ['outra coisa escrita'], byQ: Object.assign({}, NOITE667().byQ, { 'med|Apoquel|08:00': 'Não' }) });
+    const rb = await run(`relCorrigirGravar('noite', '${FK667}', {nome:'Biscoito', tutor:'Rita Teste'}, __n667, {por:'Bia Consultora Teste', papel:'consultora', motivo:'${MOT667}', ts:1}, relDiff(REL_CUR.noite, __n667, 'noite'), {marca:relBaseAssinatura(REL_CUR.noite), passou:'Wandela Teste', dia:'2026-10-09'})`);
+    igual([rb.ok, !!rb.barrou, esc667(/relatorios/).length], [false, true, 0], 'a função que grava confere quem assinou');
+    // no dia seguinte (a ficha de ontem aberta), o aparelho sem o papel do Plantão é barrado antes de abrir
+    relogio658(T658(10, 10, 0)); run('__au657=[];');
+    tela667(NOITE667({ areas: ['mais uma coisa escrita'], byQ: Object.assign({}, NOITE667().byQ, { 'med|Apoquel|08:00': 'Não' }) })); await salva667();
+    igual([passo667(), esc667(/relatorios/).length, aud667('sem-permissao').length], [null, 0, 1]);
+  });
+});
+provaAsync('6.67 P6 (AC2.4) — com o recebimento assinado: a assinatura vai junto para a versão anterior («assinou esta versão»), o cartão volta a «aguardando recebimento» e a tela diz «{Nome} assinou a versão anterior. Peça para ler de novo e assinar.». Base: a assinatura continua valendo para o texto novo', async () => {
+  await com667(async () => {
+    rel667(NOITE667({ recebeu: 'Caio Encãotador Teste', _tsReceb: T658(9, 7, 30), _segLeitura: 40 }));
+    igual(run('RELSTATE.noite.recebeu'), 'Caio Encãotador Teste');
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Bebeu água?': 'Não' }) })); await salva667();
+    assert.ok(/Caio Encãotador Teste assinou o recebimento/.test(txt667(cartaz667())), 'o cartaz avisa');
+    const [p] = await assina667('s-wandela', MOT667); igual(p, 'pronto');
+    const v = db658(REL667 + '/noite'), vs = Object.values(v.versoes || {});
+    igual([v.recebeu || null, v._tsReceb || null, vs[0].recebeu, vs[0]._segLeitura, run('RELSTATE.noite.recebeu'), run('RELSTATE.noite.passou')], [null, null, 'Caio Encãotador Teste', 40, '', 'Wandela Teste']);
+    igual(run("__el657['status-noite'].textContent"), 'Caio Encãotador Teste assinou a versão anterior. Peça para ler de novo e assinar.');
+    const hc = txt667(run(`relCorrHTML('noite', __get657('${REL667}/noite'))`));
+    assert.ok(/Caio Encãotador Teste assinou a versão anterior/.test(hc) && /Versões anteriores \(1\)/.test(hc) && /assinou esta versão/.test(hc), hc);
+  });
+});
+provaAsync('6.67 P7 (AC2.5) — «Vomitou?» de Não para Sim: a linha de correção vai ao grupo da Gestão (o texto da S6-P11) e ao de Urgências; mudar só a observação escrita: nada vai ao grupo; o Telegram que falha: «a correção foi salva, mas o grupo não recebeu»; o aviso do turno (plantaoAvisoGestao) não roda de novo. Base: nada vai ao grupo', async () => {
+  await com667(async () => {
+    rel667(NOITE667());
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Vomitou?': 'Sim' }) })); await salva667();
+    await assina667('s-wandela', MOT667); await espera667();
+    const g = J658('__tg658');
+    igual(g.map((x) => [x.grupo, x.texto]), [['gestao', 'CORREÇÃO do relatório de Biscoito (Relatório da Noite), por Wandela Teste: Vomitou?: Não → Sim. Motivo: ' + MOT667 + '.']]);
+    const u = J658('__urg667');
+    igual([u.length, u[0] && /CORREÇÃO/.test(u[0].texto) && /vomitou/.test(u[0].texto)], [1, true], JSON.stringify(u));
+    igual(J658('__pag667'), [], 'o aviso do turno não roda de novo');
+    await fecha667();
+    // só a observação: nada no grupo
+    rel667(db658(REL667 + '/noite'));
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Vomitou?': 'Sim' }), areas: ['vomitou uma vez às 3h'] })); await salva667();
+    await assina667('s-wandela', MOT667); await espera667();
+    igual([J658('__tg658').length, J658('__urg667').length], [0, 0], 'só a observação mudou');
+    await fecha667();
+    // o Telegram que falha
+    rel667(db658(REL667 + '/noite'));
+    run('__tgOk658=false;');
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Vomitou?': 'Não' }), areas: ['vomitou uma vez às 3h'] })); await salva667();
+    await assina667('s-wandela', MOT667); await espera667();
+    assert.ok(/^A correção foi salva, mas o grupo não recebeu/.test(run("__el657['status-noite'].textContent")), run("__el657['status-noite'].textContent"));
+    igual(db658(REL667 + '/noite').byQ['Vomitou?'], 'Não', 'a correção ficou');
+  });
+});
+provaAsync('6.67 P8 (AC2.6) — «Anular este relatório» (a Gestão): a cascata; a Plantonista recusada; o relatório riscado com «Reabrir»; o cartão em «sem relatório»; a linha ao grupo; o Excluir da 6.53 não conta o anulado como prova; «Reabrir» (a Gestão) devolve; varredura: todo leitor de auaulandia/relatorios passa pelo predicado do anulado. Base: não existe', async () => {
+  await com667(async () => {
+    rel667(NOITE667({ recebeu: 'Caio Encãotador Teste' }));
+    REL_DO_DIA667();
+    run(`__p667=relAnularAbrir('noite');`);
+    const h = txt667(cartaz667());
+    assert.ok(/volta a "sem relatório"/.test(h) && /A assinatura de recebimento de Caio Encãotador Teste fica registrada/.test(h) && /O grupo da Gestão recebe uma linha de correção/.test(h), h);
+    let [p] = await assina667('s-wandela', 'lancei o relatório no FILHOt errado'); igual(p, 'conferir');
+    [p] = await assina667(SENHA657, 'lancei o relatório no FILHOt errado'); igual(p, 'pronto');
+    const v = db658(REL667 + '/noite');
+    igual([!!v.anulado, v.anulado.motivo, v.anulado.registro.por, v.passou, v.recebeu], [true, 'lancei o relatório no FILHOt errado', 'Gestora Teste', 'Wandela Teste', 'Caio Encãotador Teste']);
+    igual([run(`REL_DO_DIA['${FK667}'].noite`), run('RELSTATE.noite.passou')], [false, '']);
+    const hc = txt667(run(`relCorrHTML('noite', __get657('${REL667}/noite'))`));
+    assert.ok(/foi anulado/.test(hc) && /Reabrir/.test(hc) && /relReabrirAbrir/.test(run(`relCorrHTML('noite', __get657('${REL667}/noite'))`)), hc);
+    await espera667();
+    assert.ok(J658('__tg658').some((t) => t.grupo === 'gestao' && /^CORREÇÃO do relatório de Biscoito \(Relatório da Noite\), por Gestora Teste: o relatório foi anulado/.test(t.texto)), JSON.stringify(J658('__tg658')));
+    // a prova de que dormiu aqui (6.53): o anulado não conta; o dia válido conta
+    igual(run(`hospProvaDeEstadia({}, {}, {'2026-10-09': __get657('${REL667}')}).bloqueia`), false);
+    igual(run(`hospProvaDeEstadia({}, {}, {'2026-10-09': {noite:${JSON.stringify(NOITE667())}}}).bloqueia`), true);
+    // o leitor do «Sem relatório» (relCarregarDoDia) e o Resumo de hoje da Gestão
+    igual([run(`relPassado(__get657('${REL667}/noite'))`), run(`relValido(__get657('${REL667}/noite'))`)], [false, null]);
+    // salvar de novo o anulado não grava
+    tela667(NOITE667()); run(`__esc657=[]; __za657=[]; __el657['status-noite'].textContent='';`); await salva667();
+    igual([esc667(/relatorios/), tit667(/ANULADO/).length], [[], 1]);
+    // (2ª rodada) a tela que já sabe do anulado nem tenta gravar: nada de «Salvando...» nem de «anulado em outro aparelho»
+    igual(run("__el657['status-noite'].textContent"), '', 'a tela que já mostra o anulado não tenta o 1º salvamento');
+    await fecha667();
+    // «Reabrir» (a Gestão)
+    run(`__p667=relReabrirAbrir('noite');`);
+    [p] = await assina667('s-wandela', 'era mesmo o relatório do Biscoito'); igual(p, 'conferir');
+    [p] = await assina667(SENHA657, 'era mesmo o relatório do Biscoito'); igual(p, 'pronto');
+    const v2 = db658(REL667 + '/noite');
+    igual([!!v2.anulado, Object.keys(v2.anulacoes || {}).length, run(`REL_DO_DIA['${FK667}'].noite`)], [false, 1, true]);
+  });
+  // a varredura: toda função que lê auaulandia/relatorios usa o predicado (relAnulado/relPassado/relValido/relNoProva) — com as duas
+  // exceções escritas: o cartão (carregarFicha → aplicarCard → relCorrPintar desenha o anulado riscado) e o acerto das plantonistas
+  // (acertoQuemPelaAssinatura: conta quem trabalhou a noite; o relatório lançado no FILHOt errado não desfaz o plantão — dinheiro)
+  const s = fs.readFileSync(APP, 'utf8');
+  const re = /\n  (?:async )?function ([\w$]+)\(/g; let m; const ini = [];
+  while ((m = re.exec(s))) ini.push([m.index, m[1]]);
+  const lit = /'auaulandia\/relatorios/g, sem = [];
+  while ((m = lit.exec(s))) {
+    let f = '(topo)', a = 0, b = s.length;
+    for (let j = 0; j < ini.length; j++) if (ini[j][0] < m.index) { f = ini[j][1]; a = ini[j][0]; b = (ini[j + 1] || [s.length])[0]; }
+    if (!/\b(relAnulado|relPassado|relValido|relNoProva)\(/.test(s.slice(a, b)) && ['carregarFicha', 'acertoQuemPelaAssinatura'].indexOf(f) < 0) sem.push(f);
+  }
+  igual(sem, [], 'leitores sem o predicado do anulado');
+  assert.ok(/aplicarCard[\s\S]{0,40}/.test(s) && /relCorrPintar\(tipo, d\)/.test(s), 'o cartão passa pelo relCorrPintar');
+});
+const REL_DO_DIA667 = () => run(`REL_DO_DIA['${FK667}']={dia:false, inicio:false, noite:true};`);
+
+// ---- AC3 — «Retirar esta assinatura» -------------------------------------------------------------------------------------------------------
+provaAsync('6.67 P9 (AC3) — «Retirar esta assinatura» (44 px): a Consultora recusada; a própria pessoa (a senha dela) retira; o recebimento inteiro vai para recebimentos_anteriores e sai do topo; o cartão volta a aguardar; assinar de novo por outra pessoa (confirmarRecebimento) guarda o nome anterior. Base: sobrescreve, sem retirar', async () => {
+  await com667(async () => {
+    rel667(NOITE667({ recebeu: 'Caio Encãotador Teste', _tsReceb: T658(9, 7, 30), _segLeitura: 40 }));
+    const hb = run(`relCorrHTML('noite', __get657('${REL667}/noite'))`);
+    assert.ok(/>Retirar esta assinatura \(Caio Encãotador Teste\)</.test(hb) && /min-height:44px/.test(hb), hb);
+    run(`__p667=relRetirarAssinaturaAbrir('noite');`);
+    assert.ok(/A assinatura de Caio Encãotador Teste sai deste turno: o cartão volta a "aguardando recebimento"/.test(txt667(cartaz667())), txt667(cartaz667()));
+    let [p] = await assina667('s-bia', 'assinei sem ter lido o relatório'); igual(p, 'conferir', 'a Consultora não é a pessoa nem a Supervisão');
+    [p] = await assina667('s-caio', 'assinei sem ter lido o relatório'); igual(p, 'pronto');
+    const v = db658(REL667 + '/noite'), ra = Object.values(v.recebimentos_anteriores || {});
+    igual([v.recebeu || null, ra.length, ra[0].recebeu, ra[0]._segLeitura, ra[0].retirado.registro.por, run('RELSTATE.noite.recebeu')], [null, 1, 'Caio Encãotador Teste', 40, 'Caio Encãotador Teste', '']);
+    await fecha667();
+    // a Supervisão também retira (outro relatório)
+    rel667(NOITE667({ recebeu: 'Caio Encãotador Teste' }));
+    run(`__p667=relRetirarAssinaturaAbrir('noite');`);
+    [p] = await assina667('s-amanda', 'o Caio pediu para tirar a assinatura'); igual(p, 'pronto');
+    await fecha667();
+    // assinar de novo por outra pessoa guarda o nome anterior (o confirmarRecebimento de verdade)
+    rel667(NOITE667({ recebeu: 'Caio Encãotador Teste', _tsReceb: T658(9, 7, 30) }));
+    run(`__el657['recebeu-noite']={value:'Gilda Teste'}; __zpq657=[true]; LEITURA_ROLOU.noite=true;`);
+    await run(`confirmarRecebimento('noite')`); await espera667();
+    const v3 = db658(REL667 + '/noite'), ra3 = Object.values(v3.recebimentos_anteriores || {});
+    igual([v3.recebeu, ra3.length, ra3[0] && ra3[0].recebeu, ra3[0] && ra3[0].substituido.por], ['Gilda Teste', 1, 'Caio Encãotador Teste', 'Gilda Teste'], JSON.stringify(v3));
+  });
+});
+
+// ---- AC4 — o café e o protocolo do Plantão -------------------------------------------------------------------------------------------------
+provaAsync('6.67 P10 (AC4.1) — o café: trocar «Comeu» por «Metade» e depois limpar registram o antes (a marca anterior, quem e hora) no registro do dia e na auditoria («desmarcou "Comeu" de Biscoito (era de … às …)»); o toque continua um toque. Base: sem rastro no desmarcar', async () => {
+  await com667(async () => {
+    run(`hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __k667=cafeKey(hospedes[0]);`);
+    const k = run('__k667'), C = 'auaulandia/cafe/2026-10-09/' + k;
+    run(`marcarCafe(__k667, 'tudo');`); await espera667(200);
+    igual(db658(C), { estado: 'tudo', quem: 'Gestora Teste', hora: '10:00' });
+    relogio658(T658(9, 10, 5));
+    run(`marcarCafe(__k667, 'metade');`); await espera667(200);
+    igual(db658(C), { estado: 'metade', quem: 'Gestora Teste', hora: '10:05', antes: { estado: 'tudo', quem: 'Gestora Teste', hora: '10:00' } });
+    relogio658(T658(9, 10, 7));
+    run(`marcarCafe(__k667, 'metade');`); await espera667(200);
+    igual(db658(C), { estado: '', quem: 'Gestora Teste', hora: '10:07', limpo: true, antes: { estado: 'metade', quem: 'Gestora Teste', hora: '10:05' } });
+    igual(run('cafeEstado(__k667)'), '', 'a tela lê o limpo como sem marca');
+    igual(aud667('cafe-desmarcado').map((a) => a[1]), ['desmarcou "Comeu" de Biscoito (era de Gestora Teste às 10:00) e marcou "Metade"', 'desmarcou "Metade" de Biscoito (era de Gestora Teste às 10:05)']);
+  });
+});
+provaAsync('6.67 P11 (AC4.2) — o protocolo do Plantão: marcar grava quem e a hora (no lugar de true; a tela lê como marcado); desmarcar registra quem desmarcou e qual item; o «Salvar» continua exigindo todos. Base: grava true, sem rastro', async () => {
+  await com667(async () => {
+    const C = 'auaulandia/checkout/2026-10-09/0';
+    run('toggleCheckoutPlantao(0);'); await espera667(200);
+    igual(db658(C), { feito: true, quem: 'Gestora Teste', hora: '10:00' });
+    run('toggleCheckoutPlantao(0);'); await espera667(200);
+    igual(db658(C), null);
+    const a = aud667('protocolo-plantao-desmarcado');
+    igual([a.length, /desmarcou o item 1 do protocolo do Plantão \(Colocar água nova para todos os Peludinhos antes de dormir\) \(era de Gestora Teste às 10:00\)/.test(a[0] && a[0][1])], [1, true], JSON.stringify(a));
+    // o «Salvar» exige todos (marcados com quem e hora)
+    run('salvarCheckoutPlantao();');
+    assert.ok(/Faltam 7 item/.test(run("__el657['status-checkout'].textContent")));
+    run('for(var i=0;i<CHECKOUT_PLANTAO.length;i++) toggleCheckoutPlantao(i); salvarCheckoutPlantao();');
+    assert.ok(/salvo/.test(run("__el657['status-checkout'].textContent")), run("__el657['status-checkout'].textContent"));
+  });
+});
+prova('6.67 P12 (AC5, guarda) — o Plantão do Encãotador: a foto do cartão sem a inicial (o hóspede de onde a causa dos 407 px foi medida) mostra a 1ª letra do nome, nunca «undefined», e a foto não deixa texto passar da borda (overflow); a medida a 375 px está no roteiro do Chromium', () => {
+  const s = fs.readFileSync(APP, 'utf8');
+  const i = s.indexOf('  function renderHosp(){'), corpo = s.slice(i, s.indexOf('\n  }\n', i));
+  assert.ok(!/\$\{h\.ini\}<\/div>`/.test(corpo), 'a foto do cartão não escreve h.ini cru');
+  assert.ok(/#hospGrid \.pet \.ph, #cafeGrid \.pet \.ph\{width:132px;height:132px;font-size:46px;margin-bottom:12px;overflow:hidden\}/.test(s), 'a foto corta o que passa da borda');
+});
+
+// ---- AC6 a AC10 — a Conferência do check-in ------------------------------------------------------------------------------------------------
+// A Conferência do Biscoito aberta na tela: a Mochila etiquetada pela Cora às 09:00, o alarme do Apoquel confirmado, a ração (1.200 g para a
+// estadia) e a comida natural; uma ocorrência registrada hoje pela Gilda (Encãotadora); duas fotos na lista antiga.
+const CFK667 = 'med_0_apoquel';
+const EST_CF667 = (extra) => Object.assign({ nome: 'Biscoito', tutor: 'Rita Teste', refKey: K658, entrada: '2026-10-08', saida: '2026-10-12', status: 'ativa',
+  pertences: [{ uid: 'p1', k: 'mochila', nome: 'Mochila' }], medicacao: [{ nome: 'Apoquel', q: '1', u: 'comprimido', horarios: ['08:00'] }],
+  ficha: { alim: { tipo: 'Ração', qtd: '100', unidade: 'g', refeicoes: 2, minimo: 1200, comida: { qtd: '50', refeicoes: ['jantar'], minimo: 300 } } },
+  ocorrencias: { o1: { texto: 'chegou com a coleira arrebentada', quem: 'Gilda Teste', ts: T658(9, 8, 0) } },
+  conferencia: { pertences: { p1: { etiquetado: true, quem: 'Cora Conferência Teste', ts: T658(9, 9, 0) } },
+    medicacao: { [CFK667]: { testado: true, confirmado: true, quem: 'Cora Conferência Teste', ts: T658(9, 9, 5) } },
+    racao: { modo: 'peso', pesoTrazido: 1000, minimoNecessario: 1200, dias: 5, unidade: 'g', deficit: 200, obs: '', pesado: true, quem: 'Cora Conferência Teste', ts: T658(9, 9, 10) },
+    comida: { modo: 'peso', pesoTrazido: 400, minimoNecessario: 300, unidade: 'g', deficit: -100, obs: '', pesado: true, quem: 'Cora Conferência Teste', ts: T658(9, 9, 12) } } }, extra || {});
+// a estadia no banco e na tela (cfEstadia, cfConf e a cópia viva EST_TODAS/CF_ESTADIAS), no aparelho de quem confere
+const cf667 = (est, papel) => {
+  put658(EP667, est || EST_CF667());
+  run(`EST_TODAS={}; EST_TODAS['${EST667}']=__get657('${EP667}'); CF_ESTADIAS={}; CF_ESTADIAS['${K658}']={id:'${EST667}', e:EST_TODAS['${EST667}']};
+    cfEstadiaId='${EST667}'; cfEstadia=JSON.parse(JSON.stringify(EST_TODAS['${EST667}'])); cfHosp={nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'};
+    cfConf=Object.assign({pertences:{},medicacaoEtiqueta:{},medicacao:{},racao:{},comida:{},fotos:[]}, JSON.parse(JSON.stringify(cfEstadia.conferencia||{})));
+    document.body.dataset.role=${JSON.stringify(papel || 'conferencia')}; __esc657=[]; __au657=[]; __za657=[]; __zp657=[];`);
+};
+const sync667 = () => run(`EST_TODAS['${EST667}']=__get657('${EP667}');`);
+provaAsync('6.67 P13 (AC6.1) — desmarcar um item etiquetado e um «Confirmo que tocou» com a Conferência aberta: a auditoria registra quem desmarcou, qual item e quem tinha marcado (era de … às …). Base: o audit só sai quando marca', async () => {
+  await com667(async () => {
+    cf667();
+    run(`__top667={closest:function(){ return {dataset:{t:'pertence', k:'p1'}}; }}; cfToggleItem(__top667);`); await espera667(200);
+    igual(db658(EP667 + '/conferencia/pertences/p1'), null, 'desmarcado');
+    const a = aud667('conferencia-desmarcada');
+    igual([a.length, a[0] && a[0][1], a[0] && a[0][2].marcadoPor], [1, 'desmarcou «Mochila» na conferência de Biscoito (era de Cora Conferência Teste às 09:00)', 'Cora Conferência Teste'], JSON.stringify(a));
+    run(`__el657['cf-ouviu-${CFK667}']={checked:false}; cfConfirmarAlarme('${CFK667}');`); await espera667(200);
+    const b = aud667('conferencia-desmarcada');
+    igual([b.length, /desmarcou «Confirmo que tocou» \(med_0_apoquel\) na conferência de Biscoito \(era de Cora Conferência Teste às 09:05\)/.test(b[1] && b[1][1])], [2, true], JSON.stringify(b));
+  });
+});
+provaAsync('6.67 P14 (AC6.2) — a Conferência fechada: os itens, o alarme, a ração, a comida e as fotos só de leitura (sem o toque na tela, o checkbox travado); a função que grava recusa — também a tela velha (fechada em outro aparelho); a frase «A conferência foi fechada por … em …. Para mudar alguma coisa, toque em «Reabrir conferência».». Base: aceita mudança', async () => {
+  await com667(async () => {
+    const F = EST_CF667(); F.conferencia.concluida = true; F.conferencia.concluida_por = 'Cora Conferência Teste'; F.conferencia.concluida_ts = T658(9, 9, 30);
+    cf667(F);
+    const FR = 'A conferência foi fechada por Cora Conferência Teste em 09/10 09:30. Para mudar alguma coisa, toque em «Reabrir conferência».';
+    run(`__top667={closest:function(){ return {dataset:{t:'pertence', k:'p1'}}; }}; cfToggleItem(__top667); __el657['cf-ouviu-${CFK667}']={checked:false}; cfConfirmarAlarme('${CFK667}');
+      __el657['cfRacaoPeso']={value:'1300'}; __el657['cfRacaoObs']={value:''}; cfConfirmarRacao(); __el657['cfComidaPeso']={value:'500'}; __el657['cfComidaObs']={value:''}; cfConfirmarComida();`);
+    await espera667(200);
+    igual(esc667(/estadias/), [], 'nada gravado');
+    const t = tit667(/A CONFERÊNCIA ESTÁ FECHADA/);
+    igual([t.length, t[0] && t[0][1][0]], [4, FR]);
+    // a tela: sem o toque nos itens, o checkbox travado, a frase com «Reabrir conferência» no lugar do «Tudo certo»
+    run(`__el657['cfPertList']={innerHTML:''}; __el657['cfMedList']={innerHTML:''}; __el657['cf-med-card']={style:{}}; __el657['cfPendHint']={innerHTML:''}; renderCfPert(); renderCfMed(); renderCfGate();`);
+    assert.ok(!/cfToggleItem/.test(run("__el657['cfPertList'].innerHTML")), 'os itens sem o toque');
+    assert.ok(/ disabled onchange="cfConfirmarAlarme/.test(run("__el657['cfMedList'].innerHTML")), 'o checkbox travado');
+    const g = run("__el657['cfPendHint'].innerHTML");
+    assert.ok(txt667(g).indexOf(FR) >= 0 && /onclick="cfReabrirAbrir\(\)"/.test(g) && /min-height:44px/.test(g), g);
+    // a tela velha: a tela leu aberta, o ouvinte já trouxe fechada
+    cf667(EST_CF667());
+    run(`EST_TODAS['${EST667}'].conferencia.concluida=true; EST_TODAS['${EST667}'].conferencia.concluida_por='Outra Teste'; EST_TODAS['${EST667}'].conferencia.concluida_ts=${T658(9, 9, 50)};
+      cfToggleItem(__top667);`); await espera667(200);
+    igual([esc667(/estadias/), tit667(/A CONFERÊNCIA ESTÁ FECHADA/).length], [[], 1], 'a tela velha recusa');
+    // as fotos: tirar e pôr de volta recusam com a Conferência fechada
+    cf667(F); run(`CF_FOTOS=[{id:'0', src:'data:a', quem:'', ts:0, antigo:true}];`);
+    await run(`cfFotoTirar('0')`); await espera667(200);
+    igual([esc667(/conferencia-fotos/), J658('__zp657').length], [[], 0]);
+  });
+});
+prova('6.67 P15 (AC6.3, guarda) — o check-in com material novo continua reabrindo a Conferência sozinho (o __ciGravar não mudou nessa parte: concluida:false, reaberta_em, recebido_por, «CHEGOU MATERIAL NOVO»)', () => {
+  const s = fs.readFileSync(APP, 'utf8');
+  assert.ok(s.indexOf(`ops.push(DB.ref('auaulandia/estadias/'+estadiaId+'/conferencia').update({
+          concluida:false, reaberta_em:Date.now(), reaberta_por:(P.correcao&&P.correcao.quem)||quemSou(),
+          recebido_por:_rec, recebido_em:Date.now(), recebido_lancado_por:quemSou(),
+          reaberta_motivo:(P.substituir?'SUBSTITUIU O CHECK-IN — ':'CHEGOU MATERIAL NOVO — ')+chegouNovo.join(' · ')+' · recebido por '+_rec`) > 0, 'a reabertura do check-in');
+  assert.ok(s.indexOf(`up[P+'conferencia/reaberta_motivo']='CHEGOU MATERIAL NOVO — '`) > 0, 'a do «Mudar comida e remédio» (6.54)');
+});
+provaAsync('6.67 P16 (AC7.1) — a pesagem já conferida e confirmada de novo com outro peso: o cartaz «corrigir» (Peso trazido «1000 g» → «1300 g»), o motivo e a senha de quem confere; a anterior em racao_historico e a nova no lugar, numa gravação só; idem para a comida natural (comida_historico); sem mudança, «Nada mudou». Base: o set sobrescreve', async () => {
+  await com667(async () => {
+    cf667();
+    run(`__el657['cfRacaoPeso']={value:'1000'}; __el657['cfRacaoObs']={value:''}; cfConfirmarRacao();`); await espera667(200);
+    assert.ok(/Nada mudou na pesagem/.test(run("__el657['cf-racao-status'].textContent")) && passo667() === null && esc667(/estadias/).length === 0, 'sem mudança, nada');
+    run(`__el657['cfRacaoPeso']={value:'1300'}; cfConfirmarRacao();`); await espera667(200);
+    igual(passo667(), 'conferir');
+    assert.ok(/Peso trazido\s*:?\s*«1000 g» → «1300 g»/.test(txt667(cartaz667())), txt667(cartaz667()));
+    let [p] = await assina667('s-bia', 'pesei de novo e deu mais'); igual(p, 'conferir', 'a Consultora não confere');
+    [p] = await assina667('s-cora', 'pesei de novo e deu mais'); igual(p, 'pronto');
+    const c = db658(EP667 + '/conferencia'), h = Object.values(c.racao_historico || {});
+    igual([c.racao.pesoTrazido, c.racao.deficit, c.racao.pesado, h.length, h[0].pesoTrazido, h[0].substituida.motivo, h[0].substituida.registro.por], [1300, -100, true, 1, 1000, 'pesei de novo e deu mais', 'Cora Conferência Teste']);
+    igual(esc667(/estadias/), ['update ' + EP667 + '/conferencia'], 'uma gravação só');
+    assert.ok(aud667('conferencia-pesagem-corrigida').length === 1);
+    await fecha667();
+    // a comida natural
+    run(`__esc657=[]; __el657['cfComidaPeso']={value:'550'}; __el657['cfComidaObs']={value:''}; cfConfirmarComida();`); await espera667(200);
+    [p] = await assina667('s-cora', 'a comida tinha mais um pote'); igual(p, 'pronto');
+    const c2 = db658(EP667 + '/conferencia'), h2 = Object.values(c2.comida_historico || {});
+    igual([c2.comida.pesoTrazido, h2.length, h2[0].pesoTrazido], [550, 1, 400]);
+  });
+});
+provaAsync('6.67 P17 (AC7.2) — «Desfazer a conferência da ração» (o cartaz «reabrir», quem confere): a pesagem vai para o histórico e o nó fica {pesado:false, desfeita}; a Conferência volta a pedir «Conferir a ração». Base: não existe', async () => {
+  await com667(async () => {
+    cf667();
+    igual(run('cfPendencias().indexOf("Conferir a ração")'), -1);
+    run(`__p667=cfPesagemDesfazerAbrir('racao');`);
+    assert.ok(/volta a pedir «Conferir a ração»/.test(txt667(cartaz667())), txt667(cartaz667()));
+    const [p] = await assina667('s-cora', 'pesei a ração do FILHOt errado'); igual(p, 'pronto');
+    const c = db658(EP667 + '/conferencia'), h = Object.values(c.racao_historico || {});
+    igual([c.racao.pesado, c.racao.desfeita.registro.por, h.length, h[0].pesoTrazido, h[0].desfeita.motivo], [false, 'Cora Conferência Teste', 1, 1000, 'pesei a ração do FILHOt errado']);
+    assert.ok(run('cfPendencias().indexOf("Conferir a ração")>=0'), 'a Conferência pede de novo');
+  });
+});
+provaAsync('6.67 P18 (AC7.3, AC7.4) — o aviso de falta acompanha: a pesagem corrigida que agora cobre entra na trilha do aviso aberto («A pesagem foi corrigida por …: 1300 g (agora cobre a estadia)»); o cartão da Recepção diz «A pesagem foi corrigida e agora cobre a estadia» e oferece «Retirar este aviso» (o da 6.66, com o motivo começado); nada é retirado sozinho; a que ainda falta diz a falta nova, sem aviso em dobro. Base: o aviso fica com a pesagem velha', async () => {
+  await com667(async () => {
+    cf667();
+    put658('auaulandia/avisos-racao/a1', { hospNome: 'Biscoito', tutor: 'Rita Teste', estadiaId: EST667, tipo: 'racao', itemNome: 'Ração/comida', deficit: 200, unidade: 'g', status: 'pendente', entries: [], criado_por: 'Cora Conferência Teste', _ts: T658(9, 9, 10) });
+    run(`__el657['cfRacaoPeso']={value:'1300'}; __el657['cfRacaoObs']={value:''}; cfConfirmarRacao();`); await espera667(200);
+    await assina667('s-cora', 'pesei de novo e deu mais'); await espera667();
+    const a = db658('auaulandia/avisos-racao/a1');
+    igual([a.status, a.entries.length, a.entries[0].acao, a.entries[0].pesagem.cobre], ['pendente', 1, 'A pesagem foi corrigida por Cora Conferência Teste: 1300 g (agora cobre a estadia)', true], JSON.stringify(a));
+    run(`AVISOS_RACAO_CACHE={a1:__get657('auaulandia/avisos-racao/a1')}; document.body.dataset.role='consultora';`);
+    const card = run(`avisoRacaoCardHTML('a1')`);
+    assert.ok(/A pesagem foi corrigida e agora cobre a estadia/.test(card) && /onclick="cfAvisoRetirarCobre\('a1'\)"/.test(card), txt667(card));
+    await fecha667();
+    run(`__p667=cfAvisoRetirarCobre('a1');`);
+    igual([run('CORR_ATUAL.op.acao'), run('CORR_ATUAL.motivo')], ['anular', 'A pesagem foi corrigida e agora cobre a estadia']);
+    await fecha667();
+    igual(db658('auaulandia/avisos-racao/a1').status, 'pendente', 'nada foi retirado sozinho');
+    // a que ainda falta: a falta nova na trilha, sem aviso em dobro
+    cf667(); run(`cfConf.racao=__get657('${EP667}/conferencia/racao'); document.body.dataset.role='conferencia';`);
+    run(`__el657['cfRacaoPeso']={value:'1100'}; cfConfirmarRacao();`); await espera667(200);
+    await assina667('s-cora', 'a balança estava descalibrada hoje'); await espera667();
+    const a2 = db658('auaulandia/avisos-racao/a1');
+    igual([Object.keys(db658('auaulandia/avisos-racao') || {}).length, a2.entries.length, a2.entries[1].acao, a2.deficit], [1, 2, 'A pesagem foi corrigida por Cora Conferência Teste: 1100 g (ainda faltam 100 g)', 100]);
+  });
+});
+provaAsync('6.67 P19 (AC8.1, AC8.2) — a ocorrência sem o ×: «Corrigir o texto» e «Lançada por engano» (44 px); «Corrigir o texto» guarda o antigo em correcoes; a Recepção e a bolsa do check-out mostram o texto novo, «corrigido por …». Base: o ×', async () => {
+  await com667(async () => {
+    cf667();
+    run(`__el657['cfOcorrList']={innerHTML:''}; renderCfOcorrencias();`);
+    const h = run("__el657['cfOcorrList'].innerHTML");
+    assert.ok(!/cfRemoverOcorrencia/.test(h) && />Corrigir o texto</.test(h) && />Lançada por engano</.test(h) && (h.match(/min-height:44px/g) || []).length >= 2, h);
+    run(`__p667=cfOcorrCorrigirAbrir('${EST667}', 'o1', 'conferencia'); corrToque('continuar', {valores:['chegou com a coleira gasta (não arrebentada)']});`);
+    const [p] = await assina667('s-cora', 'a coleira estava só gasta'); igual(p, 'pronto');
+    const o = db658(EP667 + '/ocorrencias/o1'), c = Object.values(o.correcoes || {});
+    igual([o.texto, o.corrigido.por, c.length, c[0].antes.texto, c[0].depois.texto], ['chegou com a coleira gasta (não arrebentada)', 'Cora Conferência Teste', 1, 'chegou com a coleira arrebentada', 'chegou com a coleira gasta (não arrebentada)']);
+    sync667(); run(`CF_ESTADIAS['${K658}'].e=EST_TODAS['${EST667}']; coEstadia=EST_TODAS['${EST667}'];`);
+    const L = J658('ocorrenciasLoja()');
+    igual([L.length, L[0].texto, L[0].corrigidoPor], [1, 'chegou com a coleira gasta (não arrebentada)', 'Cora Conferência Teste']);
+    assert.ok(/corrigido por Cora Conferência Teste/.test(run('ocorrCardHTML(ocorrenciasLoja()[0])')), 'a Recepção');
+    assert.ok(J658('coItensLista()').some((x) => x.label === 'Item da estadia: chegou com a coleira gasta (não arrebentada) (corrigido por Cora Conferência Teste)'), JSON.stringify(J658('coItensLista()')));
+  });
+});
+provaAsync('6.67 P20 (AC8.3) — «Lançada por engano»: sem desfecho, quem registrou (no mesmo dia, a própria senha) anula; com desfecho, só a Gestão (quem confere é recusada) e a frase do tutor avisado. Base: não existe', async () => {
+  await com667(async () => {
+    cf667(null, 'monitor');   // o aparelho da Gilda (Encãotadora): ela registrou hoje
+    run(`__p667=cfOcorrEnganoAbrir('${EST667}', 'o1', 'conferencia');`);
+    const h = txt667(cartaz667());
+    assert.ok(/Sai da fila da Recepção, das contagens e da bolsa do check-out\. Fica riscada, com quem, quando e o motivo\. Nada é apagado\./.test(h) && /Gilda Teste, que registrou/.test(h), h);
+    let [p] = await assina667('s-caio', 'registrei no FILHOt errado hoje'); igual(p, 'conferir', 'o Caio não registrou');
+    [p] = await assina667('s-gilda', 'registrei no FILHOt errado hoje'); igual(p, 'pronto');
+    const o = db658(EP667 + '/ocorrencias/o1');
+    igual([o.anulada.motivo, o.anulada.registro.por, o.texto], ['registrei no FILHOt errado hoje', 'Gilda Teste', 'chegou com a coleira arrebentada']);
+    await fecha667();
+    // com desfecho (o tutor foi avisado): a Gestão
+    const E = EST_CF667(); E.ocorrencias.o1.avisadoTutor = { acao: 'liguei para a tutora e expliquei', assinatura: 'Bia Consultora Teste', desfecho: 'tutor', quando: '09/10 09:40', ts: T658(9, 9, 40) };
+    cf667(E);
+    run(`__p667=cfOcorrEnganoAbrir('${EST667}', 'o1', 'conferencia');`);
+    const h2 = txt667(cartaz667());
+    assert.ok(/O desfecho foi "Avisei o tutor" em 09\/10 09:40, por Bia Consultora Teste; o tutor foi avisado\. Se o tutor foi avisado, fale com ele: o app não manda nada sozinho\./.test(h2) && /Senha da Gestão/.test(cartaz667()), h2);
+    [p] = await assina667('s-cora', 'foi registrada no FILHOt errado'); igual(p, 'conferir');
+    [p] = await assina667(SENHA657, 'foi registrada no FILHOt errado'); igual(p, 'pronto');
+    const o2 = db658(EP667 + '/ocorrencias/o1');
+    igual([!!o2.anulada, o2.avisadoTutor.desfecho], [true, 'tutor'], 'o desfecho fica');
+  });
+});
+provaAsync('6.67 P21 (AC8.4) — a lançada por engano sai da fila (ocorrenciasLoja), do número da Recepção e da bolsa do check-out; fica riscada em «Lançadas por engano (N)» na Conferência e na Recepção, com «Desfazer» (a Gestão: quem confere é recusada). Base: só o ×', async () => {
+  await com667(async () => {
+    const E = EST_CF667(); E.ocorrencias.o1.anulada = { motivo: 'registrei no FILHOt errado hoje', registro: { acao: 'anular', por: 'Gilda Teste', papel: 'monitor', quando: '09/10 10:00', motivo: 'registrei no FILHOt errado hoje', ts: T658(9, 10, 0) } };
+    E.ocorrencias.o2 = { texto: 'trouxe um brinquedo novo', quem: 'Cora Conferência Teste', ts: T658(9, 9, 0) };
+    cf667(E); run(`coEstadia=EST_TODAS['${EST667}'];`);
+    igual(J658('ocorrenciasLoja().map(function(o){ return o.ocId; })'), ['o2']);
+    igual(J658('coItensLista().filter(function(x){ return /^oc_/.test(x.k); }).map(function(x){ return x.k; })'), ['oc_o2']);
+    run(`__el657['ocorrRecepcaoList']={innerHTML:''}; __el657['ocorrDayCareRecepcaoList']={innerHTML:''}; renderOcorrenciasRecepcao(); __el657['cfOcorrList']={innerHTML:''}; renderCfOcorrencias();`);
+    for (const id of ['ocorrRecepcaoList', 'cfOcorrList']) {
+      const h = run(`__el657['${id}'].innerHTML`);
+      assert.ok(/Lançadas por engano \(1\)/.test(h) && /cfOcorrDesfazerAbrir\('est667','o1'\)/.test(h) && /corr-riscado/.test(h), id + ': ' + txt667(h).slice(0, 400));
+    }
+    run(`__p667=cfOcorrDesfazerAbrir('${EST667}', 'o1');`);
+    let [p] = await assina667('s-cora', 'a ocorrência era mesmo do Biscoito'); igual(p, 'conferir');
+    [p] = await assina667(SENHA657, 'a ocorrência era mesmo do Biscoito'); igual(p, 'pronto');
+    const o = db658(EP667 + '/ocorrencias/o1');
+    igual([!!o.anulada, Object.keys(o.enganos_desfeitos || {}).length], [false, 1]);
+    sync667(); run(`CF_ESTADIAS['${K658}'].e=EST_TODAS['${EST667}'];`);
+    igual(J658('ocorrenciasLoja().map(function(o){ return o.ocId; }).sort()'), ['o1', 'o2'], 'volta para a fila');
+  });
+});
+provaAsync('6.67 P22 (AC8.5) — «Reabrir» na Recepção (o ramo da hospedagem): o cartaz «reabrir» com motivo e a senha da Recepção; o desfecho anterior vai para desfechos_anteriores e a ocorrência volta a «FALTA AVISAR». Base: o desfecho some, sem rastro', async () => {
+  await com667(async () => {
+    const E = EST_CF667(); E.ocorrencias.o1.avisadoTutor = { acao: 'liguei para a tutora e expliquei', assinatura: 'Bia Consultora Teste', desfecho: 'tutor', quando: '09/10 09:40', ts: T658(9, 9, 40) };
+    cf667(E, 'consultora');
+    run(`__zpq657=[true];`);
+    await run(`ocorrReabrir('${EST667}__o1')`); await espera667(200);
+    igual(passo667(), 'conferir', 'o cartaz «reabrir»');
+    assert.ok(/O desfecho de antes fica guardado/.test(txt667(cartaz667())), txt667(cartaz667()));
+    const [p] = await assina667('s-bia', 'a tutora ainda não respondeu nada'); igual(p, 'pronto');
+    const o = db658(EP667 + '/ocorrencias/o1'), d = Object.values(o.desfechos_anteriores || {});
+    igual([o.avisadoTutor || null, d.length, d[0].avisadoTutor.acao, d[0].registro.por], [null, 1, 'liguei para a tutora e expliquei', 'Bia Consultora Teste']);
+    sync667(); run(`CF_ESTADIAS['${K658}'].e=EST_TODAS['${EST667}'];`);
+    igual(J658('ocorrenciasLoja()[0].avisado'), null, 'FALTA AVISAR');
+    assert.ok(/FALTA AVISAR/.test(run('ocorrCardHTML(ocorrenciasLoja()[0])')));
+  });
+});
+provaAsync('6.67 P23 (AC9.1) — as fotos: a lista antiga ainda é lida; duas fotos adicionadas em dois aparelhos ao mesmo tempo ficam as duas (cada uma no seu registro; a lista nunca é regravada inteira). Base: a lista regravada (a segunda apaga a primeira)', async () => {
+  await com667(async () => {
+    cf667();
+    put658('auaulandia/conferencia-fotos/' + EST667, ['data:antiga1', 'data:antiga2']);
+    run(`cfCarregarFotos('${EST667}');`); await espera667(200);
+    igual(J658('cfConf.fotos'), ['data:antiga1', 'data:antiga2'], 'a lista antiga');
+    // no Firebase, a lista antiga é o nó {0:…, 1:…} (e aceita filhos com chave de texto); o banco de mentira guarda o array do JS, que não
+    // aceita: a lista antiga entra na forma do Firebase para as fotos novas
+    put658('auaulandia/conferencia-fotos/' + EST667, { 0: 'data:antiga1', 1: 'data:antiga2' });
+    run(`cfCarregarFotos('${EST667}');`); await espera667(200);
+    igual(J658('cfConf.fotos'), ['data:antiga1', 'data:antiga2'], 'a lista antiga, na forma do Firebase');
+    // a foto que a câmera devolve (o FileReader, a imagem e o canvas de mentira)
+    run(`__bkF667={fr:(typeof FileReader!=='undefined')?FileReader:undefined, im:(typeof Image!=='undefined')?Image:undefined, ce:document.createElement};
+      FileReader=function(){ var s=this; this.readAsDataURL=function(){ s.result='data:bruta'; s.onload(); }; };
+      Image=function(){ var o={width:800, height:600}; Object.defineProperty(o, 'src', {set:function(v){ o.onload && o.onload(); }}); return o; };
+      __nf667=0; document.createElement=function(t){ return (t==='canvas')?{getContext:function(){ return {drawImage:function(){}}; }, toDataURL:function(){ return 'data:nova'+(++__nf667); }}:__bkF667.ce.call(document, t); };`);
+    try {
+      run(`__fotosA667=JSON.parse(JSON.stringify(CF_FOTOS)); cfAddFoto({target:{files:[{}], value:'x'}});`);   // o aparelho 1
+      run(`CF_FOTOS=__fotosA667; cfAddFoto({target:{files:[{}], value:'x'}});`);   // o aparelho 2, com a tela de antes
+      await espera667(200);
+    } finally { run(`if(__bkF667.fr!==undefined) FileReader=__bkF667.fr; if(__bkF667.im!==undefined) Image=__bkF667.im; document.createElement=__bkF667.ce;`); }
+    const v = db658('auaulandia/conferencia-fotos/' + EST667);
+    const srcs = J658(`cfFotosDe(__get657('auaulandia/conferencia-fotos/${EST667}')).map(function(f){ return f.src; })`);
+    igual(srcs.sort(), ['data:antiga1', 'data:antiga2', 'data:nova1', 'data:nova2'], JSON.stringify(v));
+    igual(esc667(/conferencia-fotos/).filter((e) => e === 'set auaulandia/conferencia-fotos/' + EST667), [], 'a lista nunca é regravada inteira');
+  });
+});
+provaAsync('6.67 P24 (AC9.2, AC9.3) — «Tirar esta foto» pergunta e marca `tirada` (a foto não é apagada); a única foto avisa do fechamento; «Fotos tiradas (1)» com «Pôr de volta»; «Pôr de volta» devolve; o rastro. Base: o × apaga sem perguntar', async () => {
+  await com667(async () => {
+    cf667();
+    put658('auaulandia/conferencia-fotos/' + EST667, { f1: { src: 'data:f1', quem: 'Cora Conferência Teste', ts: T658(9, 9, 20) } });
+    run(`cfCarregarFotos('${EST667}');`); await espera667(200);
+    run(`__zpq657=[true];`);
+    await run(`cfFotoTirar('f1')`); await espera667(200);
+    const zp = J658('__zp657');
+    igual([zp.length, zp[0][0], zp[0][1]], [1, 'Tirar esta foto da conferência?', ['A foto sai da conferência e fica em «Fotos tiradas», com «Pôr de volta». Nada é apagado.', 'A conferência precisa de pelo menos 1 foto para ser fechada: tire outra antes de fechar.']]);
+    const f = db658('auaulandia/conferencia-fotos/' + EST667 + '/f1');
+    igual([f.src, f.tirada.quem, J658('cfConf.fotos')], ['data:f1', 'Gestora Teste', []]);
+    assert.ok(run('cfPendencias().indexOf("Adicionar ao menos 1 foto")>=0'), 'o gate pede foto de novo');
+    run(`__el657['cfFotos']={innerHTML:''}; renderCfFotos();`);
+    const h = run("__el657['cfFotos'].innerHTML");
+    assert.ok(/Fotos tiradas \(1\)/.test(h) && /onclick="cfFotoPorDeVolta\('f1'\)"/.test(h) && />Pôr de volta</.test(h), h);
+    await run(`cfFotoPorDeVolta('f1')`); await espera667(200);
+    const f2 = db658('auaulandia/conferencia-fotos/' + EST667 + '/f1');
+    igual([f2.tirada || null, f2.devolvida.quem, J658('cfConf.fotos')], [null, 'Gestora Teste', ['data:f1']]);
+    igual([aud667('conferencia-foto-tirada').length, aud667('conferencia-foto-devolvida').length], [1, 1]);
+    // o × antigo pela posição (cfRemoverFoto) passa pela mesma pergunta; «Deixar a foto» não grava nada
+    run(`__zp657=[]; __esc657=[]; __zpq657=[false];`); await run(`cfRemoverFoto(0)`); await espera667(200);
+    igual([J658('__zp657').map((z) => z[0]), esc667(/conferencia-fotos/)], [['Tirar esta foto da conferência?'], []]);
+    // a foto da lista antiga também é tirada sem apagar (vira registro com a mesma imagem)
+    put658('auaulandia/conferencia-fotos/' + EST667, ['data:antiga1', 'data:antiga2']);
+    run(`cfCarregarFotos('${EST667}');`); await espera667(200);
+    run(`__zpq657=[true];`); await run(`cfFotoTirar('1')`); await espera667(200);
+    igual(J658(`cfFotosDe(__get657('auaulandia/conferencia-fotos/${EST667}')).map(function(x){ return [x.src, !!x.tirada]; })`), [['data:antiga1', false], ['data:antiga2', true]]);
+  });
+});
+provaAsync('6.67 P25 (AC10) — «Reabrir conferência» (44 px): o posto recusado; quem confere reabre com motivo e a própria senha; concluida:false; o fechamento anterior em reaberturas (quem, quando, o motivo e o registro); a Recepção também reabre. Base: não existe', async () => {
+  await com667(async () => {
+    const F = EST_CF667(); F.conferencia.concluida = true; F.conferencia.concluida_por = 'Cora Conferência Teste'; F.conferencia.concluida_ts = T658(9, 9, 30);
+    cf667(F);
+    run(`__p667=cfReabrirAbrir();`);
+    assert.ok(/A conferência volta a ficar aberta: os itens podem ser marcados de novo e ela precisa ser fechada outra vez\./.test(txt667(cartaz667())), txt667(cartaz667()));
+    let [p, a] = await assina667('s-posto', 'faltou etiquetar o remédio novo'); igual(p, 'conferir'); assert.ok(/posto/.test(a), a);
+    [p] = await assina667('s-cora', 'faltou etiquetar o remédio novo'); igual(p, 'pronto');
+    const c = db658(EP667 + '/conferencia'), r = Object.values(c.reaberturas || {});
+    igual([c.concluida, c.concluida_por || null, r.length, r[0].concluida_por, r[0].concluida_ts, r[0].motivo, r[0].registro.por], [false, null, 1, 'Cora Conferência Teste', T658(9, 9, 30), 'faltou etiquetar o remédio novo', 'Cora Conferência Teste']);
+    igual(run('cfFechadaSoLeitura()'), false, 'a tela volta a aceitar');
+    await fecha667();
+    // a Recepção
+    cf667(F, 'consultora');
+    run(`__p667=cfReabrirAbrir();`);
+    [p] = await assina667('s-bia', 'o tutor trouxe a ração que faltava'); igual(p, 'pronto');
+    igual(db658(EP667 + '/conferencia').concluida, false);
+  });
+});
+
+// ---- AC11 e AC12 — a bolsa, o check-out e o placar --------------------------------------------------------------------------------------------
+// A bolsa do Biscoito montada pela Gilda (Encãotadora) hoje às 09:40, com tudo marcado; o check-out feito pela Bia às 09:50 (a sobra da
+// ração não desceu: 5 de 10 para a Gilda); no placar de outubro, a bolsa do Biscoito e uma da Pipoca (10 de 10), o «Seu dia» e o Início do
+// protocolo da Gilda (que não são bolsa).
+const PT667 = 'daycare/pontos-checkout/' + MES667;
+const RACAO667 = 'Devolver sobra de ração/comida: Ração';
+const CONF667 = () => ({ pert_p1: true, med_0: true, racao: true, oc_o1: true });
+const E1667 = (extra) => Object.assign({ ts: T658(9, 9, 40), quem: 'Gilda Teste', conferido: CONF667() }, extra || {});
+const CHK667 = (extra) => Object.assign({ ts: T658(9, 9, 50), quem: 'Bia Consultora Teste', assinado_por: 'Rita Teste', assinatura: 'data:assinatura', semTutor: false, obs: '',
+  conferido: CONF667(), bolsa_montada_por: 'Gilda Teste', bolsa_montada_em: T658(9, 9, 40), faltou_descer: [RACAO667], pontos: 5, pontos_por: 'Bia Consultora Teste' }, extra || {});
+const PONTOS667 = () => ({
+  p1: { quem: 'Gilda Teste', pontos: 5, faltas: 1, itens: [RACAO667], pet: 'Biscoito', estadia: EST667, conferido_por: 'Bia Consultora Teste', ts: T658(9, 9, 50) },
+  p2: { quem: 'Gilda Teste', pontos: 10, faltas: 0, itens: [], pet: 'Pipoca', estadia: 'est2', conferido_por: 'Bia Consultora Teste', ts: T658(8, 18, 0) },
+  sd: { origem: 'seu-dia', quem: 'Gilda Teste', pontos: 5, ts: T658(8, 8, 0) },
+  pi: { origem: 'protocolo-inicio', quem: 'Gilda Teste', pontos: 5, ts: T658(9, 7, 0) } });
+// a estadia no banco, na lista viva (EST_TODAS e CF_ESTADIAS) e aberta no Check-out (coEstadia), no aparelho do papel pedido
+const co667 = (est, papel) => {
+  put658(EP667, est);
+  run(`EST_TODAS={}; EST_TODAS['${EST667}']=__get657('${EP667}'); CF_ESTADIAS={}; CF_ESTADIAS['${K658}']={id:'${EST667}', e:EST_TODAS['${EST667}']};
+    coEstadiaId='${EST667}'; coEstadia=JSON.parse(JSON.stringify(EST_TODAS['${EST667}'])); coHosp={nome:'Biscoito', tutor:'Rita Teste'}; coModo='conferencia';
+    document.body.dataset.role=${JSON.stringify(papel || 'consultora')}; __esc657=[]; __au657=[]; __za657=[]; __ze657=[]; __zp657=[];`);
+};
+const valendo667 = () => J658(`coBolsasValendo(__get657('${PT667}')).map(function(x){ return x.k; }).sort()`);
+provaAsync('6.67 P26 (AC11) — «Reabrir a bolsa» (44 px, na etapa 2): o Caio (não montou) recusado; a Gilda, que montou hoje, reabre com a própria senha; a etapa 1 inteira em bolsas_reabertas e fora do topo; a tela volta à etapa 1 com as marcas de antes; nenhum ponto muda; montada ontem, a Recepção reabre (quem montou, não). Base: não existe', async () => {
+  await com667(async () => {
+    put658(PT667, PONTOS667());
+    co667(EST_CF667({ checkout_etapa1: E1667() }));
+    const bt = run('coBolsaReabrirBotaoHTML()');
+    assert.ok(/>Reabrir a bolsa</.test(bt) && /min-height:44px/.test(bt) && /onclick="coBolsaReabrirAbrir\(\)"/.test(bt), bt);
+    run(`__el657['coEtapaBanner']={innerHTML:''}; coRenderEtapa();`);
+    assert.ok(/Reabrir a bolsa/.test(run("__el657['coEtapaBanner'].innerHTML")), 'na etapa 2 da tela');
+    run(`__p667=coBolsaReabrirAbrir();`);
+    assert.ok(/A bolsa volta para a etapa 1: quem montou marca de novo o que juntou\. Reabrir não conta como falta de ninguém\./.test(txt667(cartaz667())) && /Gilda Teste, que registrou/.test(txt667(cartaz667())), txt667(cartaz667()));
+    let [p] = await assina667('s-caio', 'faltou pôr a coleira na bolsa'); igual(p, 'conferir', 'o Caio não montou');
+    [p] = await assina667('s-gilda', 'faltou pôr a coleira na bolsa'); igual(p, 'pronto');
+    const e = db658(EP667), b = Object.values(e.bolsas_reabertas || {});
+    igual([e.checkout_etapa1 || null, b.length, b[0].quem, b[0].ts, b[0].conferido, b[0].motivo, b[0].registro.por], [null, 1, 'Gilda Teste', T658(9, 9, 40), CONF667(), 'faltou pôr a coleira na bolsa', 'Gilda Teste']);
+    igual([esc667(/pontos-checkout/), db658(PT667)], [[], PONTOS667()], 'nenhum ponto muda');
+    assert.ok(aud667('bolsa-reaberta').length === 1 && /não conta como falta/.test(aud667('bolsa-reaberta')[0][1]));
+    // a tela de novo: a etapa 1, com as marcas de antes
+    igual(J658(`coConferidoDaReaberta(__get657('${EP667}'))`), CONF667());
+    run(`__bkCo667={i:coInitSig, l:coLimparAssinatura}; coInitSig=function(){}; coLimparAssinatura=function(){}; CF_ESTADIAS['${K658}'].e=__get657('${EP667}');`);
+    try { run(`coAbrirFicha('${K658}');`); } finally { run('coInitSig=__bkCo667.i; coLimparAssinatura=__bkCo667.l;'); }
+    igual([run('coEtapaDe(coEstadia)'), J658('coConf')], [1, CONF667()]);
+    await fecha667();
+    // montada ontem: quem montou não reabre sozinha; a Recepção, sim
+    co667(EST_CF667({ checkout_etapa1: E1667({ ts: T658(8, 18, 0) }) }));
+    run(`__p667=coBolsaReabrirAbrir();`);
+    [p] = await assina667('s-gilda', 'o tutor vem buscar amanhã'); igual(p, 'conferir', 'de ontem, quem montou não reabre');
+    [p] = await assina667('s-bia', 'o tutor vem buscar amanhã'); igual(p, 'pronto');
+    igual(db658(EP667).checkout_etapa1 || null, null);
+  });
+});
+provaAsync('6.67 P27 (AC12.1 a AC12.3) — «Reabrir o check-out» (44 px, na linha de Hóspedes de hoje e em «Check-outs de hoje»): a Recepção recusada, a Gestão reabre; o checkout inteiro em checkouts_anteriores; a estadia «ativa», na etapa 2 (a bolsa fica montada); o ponto da Gilda estornado (o placar perde a bolsa); meio feito (a estadia não voltou): a tela diz e «Terminar agora» completa sem estorno em dobro. Base: não existe', async () => {
+  await com667(async () => {
+    put658(PT667, PONTOS667());
+    co667(EST_CF667({ status: 'finalizada', checkout: CHK667(), checkout_etapa1: E1667() }));
+    const l = run(`hospLinha666('${EST667}', EST_TODAS['${EST667}'], 'finalizada').botoes`);
+    assert.ok(/>Reabrir o check-out</.test(l) && /onclick="coCheckoutReabrirAbrir\('est667'\)"/.test(l) && /min-height:44px/.test(l), l);
+    const hj = run('coCheckoutsDeHojeHTML()');
+    assert.ok(/Check-outs de hoje \(1\)/.test(txt667(hj)) && /saiu às 09:50 · assinou Rita Teste/.test(txt667(hj)) && />Reabrir o check-out</.test(hj), txt667(hj));
+    run(`__p667=coCheckoutReabrirAbrir('${EST667}');`);
+    const h = txt667(cartaz667());
+    assert.ok(/A estadia volta a "ativa", na etapa 2 \(a bolsa montada continua montada\)/.test(h) && /O ponto de Gilda Teste desta bolsa \(5 de 10\) é estornado\./.test(h)
+      && /A assinatura do tutor de 09\/10 09:50 fica guardada\./.test(h) && /O banho de saída e o contato depois da hospedagem voltam a ver a estadia como em curso\./.test(h) && /Senha da Gestão/.test(cartaz667()), h);
+    let [p] = await assina667('s-bia', 'o tutor assinou no nome errado'); igual(p, 'conferir', 'a Recepção não reabre o check-out');
+    igual(esc667(/estadias|pontos-checkout/), [], 'nada gravado');
+    [p] = await assina667(SENHA657, 'o tutor assinou no nome errado'); igual(p, 'pronto');
+    const e = db658(EP667), c = Object.values(e.checkouts_anteriores || {});
+    igual([e.status, e.checkout || null, e.checkout_etapa1.quem, e.checkout_reaberto.por, c.length, c[0].assinado_por, c[0].pontos, c[0].motivo, c[0].registro.por, c[0].estornos],
+      ['ativa', null, 'Gilda Teste', 'Gestora Teste', 1, 'Rita Teste', 5, 'o tutor assinou no nome errado', 'Gestora Teste', [{ mes: MES667, id: 'p1' }]]);
+    const pt = db658(PT667);
+    igual([pt['est-p1'].origem, pt['est-p1'].estornaId, pt['est-p1'].quem, pt['est-p1'].pontos_estornados, pt['est-p1'].motivo, pt['est-p1'].registro.por, !!pt.p1],
+      ['estorno-bolsa', 'p1', 'Gilda Teste', 5, 'o tutor assinou no nome errado', 'Gestora Teste', true], 'o estorno é um registro novo; o ponto fica');
+    igual(valendo667(), ['p2']);
+    assert.ok(aud667('checkout-reaberto').length === 1 && aud667('registro-reaberto').length === 1, JSON.stringify(J658('__au657').map((a) => a[0])));
+    await fecha667();
+    // meio feito: o estorno entrou, a estadia não (o banco recusa a estadia)
+    co667(EST_CF667({ status: 'finalizada', checkout: CHK667({ ts: T658(9, 10, 0), pontos: 10, faltou_descer: [] }), checkout_etapa1: E1667() }));
+    put658(PT667 + '/co-est667-1', { quem: 'Gilda Teste', pontos: 10, faltas: 0, itens: [], pet: 'Biscoito', estadia: EST667, conferido_por: 'Bia Consultora Teste', ts: T658(9, 10, 0) });
+    run(`__recusa657='^auaulandia/estadias/est667$'; __p667=coCheckoutReabrirAbrir('${EST667}');`);
+    await assina667(SENHA657, 'a tutora voltou para buscar a cama'); await espera667();
+    igual(passo667(), null, 'o cartaz fecha');
+    const ze = J658('__ze657');
+    igual([ze.length, ze[0] && ze[0][0], ze[0] && ze[0][2]], [1, 'O PONTO FOI ESTORNADO; O CHECK-OUT AINDA NÃO VOLTOU', ['Terminar agora', 'Fechar']]);
+    igual([db658(EP667).status, !!db658(PT667 + '/est-co-est667-1')], ['finalizada', true]);
+    igual(run(`hospLinha666('${EST667}', EST_TODAS['${EST667}'], 'finalizada').botoes`).indexOf('Terminar agora (o check-out ainda não voltou)') >= 0, true, 'a linha mostra «Terminar agora»');
+    run(`__recusa657=null;`);
+    await run(`coCheckoutReabrirAbrir('${EST667}')`); await espera667();
+    const e2 = db658(EP667), c2 = Object.values(e2.checkouts_anteriores || {});
+    igual([e2.status, c2.length, c2[c2.length - 1].estornos, Object.keys(db658(PT667)).filter((k) => /^est-/.test(k)).sort()], ['ativa', 1, [{ mes: MES667, id: 'co-est667-1' }], ['est-co-est667-1', 'est-p1']]);
+    igual(tit667(/CHECK-OUT REABERTO/).length, 1);
+    // de novo (outro aparelho com a tela velha): a estadia já está ativa, nada a reabrir
+    run(`EST_TODAS['${EST667}']=__get657('${EP667}');`);
+    await run(`coCheckoutReabrirAbrir('${EST667}')`);
+    igual(tit667(/NÃO TEM CHECK-OUT FEITO/).length, 1);
+  });
+});
+provaAsync('6.67 P28 (AC12.4) — o 2º «Finalizar» da mesma hospedagem não lança outro ponto (a chave da estadia, por transação; a auditoria diz «já tinha sido lançado»); reaberto e finalizado de novo: um ponto só valendo. Base: o push lança outro', async () => {
+  await com667(async () => {
+    co667(EST_CF667({ checkout_etapa1: E1667() }));
+    const fin = async (faltou) => {
+      run(`coEstadia=JSON.parse(JSON.stringify(__get657('${EP667}'))); coItensLista().forEach(function(it){ coConf[it.k]=true; }); CO_FALTOU=${JSON.stringify(faltou || {})};
+        __el657['coSemTutor']={checked:true}; __el657['coQuemRetirou']={value:'Avó Teste'}; __el657['coObs']={value:''}; __el657['coAssinaNome']={value:''};
+        __el657['co-status']={style:{}, textContent:''}; coFinalizar();`);
+      await espera667();
+    };
+    await fin({ racao: true });
+    await fin({});   // o 2º toque
+    const pt = db658(PT667) || {};
+    igual([Object.keys(pt), pt['co-est667-1'].pontos, pt['co-est667-1'].quem, pt['co-est667-1'].estadia], [['co-est667-1'], 5, 'Gilda Teste', EST667]);
+    igual(aud667('checkout-pontos').map((a) => a[1]), ['Gilda Teste: 5 pontos — não desceu: ' + RACAO667, 'Gilda Teste: o ponto desta bolsa já tinha sido lançado — nada entrou de novo']);
+    // reaberto (a Gestão) e finalizado de novo: o antigo estornado, o novo valendo
+    run(`EST_TODAS['${EST667}']=__get657('${EP667}');`);
+    run(`__p667=coCheckoutReabrirAbrir('${EST667}');`);
+    const [p] = await assina667(SENHA657, 'a assinatura saiu borrada demais'); igual(p, 'pronto');
+    await fecha667();
+    await fin({});
+    igual([valendo667(), db658(PT667 + '/co-est667-2').pontos, db658(EP667).status], [['co-est667-2'], 10, 'finalizada']);
+  });
+});
+provaAsync('6.67 P29 (AC12.5, AC12.6) — o Ritmo do Time aberto na Gilda: cada bolsa com «Corrigir os pontos» e «Estornar este ponto» (44 px, só a Gestão); corrigir (a sobra «desceu»): 5 → 10, o estorno do antigo e o ponto novo (correcao-bolsa); estornar a outra; o quadro, o «Meus pontos» e o Meu Dashboard contam só as bolsas que valem; o «Seu dia» e o Início do protocolo fora; a Consultora recusada. Base: não existe', async () => {
+  await com667(async () => {
+    put658(PT667, PONTOS667());
+    run(`RITMO_PT_ABERTO='Gilda Teste'; __el657['ritmoPontos']={innerHTML:''}; ritmoPontosCarregar();`); await espera667();
+    let h = run("__el657['ritmoPontos'].innerHTML");
+    assert.ok(/2 bolsas · 1 com falta/.test(txt667(h)) && /15 de 20/.test(txt667(h)), txt667(h));
+    igual([(h.match(/>Corrigir os pontos</g) || []).length, (h.match(/>Estornar este ponto</g) || []).length, /coPontoCorrigirAbrir\('2026-10','p1'\)/.test(h)], [1, 2, true], 'corrigir só onde há «não desceu»');
+    assert.ok((h.match(/min-height:44px/g) || []).length >= 3, h);
+    run(`coPontosDoMesDe('Gilda Teste').then(function(R){ __R667=R; });`); await espera667();
+    igual([run('__R667.bolsas'), run('__R667.total')], [2, 15], 'o «Meus pontos» sem o «Seu dia» e o Início do protocolo');
+    // corrigir os pontos da bolsa do Biscoito
+    run(`__p667=coPontoCorrigirAbrir('${MES667}', 'p1');`);
+    igual(J658('CORR_ATUAL.op.campos.map(function(c){ return [c.rotulo, c.valor, c.opcoes]; })'), [[RACAO667, 'não desceu', ['não desceu', 'desceu (foi marcado por engano)']]]);
+    run(`corrToque('continuar', {valores:['desceu (foi marcado por engano)']});`);
+    assert.ok(/Pontos de Gilda Teste nesta bolsa: 5 de 10 → 10 de 10\./.test(txt667(cartaz667())), txt667(cartaz667()));
+    let [p, a] = await assina667('s-bia', 'a sobra da ração tinha descido'); igual(p, 'conferir'); assert.ok(/Gestão/.test(a), a);
+    [p] = await assina667(SENHA657, 'a sobra da ração tinha descido'); igual(p, 'pronto');
+    let pt = db658(PT667);
+    igual([pt['est-p1'].origem, pt['cor-p1'].origem, pt['cor-p1'].corrige, pt['cor-p1'].pontos, pt['cor-p1'].faltas, pt['cor-p1'].quem, pt['cor-p1'].estadia], ['estorno-bolsa', 'correcao-bolsa', 'p1', 10, 0, 'Gilda Teste', EST667]);
+    igual(valendo667(), ['cor-p1', 'p2']);
+    await fecha667();
+    // estornar a da Pipoca
+    run(`__p667=coPontoEstornarAbrir('${MES667}', 'p2');`);
+    [p] = await assina667(SENHA657, 'a bolsa da Pipoca foi de outra pessoa'); igual(p, 'pronto');
+    pt = db658(PT667);
+    igual([pt['est-p2'].estornaId, pt['est-p2'].quem, valendo667()], ['p2', 'Gilda Teste', ['cor-p1']]);
+    await fecha667();
+    // as contas: o quadro, o «Meus pontos» (e o Meu Dashboard, que lê a mesma conta)
+    run(`__el657['ritmoPontos']={innerHTML:''}; ritmoPontosCarregar();`); await espera667();
+    h = txt667(run("__el657['ritmoPontos'].innerHTML"));
+    assert.ok(/Gilda Teste 1 bolsa · nenhuma volta 10 de 10/.test(h) && /corrigido/.test(h), h);
+    run(`coPontosDoMesDe('Gilda Teste').then(function(R){ __R667=R; });`); await espera667();
+    igual([run('__R667.bolsas'), run('__R667.total'), run('__R667.perfeitas')], [1, 10, 1]);
+    // a Consultora: sem os botões; a função que grava confere de novo
+    run("document.body.dataset.role='consultora';");
+    igual(run(`coPontoBotoesHTML('${MES667}', 'cor-p1', {itens:['x']})`), '');
+    const r = await run(`coPontoEstornarGravar('${MES667}', 'cor-p1', {papel:'consultora', por:'Bia Consultora Teste', motivo:'teste da tela velha', ts:1})`);
+    igual([r.ok, r.barrou, valendo667()], [false, true, ['cor-p1']]);
+  });
+});
+provaAsync('6.67 P30 (AC12.7) — «Mudar datas» na finalizada: nada é gravado, sem a pergunta «reabrir com as novas datas», e a tela diz «Esta hospedagem teve check-out em 09/10/2026. Para ela voltar, use «Reabrir o check-out».». Base: reabre como «NA RECEPÇÃO»', async () => {
+  await com667(async () => {
+    co667(EST_CF667({ status: 'finalizada', checkout: CHK667(), checkout_etapa1: E1667() }));
+    run(`__el657['hospEdIni']={value:'2026-10-08'}; __el657['hospEdFim']={value:'2026-10-13'};`);
+    await run(`hospSalvarDatas('${EST667}')`); await espera667();
+    if (passo667()) await assina667('s-bia', 'a tutora mudou a data da viagem');
+    igual([J658('__zp657').map((z) => z[0]), za667().map((z) => [z[0], z[1]]), esc667(/estadias/), db658(EP667).status],
+      [[], [['AS DATAS NÃO MUDAM POR AQUI', ['Esta hospedagem teve check-out em 09/10/2026. Para ela voltar, use «Reabrir o check-out».', 'Nada foi gravado.']]], [], 'finalizada']);
+  });
+});
+
+// ---- AC13 a AC17 — as guardas ---------------------------------------------------------------------------------------------------------------
+// o sandbox novo (as funções como estão no arquivo, sem o palco das provas) e o sha-256 (16) de cada uma, como na 6.65 P22
+const novo667 = () => {
+  const c = vm.createContext(makeSandbox());
+  vm.runInContext(extractMainScript(fs.readFileSync(APP, 'utf8')), c, { filename: 'index.html#script', timeout: 15000 });
+  return (x) => vm.runInContext(x, c);
+};
+const h667 = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
+prova('6.67 P31 (AC12.6, AC16, guarda) — o leitor protegido do placar (ckCargaTreinamento) e o cktSeAcabou idênticos aos da base; o ponto do Início do protocolo continua somado só na trilha: não é bolsa, como o «Seu dia»', () => {
+  const runN = novo667();
+  igual({ ckCargaTreinamento: h667(runN('String(ckCargaTreinamento)')), cktSeAcabou: h667(runN('String(cktSeAcabou)')) }, { ckCargaTreinamento: '320fb4978dc9e4ad', cktSeAcabou: 'a321a8e6a94d2c56' });
+  igual(['protocolo-inicio', 'seu-dia', ''].map((o) => runN(`pontoEhBolsa({origem:'${o}'})`)), [false, false, true]);   // o estorno e a correção: a P29
+  assert.ok(/protocolo-inicio/.test(runN('String(ckCargaTreinamento)')), 'a trilha soma o Início do protocolo');
+});
+provaAsync('6.67 P32 (AC13, AC14) — a matriz de quem assina: o posto «Plantonista» e o nome digitado no lugar da senha não assinam (o lançamento à mão, o relatório, a Conferência, a bolsa, o check-out); a Linha do tempo traduz as ações novas e as da lista do AC14; nenhuma senha em registro, versão, histórico, auditoria ou Telegram', async () => {
+  // a Linha do tempo: todas em português (nada de nome técnico)
+  const ACOES = ['relatorio', 'recebimento', 'cafe', 'checkout', 'checkout-pontos', 'conferencia-etiqueta', 'conferencia-alarme', 'conferencia-racao', 'conferencia-comida',
+    'conferencia-ocorrencia', 'conferencia-fechada', 'hospede-removido', 'hospede-restaurado', 'pernoite-agendado', 'ocorrencia-desfecho',
+    'manual-corrigido', 'relatorio-corrigido', 'relatorio-anulado', 'relatorio-reaberto', 'recebimento-retirado', 'cafe-desmarcado', 'protocolo-plantao-desmarcado',
+    'conferencia-desmarcada', 'conferencia-reaberta', 'conferencia-pesagem-corrigida', 'conferencia-pesagem-desfeita', 'ocorrencia-corrigida', 'ocorrencia-engano',
+    'ocorrencia-engano-desfeito', 'ocorrencia-reaberta', 'conferencia-foto-tirada', 'conferencia-foto-devolvida', 'bolsa-reaberta', 'checkout-reaberto', 'ponto-estornado',
+    'ponto-corrigido', 'plantao-aviso', 'racao-aviso-entrada', 'registro-corrigido', 'registro-anulado', 'registro-reaberto'];
+  igual(ACOES.filter((a) => run(`acaoNome(${JSON.stringify(a)})`) === a), [], 'ações sem tradução');
+  const SENHAS = ['s-wandela', 's-cora', 's-gilda', 's-caio', 's-bia', SENHA657];
+  await com667(async () => {
+    const recusa = async (abrir, motivo) => {
+      const r = [];
+      for (const s of ['s-posto', 'Plantonista', 'Wandela Teste', 'Gilda Teste', 'Cora Conferência Teste']) {
+        run(abrir); const [p] = await assina667(s, motivo); r.push(p); await fecha667();
+      }
+      return r;
+    };
+    const C5 = ['conferir', 'conferir', 'conferir', 'conferir', 'conferir'];
+    // o lançamento à mão
+    put658('auaulandia/manuais/2026-10-08/m1', PERN667());
+    run(HOSPPERN667() + "document.body.dataset.role='monitor';");
+    igual(await recusa(`__p667=manualCorrigirAbrir('2026-10-08', 'm1'); corrToque('continuar', {valores:['08/10/2026', '3', 'Ração 80g', 'Armário', 'busca no domingo']});`, 'o tutor mudou o jantar'), C5, 'o lançamento à mão');
+    // o relatório (assinado de verdade no fim, para a varredura da senha)
+    rel667(NOITE667());
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Vomitou?': 'Sim' }) }));
+    igual(await recusa(`salvarRelatorioCard('noite');`, MOT667), C5, 'o relatório');
+    run(`salvarRelatorioCard('noite');`); await espera667();
+    let [p] = await assina667('s-wandela', MOT667); igual(p, 'pronto'); await fecha667();
+    // a Conferência
+    const F = EST_CF667(); F.conferencia.concluida = true; F.conferencia.concluida_por = 'Cora Conferência Teste'; F.conferencia.concluida_ts = T658(9, 9, 30);
+    cf667(F);
+    igual(await recusa(`__p667=cfReabrirAbrir();`, 'faltou etiquetar o remédio'), C5, 'a Conferência');
+    run(`__p667=cfReabrirAbrir();`); [p] = await assina667('s-cora', 'faltou etiquetar o remédio'); igual(p, 'pronto'); await fecha667();
+    // a bolsa e o check-out
+    co667(EST_CF667({ checkout_etapa1: E1667() }));
+    igual(await recusa(`__p667=coBolsaReabrirAbrir();`, 'faltou pôr a coleira'), C5, 'a bolsa');
+    put658(PT667, PONTOS667());
+    co667(EST_CF667({ status: 'finalizada', checkout: CHK667(), checkout_etapa1: E1667() }));
+    igual(await recusa(`__p667=coCheckoutReabrirAbrir('${EST667}');`, 'o tutor assinou errado'), C5, 'o check-out');
+    run(`__p667=coCheckoutReabrirAbrir('${EST667}');`); [p] = await assina667(SENHA657, 'o tutor assinou errado'); igual(p, 'pronto'); await fecha667();
+    // nenhuma senha em lugar nenhum
+    const tudo = JSON.stringify([run('JSON.stringify(__db657)'), run('JSON.stringify(__au657)'), run('JSON.stringify(__tg658)'), run('JSON.stringify(__urg667)')]);
+    igual(SENHAS.filter((s) => tudo.indexOf(s) >= 0), [], 'a senha não aparece');
+  });
+});
+provaAsync('6.67 P33 (AC17, guarda) — o banho de saída (6.52) e o contato depois da hospedagem (6.55) com a estadia reaberta: a finalizada antes da saída não tem banho e o contato fecha no dia do check-out; reaberta, volta a «em curso» nos dois; as provas da 6.52 e da 6.55 passaram sem mudar asserção', async () => {
+  await com667(async () => {
+    put658(PT667, PONTOS667());
+    const E = EST_CF667({ status: 'finalizada', checkout: CHK667(), checkout_etapa1: E1667() });
+    E.ficha.spa = { banho: 'Sim', horario: '15:00', horaDia: '2026-10-12' };
+    co667(E);
+    igual([run(`banhoSaidaDe('${EST667}', __get657('${EP667}'), {})`), run(`contatoEstadiaFim(__get657('${EP667}'))`)], [null, '2026-10-09'], 'finalizada');
+    run(`__p667=coCheckoutReabrirAbrir('${EST667}');`);
+    const [p] = await assina667(SENHA657, 'o tutor assinou no nome errado'); igual(p, 'pronto');
+    const b = J658(`banhoSaidaDe('${EST667}', __get657('${EP667}'), {})`);
+    igual([b && b.emCurso, b && b.saida, b && b.hora, run(`contatoEstadiaFim(__get657('${EP667}'))`)], [true, '2026-10-12', '15:00', ''], 'reaberta: em curso');
+  });
+  const me = fs.readFileSync(__filename, 'utf8');
+  assert.ok((me.match(/\bprova(?:Async)?\(['"]6\.52 /g) || []).length >= 40 && (me.match(/\bprova(?:Async)?\(['"]6\.55 /g) || []).length >= 50, 'as provas da 6.52 e da 6.55 continuam no arquivo');
+  igual(falhas.filter((f) => /^6\.5[25] /.test(f)), [], 'as provas da 6.52 e da 6.55 passaram');
+});
+prova('6.67 P34 (AC16, AC17, guarda) — a área protegida (155 funções ck*/ckt*/pt* e pendAvisarChegada, nomes e texto), o #v-daycare e as declarações ck*/pt* idênticos; nenhuma função nova ck/pt; turnoTrocar idêntica; a PERM sem as três capacidades novas igual à da base; a régua, a trava, a agenda e o log do remédio, o Telegram e as Urgências idênticos', () => {
+  const runN = novo667();
+  const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  igual([prot.length, h667(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n'))], [155, '5bac486c669007ec'], 'a área protegida');
+  const src = fs.readFileSync(APP, 'utf8');
+  const i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
+  igual([h667(src.slice(i, j)), h667(src.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396'], 'o #v-daycare e as declarações');
+  const BASE = { turnoTrocar: 'bd1991353daeb0ff', hospConfirmarAntecipada: '626c463d53e361d8', repSaldo: '566c707e9b91295e', medAgendaGravarItens: '25f628deb71f8375',
+    mcrReguaDaAgenda: '1a85ebb971f86c45', mcrTravaAgenda: '64a75a2ee28d7471', medLogHoje: 'b92405afc8dec1f0', tgAvisar: 'fe030a1d1f917599', urgAvisar: '308cb9b76b5b2963',
+    plantaoAvisoGestao: '416b79648bb37b42', ciQuemRecebeu: '385cbfebf39b2743' };
+  const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h667(runN('String(' + n + ')')); });
+  igual(agora, BASE, 'as funções que não mudam');
+  igual(h667(runN("(function(){ var c=JSON.parse(JSON.stringify(PERM)); delete c['lancar-manual-plantao']; delete c['trabalha-plantao']; delete c['conferir-checkin']; return JSON.stringify(c); })()")), 'f79140b1c2844dd5', 'as outras capacidades da PERM');
+});
+provaAsync('6.67 P35 (AC12.2, AC12.5, extra) — o placar com o cache frio do Firebase (a 1ª rodada da transação vem com null, e só a que devolve um valor roda de novo com o banco): «Reabrir o check-out» estorna o ponto e «Corrigir os pontos» grava o estorno e o ponto novo, sem dizer «já foi estornado em outro aparelho»', async () => {
+  await com667(async () => {
+    put658(PT667, PONTOS667());
+    // o Firebase de verdade: a transação começa com o que o aparelho tem guardado (nada, sem ouvinte no nó do mês); se a função
+    // desiste (devolve undefined), acabou; se devolve um valor, o banco confere e roda de novo com o que tem
+    run(`__ref667=DB.ref; DB.ref=function(p){ var r=__ref667(p); if(String(p).indexOf('daycare/pontos-checkout/')===0){ var t=r.transaction;
+      r.transaction=function(fn){ if(fn(null)===undefined) return Promise.resolve({committed:false, snapshot:{val:function(){ return null; }}}); return t.call(r, fn); }; } return r; };`);
+    try {
+      co667(EST_CF667({ status: 'finalizada', checkout: CHK667(), checkout_etapa1: E1667() }));
+      run(`__p667=coCheckoutReabrirAbrir('${EST667}');`);
+      let [p] = await assina667(SENHA657, 'o tutor assinou no nome errado'); igual(p, 'pronto');
+      igual([!!db658(PT667 + '/est-p1'), db658(EP667).status, valendo667()], [true, 'ativa', ['p2']]);
+      await fecha667();
+      put658(PT667 + '/p3', { quem: 'Gilda Teste', pontos: 5, faltas: 1, itens: [RACAO667], pet: 'Pipoca', estadia: 'est3', conferido_por: 'Bia Consultora Teste', ts: T658(9, 9, 55) });
+      run(`RITMO_PT_V={mes:'${MES667}', v:__get657('${PT667}')}; __p667=coPontoCorrigirAbrir('${MES667}', 'p3'); corrToque('continuar', {valores:['desceu (foi marcado por engano)']});`);
+      [p] = await assina667(SENHA657, 'a sobra da ração tinha descido'); igual(p, 'pronto');
+      igual([db658(PT667 + '/cor-p3').pontos, !!db658(PT667 + '/est-p3'), valendo667()], [10, true, ['cor-p3', 'p2']]);
+    } finally { run('DB.ref=__ref667;'); }
+  });
+});
+provaAsync('6.67 P36 (AC12.6, extra, decisão do orquestrador) — o que é bolsa no placar vai por lista positiva: só a bolsa do «Finalizar» (o registro sem origem) e a correção dela; o «Seu dia», o Início do protocolo, o estorno da bolsa e as origens que vêm depois (o estorno e a devolução do «Seu dia», ou qualquer outra) ficam fora do quadro do Ritmo do Time e do «Meus pontos». Base: toda origem nova contava como bolsa', async () => {
+  const ORIG = [['', true], ['correcao-bolsa', true], ['seu-dia', false], ['protocolo-inicio', false], ['estorno-bolsa', false], ['estorno-seu-dia', false], ['devolve-seu-dia', false], ['qualquer-origem-nova', false]];
+  igual(ORIG.map((o) => run(`pontoEhBolsa(${o[0] ? `{origem:'${o[0]}', pontos:5}` : '{pontos:10}'})`)), ORIG.map((o) => o[1]), 'a régua das bolsas');
+  await com667(async () => {
+    put658(PT667, { p1: { quem: 'Gilda Teste', pontos: 5, faltas: 1, itens: [RACAO667], pet: 'Biscoito', estadia: EST667, conferido_por: 'Bia Consultora Teste', ts: T658(9, 9, 50) },
+      sd: { origem: 'seu-dia', quem: 'Gilda Teste', pontos: 5, ts: T658(8, 8, 0) }, pi: { origem: 'protocolo-inicio', quem: 'Gilda Teste', pontos: 5, ts: T658(9, 7, 0) },
+      esd: { origem: 'estorno-seu-dia', estornaId: 'sd', quem: 'Gilda Teste', pontos: -5, ts: T658(9, 8, 0) }, dsd: { origem: 'devolve-seu-dia', quem: 'Gilda Teste', pontos: 5, ts: T658(9, 8, 30) },
+      nova: { origem: 'qualquer-origem-nova', quem: 'Gilda Teste', pontos: 3, ts: T658(9, 8, 40) } });
+    igual(valendo667(), ['p1'], 'só a bolsa vale');
+    run(`coPontosDoMesDe('Gilda Teste').then(function(R){ __R667=R; });`); await espera667();
+    igual([run('__R667.bolsas'), run('__R667.total'), run('__R667.maximo')], [1, 5, 10], 'o «Meus pontos» e o Meu Dashboard');
+    run(`RITMO_PT_ABERTO=''; __el657['ritmoPontos']={innerHTML:''}; ritmoPontosCarregar();`); await espera667();
+    const h = txt667(run("__el657['ritmoPontos'].innerHTML"));
+    assert.ok(/Gilda Teste 1 bolsa · 1 com falta 5 de 10/.test(h), h);
+  });
+});
+// ================================================================== 6.67 QA — as provas de ataque do QA (Quinn), dentro do bloco da 6.67
+// 2ª rodada (TEST-001): vieram de scratchpad/qa667/ataque667-todos.js («QA667 A01» a «A37»), com o nome «6.67 QA Axx». Mesmo palco das
+// provas do @dev (com667, o banco de mentira da 6.57, relógio fixo em 09/10/2026 10:00, gente «Teste»). As seis que eram «[ACHADO]»
+// (A04, A05, A10, A15, A16, A17) afirmam agora o comportamento certo, depois das correções da 2ª rodada; a A34 ganhou palco (a marca
+// antiga também no banco: o «antes» do café vem do banco, REL-004).
+const QA667_CAMERA = `__bkFq={fr:(typeof FileReader!=='undefined')?FileReader:undefined, im:(typeof Image!=='undefined')?Image:undefined, ce:document.createElement};
+  FileReader=function(){ var s=this; this.readAsDataURL=function(){ s.result='data:bruta'; s.onload(); }; };
+  Image=function(){ var o={width:800, height:600}; Object.defineProperty(o, 'src', {set:function(v){ o.onload && o.onload(); }}); return o; };
+  __nfq=0; document.createElement=function(t){ return (t==='canvas')?{getContext:function(){ return {drawImage:function(){}}; }, toDataURL:function(){ return 'data:qa'+(++__nfq); }}:__bkFq.ce.call(document, t); };`;
+const QA667_CAMERA_SOLTA = `if(__bkFq.fr!==undefined) FileReader=__bkFq.fr; if(__bkFq.im!==undefined) Image=__bkFq.im; document.createElement=__bkFq.ce;`;
+
+prova('6.67 QA A01 (placar) — pontoEhBolsa por lista positiva: só a bolsa sem origem e a correcao-bolsa; estorno-bolsa, seu-dia, protocolo-inicio, estorno-seu-dia, devolve-seu-dia, uma origem inventada e a correção com maiúscula ficam fora', () => {
+  const C = [[{ pontos: 10 }, true], [{ origem: '', pontos: 10 }, true], [{ origem: 'correcao-bolsa', pontos: 10 }, true], [{ origem: 'estorno-bolsa', estornaId: 'x' }, false],
+    [{ origem: 'seu-dia', pontos: 5 }, false], [{ origem: 'protocolo-inicio', pontos: 5 }, false], [{ origem: 'estorno-seu-dia', pontos: -5 }, false],
+    [{ origem: 'devolve-seu-dia', pontos: 5 }, false], [{ origem: 'bolsa-inventada-qa667', pontos: 10 }, false], [{ origem: 'Correcao-Bolsa', pontos: 10 }, false]];
+  igual(C.map((c) => run(`pontoEhBolsa(${JSON.stringify(c[0])})`)), C.map((c) => c[1]));
+});
+
+provaAsync('6.67 QA A02 (placar) — com estorno de outra origem, estorno sem alvo, estorno da correção e as origens novas no mesmo mês: coBolsasValendo, o «Meus pontos» e o quadro do Ritmo contam só as bolsas que valem; o estorno apontado para o «Seu dia» não tira bolsa nenhuma', async () => {
+  await com667(async () => {
+    put658(PT667, {
+      p1: { quem: 'Gilda Teste', pontos: 5, faltas: 1, itens: [RACAO667], pet: 'Biscoito', estadia: EST667, ts: T658(9, 9, 50) },
+      'est-p1': { origem: 'estorno-bolsa', estornaId: 'p1', quem: 'Gilda Teste', pontos_estornados: 5, ts: T658(9, 9, 55) },
+      'cor-p1': { quem: 'Gilda Teste', pontos: 10, faltas: 0, pet: 'Biscoito', estadia: EST667, origem: 'correcao-bolsa', corrige: 'p1', ts: T658(9, 9, 50) },
+      'est-cor-p1': { origem: 'estorno-bolsa', estornaId: 'cor-p1', quem: 'Gilda Teste', ts: T658(9, 9, 58) },
+      p2: { quem: 'Gilda Teste', pontos: 10, faltas: 0, pet: 'Pipoca', estadia: 'est2', ts: T658(8, 18, 0) },
+      p3: { quem: 'Gilda Teste', pontos: 5, faltas: 1, itens: ['x'], pet: 'Mel', estadia: 'est3', ts: T658(8, 19, 0) },
+      sd: { origem: 'seu-dia', quem: 'Gilda Teste', pontos: 5, ts: T658(8, 8, 0) },
+      'est-sd': { origem: 'estorno-bolsa', estornaId: 'sd', quem: 'Gilda Teste', ts: T658(9, 8, 0) },
+      'est-nada': { origem: 'estorno-bolsa', quem: 'Gilda Teste', ts: T658(9, 8, 1) },
+      'est-fantasma': { origem: 'estorno-bolsa', estornaId: 'naoexiste', quem: 'Gilda Teste', ts: T658(9, 8, 2) },
+      esd: { origem: 'estorno-seu-dia', estornaId: 'p2', quem: 'Gilda Teste', pontos: -5, ts: T658(9, 8, 3) },
+      dsd: { origem: 'devolve-seu-dia', quem: 'Gilda Teste', pontos: 5, ts: T658(9, 8, 4) },
+      inv: { origem: 'bolsa-inventada-qa667', estornaId: 'p3', quem: 'Gilda Teste', pontos: 10, ts: T658(9, 8, 5) },
+      pi: { origem: 'protocolo-inicio', quem: 'Gilda Teste', pontos: 5, ts: T658(9, 7, 0) } });
+    igual(valendo667(), ['p2', 'p3'], 'só p2 e p3 valem (p1 e a correção dele estornados; o estorno de outra origem não estorna p2)');
+    run(`coPontosDoMesDe('Gilda Teste').then(function(R){ __Rq=R; });`); await espera667();
+    igual([run('__Rq.bolsas'), run('__Rq.total'), run('__Rq.maximo')], [2, 15, 20]);
+    run(`RITMO_PT_ABERTO=''; __el657['ritmoPontos']={innerHTML:''}; ritmoPontosCarregar();`); await espera667();
+    const h = txt667(run("__el657['ritmoPontos'].innerHTML"));
+    assert.ok(/Gilda Teste 2 bolsas · 1 com falta 15 de 20/.test(h), h);
+  });
+});
+
+provaAsync('6.67 QA A03 (placar, área protegida) — o leitor protegido (ckCargaTreinamento) com o placar cheio de estornos, correções e origens novas soma só o protocolo-inicio de quem está logado (5), como antes', async () => {
+  await com667(async () => {
+    put658(PT667, { pi: { origem: 'protocolo-inicio', quem: 'Gilda Teste', pontos: 5, ts: T658(9, 7, 0) },
+      'est-p1': { origem: 'estorno-bolsa', estornaId: 'p1', quem: 'Gilda Teste', ts: 1 }, 'cor-p1': { origem: 'correcao-bolsa', quem: 'Gilda Teste', pontos: 10, ts: 1 },
+      esd: { origem: 'estorno-seu-dia', quem: 'Gilda Teste', pontos: -5, ts: 1 }, p1: { quem: 'Gilda Teste', pontos: 5, ts: 1 }, pi2: { origem: 'protocolo-inicio', quem: 'Caio Encãotador Teste', pontos: 5, ts: 1 } });
+    run(`__bkCk={e:ckEmTreinamento, q:quemSou, d:dcDataKey}; ckEmTreinamento=function(){ return true; }; quemSou=function(){ return 'Gilda Teste'; }; dcDataKey=function(){ return '2026-10-09'; };`);
+    try { await run('ckCargaTreinamento()'); await espera667(); igual(run('CKT_PONTOS_MES'), 5); }
+    finally { run('ckEmTreinamento=__bkCk.e; quemSou=__bkCk.q; dcDataKey=__bkCk.d;'); }
+  });
+});
+
+provaAsync('6.67 QA A04 (relatório, dois aparelhos; era [ACHADO], REL-001) — o 1º «Passar plantão» de uma tela velha (que abriu a ficha antes de o outro aparelho passar) não regrava por cima: o banco fica com o relatório e a assinatura do aparelho A, a tela diz quem passou e quando (sem «Plantão passado!») e o cartaz «corrigir» abre com o banco como base; assinado, a versão do aparelho A vai para as versões', async () => {
+  await com667(async () => {
+    run(`aplicarCard('card-noite', {}); __esc657=[]; __au657=[]; __tg658=[]; __za657=[];`);
+    igual(run('REL_CUR.noite'), null, 'a tela do aparelho B: sem relatório');
+    put658(REL667 + '/noite', NOITE667({ areas: ['texto do aparelho A'], recebeu: 'Caio Encãotador Teste', _tsReceb: T658(9, 7, 30) }));   // o aparelho A passou e o Caio assinou
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Vomitou?': 'Sim' }), areas: ['texto do aparelho B'], _ts: T658(9, 9, 0) }));
+    await salva667();
+    const v = db658(REL667 + '/noite') || {};
+    igual([(v.areas || [])[0], v.recebeu, Object.keys(v.versoes || {}).length, esc667(/relatorios/)], ['texto do aparelho A', 'Caio Encãotador Teste', 0, []], 'nada gravado por cima');
+    const st = String(run("__el657['status-noite'].textContent") || '');
+    assert.ok(/Este plantão já foi passado em outro aparelho, por Wandela Teste às 07:00\. Nada foi gravado por cima/.test(st) && !/Plantão passado!/.test(st), st);
+    igual([passo667(), aud667('relatorio').length], ['conferir', 0], 'o cartaz «corrigir» abre; sem o rastro do 1º salvamento');
+    const h = txt667(cartaz667());
+    assert.ok(/Vomitou\?\s*:?\s*«Não» → «Sim»/.test(h) && /texto do aparelho A/.test(h) && /Caio Encãotador Teste assinou o recebimento/.test(h), h);
+    const [p] = await assina667('s-wandela', MOT667); igual(p, 'pronto');
+    const v2 = db658(REL667 + '/noite'), vs = Object.values(v2.versoes || {});
+    igual([v2.areas[0], v2.byQ['Vomitou?'], v2.recebeu || null, vs.length, vs[0].areas[0], vs[0].recebeu], ['texto do aparelho B', 'Sim', null, 1, 'texto do aparelho A', 'Caio Encãotador Teste']);
+    // o anulado no banco: o 1º salvamento da tela velha também não grava
+    put658(REL667 + '/noite', NOITE667({ anulado: { motivo: MOT667, registro: { por: 'Gestora Teste' } } }));
+    run(`aplicarCard('card-noite', {}); __esc657=[]; __za657=[];`); await fecha667();
+    tela667(NOITE667({ areas: ['texto da tela velha'] })); await salva667();
+    igual([esc667(/relatorios/), tit667(/ANULADO/).length, db658(REL667 + '/noite').areas[0]], [[], 1, 'dormiu a noite inteira']);
+  });
+});
+
+provaAsync('6.67 QA A05 (relatório, dois aparelhos; era [ACHADO], REL-002) — a correção feita numa tela velha não desfaz em silêncio a correção que outro aparelho já gravou: recusada («mudou em outro aparelho», com quem, a hora e o que está no banco), nada gravado, nenhuma linha ao grupo, e a tela passa a mostrar o banco', async () => {
+  await com667(async () => {
+    const orig = NOITE667();
+    rel667(orig);   // o aparelho B leu a versão original (Vomitou? Não)
+    const corr = NOITE667({ byQ: Object.assign({}, orig.byQ, { 'Vomitou?': 'Sim' }), _ts: T658(9, 9, 30), corrigido: { por: 'Wandela Teste', ts: T658(9, 9, 30) },
+      versoes: { v1: Object.assign({}, orig, { corrigida: { motivo: MOT667, registro: { por: 'Wandela Teste' } } }) } });
+    put658(REL667 + '/noite', corr);   // o aparelho A corrigiu: Vomitou? Sim (já foi ao grupo)
+    tela667(NOITE667({ byQ: Object.assign({}, orig.byQ, { 'Bebeu água?': 'Não' }) }));   // B muda só «Bebeu água?»; a tela dele ainda diz Vomitou? Não
+    await salva667();
+    const [p] = await assina667('s-wandela', MOT667);
+    const v = db658(REL667 + '/noite');
+    igual([p, v.byQ['Vomitou?'], v.byQ['Bebeu água?'], Object.keys(v.versoes || {}).length, J658('__tg658').length, J658('__urg667').length, aud667('relatorio-corrigido').length],
+      ['falhou', 'Sim', 'Sim', 1, 0, 0, 0], 'nada gravado por cima da correção do aparelho A');
+    const erro = String(run('(typeof CORR_ATUAL!=="undefined" && CORR_ATUAL)?CORR_ATUAL.erro:""') || '');
+    assert.ok(/O relatório mudou em outro aparelho depois que esta tela abriu \(corrigido por Wandela Teste às 09:30\)\. Nada foi gravado\./.test(erro) && /No banco agora: Vomitou\?: «Não» → «Sim»/.test(erro), erro);
+    igual(run('REL_CUR.noite.byQ["Vomitou?"]'), 'Sim', 'a tela passa a ter o que está no banco');
+    assert.ok(/mudou em outro aparelho/.test(run("__el657['status-noite'].textContent")), run("__el657['status-noite'].textContent"));
+    // de novo, agora com a tela certa: a correção passa
+    await fecha667();
+    tela667(Object.assign(JSON.parse(JSON.stringify(corr)), { byQ: Object.assign({}, corr.byQ, { 'Bebeu água?': 'Não' }) })); await salva667();
+    const [p2] = await assina667('s-wandela', MOT667);
+    igual([p2, db658(REL667 + '/noite').byQ['Vomitou?'], db658(REL667 + '/noite').byQ['Bebeu água?'], Object.keys(db658(REL667 + '/noite').versoes || {}).length], ['pronto', 'Sim', 'Não', 2]);
+  });
+});
+
+provaAsync('6.67 QA A06 (relatório, banco recusando) — a correção que o banco recusa: o cartaz diz que falhou, o banco fica como estava, sem rastro de «corrigido», sem linha ao grupo e sem «Correção salva» na tela', async () => {
+  await com667(async () => {
+    rel667(NOITE667());
+    run(`__el657['status-noite'].textContent='';`);
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Vomitou?': 'Sim' }) })); await salva667();
+    run(`__recusa657='^auaulandia/relatorios/';`);
+    const [p] = await assina667('s-wandela', MOT667); await espera667();
+    run(`__recusa657=null;`);
+    igual([p, db658(REL667 + '/noite').byQ['Vomitou?'], aud667('relatorio-corrigido').length, aud667('registro-corrigido').length, J658('__tg658').length, J658('__urg667').length],
+      ['falhou', 'Não', 0, 0, 0, 0]);
+    assert.ok(!/Correção salva/.test(run("__el657['status-noite'].textContent")), run("__el657['status-noite'].textContent"));
+  });
+});
+
+provaAsync('6.67 QA A07 (recebimento, banco recusando) — «Li tudo e assino» com o banco recusando: a tela diz o erro, o cartão continua «aguardando recebimento» e não há rastro de recebimento', async () => {
+  await com667(async () => {
+    rel667(NOITE667());
+    run(`__el657['recebeu-noite']={value:'Gilda Teste'}; __el657['status-receb-noite']={style:{}, textContent:''}; __zpq657=[true]; LEITURA_ROLOU.noite=true; __recusa657='^auaulandia/relatorios/';`);
+    await run(`confirmarRecebimento('noite')`); await espera667();
+    run(`__recusa657=null;`);
+    igual([run('RELSTATE.noite.recebeu'), aud667('recebimento').length, db658(REL667 + '/noite').recebeu || null], ['', 0, null]);
+    assert.ok(/Erro/.test(run("__el657['status-receb-noite'].textContent")), run("__el657['status-receb-noite'].textContent"));
+  });
+});
+
+provaAsync('6.67 QA A08 (lançamento à mão, banco recusando) — «Corrigir este lançamento» com o banco recusando: o cartaz diz que falhou, a lista do Plantão continua com o lançamento de antes (o × não guardaria uma versão que o banco não tem) e não há rastro', async () => {
+  await com667(async () => {
+    put658('auaulandia/manuais/2026-10-08/m1', PERN667());
+    run(HOSPPERN667() + "document.body.dataset.role='monitor';");
+    run(`__p667=manualCorrigirAbrir('2026-10-08', 'm1'); corrToque('continuar', {valores:['08/10/2026', '3', 'Ração 80g', 'Armário', 'busca no domingo']});`);
+    run(`__recusa657='^auaulandia/manuais';`);
+    const [p] = await assina667('s-caio', 'o tutor mudou a quantidade do jantar');
+    run(`__recusa657=null;`);
+    igual([p, db658('auaulandia/manuais/2026-10-08/m1').jantar.comida, run('hospedes[0].jantar.comida'), run('hospedes[0].manualReg.jantar.comida'), aud667('manual-corrigido').length],
+      ['falhou', 'Ração 50g', 'Ração 50g', 'Ração 50g', 0]);
+  });
+});
+
+provaAsync('6.67 QA A09 («Trazer de volta», banco recusando) — o lançamento não volta: a marca «devolvido» sai (o tirado continua tirado, aparece de novo na faixa) e não há rastro de «trouxe de volta»', async () => {
+  await com667(async () => {
+    put658('auaulandia/removidos/2026-10-08/pipoca__lia teste', { nome: 'Pipoca', tutor: 'Lia Teste', quem: 'Caio Encãotador Teste', ts: T658(8, 21, 0), motivo: 'lancei a Pipoca no dia errado',
+      origem: 'manual', manualDia: '2026-10-08', manualKey: 'm1', registro: PERN667() });
+    run(`hospPodeDesfazer=function(){ return true; };`);
+    await run('carregarRemovidosAnteriores()'); await espera667();
+    run(`__zpq657=[true]; __recusa657='^auaulandia/manuais';`);
+    await run(`hospTrazerDeVolta('pipoca__lia teste', '2026-10-08')`); await espera667();
+    run(`__recusa657=null;`);
+    const r = db658('auaulandia/removidos/2026-10-08/pipoca__lia teste');
+    igual([!!r, (r || {}).devolvido || null, db658('auaulandia/manuais/2026-10-08'), aud667('hospede-restaurado').length], [true, null, null, 0]);
+    await run('carregarRemovidosAnteriores()'); await espera667();
+    igual(J658('REMOVIDOS_ANTERIORES.map(function(x){ return x.k; })'), ['pipoca__lia teste'], 'continua na faixa, para tentar de novo');
+  });
+});
+
+provaAsync('6.67 QA A10 (fotos, banco recusando; era [ACHADO], REL-003) — a foto que o banco recusou não aparece, não conta para fechar a Conferência (nada de «Tudo certo» com a foto só na tela) e a tela avisa «A FOTO NÃO FOI SALVA»; a foto aceita aparece e conta', async () => {
+  await com667(async () => {
+    cf667();
+    run(`cfCarregarFotos('${EST667}');`); await espera667(200);
+    igual(J658('cfConf.fotos'), [], 'sem foto');
+    run(QA667_CAMERA);
+    try {
+      run(`__recusa657='^auaulandia/conferencia-fotos';`);
+      run(`cfAddFoto({target:{files:[{}], value:'x'}});`); await espera667(200);
+    } finally { run(`__recusa657=null;`); run(QA667_CAMERA_SOLTA); }
+    igual(db658('auaulandia/conferencia-fotos/' + EST667), null, 'o banco não tem a foto');
+    igual([J658('cfConf.fotos'), J658('CF_FOTOS').length], [[], 0], 'a foto recusada não fica na tela');
+    assert.ok(run('cfPendencias().indexOf("Adicionar ao menos 1 foto")>=0'), 'o portão continua pedindo foto: ' + JSON.stringify(J658('cfPendencias()')));
+    igual(tit667(/^A FOTO NÃO FOI SALVA$/).length, 1, 'a tela avisa');
+    run(QA667_CAMERA);
+    try { run(`cfAddFoto({target:{files:[{}], value:'x'}});`); await espera667(200); } finally { run(QA667_CAMERA_SOLTA); }
+    igual([J658('cfConf.fotos').length, Object.keys(db658('auaulandia/conferencia-fotos/' + EST667) || {}).length], [1, 1], 'a foto aceita aparece e está no banco');
+    assert.ok(run('cfPendencias().indexOf("Adicionar ao menos 1 foto")<0'), JSON.stringify(J658('cfPendencias()')));
+  });
+});
+
+provaAsync('6.67 QA A11 («Reabrir o check-out», banco recusando o placar) — o estorno recusado: nada é gravado na estadia, o meio feito não fica marcado e o cartaz diz que falhou', async () => {
+  await com667(async () => {
+    put658(PT667, PONTOS667());
+    co667(EST_CF667({ status: 'finalizada', checkout: CHK667(), checkout_etapa1: E1667() }));
+    run(`__recusa657='^daycare/pontos-checkout'; __p667=coCheckoutReabrirAbrir('${EST667}');`);
+    const [p] = await assina667(SENHA657, 'o tutor assinou no nome errado'); await espera667();
+    run(`__recusa657=null;`);
+    igual([p, db658(EP667).status, !!db658(EP667).checkout, run(`!!CO_REABRIR_MEIO['${EST667}']`), valendo667(), aud667('checkout-reaberto').length], ['falhou', 'finalizada', true, false, ['p1', 'p2'], 0]);
+  });
+});
+
+provaAsync('6.67 QA A12 («Reabrir o check-out» do mês anterior) — o check-out de 30/09 reaberto em 09/10: o estorno entra no placar de setembro (o mês do ponto), o de outubro não muda; finalizada de novo, um ponto só valendo em outubro', async () => {
+  await com667(async () => {
+    const PTS = 'daycare/pontos-checkout/2026-09', tsSet = new Date(2026, 8, 30, 12, 0, 0).getTime();
+    put658(PTS, { s1: { quem: 'Gilda Teste', pontos: 10, faltas: 0, itens: [], pet: 'Biscoito', estadia: EST667, ts: tsSet } });
+    put658(PT667, { p2: PONTOS667().p2 });
+    co667(EST_CF667({ status: 'finalizada', checkout: CHK667({ ts: tsSet, pontos: 10, faltou_descer: [] }), checkout_etapa1: E1667({ ts: tsSet - 3600000 }) }));
+    run(`__p667=coCheckoutReabrirAbrir('${EST667}');`);
+    const [p] = await assina667(SENHA657, 'o tutor assinou no nome errado'); igual(p, 'pronto');
+    const set = db658(PTS);
+    igual([!!set['est-s1'], J658(`coBolsasValendo(__get657('${PTS}')).length`), valendo667(), db658(EP667).status], [true, 0, ['p2'], 'ativa']);
+  });
+});
+
+provaAsync('6.67 QA A13 (pesagem, dois aparelhos) — a correção da pesagem numa tela velha (o outro aparelho já corrigiu) é recusada: «A pesagem mudou em outro aparelho», nada gravado', async () => {
+  await com667(async () => {
+    cf667();
+    put658(EP667 + '/conferencia/racao', Object.assign({}, EST_CF667().conferencia.racao, { pesoTrazido: 1250, deficit: -50, ts: T658(9, 9, 45) }));   // o aparelho A corrigiu
+    run(`__el657['cfRacaoPeso']={value:'1300'}; __el657['cfRacaoObs']={value:''}; cfConfirmarRacao();`); await espera667(200);
+    const [p, a] = await assina667('s-cora', 'pesei de novo e deu mais');
+    igual([p, db658(EP667 + '/conferencia/racao').pesoTrazido, Object.keys(db658(EP667 + '/conferencia').racao_historico || {}).length], ['falhou', 1250, 0], a);
+  });
+});
+
+provaAsync('6.67 QA A14 (ocorrência) — quem registrou, num dia seguinte e sem ser de quem confere, não anula nem corrige sozinho (no dia seguinte, a régua de quem confere ou da Recepção)', async () => {
+  await com667(async () => {
+    const E = EST_CF667(); E.ocorrencias.o1.ts = T658(8, 8, 0);   // registrada ontem pela Gilda
+    cf667(E, 'monitor');
+    const r1 = await run(`cfOcorrEnganoAbrir('${EST667}', 'o1', 'conferencia')`);
+    igual([!!(r1 && r1.barrou), passo667()], [true, null], 'o aparelho da Gilda (Encãotadora) não abre: no dia seguinte, quem registrou não assina');
+    const r2 = await run(`cfOcorrCorrigirAbrir('${EST667}', 'o1', 'conferencia')`);
+    igual([!!(r2 && r2.barrou), passo667()], [true, null]);
+    const r3 = await run(`cfOcorrEnganoGravar('${EST667}', 'o1', 'conferencia', {por:'Gilda Teste', papel:'monitor', motivo:'registrei no FILHOt errado ontem', ts:1})`);
+    igual([!!(r3 && r3.barrou), !!(db658(EP667 + '/ocorrencias/o1').anulada)], [true, false], 'a função que grava confere de novo');
+  });
+});
+
+provaAsync('6.67 QA A15 (relatório, AC2.2; era [ACHADO], REQ-001) — quem passou o plantão hoje assina a correção com a própria senha mesmo sem o papel do Plantão (a Aprendiz que passou o Relatório da Noite); outra Aprendiz, não', async () => {
+  await com667(async () => {
+    run(`__srQ=senhasRuntime; senhasRuntime=function(){ var m=__srQ(); m['s-ana']={role:'aprendiz', nome:'Ana Aprendiz Teste'}; m['s-lia']={role:'aprendiz', nome:'Lia Aprendiz Teste'}; return m; };`);
+    try {
+      rel667(NOITE667({ passou: 'Ana Aprendiz Teste' }));
+      run("document.body.dataset.role='aprendiz';");
+      tela667(NOITE667({ passou: 'Ana Aprendiz Teste', areas: ['dormiu a noite inteira, roncou'] }));
+      await salva667();
+      igual(passo667(), 'conferir', 'quem passou hoje abre o cartaz da correção (AC2.2: «quem passou o plantão … no mesmo dia, ou quem trabalha no Plantão»); auditoria: ' + JSON.stringify(aud667('sem-permissao').map((a) => a[1])));
+      let [p, a] = await assina667('s-lia', MOT667); igual(p, 'conferir'); assert.ok(/Lia Aprendiz Teste/.test(a), a);
+      [p] = await assina667('s-ana', MOT667); igual(p, 'pronto');
+      igual([db658(REL667 + '/noite').areas[0], Object.keys(db658(REL667 + '/noite').versoes || {}).length], ['dormiu a noite inteira, roncou', 1]);
+    } finally { run('senhasRuntime=__srQ;'); }
+  });
+});
+
+provaAsync('6.67 QA A16 (café, dois aparelhos; era [ACHADO], REL-004) — a marca trocada por um aparelho que leu o café antes guarda o «antes» do banco (a marca do outro aparelho não some sem rastro); a mesma marca que já está no banco não grava de novo, e a tela fica com a marca do banco', async () => {
+  await com667(async () => {
+    run(`hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __kq=cafeKey(hospedes[0]);`);
+    const k = run('__kq'), C = 'auaulandia/cafe/2026-10-09/' + k;
+    put658(C, { estado: 'tudo', quem: 'Wandela Teste', hora: '08:00' });   // o aparelho A marcou «Comeu»
+    run('cafeMarcas={};');   // o aparelho B leu o café antes
+    run(`marcarCafe(__kq, 'metade');`); await espera667(200);
+    igual(db658(C), { estado: 'metade', quem: 'Gestora Teste', hora: '10:00', antes: { estado: 'tudo', quem: 'Wandela Teste', hora: '08:00' } });
+    igual(aud667('cafe-desmarcado').map((a) => a[1]), ['desmarcou "Comeu" de Biscoito (era de Wandela Teste às 08:00) e marcou "Metade"']);
+    igual(run('cafeEstado(__kq)'), 'metade', 'a tela fica com o que o banco guardou');
+    // a tela velha de novo (sem marca) toca «Não comeu», que o outro aparelho já marcou: nada é gravado, nenhum rastro novo, e a tela
+    // fica com a marca do banco (de quem marcou e a hora), não com a do toque
+    put658(C, { estado: 'nao', quem: 'Wandela Teste', hora: '08:30' });
+    run(`cafeMarcas={}; __esc657=[];`);
+    run(`marcarCafe(__kq, 'nao');`); await espera667(200);
+    igual([esc667(/cafe/), aud667('cafe-desmarcado').length, db658(C), run('cafeEstado(__kq)'), J658('cafeMarcas[__kq]')],
+      [[], 1, { estado: 'nao', quem: 'Wandela Teste', hora: '08:30' }, 'nao', { estado: 'nao', quem: 'Wandela Teste', hora: '08:30' }]);
+  });
+});
+
+provaAsync('6.67 QA A17 (texto no onclick; era [ACHADO], MNT-001) — «Trazer de volta» funciona com apóstrofo no nome do tutor: o onclick da linha do tirado em dia anterior e o da linha de hoje são JavaScript válido (a chave vira texto de JavaScript dentro do onclick)', async () => {
+  await com667(async () => {
+    const valido = (h) => (h.match(/onclick="([^"]*)"/g) || []).map((x) => {
+      const js = /onclick="([^"]*)"/.exec(x)[1].replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+      try { new Function(js); return null; } catch (e) { return e.message + ': ' + js; } });
+    const h = run(`removidoAnteriorHTML({dia:'2026-10-08', k:"pipoca__lia d'avila teste", v:{nome:'Pipoca', tutor:"Lia D'Ávila Teste", quem:'Caio Encãotador Teste', manualDia:'2026-10-08', registro:{noites:3}}})`);
+    igual(valido(h), [null], 'a linha do dia anterior');
+    run(`__el657['hospGrid']={parentNode:{insertBefore:function(){}}}; __el657['hospRemovidos']={style:{}, innerHTML:'', remove:function(){}}; hospPodeDesfazer=function(){ return true; };
+      REMOVIDOS_ANT_DIA=dataKeyAtual(); REMOVIDOS_ANTERIORES=[]; REMOVIDOS_HOJE={}; REMOVIDOS_HOJE["pipoca__lia d'avila teste"]={nome:'Pipoca', tutor:"Lia D'Ávila Teste", quem:'Caio Encãotador Teste', ts:1};
+      renderRemovidosHoje();`);
+    const h2 = run("__el657['hospRemovidos'].innerHTML");
+    assert.ok(/Trazer de volta/.test(h2), h2);
+    igual(valido(h2), [null], 'a linha de hoje');
+  });
+});
+
+provaAsync('6.67 QA A18 (correção do ponto) — depois de corrigido, a tela velha que ainda mostra o p1 não estorna de novo (o quadro se relê; a função que grava recusa «já foi estornado (ou corrigido)»); estornar a correção deixa só a outra bolsa valendo', async () => {
+  await com667(async () => {
+    put658(PT667, PONTOS667());
+    run(`RITMO_PT_V={mes:'${MES667}', v:__get657('${PT667}')}; __p667=coPontoCorrigirAbrir('${MES667}', 'p1'); corrToque('continuar', {valores:['desceu (foi marcado por engano)']});`);
+    let [p] = await assina667(SENHA657, 'a sobra da ração tinha descido'); igual(p, 'pronto'); await fecha667();
+    // a tela velha (o quadro lido antes) tenta estornar o p1: o quadro se relê depois da correção, e o cartaz não abre; a função que grava
+    // (um aparelho que não se releu) também recusa
+    run(`__za657=[]; __p667=coPontoEstornarAbrir('${MES667}', 'p1');`);
+    igual([passo667(), tit667(/ESTE PONTO NÃO VALE MAIS/).length], [null, 1]);
+    const rv = await run(`coPontoEstornarGravar('${MES667}', 'p1', {papel:'gestao', por:'Gestora Teste', motivo:'a bolsa foi de outra pessoa mesmo', ts:2})`);
+    igual([rv.ok, /já foi estornado \(ou corrigido\)/.test(String(rv.erro))], [false, true]);
+    // corrigir a correção (voltar a «não desceu» não existe — a correção não tem itens; estornar a correção, sim)
+    run(`RITMO_PT_V={mes:'${MES667}', v:__get657('${PT667}')}; __p667=coPontoEstornarAbrir('${MES667}', 'cor-p1');`);
+    [p] = await assina667(SENHA657, 'a correção foi lançada na bolsa errada'); igual(p, 'pronto');
+    igual(valendo667(), ['p2']);
+    const pt = db658(PT667);
+    igual([pt['est-cor-p1'].estornaId, pt['est-cor-p1'].quem, Object.keys(pt).filter((k) => /^est-/.test(k)).sort()], ['cor-p1', 'Gilda Teste', ['est-cor-p1', 'est-p1']]);
+  });
+});
+
+provaAsync('6.67 QA A19 («Trazer de volta», o dia certo) — a pernoite lançada em 07/10 (3 noites) e tirada em 08/10 volta para o dia em que foi lançada (07/10, com as 3 noites), não para o dia em que foi tirada: a janela das noites continua a mesma', async () => {
+  await com667(async () => {
+    put658('auaulandia/removidos/2026-10-08/pipoca__lia teste', { nome: 'Pipoca', tutor: 'Lia Teste', quem: 'Caio Encãotador Teste', ts: T658(8, 21, 0), motivo: 'tirei a Pipoca por engano ontem',
+      origem: 'manual', manualDia: '2026-10-07', manualKey: 'm0', registro: PERN667({ criadoTs: T658(7, 9, 0) }) });
+    run(`hospPodeDesfazer=function(){ return true; };`);
+    await run('carregarRemovidosAnteriores()'); await espera667();
+    igual(J658('REMOVIDOS_ANTERIORES.map(function(x){ return [x.dia, x.k, x.v.manualDia]; })'), [['2026-10-08', 'pipoca__lia teste', '2026-10-07']]);
+    run(`__zpq657=[true];`);
+    await run(`hospTrazerDeVolta('pipoca__lia teste', '2026-10-08')`); await espera667();
+    const v7 = Object.values(db658('auaulandia/manuais/2026-10-07') || {}), v8 = db658('auaulandia/manuais/2026-10-08');
+    igual([v7.length, v7[0] && v7[0].noites, v8], [1, 3, null]);
+    run(`hospedes=[]; carregarManuais();`); await espera667();
+    igual(J658('hospedes.map(function(h){ return [h.nome, h.manualDia]; })'), [['Pipoca', '2026-10-07']], 'hoje (09/10) a pernoite de 07/10 com 3 noites está no Plantão');
+  });
+});
+
+// ---- QA 6.67 — 2ª leva: a função que grava confere de novo (a tela velha, o console) e as telas velhas que não podem gravar por cima
+provaAsync('6.67 QA A20 (relatório, a função que grava) — a correção que muda remédio, chamada direto (tela velha ou console) com a assinatura da Plantonista, é barrada: só a Gestão', async () => {
+  await com667(async () => {
+    rel667(NOITE667());
+    const novo = NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'med|Apoquel|08:00': 'Não' }) });
+    ctx.__nq = novo;
+    const r = await run(`relCorrigirGravar('noite', '${FK667}', {nome:'Biscoito', tutor:'Rita Teste'}, __nq, {por:'Wandela Teste', papel:'plantonista', motivo:'${MOT667}', ts:1}, relDiff(REL_CUR.noite, __nq, 'noite'))`);
+    igual([r.ok, !!r.barrou, db658(REL667 + '/noite').byQ['med|Apoquel|08:00']], [false, true, 'Sim']);
+  });
+});
+
+provaAsync('6.67 QA A21 («Retirar esta assinatura», a função que grava) — chamada direto com a assinatura da Consultora (nem a pessoa, nem a Supervisão): barrada, a assinatura fica', async () => {
+  await com667(async () => {
+    rel667(NOITE667({ recebeu: 'Caio Encãotador Teste', _tsReceb: T658(9, 7, 30) }));
+    const r = await run(`relRetirarGravar('noite', '${FK667}', {nome:'Biscoito'}, 'Caio Encãotador Teste', {por:'Bia Consultora Teste', papel:'consultora', motivo:'assinei sem ter lido o relatório', ts:1})`);
+    igual([r.ok, !!r.barrou, db658(REL667 + '/noite').recebeu], [false, true, 'Caio Encãotador Teste']);
+  });
+});
+
+provaAsync('6.67 QA A22 («Lançada por engano», o desfecho que chega com o cartaz aberto) — sem desfecho quando o cartaz abriu; «Levei à veterinária» gravado em outro aparelho antes da assinatura: quem confere é recusada (agora é a Gestão)', async () => {
+  await com667(async () => {
+    cf667();
+    run(`__p667=cfOcorrEnganoAbrir('${EST667}', 'o1', 'conferencia');`);
+    put658(EP667 + '/ocorrencias/o1/avisadoTutor', { acao: 'levei à vet para olhar a pata', assinatura: 'Bia Consultora Teste', desfecho: 'vet', quando: '09/10 09:58', ts: T658(9, 9, 58) });
+    const [p, a] = await assina667('s-cora', 'foi registrada no FILHOt errado');
+    igual([p, !!db658(EP667 + '/ocorrencias/o1').anulada], ['falhou', false], a);
+  });
+});
+
+provaAsync('6.67 QA A23 («Reabrir a bolsa», a função que grava) — quem montou ONTEM, chamando direto com a própria assinatura, é barrada (no dia seguinte, a Recepção)', async () => {
+  await com667(async () => {
+    co667(EST_CF667({ checkout_etapa1: E1667({ ts: T658(8, 18, 0) }) }));
+    const r = await run(`coBolsaReabrirGravar('${EST667}', 'Gilda Teste', false, {por:'Gilda Teste', papel:'monitor', motivo:'o tutor vem buscar amanhã', ts:1})`);
+    igual([r.ok, !!r.barrou, !!db658(EP667).checkout_etapa1], [false, true, true]);
+  });
+});
+
+provaAsync('6.67 QA A24 («Reabrir conferência», tela velha) — a conferência já reaberta em outro aparelho: nada é gravado de novo (nenhuma reabertura vazia em reaberturas)', async () => {
+  await com667(async () => {
+    cf667();   // aberta no banco
+    const r = await run(`cfReabrirGravar('${EST667}', {por:'Cora Conferência Teste', papel:'conferencia', motivo:'faltou etiquetar o remédio', ts:1})`);
+    igual([r.ok, Object.keys(db658(EP667 + '/conferencia').reaberturas || {}).length], [false, 0]);
+  });
+});
+
+provaAsync('6.67 QA A25 (pesagem, tela velha) — a correção da pesagem assinada depois que outro aparelho fechou a conferência: recusada, nada gravado', async () => {
+  await com667(async () => {
+    cf667();
+    run(`__el657['cfRacaoPeso']={value:'1300'}; __el657['cfRacaoObs']={value:''}; cfConfirmarRacao();`); await espera667(200);
+    put658(EP667 + '/conferencia/concluida', true);   // outro aparelho fechou com o cartaz aberto
+    const [p] = await assina667('s-cora', 'pesei de novo e deu mais');
+    igual([p, db658(EP667 + '/conferencia/racao').pesoTrazido], ['falhou', 1000]);
+  });
+});
+
+provaAsync('6.67 QA A26 (lançamento à mão, tela velha) — corrigir o lançamento que outro aparelho já mudou de dia: recusado, nenhum lançamento novo (o FILHOt não fica em dobro)', async () => {
+  await com667(async () => {
+    put658('auaulandia/manuais/2026-10-08/m1', PERN667({ movidoPara: { dia: '2026-10-10', id: 'mX', registro: { por: 'Caio Encãotador Teste' } } }));
+    put658('auaulandia/manuais/2026-10-10/mX', PERN667({ movidoDe: { dia: '2026-10-08', id: 'm1' } }));
+    run("document.body.dataset.role='monitor';");
+    const r = await run(`manualCorrigirGravar('2026-10-08', 'm1', {depois:{dia:'11/10/2026'}, antes:{}, por:'Caio Encãotador Teste', papel:'monitor', ts:1})`);
+    igual([r.ok, Object.keys(db658('auaulandia/manuais/2026-10-11') || {}).length, Object.keys(db658('auaulandia/manuais/2026-10-10') || {}).length], [false, 0, 1]);
+  });
+});
+
+provaAsync('6.67 QA A27 (Urgências) — a correção que muda o remédio de um relatório que JÁ dizia «Vomitou? Sim»: a Gestão recebe a linha; o grupo de Urgências não recebe de novo o vômito que já estava lá', async () => {
+  await com667(async () => {
+    rel667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Vomitou?': 'Sim' }) }));
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Vomitou?': 'Sim', 'med|Apoquel|08:00': 'Não' }) })); await salva667();
+    const [p] = await assina667(SENHA657, MOT667); igual(p, 'pronto'); await espera667();
+    igual([J658('__tg658').filter((t) => t.grupo === 'gestao').length, J658('__urg667').length], [1, 0]);
+  });
+});
+
+provaAsync('6.67 QA A28 (aviso de falta) — a pesagem corrigida da comida natural não escreve na trilha do aviso da RAÇÃO da mesma estadia', async () => {
+  await com667(async () => {
+    cf667();
+    put658('auaulandia/avisos-racao/a1', { hospNome: 'Biscoito', tutor: 'Rita Teste', estadiaId: EST667, tipo: 'racao', itemNome: 'Ração/comida', deficit: 200, unidade: 'g', status: 'pendente', entries: [], _ts: T658(9, 9, 10) });
+    run(`__el657['cfComidaPeso']={value:'550'}; __el657['cfComidaObs']={value:''}; cfConfirmarComida();`); await espera667(200);
+    const [p] = await assina667('s-cora', 'a comida tinha mais um pote'); igual(p, 'pronto'); await espera667();
+    igual((db658('auaulandia/avisos-racao/a1').entries || []).length, 0);
+  });
+});
+
+prova('6.67 QA A29 (relatório) — «Anular este relatório» só aparece no aparelho de quem exclui hospedagem (Supervisão, Gestão, Diretoria); na Plantonista e no Encãotador, não', () => {
+  const d = JSON.stringify(NOITE667()), papel0 = run('document.body.dataset.role');
+  try {
+    igual(['plantonista', 'monitor', 'consultora', 'supervisor', 'gestao', 'diretoria'].map((r) => { run(`document.body.dataset.role='${r}';`); return /relAnularAbrir/.test(run(`relCorrHTML('noite', ${d})`)); }),
+      [false, false, false, true, true, true]);
+  } finally { ctx.__papel667 = papel0; run('document.body.dataset.role=__papel667;'); }   // 2ª rodada (palco): o papel volta ao que era
+});
+
+provaAsync('6.67 QA A30 (fotos) — com a conferência fechada, a tela das fotos não mostra o × nem «Pôr de volta» (só de leitura)', async () => {
+  await com667(async () => {
+    const F = EST_CF667(); F.conferencia.concluida = true; F.conferencia.concluida_por = 'Cora Conferência Teste'; F.conferencia.concluida_ts = T658(9, 9, 30);
+    cf667(F);
+    run(`CF_FOTOS=[{id:'f1', src:'data:f1', quem:'Cora', ts:1}, {id:'f2', src:'data:f2', quem:'Cora', ts:2, tirada:{quem:'Cora', ts:3}}]; cfFotosSincronizar(); __el657['cfFotos']={innerHTML:''}; renderCfFotos();`);
+    const h = run("__el657['cfFotos'].innerHTML");
+    assert.ok(!/cfFotoTirar/.test(h) && !/cfFotoPorDeVolta/.test(h) && /Fotos tiradas \(1\)/.test(h), h);
+  });
+});
+
+provaAsync('6.67 QA A31 (relatório, remédio) — mudar só a grade de suplementação do turno, ou «Tem suplementação?», pede a Gestão (é remédio)', async () => {
+  await com667(async () => {
+    rel667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Tem suplementação?': 'Sim' }), sups: [{ m: 'Ômega 3', h: '08:00', q: '1', u: 'cápsula' }] }));
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Tem suplementação?': 'Sim' }), sups: [{ m: 'Ômega 3', h: '20:00', q: '1', u: 'cápsula' }] })); await salva667();
+    assert.ok(/Senha da Gestão/.test(cartaz667()), 'a grade de suplementação: ' + txt667(cartaz667()).slice(0, 300));
+    await fecha667();
+    rel667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Tem suplementação?': 'Sim' }) }));
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Tem suplementação?': 'Não' }) })); await salva667();
+    assert.ok(/Senha da Gestão/.test(cartaz667()), '«Tem suplementação?»: ' + txt667(cartaz667()).slice(0, 300));
+  });
+});
+
+provaAsync('6.67 QA A32 (ocorrência, tela velha) — «Corrigir o texto» de uma ocorrência que outro aparelho lançou por engano: recusado, o texto fica; «Reabrir» na Recepção da ocorrência já reaberta: nada gravado', async () => {
+  await com667(async () => {
+    cf667();
+    run(`__p667=cfOcorrCorrigirAbrir('${EST667}', 'o1', 'conferencia'); corrToque('continuar', {valores:['texto novo da ocorrência']});`);
+    put658(EP667 + '/ocorrencias/o1/anulada', { motivo: 'registrada no FILHOt errado', registro: { por: 'Gilda Teste' } });
+    const [p] = await assina667('s-cora', 'a coleira estava só gasta');
+    igual([p, db658(EP667 + '/ocorrencias/o1').texto], ['falhou', 'chegou com a coleira arrebentada']);
+    await fecha667();
+    cf667(null, 'consultora');
+    const r = await run(`ocorrHospReabrirGravar('${EST667}', 'o1', {por:'Bia Consultora Teste', papel:'consultora', motivo:'a tutora ainda não respondeu nada', ts:1})`);
+    igual([r.ok, Object.keys(db658(EP667 + '/ocorrencias/o1').desfechos_anteriores || {}).length], [false, 0]);
+  });
+});
+
+provaAsync('6.67 QA A33 (faixa dos tirados) — a pernoite de 3 noites lançada em 07/10 e tirada ANTEONTEM (07/10) ainda estaria aqui hoje: aparece na faixa', async () => {
+  await com667(async () => {
+    put658('auaulandia/removidos/2026-10-07/pipoca__lia teste', { nome: 'Pipoca', tutor: 'Lia Teste', quem: 'Caio Encãotador Teste', ts: T658(7, 21, 0), motivo: 'tirei a Pipoca por engano',
+      origem: 'manual', manualDia: '2026-10-07', manualKey: 'm0', registro: PERN667() });
+    run(`hospPodeDesfazer=function(){ return true; };`);
+    await run('carregarRemovidosAnteriores()'); await espera667();
+    igual(J658('REMOVIDOS_ANTERIORES.map(function(x){ return [x.dia, x.k]; })'), [['2026-10-07', 'pipoca__lia teste']]);
+  });
+});
+
+provaAsync('6.67 QA A34 (café, o formato antigo) — a marca antiga gravada só como texto («tudo») trocada por «Metade»: o «antes» guarda «Comeu»', async () => {
+  await com667(async () => {
+    run(`hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __kq=cafeKey(hospedes[0]); cafeMarcas={}; cafeMarcas[__kq]='tudo';`);
+    put658('auaulandia/cafe/2026-10-09/' + run('__kq'), 'tudo');   // 2ª rodada (palco): a marca antiga gravada no banco — o «antes» vem de lá
+    run(`marcarCafe(__kq, 'metade');`); await espera667(200);
+    const v = db658('auaulandia/cafe/2026-10-09/' + run('__kq'));
+    igual([v.estado, v.antes && v.antes.estado], ['metade', 'tudo']);
+  });
+});
+
+provaAsync('6.67 QA A35 (Conferência fechada) — a tela que leu a conferência fechada recusa mesmo antes de a cópia viva chegar (cfConf fechada, cópia viva ainda aberta)', async () => {
+  await com667(async () => {
+    cf667();
+    run(`cfConf.concluida=true; cfConf.concluida_por='Cora Conferência Teste'; cfConf.concluida_ts=${T658(9, 9, 30)}; __top667={closest:function(){ return {dataset:{t:'pertence', k:'p1'}}; }}; cfToggleItem(__top667);`); await espera667(200);
+    igual([esc667(/estadias/), tit667(/A CONFERÊNCIA ESTÁ FECHADA/).length], [[], 1]);
+  });
+});
+
+provaAsync('6.67 QA A36 (relatório) — a correção não grava num turno que, no banco, nunca foi passado (só existe a assinatura solta de recebimento)', async () => {
+  await com667(async () => {
+    rel667(NOITE667());
+    put658(REL667 + '/noite', { recebeu: 'Caio Encãotador Teste', _tsReceb: 1 });   // o banco: nada passado
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Bebeu água?': 'Não' }) })); await salva667();
+    const [p] = await assina667('s-wandela', MOT667);
+    igual([p, db658(REL667 + '/noite').passou || null], ['falhou', null]);
+    // 2ª rodada: a função que grava, chamada direto, sem a base da tela (o console ou uma tela antiga), também não grava no turno nunca passado
+    ctx.__o36 = NOITE667(); ctx.__n36 = NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Bebeu água?': 'Não' }) });   // o antes → depois da tela velha
+    const r = await run(`relCorrigirGravar('noite', '${FK667}', {nome:'Biscoito', tutor:'Rita Teste'}, __n36, {por:'Wandela Teste', papel:'plantonista', motivo:'${MOT667}', ts:1}, relDiff(__o36, __n36, 'noite'))`);
+    igual([r.ok, db658(REL667 + '/noite').passou || null, /ainda não tinha sido passado/.test(String(r.erro || ''))], [false, null, true], JSON.stringify(r));
+  });
+});
+
+provaAsync('6.67 QA A37 (ocorrência na Recepção) — a Consultora de Bem-Estar corrige o texto pela Recepção com a própria senha (a ocorrência de ontem: vale a régua da Recepção, não a de quem registrou)', async () => {
+  await com667(async () => {
+    const E = EST_CF667(); E.ocorrencias.o1.ts = T658(8, 8, 0);
+    cf667(E, 'consultora');
+    run(`__p667=cfOcorrCorrigirAbrir('${EST667}', 'o1', 'recepcao');`);
+    igual(passo667(), 'campos', 'o cartaz abre na Recepção');
+    run(`corrToque('continuar', {valores:['chegou com a coleira gasta']});`);
+    const [p] = await assina667('s-bia', 'a coleira estava só gasta');
+    igual([p, db658(EP667 + '/ocorrencias/o1').texto], ['pronto', 'chegou com a coleira gasta']);
+  });
+});
+// ---- 2ª rodada (o parecer do QA e os dois «à parte» da base) ----------------------------------------------------------------------------
+// As provas do QA (acima) cobrem REL-001, REL-002, REL-003, REQ-001, REL-004 e MNT-001; estas cobrem o resto: o mês do ponto (à parte),
+// o atalho da Mesa (à parte), a assinatura do check-out a 375 px (REQ-002), o mês anterior no Ritmo (REQ-003), os leitores fora da
+// varredura (MNT-002) e os textos (DOC-001).
+provaAsync('6.67 P37 (2ª rodada, à parte) — o ponto da bolsa no mês de Brasília: o check-out finalizado às 22h de 31/10 (01:00 de 01/11 em UTC) entra no placar de outubro, e o quadro do Ritmo e o «Meus pontos» (que leem o mês local) o mostram; «Reabrir o check-out» acha no mês de Brasília e também no mês UTC (o ponto lançado antes desta versão). Base: o ponto ia para novembro e sumia do quadro até virar o dia', async () => {
+  const tz0 = process.env.TZ;
+  process.env.TZ = 'America/Sao_Paulo';   // o fuso da Zêluz, também na rodada em UTC (o defeito só aparece fora do UTC)
+  try {
+    await com667(async () => {
+      relogio658(T658(31, 22, 0));
+      igual([run('coMesAtual()'), run(`coMesDoTs(${T658(31, 22, 0)})`)], ['2026-10', '2026-10'], 'o mês local');
+      co667(EST_CF667({ checkout_etapa1: E1667() }));
+      run(`coEstadia=JSON.parse(JSON.stringify(__get657('${EP667}'))); coItensLista().forEach(function(it){ coConf[it.k]=true; }); CO_FALTOU={};
+        __el657['coSemTutor']={checked:true}; __el657['coQuemRetirou']={value:'Avó Teste'}; __el657['coObs']={value:''}; __el657['coAssinaNome']={value:''};
+        __el657['co-status']={style:{}, textContent:''}; coFinalizar();`);
+      await espera667();
+      igual([Object.keys(db658('daycare/pontos-checkout/2026-10') || {}), db658('daycare/pontos-checkout/2026-11')], [['co-est667-1'], null], 'outubro, não novembro');
+      run(`RITMO_PT_ABERTO=''; __el657['ritmoPontos']={innerHTML:''}; ritmoPontosCarregar();`); await espera667();
+      assert.ok(/Gilda Teste 1 bolsa/.test(txt667(run("__el657['ritmoPontos'].innerHTML"))), txt667(run("__el657['ritmoPontos'].innerHTML")));
+      run(`coPontosDoMesDe('Gilda Teste').then(function(R){ __R667=R; });`); await espera667();
+      igual([run('__R667.bolsas'), run('__R667.total')], [1, 10]);
+      // o ponto lançado antes desta versão, no mês UTC do check-out (novembro), reaberto em dezembro: acha e estorna lá
+      put658('daycare/pontos-checkout/2026-10', null);
+      put658('daycare/pontos-checkout/2026-11', { velho: { quem: 'Gilda Teste', pontos: 10, faltas: 0, itens: [], pet: 'Biscoito', estadia: EST667, ts: T658(31, 22, 0) } });
+      relogio658(new Date(2026, 11, 5, 10, 0, 0).getTime());
+      co667(EST_CF667({ status: 'finalizada', checkout: CHK667({ ts: T658(31, 22, 0), pontos: 10, faltou_descer: [] }), checkout_etapa1: E1667() }));
+      run(`__p667=coCheckoutReabrirAbrir('${EST667}');`);
+      const [p] = await assina667(SENHA657, 'o tutor assinou no nome errado'); igual(p, 'pronto');
+      const nov = db658('daycare/pontos-checkout/2026-11') || {};
+      igual([!!nov['est-velho'], J658(`coBolsasValendo(__get657('daycare/pontos-checkout/2026-11')).length`), db658(EP667).status], [true, 0, 'ativa']);
+    });
+  } finally { if (tz0 === undefined) delete process.env.TZ; else process.env.TZ = tz0; }
+});
+provaAsync('6.67 P38 (2ª rodada, à parte) — o atalho da Mesa «Tutor esperando na recepção» (irParaView(\'checkoutconf\')) abre a seção do Check-out no modo da Conferência (como o menu), e não uma tela em branco. Base: procurava #v-checkoutconf, que não existe', async () => {
+  await com667(async () => {
+    const box = run(`mesaBox(1, 'Tutor esperando na recepção', 'conferir a bolsa junto e assinar', '#1E8449', "irParaView('checkoutconf')")`);
+    assert.ok(/irParaView\('checkoutconf'\)/.test(box), box);
+    run(`__ativa667=[]; __el657['v-checkoutconf']=null; __el657['v-checkout']={id:'v-checkout', classList:{add:function(c){ __ativa667.push('v-checkout '+c); }, remove:function(){}, contains:function(){ return false; }}};
+      __el657['head-title']={childNodes:[{nodeValue:''}]}; __el657['head-sub']={textContent:''};
+      __bkIr667={a:aoAbrirView, s:window.scrollTo}; __abriu667=[]; aoAbrirView=function(v){ __abriu667.push(v); }; window.scrollTo=function(){};`);
+    try { run(`__bk657.irv('checkoutconf');`); }   // o irParaView de verdade (o palco da 6.57 troca o global por um vazio)
+    finally { run('aoAbrirView=__bkIr667.a; window.scrollTo=__bkIr667.s;'); }
+    igual([J658('__ativa667'), J658('__abriu667')], [['v-checkout active'], ['checkoutconf']], 'a seção do Check-out fica ativa; o gancho põe o modo da Conferência');
+  });
+});
+provaAsync('6.67 P39 (2ª rodada, REQ-002) — «Check-out com o tutor» cabe em 375 px: o quadro da assinatura (#coSig) com width:100%; o quadro escondido na hora de abrir mede o pai; o traço fica no lugar do dedo quando o desenho de 600 px aparece mais estreito. Base: 600 px fixos (a página com 647 px)', async () => {
+  const html = fs.readFileSync(APP, 'utf8');
+  assert.ok(/#v-checkout canvas#coSig\{width:100%;max-width:100%;height:190px;display:block/.test(html), 'o CSS do #coSig');
+  await com667(async () => {
+    run(`__ls667={}; __tr667=[]; __ctx667={beginPath:function(){}, moveTo:function(x,y){ __tr667.push(['m',x,y]); }, lineTo:function(x,y){ __tr667.push(['l',x,y]); }, stroke:function(){}, clearRect:function(){}};
+      __cv667=function(r, pai){ return {offsetWidth:0, width:0, height:0, parentNode:pai||null, getContext:function(){ return __ctx667; }, getBoundingClientRect:function(){ return r; },
+        addEventListener:function(ev, fn){ __ls667[ev]=fn; }, toDataURL:function(){ return 'data:x'; }}; };
+      __bkWa667=window.addEventListener; window.addEventListener=function(){};
+      __el657['x667Sig']=__cv667({left:0, top:0, width:340, height:190}, {clientWidth:340}); __el657['x667Hint']={style:{}};
+      zSigCriar('x667Sig','x667Hint').init();`);
+    try {
+      igual([run("__el657['x667Sig'].width"), run("__el657['x667Sig'].height")], [340, 190], 'escondido na hora: mede o pai');
+      run(`__el657['y667Sig']=__cv667({left:10, top:20, width:300, height:95}, null); __el657['y667Hint']={style:{}}; zSigCriar('y667Sig','y667Hint').init();
+        __ls667.touchstart({preventDefault:function(){}, touches:[{clientX:160, clientY:67.5}]}); __ls667.touchmove({preventDefault:function(){}, touches:[{clientX:85, clientY:43.75}]});`);
+      igual([run("__el657['y667Sig'].width"), J658('__tr667')], [600, [['m', 300, 95], ['l', 150, 47.5]]], 'o traço na escala do quadro');
+    } finally { run('window.addEventListener=__bkWa667;'); }
+  });
+});
+provaAsync('6.67 P40 (2ª rodada, REQ-003) — o quadro «Bolsa do check-out» do Ritmo abre o mês anterior para a Gestão («Ver setembro de 2026», 44 px): a bolsa de 30/09 marcada errada se corrige em outubro (o estorno e a correção no placar de setembro; outubro não muda); «Voltar para outubro de 2026»; só o mês anterior; a Consultora não vê a linha do mês. Base: só o mês corrente', async () => {
+  await com667(async () => {
+    igual([run("coMesAnterior('2026-10')"), run("coMesAnterior('2026-01')"), run("coMesRotulo('2026-09')"), run("coMesAnterior('x')")], ['2026-09', '2025-12', 'setembro de 2026', '']);
+    const SET = 'daycare/pontos-checkout/2026-09';
+    put658(SET, { s1: { quem: 'Gilda Teste', pontos: 5, faltas: 1, itens: [RACAO667], pet: 'Mel', estadia: 'est9', conferido_por: 'Bia Consultora Teste', ts: new Date(2026, 8, 30, 18, 0, 0).getTime() } });
+    put658(PT667, PONTOS667());
+    try {
+      run(`RITMO_PT_MES=''; RITMO_PT_ABERTO=''; __el657['ritmoPontos']={innerHTML:''}; ritmoPontosCarregar();`); await espera667();
+      let h = run("__el657['ritmoPontos'].innerHTML");
+      assert.ok(/Este mês: outubro de 2026/.test(txt667(h)) && />Ver setembro de 2026</.test(h) && /onclick="coRitmoMes\('2026-09'\)"/.test(h) && /min-height:44px/.test(h), h);
+      run(`coRitmoMes('2026-09');`); await espera667();
+      run(`ritmoPontosAbrir('Gilda Teste');`); await espera667();
+      h = run("__el657['ritmoPontos'].innerHTML");
+      assert.ok(/Mês anterior: setembro de 2026/.test(txt667(h)) && />Voltar para outubro de 2026</.test(h) && /Gilda Teste 1 bolsa · 1 com falta 5 de 10/.test(txt667(h)) && /coPontoCorrigirAbrir\('2026-09','s1'\)/.test(h), txt667(h));
+      run(`__p667=coPontoCorrigirAbrir('2026-09', 's1'); corrToque('continuar', {valores:['desceu (foi marcado por engano)']});`);
+      const [p] = await assina667(SENHA657, 'a sobra da ração tinha descido'); igual(p, 'pronto');
+      const s = db658(SET);
+      igual([s['est-s1'].origem, s['cor-s1'].pontos, J658(`coBolsasValendo(__get657('${SET}')).map(function(x){ return x.k; })`), db658(PT667)], ['estorno-bolsa', 10, ['cor-s1'], PONTOS667()]);
+      await fecha667();
+      // só o mês anterior: outro mês volta para este mês
+      run(`coRitmoMes('2026-05');`); await espera667();
+      igual(run('RITMO_PT_MES'), '');
+      assert.ok(/Este mês: outubro de 2026/.test(txt667(run("__el657['ritmoPontos'].innerHTML"))));
+      // e o outro mês não fica guardado nem quando o quadro não está na tela (o leitor não roda para apagar)
+      run(`__el657['ritmoPontos']=null; coRitmoMes('2026-05');`);
+      igual(run('RITMO_PT_MES'), '', 'só o mês anterior é guardado');
+      run(`__el657['ritmoPontos']={innerHTML:''};`);
+      // a Consultora: sem a linha do mês
+      run(`document.body.dataset.role='consultora'; __el657['ritmoPontos']={innerHTML:''}; ritmoPontosCarregar();`); await espera667();
+      assert.ok(!/Ver setembro|Este mês/.test(run("__el657['ritmoPontos'].innerHTML")), run("__el657['ritmoPontos'].innerHTML"));
+    } finally { run(`if(typeof RITMO_PT_MES!=='undefined') RITMO_PT_MES='';`); }
+  });
+});
+provaAsync('6.67 P41 (2ª rodada, MNT-002) — os leitores fora da varredura: a evolução semana a semana (plEvolucao, painel-logica.js) conta só as bolsas que valem (sem o estorno, a estornada, o «Seu dia», o Início do protocolo e as origens novas); «Reabrir a hospedagem» não conta o tirado que já voltou («devolvido»). Base: somava tudo e contava o devolvido', async () => {
+  const c = vm.createContext({});
+  vm.runInContext(fs.readFileSync(path.join(path.dirname(APP), 'painel-logica.js'), 'utf8'), c);
+  const mes = { p1: { quem: 'Gilda Teste', pontos: 5, faltas: 1, ts: T658(6, 10, 0) }, 'est-p1': { origem: 'estorno-bolsa', estornaId: 'p1', quem: 'Gilda Teste', pontos_estornados: 5, ts: T658(6, 11, 0) },
+    'cor-p1': { origem: 'correcao-bolsa', corrige: 'p1', quem: 'Gilda Teste', pontos: 10, faltas: 0, ts: T658(6, 10, 0) }, p2: { quem: 'Gilda Teste', pontos: 10, faltas: 0, ts: T658(7, 18, 0) },
+    sd: { origem: 'seu-dia', quem: 'Gilda Teste', pontos: 5, ts: T658(7, 8, 0) }, pi: { origem: 'protocolo-inicio', quem: 'Gilda Teste', pontos: 5, ts: T658(8, 7, 0) },
+    esd: { origem: 'estorno-seu-dia', estornaId: 'p2', quem: 'Gilda Teste', pontos: -5, ts: T658(8, 8, 0) }, inv: { origem: 'bolsa-inventada', quem: 'Gilda Teste', pontos: 10, ts: T658(8, 9, 0) } };
+  const ev = c.plEvolucao('Gilda Teste', { pontosPorMes: { '2026-10': mes } }, 1, '2026-10-09');
+  igual([ev.length, ev[0].bolsas, ev[0].pontos, ev[0].bolsasPerfeitas], [1, 2, 20, 2], JSON.stringify(ev));
+  igual(c.plBolsasDoMes(mes).map((r) => r.pontos + '/' + (r.origem || '')), ['10/correcao-bolsa', '10/']);
+  await com667(async () => {
+    put658('auaulandia/removidos/2026-10-09/k1', { exclusao_estadia: EST667, nome: 'Biscoito', tutor: 'Rita Teste' });
+    put658('auaulandia/removidos/2026-10-10/k1', { exclusao_estadia: EST667, nome: 'Biscoito', tutor: 'Rita Teste', devolvido: { quem: 'Gestora Teste', ts: 1 } });
+    const r = await run(`hospReabrirLer('${EST667}', {nome:'Biscoito', tutor:'Rita Teste', entrada:'2026-10-09', saida:'2026-10-11'})`);
+    igual(r.removidos.map((x) => x.dia), ['2026-10-09']);
+  });
+});
+provaAsync('6.67 P42 (2ª rodada, DOC-001) — os textos e o tamanho: «a confirmar com a Encãotadora» (não «monitora») no jantar da pernoite; «1 noite» e «3 noites» (não «noite(s)»); o botão «Corrigir a pesagem» com 44 px; o × que apagava a ocorrência da estadia (cfRemoverOcorrencia) saiu, e nada no app apaga uma ocorrência', async () => {
+  await com667(async () => {
+    const f = txt667(run(`hospEstadiaFichaHTML({nome:'Pipoca', pernoite:true, jantar:{}})`));
+    assert.ok(/a confirmar com a Encãotadora/.test(f) && !/monitora/.test(f), f);
+    const um = txt667(run(`removidoAnteriorHTML({dia:'2026-10-08', k:'pipoca__lia teste', v:{nome:'Pipoca', tutor:'Lia Teste', quem:'Caio Encãotador Teste', manualDia:'2026-10-08', registro:{noites:1}}})`));
+    assert.ok(/\(1 noite desde 08\/10\)/.test(um) && !/noite\(s\)/.test(um), um);
+    cf667();
+    run(`__el657['cf-racao-status'].parentNode={insertBefore:function(){}}; __el657['cfPesCorr-racao']={innerHTML:''}; __btn667={textContent:'Confirmar ração', style:{}};
+      __bkQs667=document.querySelector; document.querySelector=function(s){ return /cfConfirmarRacao/.test(String(s))?__btn667:null; };`);
+    try { run(`cfPesagemQuadro('racao');`); } finally { run('document.querySelector=__bkQs667;'); }
+    igual([run('__btn667.textContent'), run('__btn667.style.minHeight')], ['Corrigir a pesagem', '44px']);
+    igual(run('typeof cfRemoverOcorrencia'), 'undefined');
+    const html = fs.readFileSync(APP, 'utf8');
+    assert.ok(!/ocorrencias\/'\+[^;\n]*\)\.remove\(\)/.test(html), 'nada apaga uma ocorrência');
+  });
+});
+// ================================================================== 6.67 QA re-gate — as provas do re-gate do QA (Quinn), dentro do bloco da 6.67
+// Vieram de scratchpad/qa667r2/ataque667r2.js (B01 a B08) e ataque667r2b.js (B09 a B11), com o nome «6.67 QA re-gate · Bxx». A B09, que
+// afirmava o defeito da REQ-004 (o mês anterior escolhido pela Gestão ficava para quem entrava depois no mesmo tablet), afirma agora a
+// correção, com a virada do mês. O Firebase de verdade roda a função da transação mais de uma vez: primeiro com o que o aparelho tem
+// guardado (nada, ou uma cópia velha) e, se o servidor tem outro valor, de novo com o do servidor. O banco de mentira roda uma vez só;
+// tx2 imita as duas rodadas.
+const QAR_TX2 = (re, primeiro) => `__refQR=DB.ref; __txQR=[]; DB.ref=function(p){ var r=__refQR(p); if(new RegExp(${JSON.stringify(re)}).test(String(p))){ var t=r.transaction;
+  r.transaction=function(fn){ var pri=fn(${primeiro}); __txQR.push(pri===undefined?'desistiu':'propôs'); return t.call(r, fn); }; } return r; };`;
+const QAR_TX2_SOLTA = `DB.ref=__refQR;`;
+
+provaAsync('6.67 QA re-gate · B01 (relatório, TRÊS aparelhos) — A passa; B e C, com a tela velha, tocam «Passar plantão»: os dois veem «já foi passado» e o cartaz com o banco (A) como base; B assina primeiro (A vai para as versões); C, que abriu o cartaz antes de B assinar, é recusada («mudou em outro aparelho»): o banco fica com B, as versões com A, e o grupo recebe só a linha de B', async () => {
+  await com667(async () => {
+    run(`aplicarCard('card-noite', {});`);
+    put658(REL667 + '/noite', NOITE667({ areas: ['texto de A'] }));   // A passou
+    // B: tela velha → «já passado» e o cartaz com a base A
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Vomitou?': 'Sim' }), areas: ['texto de B'], _ts: T658(9, 9, 0) })); await salva667();
+    igual(passo667(), 'conferir', 'B: o cartaz abre');
+    const opB = run('CORR_ATUAL.op.gravar');   // a gravação do cartaz de B (com a base A)
+    ctx.__gravB = opB;
+    // C: outra tela velha, antes de B assinar → também «já passado», cartaz com a base A
+    run(`REL_CUR.noite=null;`);
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Bebeu água?': 'Não' }), areas: ['texto de C'], _ts: T658(9, 9, 5) })); await salva667();
+    igual(passo667(), 'conferir', 'C: o cartaz abre');
+    ctx.__gravC = run('CORR_ATUAL.op.gravar');
+    await fecha667();
+    // B assina (pela gravação do cartaz dele, com o registro da Wandela)
+    const rB = await run(`__gravB({por:'Wandela Teste', papel:'plantonista', motivo:'${MOT667}', ts:${T658(9, 9, 10)}, acao:'corrigir'})`); await espera667();
+    igual(rB.ok, true, JSON.stringify(rB));
+    // C assina depois, com a base A: recusada
+    const rC = await run(`__gravC({por:'Gilda Teste', papel:'monitor', motivo:'${MOT667}', ts:${T658(9, 9, 20)}, acao:'corrigir'})`); await espera667();
+    const v = db658(REL667 + '/noite'), vs = Object.values(v.versoes || {});
+    igual([rC.ok, /mudou em outro aparelho/.test(String(rC.erro || '')), v.areas[0], v.byQ['Vomitou?'], v.byQ['Bebeu água?'], vs.length, vs[0].areas[0]],
+      [false, true, 'texto de B', 'Sim', 'Sim', 1, 'texto de A']);
+    igual(J658('__tg658').filter((t) => t.grupo === 'gestao').length, 1, 'só a linha de B');
+  });
+});
+
+provaAsync('6.67 QA re-gate · B02 (relatório, a internet cai entre a leitura e a transação) — o aparelho guardou a versão velha; a 1ª rodada da transação propõe sobre ela, o servidor (com a correção do outro aparelho) faz rodar de novo: recusa, nada gravado; e o 1º salvamento com o cache frio (null) também não regrava o já passado', async () => {
+  await com667(async () => {
+    const orig = NOITE667();
+    rel667(orig);   // a tela leu a versão original
+    tela667(NOITE667({ byQ: Object.assign({}, orig.byQ, { 'Bebeu água?': 'Não' }) })); await salva667();
+    igual(passo667(), 'conferir');
+    // enquanto a internet estava fora, o aparelho A corrigiu (Vomitou? Sim); este aparelho ainda tem a versão velha guardada
+    put658(REL667 + '/noite', NOITE667({ byQ: Object.assign({}, orig.byQ, { 'Vomitou?': 'Sim' }), _ts: T658(9, 9, 30), corrigido: { por: 'Gilda Teste', ts: T658(9, 9, 30) },
+      versoes: { v1: Object.assign({}, orig, { corrigida: { motivo: MOT667, registro: { por: 'Gilda Teste' } } }) } }));
+    ctx.__velhaQR = orig;
+    run(QAR_TX2('^auaulandia/relatorios/', '__velhaQR'));
+    try {
+      const [p, a] = await assina667('s-wandela', MOT667);
+      const v = db658(REL667 + '/noite');
+      igual([J658('__txQR'), p, v.byQ['Vomitou?'], v.byQ['Bebeu água?'], Object.keys(v.versoes || {}).length], [['propôs'], 'falhou', 'Sim', 'Sim', 1], a);
+      await fecha667();
+      // o 1º salvamento de outra tela velha, com o cache frio (null na 1ª rodada): o servidor tem o passado → não regrava
+      run(`__txQR=[]; DB.ref=__refQR;`); run(QAR_TX2('^auaulandia/relatorios/', 'null'));
+      run(`aplicarCard('card-noite', {});`);
+      tela667(NOITE667({ areas: ['texto da tela fria'] })); await salva667();
+      igual([J658('__txQR'), db658(REL667 + '/noite').byQ['Vomitou?'], db658(REL667 + '/noite').areas[0], passo667()], [['propôs'], 'Sim', 'dormiu a noite inteira', 'conferir']);
+    } finally { run(QAR_TX2_SOLTA); }
+  });
+});
+
+provaAsync('6.67 QA re-gate · B03 (relatório, o anulado chega no meio) — o cartaz da correção aberto; a Gestão anula em outro aparelho; a assinatura é recusada, o anulado fica, nenhuma linha ao grupo; e a tela velha que toca «Passar plantão» sobre o anulado vê «ANULADO» e não grava', async () => {
+  await com667(async () => {
+    rel667(NOITE667());
+    tela667(NOITE667({ byQ: Object.assign({}, NOITE667().byQ, { 'Vomitou?': 'Sim' }) })); await salva667();
+    put658(REL667 + '/noite/anulado', { motivo: 'lançado no FILHOt errado', registro: { por: 'Gestora Teste' } });
+    const [p, a] = await assina667('s-wandela', MOT667); await espera667();
+    const v = db658(REL667 + '/noite');
+    igual([p, !!v.anulado, v.byQ['Vomitou?'], J658('__tg658').length, J658('__urg667').length], ['falhou', true, 'Não', 0, 0], a);
+    await fecha667();
+    run(`aplicarCard('card-noite', {}); __esc657=[]; __za657=[];`);
+    tela667(NOITE667({ areas: ['outro texto'] })); await salva667();
+    igual([esc667(/relatorios/), tit667(/ANULADO/).length, passo667()], [[], 1, null]);
+  });
+});
+
+provaAsync('6.67 QA re-gate · B04 (relatório, o cartaz aberto há horas) — aberto às 07:05; às 10:00, sem nada mudado no texto, a correção passa; com só a assinatura de recebimento feita nesse meio-tempo (não muda o texto), passa também e a assinatura vai junto para a versão anterior, com a frase', async () => {
+  await com667(async () => {
+    relogio658(T658(9, 7, 5));
+    rel667(NOITE667());
+    tela667(NOITE667({ areas: ['dormiu a noite inteira, roncou'] })); await salva667();
+    relogio658(T658(9, 10, 0));
+    put658(REL667 + '/noite/recebeu', 'Caio Encãotador Teste'); put658(REL667 + '/noite/_tsReceb', T658(9, 8, 0));
+    const [p] = await assina667('s-wandela', MOT667);
+    const v = db658(REL667 + '/noite'), vs = Object.values(v.versoes || {});
+    igual([p, v.areas[0], v.recebeu || null, vs.length, vs[0].recebeu], ['pronto', 'dormiu a noite inteira, roncou', null, 1, 'Caio Encãotador Teste']);
+    igual(run("__el657['status-noite'].textContent"), 'Caio Encãotador Teste assinou a versão anterior. Peça para ler de novo e assinar.');
+  });
+});
+
+provaAsync('6.67 QA re-gate · B05 (relatório, remédio continua só com a Gestão) — pelo 1º salvamento da tela velha (o cartaz com o banco como base), por quem passou hoje (a Aprendiz) e pela função que grava chamada direto com o nome de quem passou: mudar o remédio pede a Gestão; a Gestão assina', async () => {
+  await com667(async () => {
+    run(`__srR=senhasRuntime; senhasRuntime=function(){ var m=__srR(); m['s-ana']={role:'aprendiz', nome:'Ana Aprendiz Teste'}; return m; };`);
+    try {
+      // a tela velha da Aprendiz, que passou hoje; o banco já tem o dela; a tela muda o remédio
+      run(`aplicarCard('card-noite', {}); document.body.dataset.role='aprendiz';`);
+      put658(REL667 + '/noite', NOITE667({ passou: 'Ana Aprendiz Teste' }));
+      tela667(NOITE667({ passou: 'Ana Aprendiz Teste', byQ: Object.assign({}, NOITE667().byQ, { 'med|Apoquel|08:00': 'Não' }) })); await salva667();
+      assert.ok(/Senha da Gestão/.test(cartaz667()), txt667(cartaz667()).slice(0, 300));
+      let [p, a] = await assina667('s-ana', MOT667); igual(p, 'conferir', 'quem passou não assina remédio'); assert.ok(/Gestão/.test(a), a);
+      ctx.__gravR = run('CORR_ATUAL.op.gravar');
+      const r = await run(`__gravR({por:'Ana Aprendiz Teste', papel:'aprendiz', motivo:'${MOT667}', ts:1, acao:'corrigir'})`);
+      igual([r.ok, !!r.barrou, db658(REL667 + '/noite').byQ['med|Apoquel|08:00']], [false, true, 'Sim'], 'a função que grava, direto, com o nome de quem passou');
+      [p] = await assina667(SENHA657, MOT667); igual(p, 'pronto');
+      igual(db658(REL667 + '/noite').byQ['med|Apoquel|08:00'], 'Não');
+    } finally { run('senhasRuntime=__srR;'); }
+  });
+});
+
+provaAsync('6.67 QA re-gate · B06 (LOW-1, quem assina) — no relatório de hoje passado pela Wandela: o aparelho da Consultora abre o cartaz, mas a senha dela é recusada e a função que grava, direto, a barra; a senha de posto «Plantonista» não assina nem quando o nome em «quem passou» é «Plantonista»; o relatório de ONTEM passado pela Aprendiz: o aparelho dela é barrado antes do cartaz, e a Plantonista de outro turno (o papel do Plantão) corrige', async () => {
+  await com667(async () => {
+    run(`__srR=senhasRuntime; senhasRuntime=function(){ var m=__srR(); m['s-ana']={role:'aprendiz', nome:'Ana Aprendiz Teste'}; return m; };`);
+    try {
+      rel667(NOITE667());
+      run("document.body.dataset.role='consultora';");
+      tela667(NOITE667({ areas: ['a Consultora escreveu'] })); await salva667();
+      igual(passo667(), 'conferir', 'o aparelho da Consultora abre (o relatório de hoje tem quem passou)');
+      let [p, a] = await assina667('s-bia', MOT667); igual(p, 'conferir'); assert.ok(/Bia Consultora Teste/.test(a), a);
+      ctx.__gravR = run('CORR_ATUAL.op.gravar');
+      const r = await run(`__gravR({por:'Bia Consultora Teste', papel:'consultora', motivo:'${MOT667}', ts:1, acao:'corrigir'})`);
+      igual([r.ok, !!r.barrou, db658(REL667 + '/noite').areas[0]], [false, true, 'dormiu a noite inteira']);
+      await fecha667();
+      // o posto: «quem passou» escrito como «Plantonista» e a senha de posto
+      rel667(NOITE667({ passou: 'Plantonista' }));
+      run("document.body.dataset.role='plantonista';");
+      tela667(NOITE667({ passou: 'Plantonista', areas: ['o posto escreveu'] })); await salva667();
+      if (passo667()) { [p, a] = await assina667('s-posto', MOT667); igual(p, 'conferir'); assert.ok(/posto/.test(a), a); }
+      igual(db658(REL667 + '/noite').areas[0], 'dormiu a noite inteira', 'o posto não grava a correção');
+      await fecha667();
+      // o relatório de ontem (08/10) passado pela Aprendiz
+      run(`__sdQR=selectedDate; selectedDate=new Date(${T658(8, 12, 0)});`);
+      const FK8 = 'biscoito__rita teste__2026-10-08', REL8 = 'auaulandia/relatorios/' + FK8;
+      put658(REL8 + '/noite', NOITE667({ passou: 'Ana Aprendiz Teste', _ts: T658(8, 7, 0) }));
+      run(`aplicarCard('card-noite', __get657('${REL8}/noite')); __au657=[]; document.body.dataset.role='aprendiz';`);
+      tela667(NOITE667({ passou: 'Ana Aprendiz Teste', areas: ['corrigido no dia seguinte'] })); await salva667();
+      igual([passo667(), aud667('sem-permissao').length], [null, 1], 'a Aprendiz, no dia seguinte, é barrada antes do cartaz');
+      run("document.body.dataset.role='plantonista';");
+      tela667(NOITE667({ passou: 'Ana Aprendiz Teste', areas: ['corrigido no dia seguinte'] })); await salva667();
+      [p] = await assina667('s-wandela', MOT667); igual(p, 'pronto', 'a Plantonista (papel do Plantão) corrige o de ontem');
+      igual(db658(REL8 + '/noite').areas[0], 'corrigido no dia seguinte');
+    } finally { run('senhasRuntime=__srR;'); run('if(typeof __sdQR!=="undefined" && __sdQR) selectedDate=__sdQR;'); }
+  });
+});
+
+provaAsync('6.67 QA re-gate · B07 (café, a internet cai e o cache é velho) — o aparelho guardou «sem marca»; a 1ª rodada da transação propõe sem o «antes», o servidor (com «Comeu» do outro aparelho) faz rodar de novo: o registro guarda o «antes» do servidor e o rastro sai uma vez só', async () => {
+  await com667(async () => {
+    run(`hospedes=[{nome:'Biscoito', tutor:'Rita Teste', refKey:'${K658}'}]; __kq=cafeKey(hospedes[0]); cafeMarcas={};`);
+    const C = 'auaulandia/cafe/2026-10-09/' + run('__kq');
+    put658(C, { estado: 'tudo', quem: 'Wandela Teste', hora: '08:00' });
+    run(QAR_TX2('^auaulandia/cafe/', 'null'));
+    try { run(`marcarCafe(__kq, 'metade');`); await espera667(200); } finally { run(QAR_TX2_SOLTA); }
+    igual([J658('__txQR'), db658(C).antes, aud667('cafe-desmarcado').length, aud667('cafe').length], [['propôs'], { estado: 'tudo', quem: 'Wandela Teste', hora: '08:00' }, 1, 1]);
+  });
+});
+
+provaAsync('6.67 QA re-gate · B08 (Ritmo, o mês anterior) — «Ver setembro» só para a Gestão e a Diretoria; o quadro de setembro com os botões de setembro; corrigir grava no placar de setembro, não no de outubro; a Supervisão não vê a linha do mês; só o mês anterior (pedir agosto volta a outubro)', async () => {
+  await com667(async () => {
+    const SET = 'daycare/pontos-checkout/2026-09';
+    put658(SET, { s1: { quem: 'Gilda Teste', pontos: 5, faltas: 1, itens: [RACAO667], pet: 'Mel', estadia: 'e9', ts: new Date(2026, 8, 30, 12, 0, 0).getTime() } });
+    put658(PT667, PONTOS667());
+    run(`RITMO_PT_ABERTO=''; RITMO_PT_MES=''; __el657['ritmoPontos']={innerHTML:''}; document.body.dataset.role='supervisor'; ritmoPontosCarregar();`); await espera667();
+    assert.ok(!/coRitmoMes\(/.test(run("__el657['ritmoPontos'].innerHTML")), 'a Supervisão não vê a linha do mês');
+    run(`document.body.dataset.role='gestao'; ritmoPontosCarregar();`); await espera667();
+    const h = run("__el657['ritmoPontos'].innerHTML");
+    assert.ok(/coRitmoMes\('2026-09'\)/.test(h) && /min-height:44px/.test(h), h.slice(0, 400));
+    run(`coRitmoMes('2026-09'); RITMO_PT_ABERTO='Gilda Teste'; ritmoPontosCarregar();`); await espera667();
+    const h2 = run("__el657['ritmoPontos'].innerHTML");
+    assert.ok(/coPontoCorrigirAbrir\('2026-09','s1'\)/.test(h2), h2.slice(0, 600));
+    run(`__p667=coPontoCorrigirAbrir('2026-09', 's1'); corrToque('continuar', {valores:['desceu (foi marcado por engano)']});`);
+    const [p] = await assina667(SENHA657, 'a sobra da ração tinha descido'); igual(p, 'pronto');
+    igual([!!db658(SET + '/est-s1'), db658(SET + '/cor-s1').pontos, Object.keys(db658(PT667)).sort()], [true, 10, ['p1', 'p2', 'pi', 'sd']]);
+    run(`coRitmoMes('2026-08');`);
+    igual(run('RITMO_PT_MES'), '', 'outro mês volta para este mês');
+  });
+});
+
+
+provaAsync('6.67 QA re-gate · B09 (Ritmo, o mês escolhido pela Gestão não fica para quem entra depois no mesmo tablet; era [ACHADO], REQ-004) — a Gestão toca «Ver setembro de 2026» e sai (logout não recarrega a página); a Supervisão entra e abre o Ritmo: o quadro «Bolsa do check-out — pontos do mês» mostra OUTUBRO (2 bolsas, 15 de 20), não setembro, e a escolha velha se apaga; na virada do mês, a escolha de setembro feita em outubro não aparece como «Mês anterior» em novembro', async () => {
+  await com667(async () => {
+    try {
+      put658('daycare/pontos-checkout/2026-09', { s1: { quem: 'Gilda Teste', pontos: 5, faltas: 1, itens: [RACAO667], pet: 'Mel', estadia: 'e9', ts: new Date(2026, 8, 30, 12, 0, 0).getTime() } });
+      put658(PT667, PONTOS667());
+      run(`RITMO_PT_ABERTO=''; RITMO_PT_MES=''; __el657['ritmoPontos']={innerHTML:''}; document.body.dataset.role='gestao'; coRitmoMes('2026-09');`); await espera667();
+      assert.ok(/Mês anterior: setembro de 2026/.test(txt667(run("__el657['ritmoPontos'].innerHTML"))), 'a Gestão vê setembro, com a linha do mês');
+      run(`__lgQR=''; try{ logout(); }catch(e){ __lgQR=String(e&&e.message||e); }`);
+      run(`document.body.dataset.role='supervisor'; ritmoPontosCarregar();`); await espera667();
+      const h = txt667(run("__el657['ritmoPontos'].innerHTML"));
+      igual([run('__lgQR'), run('RITMO_PT_MES'), run('RITMO_PT_V.mes'), /1 bolsa/.test(h), /5 de 10/.test(h), /2 bolsas/.test(h), /15 de 20/.test(h), /setembro|Mês anterior/.test(h)],
+        ['', '', '2026-10', false, false, true, true, false], h.slice(0, 300));
+      // a Gestão de novo: o quadro abre em outubro (a escolha velha se apagou)
+      run(`document.body.dataset.role='gestao'; ritmoPontosCarregar();`); await espera667();
+      assert.ok(/Este mês: outubro de 2026/.test(txt667(run("__el657['ritmoPontos'].innerHTML"))), txt667(run("__el657['ritmoPontos'].innerHTML")).slice(0, 200));
+      // a virada do mês: setembro escolhido em outubro; em novembro, o quadro abre em novembro, sem «Mês anterior: setembro»
+      run(`coRitmoMes('2026-09');`); await espera667();
+      igual(run('RITMO_PT_MES'), '2026-09');
+      relogio658(new Date(2026, 10, 5, 10, 0, 0).getTime());
+      run(`ritmoPontosCarregar();`); await espera667();
+      const h3 = txt667(run("__el657['ritmoPontos'].innerHTML"));
+      igual([run('RITMO_PT_V.mes'), run('RITMO_PT_MES'), /Este mês: novembro de 2026/.test(h3), /setembro/.test(h3)], ['2026-11', '', true, false], h3.slice(0, 200));
+    } finally { run(`RITMO_PT_MES=''; RITMO_PT_ABERTO='';`); relogio658(T658(9, 10, 0)); }
+  });
+});
+provaAsync('6.67 QA re-gate · B10 (relatório, o 1º «Passar plantão» com o banco recusando) — nada gravado, sem «✅ Plantão passado!», o aviso «NÃO SALVOU» no card, o rastro relatorio-falhou, nenhuma linha ao grupo, sem cartaz; o banco volta e o 2º toque grava normalmente, sem cartaz (não é tratado como «já passado»)', async () => {
+  await com667(async () => {
+    try {
+      put658(REL667 + '/noite', null);
+      run(`aplicarCard('card-noite', {}); REL_CUR.noite=null; __esc657=[]; __au657=[]; __tg658=[]; __za657=[]; __el657['status-noite']={textContent:'', style:{}}; __recusa657='^auaulandia/relatorios/';`);
+      tela667(NOITE667({ areas: ['a primeira passagem'] })); await salva667();
+      const st = String(run("__el657['status-noite'].textContent"));
+      igual([db658(REL667 + '/noite'), /Plantão passado/.test(st), /NÃO SALVOU/.test(st), aud667('relatorio-falhou').length, aud667('relatorio').length, J658('__tg658').length, passo667()],
+        [null, false, true, 1, 0, 0, null], st);
+      run(`__recusa657=null; __au657=[]; __el657['status-noite'].textContent='';`);
+      await salva667();
+      const st2 = String(run("__el657['status-noite'].textContent"));
+      igual([db658(REL667 + '/noite') && db658(REL667 + '/noite').areas[0], /Plantão passado/.test(st2), aud667('relatorio').length, passo667()], ['a primeira passagem', true, 1, null], st2);
+    } finally { run(`__recusa657=null;`); }
+  });
+});
+
+provaAsync('6.67 QA re-gate · B11 (LOW-1, a régua do dia na função que grava) — a Aprendiz que passou hoje abre o cartaz (o nome dela vale hoje); o dia vira com o cartaz aberto e ela assina: a função que grava barra (o relatório já é de ontem), nada muda no banco; no mesmo dia, a mesma assinatura passa', async () => {
+  await com667(async () => {
+    run(`__srR=senhasRuntime; senhasRuntime=function(){ var m=__srR(); m['s-ana']={role:'aprendiz', nome:'Ana Aprendiz Teste'}; return m; };`);
+    try {
+      rel667(NOITE667({ passou: 'Ana Aprendiz Teste' }));
+      run("document.body.dataset.role='aprendiz';");
+      tela667(NOITE667({ passou: 'Ana Aprendiz Teste', areas: ['corrigido pela Ana'] })); await salva667();
+      igual(passo667(), 'conferir', 'hoje, o aparelho da Aprendiz abre o cartaz (ela passou)');
+      relogio658(T658(10, 0, 20));   // o dia vira com o cartaz aberto
+      const [p] = await assina667('s-ana', MOT667);
+      igual([p === 'pronto', db658(REL667 + '/noite').areas[0], Object.keys(db658(REL667 + '/noite').versoes || {}).length], [false, 'dormiu a noite inteira', 0], 'no dia seguinte, a função que grava barra');
+      await fecha667();
+      relogio658(T658(9, 10, 0));
+      rel667(NOITE667({ passou: 'Ana Aprendiz Teste' }));
+      tela667(NOITE667({ passou: 'Ana Aprendiz Teste', areas: ['corrigido pela Ana'] })); await salva667();
+      const [p2] = await assina667('s-ana', MOT667);
+      igual([p2, db658(REL667 + '/noite').areas[0]], ['pronto', 'corrigido pela Ana'], 'no mesmo dia, passa');
+    } finally { run('senhasRuntime=__srR;'); relogio658(T658(9, 10, 0)); }
+  });
+});
+
+// ================================================================== 6.67 × 6.76 e 6.80 publicadas — a junção sobre a 3d6910b (12/out/2026)
+// As 16 portas do cartaz da 6.57 que a 6.67 trouxe entram na lista fechada da «6.76 × publicadas · todas as portas» e do QA676J-01
+// (83 → 99). Antes de entrarem, esta prova abre cada uma no palco da 6.67, como as provas P1 a P30, e passa pela x676Portas da 6.76:
+// a senha provisória ainda não trocada, a do código sem o banco e sem a cópia e a de quem foi desativado são recusadas, cada uma com a
+// sua frase e sem gravar nada; depois, a senha certa (a mesma das provas da 6.67) assina e grava. O espião confere que o cartaz aberto é
+// o daquela porta (chamada uma vez). Assim, cada uma assina pela régua única (corrConfirmar → corrAssinar → senhaQuem).
+const OCORR_ANULADA667 = () => ({ motivo: 'registrei no FILHOt errado hoje', registro: { acao: 'anular', por: 'Gilda Teste', papel: 'monitor', quando: '09/10 10:00', motivo: 'registrei no FILHOt errado hoje', ts: T658(9, 10, 0) } });
+const OCORR_AVISADA667 = () => ({ acao: 'liguei para a tutora e expliquei', assinatura: 'Bia Consultora Teste', desfecho: 'tutor', quando: '09/10 09:40', ts: T658(9, 9, 40) });
+const QUADRO667 = async () => { put658(PT667, PONTOS667()); run(`RITMO_PT_ABERTO='Gilda Teste'; __el657['ritmoPontos']={innerHTML:''}; ritmoPontosCarregar();`); await espera667(); };
+// [a porta, o motivo, a senha certa, o palco que abre o cartaz por ela]
+const PORTAS667 = [
+  ['manualCorrigirAbrir', 'o tutor mudou a quantidade do jantar', 's-caio', async () => {
+    put658('auaulandia/manuais/2026-10-08/m1', PERN667()); run(HOSPPERN667() + "document.body.dataset.role='monitor';");
+    run(`__p667=manualCorrigirAbrir('2026-10-08', 'm1'); corrToque('continuar', {valores:['08/10/2026', '3', 'Ração 80g', 'Armário', 'busca no domingo à tarde']});`); }],
+  ['relCorrigirAbrir', MOT667, 's-wandela', async () => {
+    rel667(NOITE667()); tela667(NOITE667({ areas: ['dormiu a noite inteira, roncou'] })); await salva667(); }],
+  ['relAnularAbrir', 'lancei o relatório no FILHOt errado', SENHA657, async () => {
+    rel667(NOITE667({ recebeu: 'Caio Encãotador Teste' })); REL_DO_DIA667(); run(`__p667=relAnularAbrir('noite');`); }],
+  ['relReabrirAbrir', 'era mesmo o relatório do Biscoito', SENHA657, async () => {
+    rel667(NOITE667({ recebeu: 'Caio Encãotador Teste' })); REL_DO_DIA667(); run(`__p667=relAnularAbrir('noite');`);
+    const [p] = await assina667(SENHA657, 'lancei o relatório no FILHOt errado'); igual(p, 'pronto', 'o palco do «Reabrir»: o relatório anulado');
+    await fecha667(); run(`__p667=relReabrirAbrir('noite');`); }],
+  ['relRetirarAssinaturaAbrir', 'assinei sem ter lido o relatório', 's-caio', async () => {
+    rel667(NOITE667({ recebeu: 'Caio Encãotador Teste', _tsReceb: T658(9, 7, 30), _segLeitura: 40 })); run(`__p667=relRetirarAssinaturaAbrir('noite');`); }],
+  ['cfPesagemCorrigirAbrir', 'pesei de novo e deu mais', 's-cora', async () => {
+    cf667(); run(`__el657['cfRacaoPeso']={value:'1300'}; __el657['cfRacaoObs']={value:''}; cfConfirmarRacao();`); await espera667(200); }],
+  ['cfPesagemDesfazerAbrir', 'pesei a ração do FILHOt errado', 's-cora', async () => { cf667(); run(`__p667=cfPesagemDesfazerAbrir('racao');`); }],
+  ['cfOcorrCorrigirAbrir', 'a coleira estava só gasta', 's-cora', async () => {
+    cf667(); run(`__p667=cfOcorrCorrigirAbrir('${EST667}', 'o1', 'conferencia'); corrToque('continuar', {valores:['chegou com a coleira gasta (não arrebentada)']});`); }],
+  ['cfOcorrEnganoAbrir', 'registrei no FILHOt errado hoje', 's-gilda', async () => { cf667(null, 'monitor'); run(`__p667=cfOcorrEnganoAbrir('${EST667}', 'o1', 'conferencia');`); }],
+  ['cfOcorrDesfazerAbrir', 'a ocorrência era mesmo do Biscoito', SENHA657, async () => {
+    const E = EST_CF667(); E.ocorrencias.o1.anulada = OCORR_ANULADA667(); cf667(E); run(`__p667=cfOcorrDesfazerAbrir('${EST667}', 'o1');`); }],
+  ['ocorrHospReabrirAbrir', 'a tutora ainda não respondeu nada', 's-bia', async () => {
+    const E = EST_CF667(); E.ocorrencias.o1.avisadoTutor = OCORR_AVISADA667(); cf667(E, 'consultora');
+    run(`__zpq657=[true];`); await run(`ocorrReabrir('${EST667}__o1')`); await espera667(200); }],
+  ['cfReabrirAbrir', 'faltou etiquetar o remédio novo', 's-cora', async () => {
+    const F = EST_CF667(); F.conferencia.concluida = true; F.conferencia.concluida_por = 'Cora Conferência Teste'; F.conferencia.concluida_ts = T658(9, 9, 30);
+    cf667(F); run(`__p667=cfReabrirAbrir();`); }],
+  ['coBolsaReabrirAbrir', 'faltou pôr a coleira na bolsa', 's-gilda', async () => {
+    put658(PT667, PONTOS667()); co667(EST_CF667({ checkout_etapa1: E1667() })); run(`__p667=coBolsaReabrirAbrir();`); }],
+  ['coCheckoutReabrirAbrir', 'o tutor assinou no nome errado', SENHA657, async () => {
+    put658(PT667, PONTOS667()); co667(EST_CF667({ status: 'finalizada', checkout: CHK667(), checkout_etapa1: E1667() })); run(`__p667=coCheckoutReabrirAbrir('${EST667}');`); }],
+  ['coPontoCorrigirAbrir', 'a sobra da ração tinha descido', SENHA657, async () => {
+    await QUADRO667(); run(`__p667=coPontoCorrigirAbrir('${MES667}', 'p1'); corrToque('continuar', {valores:['desceu (foi marcado por engano)']});`); }],
+  ['coPontoEstornarAbrir', 'a bolsa da Pipoca foi de outra pessoa', SENHA657, async () => { await QUADRO667(); run(`__p667=coPontoEstornarAbrir('${MES667}', 'p2');`); }]];
+provaAsync('6.67 × 6.76 · as 16 portas da 6.67, porta por porta — cada uma, aberta no palco da 6.67 (o espião vê o cartaz aberto por ela), recusa a senha provisória ainda não trocada, a do código sem o banco e a de quem foi desativado, cada uma com a sua frase e sem gravar nada, e assina com a senha certa: a régua única (corrConfirmar → corrAssinar → senhaQuem). São as 16 que a lista fechada das portas ganha (83 → 99)', async () => {
+  const res = {}, esp = {};
+  for (const [porta, motivo, certa, abre] of PORTAS667) {
+    esp[porta] = [1, 'conferir', x676Esperado()];
+    await com667(async () => {
+      run(`__sp667={f:${porta}, n:0}; ${porta}=function(){ __sp667.n++; return __sp667.f.apply(this, arguments); };`);
+      try {
+        await abre();
+        const n = run('__sp667.n'), p0 = passo667();
+        res[porta] = [n, p0, await x676Portas(run, espera667, motivo, certa)];
+      } finally { run(`${porta}=__sp667.f;`); await fecha667(); }
+    });
+  }
+  igual(res, esp);
+  igual([PORTAS667.length, new Set(PORTAS667.map((p) => p[0])).size], [16, 16]);
+  // o cartaz de cada uma assina pela corrConfirmar, que só chama a corrAssinar (a régua da 6.76: senhaQuem); nenhuma tem régua própria
+  const fontes = PORTAS667.map((p) => String(run('String(' + p[0] + ')')));
+  igual(PORTAS667.filter((p, i) => !/\bcorrAbrir\(/.test(fontes[i]) || /senhasRuntime\(|\.senha\b|senhaQuem\(|corrAssinar\(|orcQuemPelaSenha\(|zSha256Hex\(/.test(fontes[i])).map((p) => p[0]), [],
+    'as 16 abrem o cartaz e nenhuma confere senha por conta própria');
+});
 }
 // ------------------------------------------------ o fim
 fila.then(() => {
