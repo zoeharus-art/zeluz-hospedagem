@@ -4639,6 +4639,11 @@ prova('QA47 — Configurações: o Salvar lê pela lista que estava NA TELA e gr
   assert.ok(/var ECTO_CFG_LIDO=false;/.test(src), 'nasce falsa');
   assert.ok(/<input class="cad-in" id="cfgPrevEctoNovo"[^>]*maxlength="40">/.test(src), 'o campo tem o limite');
 });
+// Manutenção da Fase 0 (13/out/2026, bomba de relógio). Antes: o último bloco (o Salvar da ficha com o «Vence em» 18/12/2026 digitado)
+// rodava o pbSalvar com o hojeISO de verdade; a trava de data do app (prevChecarLogica) vê o «Vence em» no passado a partir de 19/12/2026,
+// abre a pergunta «continua em atraso» e nada é gravado, e a prova cairia (e, em cascata, a 6.66 P38). Depois: o hojeISO desse bloco
+// fica preso em 25/09/2026 (o mesmo dia que os outros blocos desta prova e o comFicha já usam) e volta no finally; dados e asserções
+// iguais. Por quê: a prova é de 29/09/2026 (QA47 da 6.11) e o «Vence em» digitado era futuro naquele dia.
 provaAsync('QA47 — leitura recusada deixa a marca falsa; o "Não sei" do painel usa o prazo mais curto da lista, não 30 fixo; o Salvar da ficha com o "Vence em" digitado não é barrado', async () => {
   run(`__bkU={db:DB, li:ECTO_CFG_LIDO, ed:Object.assign({}, ECTO_DUR), fo:ECTO_FORA}; ECTO_CFG_LIDO=false;
     DB={ref:function(p){ return {once:function(){ return p==='daycare/config/prevencao-ectos' ? Promise.reject(new Error('permissão')) : Promise.resolve({val:function(){ return {coleiras:{}}; }}); }}; }};`);
@@ -4657,6 +4662,7 @@ provaAsync('QA47 — leitura recusada deixa a marca falsa; o "Não sei" do paine
     pelAtual={n:'Simba', tutor:'Ana'}; __alV=[]; zAlertao=function(t){ __alV.push(t); };
     PB_PEND={ecto:{ecto_t:'2026-09-20', ecto_p:'2026-12-18', ecto_p_manual:true}}; __exV={ecto_tipo:'Comprimido', ecto_prod:'', ecto_t:'2026-09-20', ecto_p:'2026-12-18', ecto_p_manual:true};
     pbEx=function(){ return __exV; }; pelExtra=function(){ return __exV; }; __patchV=null; setPelExtra=function(p, patch){ __patchV=patch; }; pbRender=function(){};`);
+  run(`__bkV.hj=hojeISO; hojeISO=function(){ return '2026-09-25'; };`);
   try {
     try { run(`pbSalvar('ecto')`); } catch (e) { /* o resto do Salvar depende da tela */ }
     assert.ok(run('__patchV') && run('__patchV.ecto_p') === '2026-12-18' && !run('__alV').length, JSON.stringify([run('__patchV'), run('__alV')]));
@@ -4664,8 +4670,13 @@ provaAsync('QA47 — leitura recusada deixa a marca falsa; o "Não sei" do paine
     run(`PB_PEND={ecto:{ecto_t:'2026-09-20'}}; __exV={ecto_tipo:'Comprimido', ecto_prod:'Outro', ecto_t:'2026-09-20'}; __patchV=null; __alV=[];`);
     try { run(`pbSalvar('ecto')`); } catch (e) { /* idem */ }
     assert.ok(run('__patchV') === null && run('__alV[0]') === 'DIGA QUANTOS DIAS ELE DURA', JSON.stringify(run('__alV')));
-  } finally { run('pelAtual=__bkV.pa; PB_PEND=__bkV.pp; pbEx=__bkV.pe; pelExtra=__bkV.pX; setPelExtra=__bkV.sp; pbRender=__bkV.pr; zAlertao=__bkV.za;'); }
+  } finally { run('pelAtual=__bkV.pa; PB_PEND=__bkV.pp; pbEx=__bkV.pe; pelExtra=__bkV.pX; setPelExtra=__bkV.sp; pbRender=__bkV.pr; zAlertao=__bkV.za; if(__bkV.hj) hojeISO=__bkV.hj;'); }
 });
+// Manutenção da Fase 0 (13/out/2026, bomba de relógio). Antes: o bloco F2/F3 (o «Vence em» 28/11/2026 digitado na ficha) rodava o
+// pbSalvar com o hojeISO de verdade; a trava de data do app (prevChecarLogica) vê o «Vence em» no passado a partir de 29/11/2026, abre
+// a pergunta «continua em atraso» e nada é gravado, e a prova cairia (e, em cascata, a 6.66 P38). Depois: o hojeISO desse bloco fica
+// preso em 25/09/2026 (o mesmo dia do bloco F3 logo abaixo e do comFicha) e volta no finally; dados e asserções iguais. Por quê: a
+// prova é de 29/09/2026 (QA48 da 6.11) e o «Vence em» digitado era futuro naquele dia.
 provaAsync('QA48 — os dias do "Outro" refazem o "Vale até"; o "Vence em" da carteira digitado agora manda e fica marcado à mão (vazio não passa); a confirmação diz "(marcado à mão)"; textos com a saída', async () => {
   // F1: o campo dos dias do "Outro" também chama o recálculo, na ficha aberta pela Prevenção
   run(`__bkF1={pe:pelExtra}; pelExtra=function(){ return {ecto_prod:'Outro', ecto_tipo:'Comprimido', ecto_outro_dias:'45'}; };`);
@@ -4686,6 +4697,7 @@ provaAsync('QA48 — os dias do "Outro" refazem o "Vale até"; o "Vence em" da c
   run(`__bkF2={pa:pelAtual, pp:PB_PEND, pe:pbEx, pX:pelExtra, sp:setPelExtra, pr:pbRender, za:zAlertao};
     pelAtual={n:'Simba', tutor:'Ana'}; __alF2=[]; zAlertao=function(t, l){ __alF2.push([t, (l||[]).join(' | ')]); };
     pbEx=function(){ return __exF2; }; pelExtra=function(){ return __exF2; }; __patchF2=null; setPelExtra=function(p, patch){ __patchF2=patch; }; pbRender=function(){};`);
+  run(`__bkF2.hj=hojeISO; hojeISO=function(){ return '2026-09-25'; };`);
   try {
     run(`PB_PEND={ecto:{ecto_t:'2026-09-20', ecto_p:'2026-11-28'}}; __exF2={ecto_tipo:'Comprimido', ecto_prod:'', ecto_t:'2026-09-20', ecto_p:'2026-11-28'};`);
     try { run(`pbSalvar('ecto')`); } catch (e) { /* o resto do Salvar depende da tela */ }
@@ -4695,7 +4707,7 @@ provaAsync('QA48 — os dias do "Outro" refazem o "Vale até"; o "Vence em" da c
     try { run(`pbSalvar('ecto')`); } catch (e) { /* idem */ }
     const al = JSON.parse(JSON.stringify(run('__alF2')));
     assert.ok(run('__patchF2') === null && al[0][0] === 'ESCOLHA O PRODUTO' && /«Vence em»/.test(al[0][1]) && /Não sei qual foi/.test(al[0][1]), JSON.stringify(al));
-  } finally { run('pelAtual=__bkF2.pa; PB_PEND=__bkF2.pp; pbEx=__bkF2.pe; pelExtra=__bkF2.pX; setPelExtra=__bkF2.sp; pbRender=__bkF2.pr; zAlertao=__bkF2.za;'); }
+  } finally { run('pelAtual=__bkF2.pa; PB_PEND=__bkF2.pp; pbEx=__bkF2.pe; pelExtra=__bkF2.pX; setPelExtra=__bkF2.sp; pbRender=__bkF2.pr; zAlertao=__bkF2.za; if(__bkF2.hj) hojeISO=__bkF2.hj;'); }
   // o alerta da ficha aberta pela Prevenção diz a saída "Não sei qual foi"
   run(`__bkF3={pd:prevPetDe, pe:pelExtra, ge:document.getElementById, za:zAlertao, hj:hojeISO};
     prevPetDe=function(){ return {n:'Antônio', tutor:'Ana'}; }; pelExtra=function(){ return {}; }; hojeISO=function(){ return '2026-09-25'; };
@@ -21494,10 +21506,21 @@ prova('6.53 R4 R3 — hospEstadiaGanha: a NÃO cancelada ganha da cancelada (mes
     igual([x, run(`CF_ESTADIAS['bolt__rui teste'].id`)], ['a', 'a']);
   } finally { run('CF_ESTADIAS=__bkCF653[0]; EST_TODAS=__bkCF653[1]; CF_ESTADIAS_LIDO=__bkCF653[2];'); }
 });
+// Manutenção da Fase 0 (13/out/2026, bomba de relógio). Antes: o tablet do Plantão (o aparelho B, o 2º sandbox) rodava com o relógio
+// de verdade, e as datas da hospedagem do Bolt são fixas (a verdadeira de 08/10 a 12/10, a duplicada de 09/10 a 11/10); o aparelho A (a
+// recepção) já estava preso em 09/10 às 10h pelo ARMA653 (zHojeISO, dataKeyAtual, hospAgora). Desde 13/10 (meia-noite no fuso do
+// processo), a verdadeira já tinha terminado no tablet, o Bolt saía do Plantão dele e a prova caía (e, em cascata, as guardas
+// «nenhuma prova antiga falhou»). Depois: o tablet fica no MESMO instante do aparelho A (AGORA653, 09/10 às 10h no fuso do processo):
+// o relógio dele (Date, preso como no relogio621) e o dia do Plantão (selectedDate, como na 6.54 MC8 d) presos aqui dentro e devolvidos
+// no finally. Os dados, os passos e as asserções são os mesmos. Por quê: a prova é do dia 09/10 (6.53, 4ª rodada); com o relógio de
+// verdade no tablet, o resultado dependia do dia em que a Fase 0 roda, e os dois aparelhos discordavam sobre que dia é hoje.
 provaAsync('6.53 R4 R3 — DOIS aparelhos: a recepção exclui a hospedagem lançada em dobro; o tablet do Plantão continua com o FILHOt, o remédio da hospedagem verdadeira no alarme e o índice na verdadeira', async () => {
   run(ARMA653);
   try {
     LIGAR_B653();
+    runB653(`__relB653={d:Date, sd:selectedDate}; (function(){ var R=__relB653.d, t=${AGORA653};
+      function F(){ if(!arguments.length) return new R(t); return new (Function.prototype.bind.apply(R,[null].concat([].slice.call(arguments))))(); }
+      F.now=function(){ return t; }; F.UTC=R.UTC; F.parse=R.parse; F.prototype=R.prototype; Date=F; })(); selectedDate=new Date();`);
     const IDV = pid653(TSB653q - 86400000, 'BoltVerd0001'), ITV = 'ci_' + (TSB653q - 86400000 - 60000) + '_v1';
     ctx.__eV = { refKey: 'bolt__rui teste', nome: 'Bolt', tutor: 'Rui Teste', raca: 'Beagle', entrada: '2026-10-08', saida: '2026-10-12', status: 'ativa', origem: 'checkin', _ts: TSB653q - 86400000 };
     ctx.__eD = { refKey: 'bolt__rui teste', nome: 'Bolt', tutor: 'Rui Teste', raca: 'Beagle', entrada: '2026-10-09', saida: '2026-10-11', status: 'ativa', origem: 'checkin', _ts: TSB653q };
@@ -21524,7 +21547,10 @@ provaAsync('6.53 R4 R3 — DOIS aparelhos: a recepção exclui a hospedagem lan�
     runB653('MED_AGENDA_TODOS=[]; carregarAgendaMedTodos()'); await espera653(6000);
     assert.ok(alarmeB653().indexOf('bolt__rui teste|' + ITV) >= 0, 'depois: o antibiótico continua no alarme do tablet: ' + JSON.stringify(alarmeB653()));
     assert.ok(!run(`__get653('auaulandia/medicacao-agenda/bolt__rui teste/itens/${ITV}').paradoEm`), 'e não foi parado (não nasceu na duplicada)');
-  } finally { SOLTA_B653(); run(SOLTA653); }
+  } finally {
+    if (ctxB653) runB653('if(typeof __relB653!=="undefined"&&__relB653){ Date=__relB653.d; selectedDate=__relB653.sd; __relB653=null; }');
+    SOLTA_B653(); run(SOLTA653);
+  }
 });
 provaAsync('6.53 R4 O13 — troca pela metade: o cartaz só oferece «Retomar»; Trocar, Excluir e Corrigir são recusados sem gravar', async () => {
   run(ARMA653);
@@ -46999,12 +47025,18 @@ provaAsync('6.63 QA 20 (AC5.3, AC17) — o «Atualizados hoje»: redesenhar a te
   });
 });
 // ---- AC2.2: o dia da falta só do calendário e até hoje ----
+// Manutenção da Fase 0 (13/out/2026, bomba de relógio). Antes: o «dia no futuro» era a data fixa 11/10/2027, e o pendCorrigirLer
+// compara com o dia de verdade do aparelho (dcDataKey); a partir de 11/10/2027 ela deixaria de ser futura, seria aceita e a prova
+// cairia. Depois: o «dia no futuro» é 366 dias depois do dia do aparelho, pelas funções do próprio app (dcDataKey, addDiasISO, fmtBR,
+// sem pressupor fuso); no dia em que a prova foi escrita (10/10/2026, QA da 6.63) dá o mesmo 11/10/2027. Asserções iguais. Por quê:
+// o que a prova afirma é que um dia futuro é recusado, e uma data fixa só é futura até chegar.
 prova('6.63 QA 21 (AC2.2) — «Corrigir»: 31/02, 2026-13-01, «ontem», dia no futuro, «outros dias» inválidos e o horário por extenso recusados na tela; 1/9/2026 aceito como 01/09/2026', () => {
   const r = { base: 'Tonico/SRD', nome: 'Tonico', dia: '2026-10-07' };
   const ler = (v) => J630(`pendCorrigirLer(${JSON.stringify(r)}, '${KP663}', 'vermifugo', ${JSON.stringify(v)})`);
   const rot = run("pendRotulo('vermifugo')");
+  const futuro = run('fmtBR(addDiasISO(dcDataKey(), 366))');
   igual([!!ler(['31/02/2026', '', 'Tonico/SRD', '', 'Tonico/SRD', rot]).recusa, !!ler(['2026-13-01', '', 'Tonico/SRD', '', 'Tonico/SRD', rot]).recusa,
-    !!ler(['ontem', '', 'Tonico/SRD', '', 'Tonico/SRD', rot]).recusa, !!ler(['11/10/2027', '', 'Tonico/SRD', '', 'Tonico/SRD', rot]).recusa,
+    !!ler(['ontem', '', 'Tonico/SRD', '', 'Tonico/SRD', rot]).recusa, !!ler([futuro, '', 'Tonico/SRD', '', 'Tonico/SRD', rot]).recusa,
     !!ler(['07/10/2026', '30/02/2026', 'Tonico/SRD', '', 'Tonico/SRD', rot]).recusa, !!ler(['07/10/2026', '', 'Tonico/SRD', 'nove horas', 'Tonico/SRD', rot]).recusa],
     [true, true, true, true, true, true]);
   const ok = ler(['1/9/2026', '', 'Tonico/SRD', '9:00', 'Tonico/SRD', rot]);
@@ -47107,9 +47139,14 @@ provaAsync('6.63 QA 27 (AC6.2; UX-001 da 2ª rodada) — a cascata do «Limpar a
   igual(['vac_mult_p', 'vac_gripe_p', 'vac_raiva_p', 'ecto_p'].filter((k) => !de(k).some((l) => /fica em aberto \(nunca registrado\)/.test(l))), [], 'os itens que a casa cobra ficam em aberto');
 });
 // ================================================================== QA 6.63 (Quinn) — bloco F: as lacunas que os defeitos plantados do QA acharam
+// Manutenção da Fase 0 (13/out/2026, bomba de relógio). Antes: o «outro dia» no futuro era a data fixa 11/10/2027 (contra o dcDataKey
+// de verdade): a partir de 11/10/2027 ela seria aceita e a prova cairia. Depois: 366 dias depois do dia do aparelho, pelas funções do
+// app (dcDataKey, addDiasISO, fmtBR); em 10/10/2026, o dia em que a prova foi escrita, é o mesmo 11/10/2027. Asserção igual. Por quê:
+// o que a prova afirma é que um «outro dia» futuro é recusado.
 prova('6.63 QA 28 (AC2.2) — «Corrigir»: «outros dias» no futuro recusados na tela', () => {
   const r = { base: 'Tonico/SRD', nome: 'Tonico', dia: '2026-10-07' };
-  const x = J630(`pendCorrigirLer(${JSON.stringify(r)}, '${KP663}', 'vermifugo', ${JSON.stringify(['07/10/2026', '06/10/2026, 11/10/2027', 'Tonico/SRD', '', 'Tonico/SRD', run("pendRotulo('vermifugo')")])})`);
+  const futuro = run('fmtBR(addDiasISO(dcDataKey(), 366))');
+  const x = J630(`pendCorrigirLer(${JSON.stringify(r)}, '${KP663}', 'vermifugo', ${JSON.stringify(['07/10/2026', '06/10/2026, ' + futuro, 'Tonico/SRD', '', 'Tonico/SRD', run("pendRotulo('vermifugo')")])})`);
   igual(!!x.recusa, true, JSON.stringify(x));
 });
 provaAsync('6.63 QA 29 (AC2.3) — «Corrigir» para outro ITEM com perguntas diferentes: as respostas do item antigo não vão junto', async () => {

@@ -14802,6 +14802,11 @@ async function main() {
 
       // ---- prova de comportamento: a Cookie da Yara, do jeito que ficou no banco ----
       // Um ambiente controlado com o dado REAL do defeito: renov diz Gold/2x, chips dizem 1x.
+      // Manutenção das provas (13/out/2026, bomba de relógio, junto com a Fase 0). Antes: o palco rodava com o dia de verdade, e o plano da Cookie é fixo
+      // (Gold, de 11/09/2026 a 30/11/2026); a partir de 01/12/2026 a trava do app «esta vigência já nasce VENCIDA» (hojeISO) entra no
+      // Confirmar e seis checagens abaixo cairiam (o valida-gen2 deixaria de dar as mesmas 17 falhas). Depois: o dia do palco (zHojeISO e
+      // hojeISO, como no palco da v-36) fica preso em 12/10/2026, o dia em que o palco foi mexido pela última vez (6.71), e volta no
+      // finally; dados, nomes das checagens e asserções iguais. Por quê: o caso afirma o Confirmar de um plano em vigor, e a data fixa vence.
       const monta15 = async (corpo) => JSON.parse(await vm.runInContext(`(async function(){
         var bkp={DB:DB, audit:audit, zFalta:zFalta, zLimparFalta:zLimparFalta, zPergunta:zPergunta,
                  zAlertao:zAlertao, renderPelFicha:renderPelFicha, renderPel:renderPel,
@@ -14849,6 +14854,7 @@ async function main() {
         pelAtual=PELUDINHOS[0]; pelAtualIdx=0;
         renovRascLimpar();
         var out;
+        var hzBkp15=zHojeISO, hjBkp15=hojeISO; zHojeISO=function(){ return '2026-10-12'; }; hojeISO=function(){ return '2026-10-12'; };
         try{ out=await (${corpo})({grav:grav, empurrou:empurrou, apagou:apagou, rastro:rastro,
               faltas:faltas, cartazes:cartazes, perguntas:perguntas, respostas:respostas}); }
         finally {
@@ -14857,6 +14863,7 @@ async function main() {
           renderPel=bkp.renderPel; renderDaycare=bkp.renderDaycare; canEditPel=bkp.canEditPel;
           podePapel=bkp.podePapel; PELUDINHOS=bkp.PELUDINHOS; pelCadCache=bkp.cad;
           pelAtual=bkp.pelAtual; pelAtualIdx=bkp.pelAtualIdx; renovRascLimpar(); corrAbrir=corrAbrirBkp;
+          zHojeISO=hzBkp15; hojeISO=hjBkp15;
         }
         return JSON.stringify(out);
       })()`, ctx));
