@@ -2,6 +2,34 @@
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
 
+## O que mudou em 12/out/2026 (v 2026-10-09-28) — Hoje na Zêluz: o FILHOt hospedado aparece com ou sem dia fixo, também no fim de semana e no feriado (o Romeo, «0 presentes»; Story 6.87)
+
+> Quadro de pedidos, linha 90 (achado da investigação do vermífugo do Romeo, 11/out/2026): *«FILHOt com dia fixo na segunda e hospedado no fim de semana não aparece na Hoje na Zêluz («0 presentes»)»*. Era só ali que o chip do vermífugo («Feito hoje») existia para ele. Nenhuma tela nova no menu, nenhum texto novo na tela, nenhuma mensagem nova ao tutor, e nada é gravado: a lista passa a ler a hospedagem inteira e pelo dia de hoje.
+
+### (EJ) Hoje na Zêluz › quem está na casa pela hospedagem
+
+| Antes | Agora |
+|---|---|
+| No fim de semana e no feriado, o FILHOt **com dia fixo** hospedado na AuAulândia não aparecia. Com só o Romeo (dia fixo na segunda) hospedado no domingo, a tela dizia «0 presentes · 0 com pendência» e «Ninguém marcado na casa ainda», o «Copiar lista» dizia «Ninguém na lista com este filtro.» e o Excel não saía | **Aparece**, com «hóspede da AuAulândia — está na casa», com ou sem dia fixo, no sábado, no domingo e no feriado (também no dia em que a hospedagem começa). O cabeçalho, os filtros, o contador do menu, o «Copiar lista» e o «Baixar Excel» contam ele junto: é a mesma lista. Na linha dele, o vencido de hoje (o chip do vermífugo com «Feito hoje»), o banho fixo, o remédio, as pendências e a pergunta «fazer hoje?», como na de qualquer FILHOt |
+| Num dia útil, o FILHOt cujo dia fixo é hoje e que **dormiu aqui** (hospedagem de ontem para hoje) só aparecia depois de alguém marcar a chamada | Aparece pela hospedagem desde o começo do dia. Marcado «veio» na chamada sem o check-in do corpo, ele vai para o quadro vermelho «Na chamada, sem o check-in do corpo», como sempre: **o exame do corpo continua obrigatório** |
+| Com o Plantão deste aparelho navegado para outro dia, a lista seguia o dia do Plantão: o hóspede que sai hoje sumia, e o que só chega amanhã (ou o que saiu ontem) aparecia | A lista é sempre a de **hoje** (o dia do relógio), em qualquer dia aberto no Plantão |
+| Uma reserva nova, para outra data, gravada depois da hospedagem de agora fazia o FILHOt sumir da lista | A hospedagem de agora continua valendo: a lista lê **todas** as estadias do FILHOt (a extensão emendada conta como a mesma hospedagem) |
+| — | Quem **chega hoje** num dia que é do Day Care dele (dia útil, fora feriado e no dia fixo dele) segue o Day Care, como antes: entra pelo check-in do corpo ou pela chamada. Sem a noite dormida, a hospedagem não o põe na lista antes de ele chegar |
+
+### (EK) O que continua igual, os limites conhecidos e o que a equipe nota
+
+- **Não aparece pela hospedagem:** a cancelada, a recusada, a encerrada, a que já terminou e a que ainda não começou; o FILHOt nos Inativos; e quem foi embora: o check-out ou a baixa tiram o FILHOt da lista também quando foram gravados na extensão (inclusive no dia em que ela começa) ou numa reserva para outra data, a que a tela de Check-out abre, mesmo que outra reserva tenha sido gravada depois (a saída gravada numa estadia que ainda nem tinha começado conta como a saída desta hospedagem). «Faltou» na chamada continua tirando o FILHOt da lista, e o check-in do corpo continua vencendo («presente pelo check-in às …»).
+- **O morador da casa** continua «morador da casa», mesmo com uma estadia aberta. A estadia antiga, **sem data de entrada**, continua valendo como antes, em qualquer dia aberto no Plantão.
+- **Limites conhecidos:**
+  - a hospedagem **aberta** (sem data de saída) com uma reserva nova gravada depois não conta, como antes: o app não distingue a aberta de agora de uma antiga esquecida aberta, e listar quem já foi embora é o erro pior. Preencher a saída da hospedagem resolve;
+  - com o tutor escrito de dois jeitos **na mesma hospedagem** (por exemplo, «Jose» na estadia e «José» na extensão) e o check-out feito na extensão no dia em que ela começa, o FILHOt continua na lista nesse dia quando o Plantão deste aparelho está aberto em hoje, como antes: é a marca de hóspede que a turma do Day Care põe, e a turma não muda nesta correção. Com o Plantão em outro dia, ele sai;
+  - **saiu e voltou no mesmo dia** (uma hospedagem termina e a outra começa no mesmo dia, emendadas) com o check-out da saída gravado numa reserva para outra data: o FILHOt não aparece pela hospedagem durante a volta, como antes. No dado, é igual a quem saiu no dia da troca e não usou a extensão; entre os dois erros, a lista fica com o menor (não listar quem voltou, em vez de listar quem já foi embora);
+  - a tela de Check-out abre a estadia mais recente, que pode ser a reserva para outra data, e grava o check-out nela (defeito anterior a esta correção, que fica para uma correção própria). A Hoje na Zêluz já entende essa saída.
+- **A Quem chamar hoje usa a mesma lista:** o FILHOt de dia fixo hospedado passa a aparecer também na gaveta «Estão aqui hoje — podemos fazer hoje?» dela, com a mesma pergunta de qualquer FILHOt na casa.
+- **Não mudou:** a Chamada e o Check-in do Day Care (a turma do dia e o selo «HÓSPEDE»), a falta automática das 12h, o Início, o Painel da Operação, a tabela de permissões (`PERM`) e a área protegida do check-in (`ck*`, `ckt*`, `pt*`, `#v-daycare`, `pendAvisarChegada`). Nada é gravado nem lido de novo do banco.
+- **Para a equipe, depois da publicação:** a Recepção pode ver mais FILHOts na lista, e o contador do menu pode subir. É o certo: quem dormiu aqui está na casa.
+- **Fica com a Adriana (perguntas H-P1 e H-P2 da story):** o Início e o Painel da Márcia ainda contam duas vezes o FILHOt de dia fixo hospedado; o FILHOt que dorme aqui por pernoite (Lançamentos do dia) ou lançado à mão no Plantão ainda não aparece nesta lista.
+
 ## O que mudou em 10/out/2026 (v 2026-10-09-27) — AuAulândia, parte 2: o Plantão, a Conferência e o check-out — o lançamento à mão, o relatório, a assinatura de recebimento, o café, a Conferência, a ocorrência, as fotos, a bolsa e os pontos (S6 da revisão tela por tela, parte 2; Story 6.67)
 
 > Adriana, 09/out/2026 (quadro de pedidos, linha 87): *"O app está engessado, tudo preciso entrar no Claude para alterar. Preciso que tudo no app possa ser excluído, modificado, alterado e etc."* Nenhuma tela nova no menu. Regra de ouro: nada é apagado (o que é corrigido, anulado ou reaberto fica guardado, com quem, quando e o motivo), a assinatura de recebimento nunca vale para um texto que a pessoa não leu e o placar dos Zelosos conta um ponto por hospedagem. As correções usam o cartaz único da S0 (Corrigir / Anular / Reabrir): motivo de pelo menos 4 palavras e a própria senha (a senha de posto, como «Plantonista», não assina).
@@ -2675,6 +2703,8 @@ No banco daquele dia, `daycare/chamada/2026-09-24` tinha **34 chaves `veio`** e 
 2. tem check-in do corpo de **entrada** hoje → está, e com a hora em que entrou;
 3. a chamada diz `veio` → está (alguém marcou no dedo, sem passar pelo check-in);
 4. hóspede com estadia ativa, ou morador da casa → está: ele dorme aqui e não depende de ninguém marcar chamada.
+
+*Desde a 6.87:* o FILHOt hospedado aparece **com ou sem dia fixo** (no sábado, no domingo, no feriado e no dia útil em que dormiu aqui), pela hospedagem inteira (todas as estadias) e pelo dia de **hoje**, nunca pelo dia aberto no Plantão. Quem chega hoje num dia que é do Day Care dele segue o Day Care (check-in do corpo ou chamada).
 
 **A folga é ZERO aqui.** Em *Vencimentos* a folga (padrão 7 dias) existe para a consultora avisar **antes**. Nesta tela a pergunta é outra — *quem está com pendência agora* — e item que só vence daqui a seis dias, numa lista lida em pé no balcão, é ruído. Ruído esconde o que é urgente. Quem quer o de amanhã abre a tela de amanhã.
 

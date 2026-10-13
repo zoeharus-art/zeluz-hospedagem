@@ -5194,13 +5194,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-09-27"></script>
+<script src="resposta-tutor.js?v=2026-10-09-28"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-09-27"></script>
+<script src="painel-logica.js?v=2026-10-09-28"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5212,7 +5212,7 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-09-27"></script>
+<script src="financeiro-logica.js?v=2026-10-09-28"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -27193,7 +27193,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-09-27';
+  const APP_VERSAO='2026-10-09-28';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -61803,14 +61803,16 @@
   //   2) tem check-in do corpo de ENTRADA hoje → está, e com a hora em que entrou;
   //   3) a chamada diz 'veio' → está (alguém marcou no dedo, sem passar pelo check-in);
   //   4) hóspede com estadia ativa, ou morador da casa → está: ele dorme aqui, e não
-  //      depende de ninguém marcar chamada para existir.
+  //      depende de ninguém marcar chamada para existir. Hóspede é a marca hospede da turma
+  //      (só hóspede) ou, desde a 6.87, a hospedadoHoje (o FILHOt de dia fixo hospedado hoje,
+  //      que a turma traz pelos dias fixos — hojeTurmaComHospedagem).
   function hojeFonteDe(o, cham, ck){
     var k=dcKey(o.p.n,o.p.tutor);
     if(cham[k]==='faltou') return '';
     var r=ck[k];
     if(r && (!r.tipo || r.tipo==='entrada')) return 'checkin';
     if(cham[k]==='veio') return 'chamada';
-    if(o&&o.hospede) return 'hospede';
+    if(o&&(o.hospede||o.hospedadoHoje)) return 'hospede';
     if(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(o.p)) return 'morador';
     return '';
   }
@@ -61843,11 +61845,213 @@
     return idx;
   }
 
+  // ---- quem está na casa pela HOSPEDAGEM (Story 6.87; o Romeo, 11/out/2026) ------------------------------------
+  // A turma do Day Care (turmaDeHoje) só marca hospede:true em quem NÃO é do dia pelos dias fixos, olha só a estadia
+  // mais recente de cada FILHOt (CF_ESTADIAS) e a compara com o dia aberto no Plantão deste aparelho (dataKeyAtual),
+  // não com hoje. Resultado: o Romeo (dia fixo na segunda) hospedado num domingo sumia desta tela («0 presentes»), o
+  // FILHOt de dia fixo que dormiu aqui sumia num dia útil até alguém marcar a chamada, e a Luna sumia com o Plantão
+  // navegado para outro dia ou com uma reserva nova gravada depois da hospedagem atual. A resposta «está na casa pela
+  // hospedagem» passa a ser lida AQUI: pela hospedagem inteira (todas as estadias de EST_TODAS, pela
+  // contatoEstadiaDoDia da 6.55) e pelo dia do relógio (zHojeISO), nunca pelo HOJE_DIA nem pelo dia do Plantão.
+  // A turma, a falta automática e a tela do Day Care NÃO mudam: a falta automática lê a marca hospede como «só
+  // hóspede, não é do Day Care hoje» e não dá falta (6.28) — por isso a marca daqui é outra (hospedadoHoje) e mora só
+  // no registro desta tela. Nada aqui grava nem lê do banco.
+  //
+  // Hoje é dia de Day Care DELE: segunda a sexta, fora feriado (vencEhDiaDayCare, a lista de feriados do Orçamento), e
+  // o dia da semana do relógio (orcDiaSemana de hoje, nunca o HOJE_DIA) está nos dias fixos da ficha.
+  function hojeEhDiaDele(p, hoje){
+    if(!p || !vencEhDiaDayCare(hoje)) return false;
+    var dias=[];
+    try{ dias=pelDias(p, hoje)||[]; }
+    catch(e){ dias=[]; } /* silencioso de propósito: ficha ilegível não tem dia fixo — vale só a hospedagem */
+    return dias.indexOf(orcDiaSemana(hoje))>=0;
+  }
+  // Está na casa pela hospedagem, hoje? Pura: lê EST_TODAS, CF_ESTADIAS, a ficha em memória e o dia dado.
+  // A hospedagem é a que contatoEstadiaDoDia devolve (as emendadas juntas), mas a decisão olha CADA estadia dela (as
+  // partes), não o resumo: o resumo emenda numa estadia aberta tudo o que vem depois dela, e deixa «ativa» a estadia
+  // anterior quando o check-out cai na extensão (correção do @po na 6.87).
+  //   a) ACABOU: a estadia mais recente do FILHOt (a que o Plantão abre, onde caem o check-out e a baixa) é desta
+  //      hospedagem, não está ativa e o fim dela já chegou → não está (foi embora; a mesma resposta de antes);
+  //  a1) A ÚLTIMA DESTA HOSPEDAGEM (3ª passada, REL-003 do re-gate): a estadia mais recente entre as partes desta
+  //      hospedagem (a de maior _ts, a régua da hospEstadiaGanha) com check-out ou baixa e o fim já chegado → não está
+  //      (a baixa ou o check-out na extensão no dia em que ela começa, com uma reserva gravada depois);
+  //  a2) A SAÍDA QUE CAIU EM OUTRA ESTADIA (2ª rodada, REL-001 do QA): uma estadia do FILHOt — qualquer uma, de qualquer
+  //      hospedagem dele (3ª passada, REL-003) — fechada ANTES da própria entrada, com o fim dentro desta hospedagem, foi
+  //      a saída desta hospedagem → não está;
+  //   b) as partes que VALEM: nem cancelada nem recusada; a aberta (sem saída) só se for a estadia mais recente — uma
+  //      hospedagem antiga esquecida aberta não deixa ninguém «hospedado» para sempre;
+  //   c) HOSPEDADO HOJE: uma parte que vale, ativa, cobre hoje. Senão, não está;
+  //   d) DORMIU AQUI: uma parte que vale começou antes de hoje e vai até hoje (a noite de ontem, a mesma conta da falta
+  //      automática; a parte de ontem pode já ter o check-out, quando a seguinte começa hoje) → está;
+  //   e) CHEGA HOJE: está, menos num dia que é de Day Care DELE — aí ele segue o Day Care (o check-in e a chamada):
+  //      não há noite dormida, e o exame do corpo continua obrigatório (Adriana, 02/out/2026).
+  function hojeNaHospedagem(p, hoje){
+    if(!p || !p.n || !/^\d{4}-\d{2}-\d{2}$/.test(String(hoje||''))) return false;
+    var est=contatoEstadiaDoDia(dcKey(p.n, p.tutor), hoje, p);
+    if(!est) return false;
+    var T=(typeof EST_TODAS!=='undefined' && EST_TODAS)?EST_TODAS:{};
+    var C=(typeof CF_ESTADIAS!=='undefined' && CF_ESTADIAS)?CF_ESTADIAS:{};
+    var ids=est.ids||[], partes=est.partes||[];
+    // A estadia mais recente: pela refKey das estadias DESTA hospedagem (a estadia pode ter o tutor escrito diferente da
+    // ficha, «Jose» × «José») e pela pelKey da ficha; vale primeiro a que for desta hospedagem.
+    var chaves=[];
+    ids.forEach(function(id){ var e=T[id]; if(e && e.refKey) chaves.push(String(e.refKey)); });
+    try{ chaves.push(pelKey(p)); }
+    catch(e){ /* silencioso de propósito: sem a chave da ficha, vale a refKey das estadias */ }
+    var ult=null;
+    for(var i=0;i<chaves.length;i++){
+      var c=C[chaves[i]]; if(!c) continue;
+      if(!ult) ult=c;
+      if(ids.indexOf(c.id)>=0){ ult=c; break; }
+    }
+    // a) acabou
+    if(ult && ids.indexOf(ult.id)>=0){
+      var ue=ult.e||{};
+      if(String(ue.status||'ativa')!=='ativa'){
+        var fimU=contatoEstadiaFim(ue)||String(ue.saida||'');
+        if(!fimU || fimU<=hoje) return false;
+      }
+    }
+    // a1) (3ª passada, REL-003 do re-gate) A ÚLTIMA DESTA HOSPEDAGEM: entre as partes, a de maior _ts (a mesma régua da
+    //     hospEstadiaGanha, que escolhe a estadia que o Plantão e o Check-out abrem). Com check-out ou baixa e o fim já chegado,
+    //     ele foi embora — também quando a estadia mais recente do FILHOt é uma reserva gravada depois (o passo a não a vê).
+    var ultH=null;
+    ids.forEach(function(id){ var e=T[id]; if(e && hospEstadiaGanha(e, ultH)) ultH=e; });
+    if(ultH){
+      var stH=String(ultH.status||'ativa');
+      if(stH==='finalizada' || stH==='encerrada'){
+        var fimH=contatoEstadiaFim(ultH)||String(ultH.saida||'');
+        if(!fimH || fimH<=hoje) return false;
+      }
+    }
+    // a2) (2ª rodada, REL-001 do QA) A SAÍDA QUE CAIU EM OUTRA ESTADIA. A tela de Check-out abre a estadia mais recente do FILHOt, que
+    //     pode ser uma reserva para outra data gravada depois desta hospedagem, e grava o check-out nela; a baixa pode cair na extensão.
+    //     Uma estadia do FILHOt (a mais recente de cada chave, ou uma parte desta hospedagem) fechada (finalizada ou encerrada) ANTES da
+    //     própria entrada — terminou antes de começar — guardou a saída de outra estadia: se esse fim cai dentro desta hospedagem (da
+    //     entrada dela até hoje), ele foi embora.
+    var fechouAntes=function(e){
+      e=e||{}; var st=String(e.status||'ativa'), en=String(e.entrada||'');
+      if(st!=='finalizada' && st!=='encerrada') return '';
+      var f=contatoEstadiaFim(e);
+      return (f && /^\d{4}-\d{2}-\d{2}$/.test(en) && f<en)?f:'';
+    };
+    var vistas=[];
+    chaves.forEach(function(k){ var c=C[k]; if(c && c.e && vistas.indexOf(c.e)<0) vistas.push(c.e); });
+    ids.forEach(function(id){ var e=T[id]; if(e && vistas.indexOf(e)<0) vistas.push(e); });
+    // (3ª passada, REL-003) e TODAS as estadias do FILHOt (as partes de todas as hospedagens dele): a reserva que guardou a
+    // saída pode ter deixado de ser a mais recente (outra reserva gravada depois)
+    contatoEstadiasDe(dcKey(p.n, p.tutor), p).forEach(function(h){
+      (h.ids||[]).forEach(function(id){ var e=T[id]; if(e && vistas.indexOf(e)<0) vistas.push(e); });
+    });
+    if(vistas.some(function(e){ var f=fechouAntes(e); return !!f && f>=est.entrada && f<=hoje; })) return false;
+    // b) as partes que valem
+    var fimDe=function(x){ return x.fim||x.saida||'9999-12-31'; };   // sem saída: ainda não terminou
+    var V=partes.filter(function(x){
+      var st=String((T[x.id]||{}).status||x.status||'');
+      if(st==='cancelada' || st==='recusada') return false;
+      return !!x.saida || !!(ult && ult.id===x.id);
+    });
+    // c) hospedado hoje
+    if(!V.some(function(x){ return x.status==='ativa' && x.entrada<=hoje && fimDe(x)>=hoje; })) return false;
+    // d) dormiu aqui
+    if(V.some(function(x){ return x.entrada<hoje && fimDe(x)>=hoje; })) return true;
+    // e) chega hoje
+    return !hojeEhDiaDele(p, hoje);
+  }
+  // O GUARDADOR: as estadias que cobrem o dia, pelo filtro barato (a data e o status; a regra decide depois). Varre
+  // EST_TODAS uma vez por versão — o próprio objeto: _cfIndexarEstadias troca o objeto inteiro a cada leitura, o molde
+  // do contatoEstIndice — e por dia: a Hoje na Zêluz desenha várias vezes por minuto (ouvintes, filtros, contador).
+  var HOJE_HOSP_DIA=null;      // {T (o objeto EST_TODAS), dia, L:[{id, e}]}
+  var HOJE_HOSP_VARRIDAS=0;    // quantas vezes EST_TODAS foi varrida aqui (a prova do guardador conta)
+  function hojeEstadiasDoDia(dia){
+    var T=(typeof EST_TODAS!=='undefined' && EST_TODAS)?EST_TODAS:{};
+    if(HOJE_HOSP_DIA && HOJE_HOSP_DIA.T===T && HOJE_HOSP_DIA.dia===dia) return HOJE_HOSP_DIA.L;
+    HOJE_HOSP_VARRIDAS++;
+    var iso=/^\d{4}-\d{2}-\d{2}$/, L=[];
+    Object.keys(T).forEach(function(id){
+      var e=T[id];
+      if(!e || typeof e!=='object' || !e.refKey) return;
+      if(String(e.status||'ativa')!=='ativa') return;
+      var ent=String(e.entrada||''), sai=String(e.saida||'');
+      if(!iso.test(ent) || ent>dia) return;
+      if(iso.test(sai) && sai<dia) return;
+      L.push({id:id, e:e});
+    });
+    HOJE_HOSP_DIA={T:T, dia:dia, L:L};
+    return L;
+  }
+  // A turma de hoje para a Hoje na Zêluz: a de turmaDeHoje() (a MESMA porta do Day Care), com a hospedagem lida inteira
+  // e pelo dia de hoje. A turma original não muda (o registro mexido é uma cópia): a falta automática e a Chamada não
+  // veem nada disto.
+  //   - quem a turma trouxe SEM a marca hospede (pelos dias fixos, reposição ou avulso) e está na hospedagem hoje: a
+  //     cópia leva hospedadoHoje:true (a 4ª resposta de hojeFonteDe; não isenta o quadro vermelho do check-in);
+  //   - quem a turma trouxe COM a marca hospede: com o Plantão deste aparelho no dia de hoje, fica como veio; com o
+  //     Plantão em outro dia, a turma o marcou pelo dia do Plantão, e ele só fica se a hospedagem for de hoje (ou se a
+  //     estadia for antiga, sem data de entrada: essa vale como antes);
+  //   - o morador fica como veio (continua «morador da casa»);
+  //   - o hospedado de hoje que a turma não trouxe (o Plantão em outro dia; a reserva nova gravada depois da hospedagem
+  //     atual): entra como só hóspede, com a ficha achada como a turma acha (pelKey = refKey, ou nome e tutor) ou, sem
+  //     ficha, com o nome e o tutor da estadia (e sem dia fixo: a turma monta o sem-ficha com o dia da aba, e com o Plantão
+  //     em outro dia é por aqui que ele volta no dia em que chega). O FILHOt inativo não entra.
+  // Hospedagens ainda não lidas: a turma como veio (nunca afirma sem saber). Um erro aqui nunca derruba a lista.
+  function hojeTurmaComHospedagem(hoje){
+    var T=turmaDeHoje()||[];
+    if(typeof CF_ESTADIAS_LIDO!=='undefined' && !CF_ESTADIAS_LIDO) return T;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(hoje||''))) return T;
+    try{
+      var outroDia=(typeof dataKeyAtual==='function') && dataKeyAtual()!==hoje;
+      var vistos={}, out=[];
+      // 2ª rodada (REL-002 do QA): a estadia antiga SEM data de entrada (dado antigo) não tem dia — vale como antes (estadiaCobreDia), em
+      // qualquer dia do Plantão, até a saída dela; a regra, que só lê estadias com entrada, não a julga. É a estadia que a turma achou: a
+      // mais recente da chave da ficha, da chave da estadia (o sem-ficha) ou do mesmo nome e tutor.
+      var C=(typeof CF_ESTADIAS!=='undefined' && CF_ESTADIAS)?CF_ESTADIAS:{};
+      var semData=function(o){
+        var iso=/^\d{4}-\d{2}-\d{2}$/, k0=dcKey(o.p.n, o.p.tutor), pk='';
+        try{ pk=pelKey(o.p); }catch(e){ pk=''; } /* silencioso de propósito: sem a chave da ficha, valem o nome e o tutor */
+        var rkI=(typeof o.i==='string' && o.i.indexOf('hosp')===0)?o.i.slice(4):'';
+        return Object.keys(C).some(function(k){
+          var c=C[k]||{}, e=c.e||{};
+          if(k!==pk && k!==rkI && contatoEstadiaChave(c.id, e)!==k0) return false;
+          if(String(e.status||'ativa')!=='ativa' || iso.test(String(e.entrada||''))) return false;
+          var sai=String(e.saida||''); return !(iso.test(sai) && sai<hoje);
+        });
+      };
+      T.forEach(function(o){
+        var p=o&&o.p;
+        if(!p || !p.n){ out.push(o); return; }
+        if(o.hospede){
+          if(outroDia && !hojeNaHospedagem(p, hoje) && !semData(o)) return;
+          vistos[dcKey(p.n, p.tutor)]=1; out.push(o); return;
+        }
+        vistos[dcKey(p.n, p.tutor)]=1;
+        // 2ª rodada (REQ-001 do QA): o morador continua morador (AC2.6): a estadia aberta dele não o faz «hóspede» na Hoje
+        if(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(p)){ out.push(o); return; }
+        out.push(hojeNaHospedagem(p, hoje)?Object.assign({}, o, {hospedadoHoje:true}):o);
+      });
+      var feitos={};
+      hojeEstadiasDoDia(hoje).forEach(function(x){
+        var e=x.e, rk=String(e.refKey);
+        if(feitos[rk]) return; feitos[rk]=1;
+        var pReal=PELUDINHOS.find(function(q){ return pelKey(q)===rk || dcKey(q.n,q.tutor)===dcKey(e.nome,e.tutor); });
+        if(pReal && typeof pelInativo==='function' && pelInativo(pReal)) return;
+        var p=pReal || {n:e.nome, raca:e.raca||'', tutor:e.tutor||'', freq:'hospede', dias:[], nasc:''};
+        if(!p.n) return;
+        var k=dcKey(p.n, p.tutor); if(vistos[k]) return;
+        if(!hojeNaHospedagem(p, hoje)) return;
+        vistos[k]=1;
+        out.push({p:p, i:(pReal?PELUDINHOS.indexOf(pReal):('hosp'+rk)), hospede:true});
+      });
+      return out;
+    }catch(e){ return T; } /* silencioso de propósito: a regra nova nunca derruba a lista — vale a turma de sempre */
+  }
+
   // ---- a lista ------------------------------------------------------------------------
   // Uma linha por FILHOt que está na casa. A turma vem de turmaDeHoje() — a MESMA porta do
   // Day Care, que já junta fixos do dia, reposições, avulsos, hóspedes e moradores e já
   // devolve tudo deduplicado. Duas telas contando a casa por critérios diferentes é como
-  // nascem duas verdades (a lição de 13/ago), e aqui não nasce nenhuma.
+  // nascem duas verdades (a lição de 13/ago), e aqui não nasce nenhuma. Desde a 6.87, por
+  // hojeTurmaComHospedagem: a mesma turma, com a hospedagem de hoje lida inteira (o FILHOt
+  // de dia fixo hospedado aparece; ver acima).
   function hojeLista(){
     if(typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS)||!PELUDINHOS.length) return [];
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
@@ -61856,7 +62060,7 @@
     var agoraAnt=Date.now();
     var out=[], vistos={};
     var turma=[];
-    try{ turma=turmaDeHoje()||[]; }
+    try{ turma=hojeTurmaComHospedagem(hoje)||[]; }
     catch(e){ turma=[]; } /* silencioso de propósito: a tela trata a lista vazia e diz por quê */
     turma.forEach(function(o){
       var p=o&&o.p; if(!p||!p.n) return;
@@ -61910,7 +62114,9 @@
         fonte:fonte, hora:hojeHoraDe(chave, ck),
         // Hóspede e morador estão na casa mesmo marcados "veio" na Chamada (a Chamada lista os dois):
         // não passam pelo check-in do corpo de entrada do Day Care (QA da 6.42; regra do QA71).
-        hospede:!!o.hospede, morador:!!(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(p)),
+        // 6.87: hospedadoHoje = veio na turma sem a marca hospede (dia fixo, reposição, avulso) e está na hospedagem
+        // hoje. Não isenta o check-in do corpo: quem foi marcado «veio» sem o exame continua no quadro vermelho.
+        hospede:!!o.hospede, hospedadoHoje:!!o.hospedadoHoje, morador:!!(typeof ehMoradorZeluz==='function' && ehMoradorZeluz(p)),
         itens:itens, remedio:remedio, banho:banho, pend:pend, respostas:respostas,
         proxima:ant.proxima, antec:ant.itens, antGrupos:antGrupos,
         antAbertos:antAbertos, antReg:antReg,

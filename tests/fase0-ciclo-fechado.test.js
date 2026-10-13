@@ -59344,6 +59344,741 @@ provaAsync('6.67 × 6.76 · as 16 portas da 6.67, porta por porta — cada uma, 
     'as 16 abrem o cartaz e nenhuma confere senha por conta própria');
 });
 }
+// ================================================================== 6.87 — Hoje na Zêluz: o FILHOt de dia fixo hospedado (o Romeo, «0 presentes»)
+console.log('\n6.87 — Hoje na Zêluz: o FILHOt hospedado aparece com ou sem dia fixo, pela hospedagem inteira e pelo dia de hoje (o Romeo, 11/out/2026)');
+{
+// Tudo inventado: os FILHOts Romeo, Luna, Bud, Tina, Nico, Zeca, Tico, Mel, Mia, Bia, Kiko, Lua e Pipoca, e os tutores «… Teste».
+// O relógio é fixado pela hora LOCAL do processo (o mesmo dia em UTC e em São Paulo); a P29 usa um instante (domingo, 21:30 de
+// Brasília), em que o dia muda com o fuso. O HOJE_DIA do sandbox nasce com o relógio REAL do dia em que a prova roda, e a turma
+// (turmaDeHoje) usa ele: o FILHOt «de dia fixo» leva o HOJE_DIA nos dias (para a turma trazê-lo pelos dias fixos, sem a marca
+// hospede, como o Romeo da base) e, quando importa, o dia da semana do relógio fixado (para ser «o dia dele»). O dia útil das
+// provas é a quarta 14/10 — ou a quinta 15/10, se o HOJE_DIA for quarta —, para o dia do relógio nunca ser o HOJE_DIA: é assim
+// que a prova separa um do outro (o d01 do @sm). Nada aqui toca a área protegida; o banco é de mentira (espião ou em árvore).
+const HD687 = run('HOJE_DIA');
+const UTIL687 = HD687 === 'qua' ? '2026-10-15' : '2026-10-14';
+const DU687 = HD687 === 'qua' ? 'qui' : 'qua';
+const OUTRO687 = ['seg', 'ter', 'qua', 'qui', 'sex'].filter((d) => d !== HD687 && d !== DU687)[0];
+const SAB687 = '2026-10-10', DOM687 = '2026-10-11', SEG687 = '2026-10-12';   // 12/10/2026: Nossa Senhora Aparecida (feriado)
+const mais687 = (iso, n) => { const a = iso.split('-').map(Number); const d = new Date(a[0], a[1] - 1, a[2] + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const FIXO687 = (...d) => [HD687].concat(d).filter((x, i, a) => a.indexOf(x) === i);   // os dias fixos de quem a turma traz pelos dias fixos
+const FRASE687 = 'hóspede da AuAulândia — está na casa';
+const NOVAS687 = ['hojeEhDiaDele', 'hojeNaHospedagem', 'hojeEstadiasDoDia', 'hojeTurmaComHospedagem'];
+// O palco. cfg: {fichas:[{n, tutor, dias, ex}], est:[{n, e, s, st, ts, co, x, rk, tutorEst, id}], cham:{nome:'veio'|'faltou'}, ck:[nome],
+// plantao:'AAAA-MM-DD' (o dia do Plantão deste aparelho; sem ele, hoje), lido:false, papel}. co = o dia do check-out (11:00).
+run(`
+__arma687=function(cfg){
+  cfg=cfg||{};
+  __bk687={P:PELUDINHOS, pc:pelCadCache, cf:CF_ESTADIAS, et:EST_TODAS, lido:CF_ESTADIAS_LIDO, av:dcAvulsos, dt:DC_DASH_TURMA, pd:planDia,
+    cm:hojeChamadaMapa, km:hojeCheckinMapa, ml:medLinhaDoPel, pa:PEND_ABERTAS, vp:VENC_PEND, vr:VENC_REG, vrd:VENC_REG_DIA, sd:selectedDate,
+    ge:document.getElementById, po:prevCorrigeOkHTML, bf:banhoFaltaCardHTML, bs:(typeof banhoSaidaAlertaHTML==='function')?banhoSaidaAlertaHTML:null,
+    hf:HOJE_FILTRO, role:document.body.dataset.role, db:DB, rx:relBaixarXLS, al:alert, au:audit, ap:APP_DIA_ABERTO, fa:_faltaAutoFeita,
+    fc:__feriadoConferido, mt:medTirarDosesDeQuemFaltou, pv:(typeof pendVarrerDia==='function')?pendVarrerDia:null, dc:dcChamada, of:orcFeriadosCfg, da:dcAtiv,
+    hh:(typeof HOJE_HOSP_DIA!=='undefined')?HOJE_HOSP_DIA:undefined};
+  document.body.dataset.role=cfg.papel||'consultora';
+  PELUDINHOS=[]; pelCadCache={}; CF_ESTADIAS={}; EST_TODAS={}; CF_ESTADIAS_LIDO=(cfg.lido===false)?false:true; dcAvulsos=[]; dcChamada={}; dcAtiv='chamada';
+  DC_DASH_TURMA={reposicao:[], avulso:[], quando:0, dia:'x687'};
+  planDia={banho:[], avulso:[], reposicao:[], adaptacao:[], faltas:[], duvidas:[], lida:true, erro:'', dia:'x687'};
+  medLinhaDoPel=function(){ return false; }; PEND_ABERTAS={}; VENC_PEND={}; VENC_REG={}; VENC_REG_DIA=''; orcFeriadosCfg=null;
+  prevCorrigeOkHTML=function(){ return ''; }; banhoFaltaCardHTML=function(){ return ''; }; if(__bk687.bs) banhoSaidaAlertaHTML=function(){ return ''; };
+  HOJE_FILTRO='todos';
+  if(typeof HOJE_HOSP_DIA!=='undefined') HOJE_HOSP_DIA=null;
+  __el687={hojeRoot:{innerHTML:''}, navHojeN:{textContent:''}}; document.getElementById=function(id){ return __el687[id]||null; };
+  __xls687=[]; relBaixarXLS=function(h, nome, n){ __xls687.push({h:String(h), nome:nome, n:n}); };
+  __al687=[]; alert=function(t){ __al687.push(String(t)); };
+  __au687=[]; audit=function(a, d){ __au687.push(String(a)+': '+String(d)); };
+  // o banco ESPIÃO: anota toda chamada (ref, once, on, set, update, remove, transaction, push) e não guarda nada
+  __db687=[];
+  var ref=function(p){ p=String(p||''); var reg=function(op){ return function(){ __db687.push(op+' '+p);
+      return (op==='once')?Promise.resolve({val:function(){ return null; }}):Promise.resolve({committed:false, snapshot:{val:function(){ return null; }}}); }; };
+    return {key:p.split('/').pop(), once:reg('once'), on:reg('on'), off:function(){}, set:reg('set'), update:reg('update'), remove:reg('remove'),
+      transaction:reg('transaction'), push:reg('push'), child:function(c){ return ref(p+'/'+c); }}; };
+  DB={ref:function(p){ __db687.push('ref '+String(p||'')); return ref(p); }};
+  (cfg.fichas||[]).forEach(function(f){
+    var p={n:f.n, raca:'SRD', freq:'', tutor:f.tutor||(f.n+' Teste'), nasc:'', dias:(f.dias||[]).slice()};
+    PELUDINHOS.push(p);
+    pelCadCache[pelKey(p)]=Object.assign({_novo:true, n:p.n, tutor:p.tutor, raca:'SRD', dias:(f.dias||[]).slice()}, f.ex||{});
+  });
+  (cfg.est||[]).forEach(function(s, i){
+    var p=PELUDINHOS.filter(function(q){ return q.n===s.n && (!s.tutor || q.tutor===s.tutor); })[0];
+    var tutor=(s.tutorEst!==undefined)?s.tutorEst:(p?p.tutor:(s.tutor||(s.n+' Teste')));
+    var rk=s.rk || (p?pelKey(p):(s.n+'__'+tutor).toLowerCase());
+    var e=Object.assign({nome:s.n, tutor:tutor, raca:'SRD', refKey:rk, entrada:s.e, saida:(s.s===undefined?'':s.s), status:s.st||'ativa', _ts:s.ts||(i+1)}, s.x||{});
+    if(s.co){ var c=s.co.split('-').map(Number); e.checkout={ts:new Date(c[0], c[1]-1, c[2], 11, 0, 0).getTime()}; }
+    var id=s.id||('e687_'+i); EST_TODAS[id]=e;
+    if(hospEstadiaGanha(e, CF_ESTADIAS[rk]&&CF_ESTADIAS[rk].e)) CF_ESTADIAS[rk]={id:id, e:e};
+  });
+  var chave=function(n){ var p=PELUDINHOS.filter(function(q){ return q.n===n; })[0]; return dcKey(n, p?p.tutor:(n+' Teste')); };
+  __cham687={}; Object.keys(cfg.cham||{}).forEach(function(n){ __cham687[chave(n)]=cfg.cham[n]; });
+  __ck687={}; (cfg.ck||[]).forEach(function(n){ __ck687[chave(n)]={tipo:'entrada', hora:'08:10', fim:1}; });
+  hojeChamadaMapa=function(){ return __cham687; }; hojeCheckinMapa=function(){ return __ck687; };
+  var pl=String(cfg.plantao||zHojeISO()).split('-').map(Number); selectedDate=new Date(pl[0], pl[1]-1, pl[2], 12, 0, 0);
+};
+__solta687=function(){
+  var b=__bk687;
+  PELUDINHOS=b.P; pelCadCache=b.pc; CF_ESTADIAS=b.cf; EST_TODAS=b.et; CF_ESTADIAS_LIDO=b.lido; dcAvulsos=b.av; DC_DASH_TURMA=b.dt; planDia=b.pd;
+  hojeChamadaMapa=b.cm; hojeCheckinMapa=b.km; medLinhaDoPel=b.ml; PEND_ABERTAS=b.pa; VENC_PEND=b.vp; VENC_REG=b.vr; VENC_REG_DIA=b.vrd; selectedDate=b.sd;
+  document.getElementById=b.ge; prevCorrigeOkHTML=b.po; banhoFaltaCardHTML=b.bf; if(b.bs) banhoSaidaAlertaHTML=b.bs; HOJE_FILTRO=b.hf;
+  document.body.dataset.role=b.role; DB=b.db; relBaixarXLS=b.rx; alert=b.al; audit=b.au; APP_DIA_ABERTO=b.ap; _faltaAutoFeita=b.fa;
+  __feriadoConferido=b.fc; medTirarDosesDeQuemFaltou=b.mt; if(b.pv) pendVarrerDia=b.pv; dcChamada=b.dc; orcFeriadosCfg=b.of; dcAtiv=b.da;
+  if(typeof HOJE_HOSP_DIA!=='undefined') HOJE_HOSP_DIA=(b.hh===undefined)?null:b.hh;
+};`);
+// O relógio: guarda o Date de verdade uma vez por palco; trocar a hora no meio da prova não empilha relógios.
+const relogio687 = (quando) => {
+  ctx.__hora687 = quando;
+  run(`(function(){ var R=__RD687, t=new R(__hora687).getTime();
+    function F(){ if(!arguments.length) return new R(t); return new (Function.prototype.bind.apply(R,[null].concat([].slice.call(arguments))))(); }
+    F.now=function(){ return t; }; F.UTC=R.UTC; F.parse=R.parse; F.prototype=R.prototype; Date=F; })();`);
+};
+// com687(dia, hora, cfg, fn): o palco montado no dia e na hora local dados (ou num instante, se `dia` for número), a prova, e tudo devolvido.
+const com687 = async (dia, hora, cfg, fn) => {
+  run('__RD687=Date;');
+  try {
+    relogio687(typeof dia === 'number' ? dia : (dia + 'T' + (hora || '14:00') + ':00'));
+    ctx.__cfg687 = JSON.parse(JSON.stringify(cfg || {}));
+    run('__arma687(__cfg687);');
+    try { return await fn(); } finally { run('__solta687();'); }
+  } finally { run('Date=__RD687;'); }
+};
+const L687 = () => J630("hojeLista().map(function(o){ return o.nome+':'+o.fonte; })");
+const LT687 = () => J630("hojeLista().map(function(o){ return o.nome+'|'+o.tutor+':'+o.fonte; })");
+const LF687 = () => J630('hojeLista().map(function(o){ return {n:o.nome, f:o.fonte, h:o.hospede, hh:o.hospedadoHoje, frase:hojeFrasePresenca(o)}; })');
+const Q687 = () => J630('hojeSemCheckinLista(hojeLista()).map(function(o){ return o.nome; })');
+// a turma da Hoje (na base a função não existe: a prova que a usa falha lá, ou confere só quando ela existe)
+const T687 = () => J630("(typeof hojeTurmaComHospedagem==='function')?hojeTurmaComHospedagem(zHojeISO()).map(function(o){ return o.p.n+(o.hospede?'(h)':'')+(o.hospedadoHoje?'(hh)':''); }):[]");
+const TD687 = () => J630("turmaDeHoje().map(function(o){ return o.p.n+(o.hospede?'(h)':'')+(o.hospedadoHoje?'(hh)':''); })");
+// a lista como a base a monta: a turma de sempre (turmaDeHoje), sem a hospedagem lida pela Hoje
+const LB687 = () => { run("__hth687=(typeof hojeTurmaComHospedagem==='function')?hojeTurmaComHospedagem:null; hojeTurmaComHospedagem=function(){ return turmaDeHoje()||[]; };");
+  try { return L687(); } finally { run("if(__hth687) hojeTurmaComHospedagem=__hth687; else delete globalThis.hojeTurmaComHospedagem;"); } };
+const E687 = (n, e, s, st, ts, extra) => Object.assign({ n, e, s, st: st || 'ativa', ts: ts || 0 }, extra || {});
+const so687 = (lista, n) => lista.filter((x) => x.split(/[:(|]/)[0] === n);
+const DOM_ROMEO687 = () => ({ fichas: [{ n: 'Romeo', dias: FIXO687('seg') }], est: [E687('Romeo', '2026-10-09', '2026-10-13', 'ativa', 1)] });
+const OUTRAS687 = (f, e) => ({ fichas: f, est: e });
+
+// ---------------------------------------------------------------- AC1 — o FILHOt hospedado com dia fixo aparece
+provaAsync('6.87 P01 (AC1.1) — domingo 11/10: o Romeo (dia fixo na segunda) hospedado de 09/10 a 13/10, sem chamada nem check-in, está na Hoje na Zêluz pela hospedagem («hóspede da AuAulândia — está na casa»; hospede da turma falso, hospedadoHoje verdadeiro); a contagem dá 1; ele entra uma vez só na turma da Hoje. Base: a lista vazia', async () => {
+  await com687(DOM687, '14:00', DOM_ROMEO687(), async () => {
+    igual(LF687(), [{ n: 'Romeo', f: 'hospede', h: false, hh: true, frase: FRASE687 }]);
+    igual(J630('hojeContagem().total'), 1);
+    igual(so687(T687(), 'Romeo'), ['Romeo(hh)'], 'uma vez, com a marca nova');
+  });
+});
+provaAsync('6.87 P02 (AC1.1, AC1.4) — só o Romeo hospedado: a tela diz «1 presente» e não mostra «Ninguém marcado na casa ainda»; o «Copiar lista» (hojeTexto) e o Excel (relHojeNaCasa) o trazem. Base: «0 presentes · 0 com pendência», «Ninguém na lista com este filtro.» e o Excel não sai', async () => {
+  await com687(DOM687, '14:00', DOM_ROMEO687(), async () => {
+    run('hojeRender();');
+    const h = String(run('__el687.hojeRoot.innerHTML'));
+    assert.ok(/>1 presente · 1 com pendência/.test(h), 'o cabeçalho conta 1');
+    assert.ok(h.indexOf('Ninguém marcado na casa ainda') < 0 && h.indexOf('>Romeo<') >= 0 && h.indexOf(FRASE687) >= 0, 'a linha do Romeo, com a frase da hospedagem');
+    const t = String(run('hojeTexto()')).split('\n');
+    assert.ok(/^1 presentes? · 1 com pendência$/.test(t[1]) && /^Romeo\/SRD · tutor Romeo Teste/.test(t[3]), JSON.stringify(t.slice(0, 4)));
+    run('relHojeNaCasa();');
+    igual([J630('__al687'), J630('__xls687.length'), J630('__xls687[0].n')], [[], 1, 1]);
+    const x = String(run('__xls687[0].h'));
+    assert.ok(x.indexOf('Romeo') >= 0 && x.indexOf(FRASE687) >= 0 && x.indexOf('1 presentes · 1 com pendência') >= 0, 'o Excel traz o Romeo e a mesma conta');
+  });
+});
+provaAsync('6.87 P03 (AC1.1) — o Romeo (dia fixo na segunda), a Luna (sem dia fixo) e o Bud (dia fixo em outro dia) na MESMA hospedagem: os três, em ordem alfabética, todos pela hospedagem; o cabeçalho conta 3. Base: só o Bud e a Luna', async () => {
+  await com687(DOM687, '14:00', {
+    fichas: [{ n: 'Romeo', dias: FIXO687('seg') }, { n: 'Luna', dias: [] }, { n: 'Bud', dias: [OUTRO687] }],
+    est: [E687('Romeo', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 2), E687('Bud', '2026-10-09', '2026-10-13', 'ativa', 3)],
+  }, async () => {
+    igual(L687(), ['Bud:hospede', 'Luna:hospede', 'Romeo:hospede']);
+    igual(TD687().sort(), ['Bud(h)', 'Luna(h)', 'Romeo'], 'a turma de sempre: o Romeo pelos dias fixos, sem a marca');
+    igual(T687().sort(), ['Bud(h)', 'Luna(h)', 'Romeo(hh)']);
+    run('hojeRender();');
+    assert.ok(/>3 presentes · 3 com pendência/.test(String(run('__el687.hojeRoot.innerHTML'))));
+  });
+});
+provaAsync('6.87 P04 (AC1.2) — sábado 10/10 e domingo 11/10: a hospedagem que COMEÇA hoje, FILHOt de dia fixo (na segunda; e a Mia, com «sab» escrito nos dias da ficha): aparece, como o hóspede sem dia fixo. Base: não aparece', async () => {
+  await com687(SAB687, '14:00', { fichas: [{ n: 'Romeo', dias: FIXO687('seg') }, { n: 'Mia', dias: FIXO687('sab') }],
+    est: [E687('Romeo', SAB687, '2026-10-13', 'ativa', 1), E687('Mia', SAB687, '2026-10-12', 'ativa', 2)] }, async () => {
+    igual(L687(), ['Mia:hospede', 'Romeo:hospede'], 'sábado');
+  });
+  await com687(DOM687, '09:00', { fichas: [{ n: 'Romeo', dias: FIXO687('seg') }], est: [E687('Romeo', DOM687, '2026-10-13', 'ativa', 1)] }, async () => {
+    igual(L687(), ['Romeo:hospede'], 'domingo');
+  });
+});
+provaAsync('6.87 P05 (AC1.2) — feriado de dia útil (segunda 12/10/2026, Nossa Senhora Aparecida): não há Day Care, e o Romeo (dia fixo na segunda) cuja hospedagem começa hoje aparece. Base: não aparece', async () => {
+  await com687(SEG687, '09:00', { fichas: [{ n: 'Romeo', dias: FIXO687('seg') }], est: [E687('Romeo', SEG687, '2026-10-14', 'ativa', 1)] }, async () => {
+    igual([run(`vencEhDiaDayCare('${SEG687}')`), run(`orcEhFeriado('${SEG687}')`)], [false, 'Nossa Senhora Aparecida']);
+    igual(L687(), ['Romeo:hospede']);
+  });
+});
+provaAsync('6.87 P06 (AC1.3) — dia útil, 08:00: o Romeo, com dia fixo HOJE, dormiu aqui (hospedagem de ontem a amanhã), sem chamada nem check-in, aparece pela hospedagem (fonte hospede); a Luna, sem dia fixo, também. Base: só a Luna', async () => {
+  await com687(UTIL687, '08:00', { fichas: [{ n: 'Romeo', dias: FIXO687(DU687) }, { n: 'Luna', dias: [] }],
+    est: [E687('Romeo', mais687(UTIL687, -1), mais687(UTIL687, 1), 'ativa', 1), E687('Luna', mais687(UTIL687, -1), mais687(UTIL687, 1), 'ativa', 2)] }, async () => {
+    igual(run(`vencEhDiaDayCare('${UTIL687}') && orcDiaSemana('${UTIL687}')==='${DU687}'`), true, 'é dia útil, e é o dia dele');
+    igual(LF687(), [{ n: 'Luna', f: 'hospede', h: true, hh: false, frase: FRASE687 }, { n: 'Romeo', f: 'hospede', h: false, hh: true, frase: FRASE687 }]);
+    igual(Q687(), [], 'o quadro vermelho vazio');
+  });
+});
+
+// ---------------------------------------------------------------- AC2 — o que a regra decide, e o que continua decidindo como hoje
+provaAsync('6.87 P07 (AC2.3, guarda) — dia útil, 08:00: a Tina, com dia fixo HOJE, CHEGA hoje para a hospedagem, sem chamada nem check-in: não aparece (ainda não chegou para o Day Care; o exame do corpo é cobrado como sempre)', async () => {
+  await com687(UTIL687, '08:00', { fichas: [{ n: 'Tina', dias: FIXO687(DU687) }, { n: 'Luna', dias: [] }],
+    est: [E687('Tina', UTIL687, mais687(UTIL687, 2), 'ativa', 1), E687('Luna', UTIL687, mais687(UTIL687, 2), 'ativa', 2)] }, async () => {
+    igual(L687(), ['Luna:hospede']);
+  });
+});
+provaAsync('6.87 P08 (AC2.1, AC2.3, guarda) — a Tina que chega hoje no dia dela: com a chamada «veio» sem check-in, entra pela chamada e no quadro vermelho; com o check-in de entrada, fonte checkin (com a hora) e fora do quadro. O Romeo que dormiu aqui com o check-in de entrada: fonte checkin, não hospede (o check-in vence a hospedagem)', async () => {
+  const base = { fichas: [{ n: 'Tina', dias: FIXO687(DU687) }, { n: 'Romeo', dias: FIXO687(DU687) }],
+    est: [E687('Tina', UTIL687, mais687(UTIL687, 2), 'ativa', 1), E687('Romeo', mais687(UTIL687, -1), mais687(UTIL687, 1), 'ativa', 2)] };
+  await com687(UTIL687, '08:00', { fichas: [base.fichas[0]], est: [base.est[0]], cham: { Tina: 'veio' } }, async () => {
+    igual(L687(), ['Tina:chamada']);
+    igual(Q687(), ['Tina']);
+  });
+  await com687(UTIL687, '09:00', Object.assign({}, base, { ck: ['Tina', 'Romeo'] }), async () => {
+    igual(J630("hojeLista().map(function(o){ return o.nome+':'+o.fonte+':'+o.hora+':'+hojeFrasePresenca(o); })"),
+      ['Romeo:checkin:08:10:presente pelo check-in às 08:10', 'Tina:checkin:08:10:presente pelo check-in às 08:10']);
+    igual(Q687(), []);
+  });
+});
+provaAsync('6.87 P09 (AC2.2, guarda) — o exame do corpo continua obrigatório: o Romeo, do Day Care hoje, dormiu aqui e foi marcado «veio» na chamada SEM o check-in de entrada: fonte chamada, «presente pela chamada — falta o check-in do corpo», no quadro vermelho (só a marca hospede da turma isenta o quadro)', async () => {
+  await com687(UTIL687, '08:00', { fichas: [{ n: 'Romeo', dias: FIXO687(DU687) }], est: [E687('Romeo', mais687(UTIL687, -1), mais687(UTIL687, 1), 'ativa', 1)], cham: { Romeo: 'veio' } }, async () => {
+    igual(J630("hojeLista().map(function(o){ return [o.nome, o.fonte, !!o.hospede, hojeFrasePresenca(o), hojeSemCkDe(o)]; })"),
+      [['Romeo', 'chamada', false, 'presente pela chamada — falta o check-in do corpo', true]]);
+    igual(Q687(), ['Romeo']);
+    run('hojeRender();');
+    assert.ok(/Na chamada, sem o check-in do corpo \(1\)/.test(String(run('__el687.hojeRoot.innerHTML'))), 'o quadro vermelho na tela');
+  });
+});
+provaAsync('6.87 P10 (AC2.1, guarda) — a palavra de quem marcou vence: o Romeo que dormiu aqui, marcado «faltou» na chamada, fica fora; a Luna (só hóspede) marcada «faltou» também', async () => {
+  await com687(UTIL687, '08:00', { fichas: [{ n: 'Romeo', dias: FIXO687(DU687) }, { n: 'Luna', dias: [] }],
+    est: [E687('Romeo', mais687(UTIL687, -1), mais687(UTIL687, 1), 'ativa', 1), E687('Luna', mais687(UTIL687, -1), mais687(UTIL687, 1), 'ativa', 2)],
+    cham: { Romeo: 'faltou', Luna: 'faltou' } }, async () => {
+    igual(L687(), []);
+  });
+});
+provaAsync('6.87 P11 (AC1.4) — uma conta só: com o Romeo (dia fixo) e a Luna (sem dia fixo) hospedados no domingo, o cabeçalho, os filtros («Todos» e «Só com pendência»), o contador do menu, o «Copiar lista» e o Excel dão o mesmo número, 2. Base: 1', async () => {
+  await com687(DOM687, '14:00', { fichas: [{ n: 'Romeo', dias: FIXO687('seg') }, { n: 'Luna', dias: [] }],
+    est: [E687('Romeo', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 2)] }, async () => {
+    const c = J630('hojeContagem()');
+    igual([c.total, c.comPendencia], [2, 2]);
+    igual([J630("hojeFiltrada(hojeLista(), 'todos').length"), J630("hojeFiltrada(hojeLista(), 'pend').map(function(o){ return o.nome; })")], [2, ['Luna', 'Romeo']]);
+    run('hojeRender();');
+    const h = String(run('__el687.hojeRoot.innerHTML'));
+    assert.ok(/>2 presentes · 2 com pendência/.test(h) && /id="hojeF-todos"[^>]*>Todos \(2\)/.test(h) && /id="hojeF-pend"[^>]*>Só com pendência \(2\)/.test(h), 'o cabeçalho e os filtros');
+    run('hojeAtualizarBadge();');
+    igual(run('__el687.navHojeN.textContent'), '(' + c.comPendencia + (c.fazerHoje ? (' · ' + c.fazerHoje + ' hoje') : '') + ')', 'o contador do menu');
+    const t = String(run('hojeTexto()')).split('\n');
+    igual([t[1], t.slice(3).map((l) => l.split('/')[0])], ['2 presentes · 2 com pendência', ['Luna', 'Romeo']], 'o Copiar lista');
+    run('relHojeNaCasa();');
+    const x = J630('__xls687[0]');
+    igual([x.n, /2 presentes · 2 com pendência/.test(x.h), x.h.indexOf('Romeo') >= 0, x.h.indexOf('Luna') >= 0], [2, true, true, true], 'o Excel');
+  });
+});
+provaAsync('6.87 P12 (AC1.5) — o resto da linha é o de sempre: o vermífugo do Romeo vencendo hoje entra como item da linha dele (o chip que abre o painel do «Feito hoje») e na pergunta «fazer hoje?» (antAbertos, o filtro «Fazer hoje»). Base: o Romeo nem aparece', async () => {
+  const cfg = DOM_ROMEO687(); cfg.fichas[0].ex = { verm_nome: 'Drontal', verm_doses: 'dose única', verm_t: '2026-06-13', verm_p: DOM687 };
+  await com687(DOM687, '14:00', cfg, async () => {
+    const o = J630("hojeLista().filter(function(o){ return o.nome==='Romeo'; }).map(function(o){ return {itens:o.itens.map(function(x){ return x.k+'@'+x.vence; }), ab:o.antAbertos}; })[0]");
+    assert.ok(o && o.itens.indexOf('verm_p@' + DOM687) >= 0, JSON.stringify(o));
+    assert.ok(o.ab.length >= 1, 'a pergunta «fazer hoje?» aberta: ' + JSON.stringify(o.ab));
+    igual(J630("hojeFiltrada(hojeLista(), 'fazer').map(function(o){ return o.nome; })"), ['Romeo']);
+    run('hojeRender();');
+    const h = String(run('__el687.hojeRoot.innerHTML'));
+    assert.ok(h.indexOf('vermífugo vence 11/10') >= 0, 'o chip do vermífugo na linha');
+  });
+});
+
+// ---------------------------------------------------------------- AC3 — a hospedagem lida inteira e pelo dia de hoje
+provaAsync('6.87 P13 (AC3.1) — todas as estadias, não só a mais recente: a hospedagem de 09/10 a 13/10 e uma reserva nova de 20/10 a 22/10 gravada DEPOIS — a Luna (sem dia fixo) e o Romeo (dia fixo) aparecem no domingo. Base: nenhum dos dois', async () => {
+  await com687(DOM687, '14:00', { fichas: [{ n: 'Luna', dias: [] }, { n: 'Romeo', dias: FIXO687('seg') }],
+    est: [E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Luna', '2026-10-20', '2026-10-22', 'ativa', 2),
+      E687('Romeo', '2026-10-09', '2026-10-13', 'ativa', 3), E687('Romeo', '2026-10-20', '2026-10-22', 'ativa', 4)] }, async () => {
+    igual(J630("Object.keys(CF_ESTADIAS).map(function(k){ return CF_ESTADIAS[k].e.entrada; })"), ['2026-10-20', '2026-10-20'], 'a mais recente é a reserva');
+    igual(L687(), ['Luna:hospede', 'Romeo:hospede']);
+    igual(T687().sort(), ['Luna(h)', 'Romeo(hh)']);
+  });
+});
+provaAsync('6.87 P14 (AC3.2; PO687-O, O2) — o dia do relógio, não o do Plantão: com o Plantão deste aparelho na segunda 12/10 (amanhã) e na terça 13/10, a Luna que sai hoje continua, o Bud que só chega na segunda não entra (a turma o marcava hóspede pelo dia do Plantão) e o Romeo que dormiu aqui continua; com o Plantão em sábado 10/10 (ontem), o Tico que saiu ontem não entra. Base: a Luna some e o Bud e o Tico aparecem', async () => {
+  const cfg = (pl) => ({ plantao: pl, fichas: [{ n: 'Luna', dias: [] }, { n: 'Bud', dias: [] }, { n: 'Romeo', dias: FIXO687('seg') }, { n: 'Tico', dias: [] }],
+    est: [E687('Luna', '2026-10-09', DOM687, 'ativa', 1), E687('Bud', SEG687, '2026-10-14', 'ativa', 2), E687('Romeo', '2026-10-09', '2026-10-13', 'ativa', 3), E687('Tico', '2026-10-08', SAB687, 'ativa', 4)] });
+  for (const pl of [SEG687, '2026-10-13']) {
+    await com687(DOM687, '14:00', cfg(pl), async () => {
+      igual(run('dataKeyAtual()'), pl);
+      igual(L687(), ['Luna:hospede', 'Romeo:hospede'], 'Plantão em ' + pl);
+      igual(T687().filter((x) => /^Bud/.test(x)), [], 'o Bud não fica na turma da Hoje');
+    });
+  }
+  await com687(DOM687, '14:00', cfg(SAB687), async () => {
+    igual(L687(), ['Luna:hospede', 'Romeo:hospede'], 'Plantão em ontem: o Tico não entra');
+  });
+});
+provaAsync('6.87 P15 (AC3.3) — o hóspede SEM ficha (a estadia tem o nome e o tutor; o cadastro não), com a hospedagem de agora mais antiga que a reserva gravada depois: aparece uma vez, com o nome e o tutor da estadia; quem a turma já trouxe não aparece duas vezes na turma da Hoje. Base: o Zeca não aparece', async () => {
+  await com687(DOM687, '14:00', { fichas: [{ n: 'Luna', dias: [] }],
+    est: [E687('Zeca', '2026-10-09', '2026-10-13', 'ativa', 1, { tutor: 'Zeca Teste' }), E687('Zeca', '2026-10-20', '2026-10-22', 'ativa', 2, { tutor: 'Zeca Teste' }),
+      E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 3)] }, async () => {
+    igual(LT687(), ['Luna|Luna Teste:hospede', 'Zeca|Zeca Teste:hospede']);
+    igual(T687().sort(), ['Luna(h)', 'Zeca(h)'], 'uma entrada por FILHOt');
+    igual(J630("hojeTurmaComHospedagem(zHojeISO()).filter(function(o){ return o.p.n==='Zeca'; }).map(function(o){ return [String(o.i).slice(0,4), o.p.tutor, o.p.freq]; })"), [['hosp', 'Zeca Teste', 'hospede']]);
+  });
+});
+provaAsync('6.87 P16 (AC3.3) — dois «Romeo» com tutores diferentes, só um hospedado: entra só o da hospedagem (a ficha achada pela pelKey ou por nome e tutor, como a turma acha) — com o Plantão em outro dia (pela 2ª varredura) e com o Plantão em hoje (pelos dias fixos). Base: nenhum Romeo', async () => {
+  const cfg = (pl, dias) => ({ plantao: pl, fichas: [{ n: 'Romeo', tutor: 'Outro Teste', dias }, { n: 'Romeo', tutor: 'Romeo Teste', dias }],
+    est: [E687('Romeo', '2026-10-09', DOM687, 'ativa', 1, { tutor: 'Romeo Teste' })] });
+  await com687(DOM687, '14:00', cfg(SEG687, []), async () => {
+    igual(TD687(), [], 'nenhum dos dois na turma de sempre');
+    igual(LT687(), ['Romeo|Romeo Teste:hospede'], 'Plantão na segunda');
+  });
+  await com687(DOM687, '14:00', cfg('', FIXO687('seg')), async () => { igual(LT687(), ['Romeo|Romeo Teste:hospede'], 'Plantão em hoje'); });
+});
+provaAsync('6.87 P17 (AC2.5, guarda) — o que não conta como hospedado hoje: cancelada, recusada, finalizada (check-out hoje), encerrada (baixa hoje), a que terminou ontem e a que começa amanhã — também quando outra estadia (reserva nova, extensão recusada) encosta nelas; o FILHOt inativo não entra pela 2ª varredura', async () => {
+  const dom = (est, extra) => ({ fichas: [{ n: 'Romeo', dias: FIXO687('seg') }, { n: 'Luna', dias: [] }].concat(extra || []), est });
+  const ambos = (s, e, st, extra) => [E687('Romeo', s, e, st, 1, extra), E687('Luna', s, e, st, 2, extra)];
+  const reserva = [E687('Romeo', '2026-10-20', '2026-10-22', 'ativa', 8), E687('Luna', '2026-10-20', '2026-10-22', 'ativa', 9)];
+  const casos = [
+    ['cancelada', ambos('2026-10-09', '2026-10-13', 'cancelada')],
+    ['recusada', ambos('2026-10-09', '2026-10-13', 'recusada')],
+    ['finalizada (check-out hoje)', ambos('2026-10-09', '2026-10-13', 'finalizada', { co: DOM687 })],
+    ['finalizada + reserva nova', ambos('2026-10-09', '2026-10-13', 'finalizada', { co: DOM687 }).concat(reserva)],
+    ['encerrada (baixa hoje)', ambos('2026-10-09', '2026-10-13', 'encerrada', { x: { encerradaEm: DOM687 } })],
+    ['encerrada + reserva nova', ambos('2026-10-09', '2026-10-13', 'encerrada', { x: { encerradaEm: DOM687 } }).concat(reserva)],
+    ['terminou ontem', ambos('2026-10-07', SAB687, 'ativa')],
+    ['terminou ontem + extensão recusada', ambos('2026-10-07', SAB687, 'ativa').concat([E687('Romeo', SAB687, '2026-10-13', 'recusada', 8), E687('Luna', SAB687, '2026-10-13', 'recusada', 9)])],
+    ['começa amanhã', ambos(SEG687, '2026-10-14', 'ativa')],
+    ['começa amanhã + estadia recusada antes', ambos(SEG687, '2026-10-14', 'ativa').concat([E687('Romeo', '2026-10-09', SEG687, 'recusada', 0), E687('Luna', '2026-10-09', SEG687, 'recusada', 0)])],
+  ];
+  for (const [rot, est] of casos) await com687(DOM687, '14:00', dom(est), async () => { igual(L687(), [], rot); });
+  // a Tina, do Day Care hoje: uma estadia RECUSADA de antes de hoje não faz a chegada de hoje virar «dormiu aqui»
+  await com687(UTIL687, '08:00', { fichas: [{ n: 'Tina', dias: FIXO687(DU687) }],
+    est: [E687('Tina', mais687(UTIL687, -3), mais687(UTIL687, 1), 'recusada', 1), E687('Tina', UTIL687, mais687(UTIL687, 2), 'ativa', 2)] }, async () => {
+    igual(L687(), [], 'a recusada não é noite dormida');
+  });
+  // a Pipoca inativa, hospedada hoje com uma reserva nova gravada depois (só a 2ª varredura a enxerga): fora da turma da Hoje
+  await com687(DOM687, '14:00', { fichas: [{ n: 'Pipoca', dias: [], ex: { inativo: 'Sim' } }],
+    est: [E687('Pipoca', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Pipoca', '2026-10-20', '2026-10-22', 'ativa', 2)] }, async () => {
+    igual([L687(), T687()], [[], []], 'inativo');
+  });
+});
+provaAsync('6.87 P18 (AC2.3, AC2.5, guarda; PO687-A, B, C, D, E, F) — a hospedagem aberta (sem saída) só conta se for a estadia mais recente: a aberta antiga de 01/08 com outra estadia depois (que o resumo emenda), ativa ou finalizada, com e sem dia fixo, não hospeda ninguém no domingo; a aberta antiga não faz a Tina, que chega hoje, virar «dormiu aqui»; a aberta de agora com uma reserva nova gravada depois fica fora (limite conhecido); só a aberta, sendo a mais recente, vale', async () => {
+  const casos = [
+    ['A Luna aberta antiga + 20/09–25/09', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-08-01', '', 'ativa', 1), E687('Luna', '2026-09-20', '2026-09-25', 'ativa', 2)] }, []],
+    ['B Romeo (dia fixo) aberta antiga + 20/09–25/09', { fichas: [{ n: 'Romeo', dias: FIXO687('seg') }], est: [E687('Romeo', '2026-08-01', '', 'ativa', 1), E687('Romeo', '2026-09-20', '2026-09-25', 'ativa', 2)] }, []],
+    ['F Luna aberta antiga + finalizada 20/09–25/09', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-08-01', '', 'ativa', 1), E687('Luna', '2026-09-20', '2026-09-25', 'finalizada', 2, { co: '2026-09-25' })] }, []],
+    ['C Luna aberta de agora + reserva nova depois (limite conhecido)', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-10-09', '', 'ativa', 1), E687('Luna', '2026-10-20', '2026-10-22', 'ativa', 2)] }, []],
+    ['D Luna só a aberta antiga (a mais recente)', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-08-01', '', 'ativa', 1)] }, ['Luna:hospede']],
+  ];
+  for (const [rot, cfg, quer] of casos) await com687(DOM687, '14:00', cfg, async () => { igual(L687(), quer, rot); });
+  await com687(UTIL687, '08:00', { fichas: [{ n: 'Tina', dias: FIXO687(DU687) }], est: [E687('Tina', '2026-08-01', '', 'ativa', 1), E687('Tina', UTIL687, mais687(UTIL687, 2), 'ativa', 2)] }, async () => {
+    igual(L687(), [], 'E a Tina com a aberta antiga: não entra antes de chegar');
+  });
+});
+provaAsync('6.87 P19 (AC2.5; PO687-M, M2, N) — dia útil, no dia fixo do Romeo: a hospedagem emendada (ontem a hoje e hoje a depois de amanhã) conta como uma, e «dormiu aqui» pela 1ª parte: aparece; só a parte que começa hoje (chega hoje): não aparece; a 1ª parte com o check-out hoje de manhã e a 2ª começando hoje: aparece (dormiu aqui). Base: nunca aparece', async () => {
+  const r = (est) => ({ fichas: [{ n: 'Romeo', dias: FIXO687(DU687) }], est });
+  const ont = mais687(UTIL687, -1), dep = mais687(UTIL687, 2);
+  await com687(UTIL687, '08:00', r([E687('Romeo', ont, UTIL687, 'ativa', 1), E687('Romeo', UTIL687, dep, 'ativa', 2)]), async () => { igual(L687(), ['Romeo:hospede'], 'M'); });
+  await com687(UTIL687, '08:00', r([E687('Romeo', UTIL687, dep, 'ativa', 2)]), async () => { igual(L687(), [], 'M2'); });
+  await com687(UTIL687, '12:00', r([E687('Romeo', ont, UTIL687, 'finalizada', 1, { co: UTIL687 }), E687('Romeo', UTIL687, dep, 'ativa', 2)]), async () => { igual(L687(), ['Romeo:hospede'], 'N'); });
+});
+provaAsync('6.87 P20 (AC3.4, guarda) — as hospedagens ainda não lidas (CF_ESTADIAS_LIDO falso): a lista é a de sempre, sem erro e sem frase nova (o Romeo de dia fixo não entra pela hospedagem; a Luna, que a turma traz, sim)', async () => {
+  await com687(DOM687, '14:00', { lido: false, fichas: [{ n: 'Romeo', dias: FIXO687('seg') }, { n: 'Luna', dias: [] }],
+    est: [E687('Romeo', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 2)] }, async () => {
+    igual(L687(), ['Luna:hospede']);
+    igual(L687(), LB687(), 'a mesma lista da turma de sempre');
+  });
+});
+provaAsync('6.87 P21 (AC3.4, guarda) — um erro dentro da regra (uma estadia ilegível em EST_TODAS) não derruba a lista: cai para a turma de sempre (a Luna, que a turma traz), sem exceção', async () => {
+  await com687(DOM687, '14:00', { fichas: [{ n: 'Romeo', dias: FIXO687('seg') }, { n: 'Luna', dias: [] }],
+    est: [E687('Romeo', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 2)] }, async () => {
+    run("EST_TODAS=Object.assign({}, EST_TODAS, {quebrada:Object.defineProperty({nome:'X', entrada:'2026-10-09'}, 'refKey', {enumerable:true, get:function(){ throw new Error('estadia ilegível'); }})});");
+    igual(L687(), ['Luna:hospede']);
+  });
+});
+// os oito cenários sem dia fixo da paridade (a P22 e a P32): [rótulo, cfg, a lista esperada]
+const PARIDADE687 = () => [
+  ['hóspede puro com ficha', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 1)] }, ['Luna:hospede']],
+  ['hóspede sem ficha', { fichas: [{ n: 'Bud', dias: [OUTRO687] }], est: [E687('Zeca', '2026-10-09', '2026-10-13', 'ativa', 1, { tutor: 'Zeca Teste' })] }, ['Zeca:hospede']],
+  ['chega hoje', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', DOM687, '2026-10-13', 'ativa', 1)] }, ['Luna:hospede']],
+  ['sai hoje', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-10-09', DOM687, 'ativa', 1)] }, ['Luna:hospede']],
+  ['reserva futura', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-10-15', '2026-10-17', 'ativa', 1)] }, []],
+  ['cancelada', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-10-09', '2026-10-13', 'cancelada', 1)] }, []],
+  ['finalizada', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-10-09', '2026-10-13', 'finalizada', 1, { co: DOM687 })] }, []],
+  ['xarás (duas Lunas, uma hospedada)', { fichas: [{ n: 'Luna', tutor: 'Outra Teste', dias: [] }, { n: 'Luna', tutor: 'Luna Teste', dias: [] }],
+    est: [E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 1, { tutor: 'Luna Teste' })] }, ['Luna:hospede']],
+];
+provaAsync('6.87 P22 (AC2.4, guarda) — quem só se hospeda não muda: em oito cenários sem dia fixo (hóspede puro, com e sem ficha, chegando hoje, saindo hoje, reserva futura, cancelada, finalizada, xarás), a lista nova é igual à da turma de sempre, linha por linha (nome, tutor e fonte)', async () => {
+  for (const [rot, cfg, quer] of PARIDADE687()) {
+    await com687(DOM687, '14:00', cfg, async () => {
+      igual(L687(), quer, rot);
+      igual(LT687(), (() => { run("__hth687=(typeof hojeTurmaComHospedagem==='function')?hojeTurmaComHospedagem:null; hojeTurmaComHospedagem=function(){ return turmaDeHoje()||[]; };");
+        try { return LT687(); } finally { run("if(__hth687) hojeTurmaComHospedagem=__hth687; else delete globalThis.hojeTurmaComHospedagem;"); } })(), rot + ': igual à turma de sempre');
+    });
+  }
+});
+
+// ---------------------------------------------------------------- AC4 — nada grava, e nada fora da Hoje na Zêluz muda
+provaAsync('6.87 P23 (AC4.1, guarda) — nenhuma gravação e nenhuma leitura nova: com o banco espião, hojeLista, hojeRender, hojeTexto, hojeAtualizarBadge e relHojeNaCasa não chamam o banco; o texto das funções novas não cita o banco nem ouvinte', async () => {
+  await com687(DOM687, '14:00', { fichas: [{ n: 'Romeo', dias: FIXO687('seg') }, { n: 'Luna', dias: [] }],
+    est: [E687('Romeo', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Luna', '2026-10-20', '2026-10-22', 'ativa', 2), E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 0)], plantao: SEG687 }, async () => {
+    run('hojeLista(); hojeRender(); hojeTexto(); hojeAtualizarBadge(); relHojeNaCasa();');
+    await espera657(50);
+    igual(J630('__db687'), []);
+  });
+  const txt = NOVAS687.filter((n) => run('typeof ' + n) === 'function').map((n) => String(run('String(' + n + ')'))).join('\n');
+  igual(/\bDB\b|\.ref\(|\.once\(|\.on\(|\.transaction\(|\.update\(|\.set\(|\.remove\(|firebase|localStorage/.test(txt), false);
+});
+provaAsync('6.87 P24 (AC4.3, guarda; a lição 2 da 6.28) — a marca hospede da turma não nasce para o FILHOt de dia fixo: no domingo, turmaDeHoje() traz o Romeo hospedado SEM a marca, antes e depois de a Hoje na Zêluz ser montada (a cópia da Hoje não mexe na turma)', async () => {
+  await com687(DOM687, '14:00', { fichas: [{ n: 'Romeo', dias: FIXO687('seg') }, { n: 'Luna', dias: [] }],
+    est: [E687('Romeo', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 2)] }, async () => {
+    igual(TD687().sort(), ['Luna(h)', 'Romeo']);
+    run('hojeLista(); hojeRender();');
+    igual(TD687().sort(), ['Luna(h)', 'Romeo'], 'depois da Hoje');
+    igual(J630("(function(){ var T=turmaDeHoje(); if(typeof hojeTurmaComHospedagem==='function') hojeTurmaComHospedagem(zHojeISO()); return T.filter(function(o){ return o.hospedadoHoje || (o.p.n==='Romeo' && o.hospede); }).length; })()"), 0);
+  });
+});
+// A falta automática das 12h com o banco em árvore (a trava, a chamada e as leituras da noite de ontem vêm dele).
+const falta687 = async (cfg) => {
+  let out = null;
+  await com687(UTIL687, '12:30', Object.assign({ papel: 'gestao' }, cfg), async () => {
+    run(`__arv687={}; var parte=function(p){ return String(p||'').split('/').filter(function(x){ return x!==''; }); };
+      var pega=function(p){ var c=__arv687, ps=parte(p); for(var i=0;i<ps.length;i++){ if(c===null||typeof c!=='object'||!(ps[i] in c)) return undefined; c=c[ps[i]]; } return c; };
+      var poe=function(p, v){ var ps=parte(p), c=__arv687; for(var i=0;i<ps.length-1;i++){ if(c[ps[i]]===null||typeof c[ps[i]]!=='object') c[ps[i]]={}; c=c[ps[i]]; } if(v===null||v===undefined) delete c[ps[ps.length-1]]; else c[ps[ps.length-1]]=JSON.parse(JSON.stringify(v)); };
+      DB={ref:function(p){ p=String(p||''); return {
+        once:function(){ var v=pega(p); return Promise.resolve({val:function(){ return v===undefined?null:JSON.parse(JSON.stringify(v)); }}); },
+        transaction:function(fn){ var g=pega(p); var r=fn(g===undefined?null:JSON.parse(JSON.stringify(g))); if(r===undefined) return Promise.resolve({committed:false}); poe(p, r); return Promise.resolve({committed:true}); },
+        update:function(o){ Object.keys(o||{}).forEach(function(k){ poe(p+'/'+k, o[k]); }); return Promise.resolve(); },
+        remove:function(){ poe(p, null); return Promise.resolve(); } }; }};
+      APP_DIA_ABERTO=zHojeISO(); _faltaAutoFeita=''; __feriadoConferido={}; __feriadoConferido[zHojeISO()]=true;
+      medTirarDosesDeQuemFaltou=function(){}; if(typeof pendVarrerDia==='function') pendVarrerDia=function(){};`);
+    await run('aplicarFaltaAutomatica()'); await espera657(400);
+    out = J630(`(function(){ var d=zHojeISO(), ch=(__arv687.daycare&&__arv687.daycare.chamada&&__arv687.daycare.chamada[d])||{}, tr=(__arv687.daycare&&__arv687.daycare['falta-automatica']&&__arv687.daycare['falta-automatica'][d])||{};
+      var nome=function(k){ var r=k; PELUDINHOS.forEach(function(p){ if(dcKey(p.n,p.tutor)===k) r=p.n; }); return r; };
+      return {faltou:Object.keys(ch).filter(function(k){ return ch[k]==='faltou'; }).map(nome).sort(), sem:Object.keys(tr.sem_falta||{}).map(nome).sort(), quantos:tr.quantos, dormiram:tr.dormiram_aqui||0, hosp:tr.na_hospedagem||0}; })()`);
+  });
+  return out;
+};
+provaAsync('6.87 P25 (AC4.4, guarda) — a falta automática do dia útil às 12:30 dá o mesmo resultado: Bud e Tina «faltou»; Romeo e Luna sem falta, dormiram_aqui 2. E ela não lê a marca nova: o Nico (dias fixos da turma, chega hoje, não dormiu aqui) recebe «faltou» como sempre, mesmo estando na Hoje pela hospedagem', async () => {
+  const ont = mais687(UTIL687, -1), dep = mais687(UTIL687, 1);
+  const cfg = { fichas: [{ n: 'Romeo', dias: FIXO687(DU687) }, { n: 'Tina', dias: FIXO687(DU687) }, { n: 'Luna', dias: [] }, { n: 'Bud', dias: FIXO687(DU687) }],
+    est: [E687('Romeo', ont, dep, 'ativa', 1), E687('Tina', UTIL687, mais687(UTIL687, 2), 'ativa', 2), E687('Luna', ont, dep, 'ativa', 3)] };
+  igual(await falta687(cfg), { faltou: ['Bud', 'Tina'], sem: ['Luna', 'Romeo'], quantos: 2, dormiram: 2, hosp: 0 });
+  cfg.fichas.push({ n: 'Nico', dias: [HD687] }); cfg.est.push(E687('Nico', UTIL687, mais687(UTIL687, 2), 'ativa', 4));
+  igual(await falta687(cfg), { faltou: ['Bud', 'Nico', 'Tina'], sem: ['Luna', 'Romeo'], quantos: 3, dormiram: 2, hosp: 0 }, 'com o Nico');
+});
+provaAsync('6.87 P26 (a lição 1 da 6.28) — uma verdade só para «ele está na casa?»: quem a falta automática dá como «dormiu aqui» pelas estadias e tem a hospedagem ativa está na Hoje na Zêluz (o Romeo de dia fixo, a Luna da extensão sem check-out, a Bia com a reserva nova depois); as três divergências por desenho, com as duas respostas: o check-out feito hoje, o check-out lançado na extensão e a estadia aberta antiga — a falta automática não dá falta (erra para o lado seguro) e a Hoje não lista. Base: o Romeo fora da Hoje', async () => {
+  const U = UTIL687, m = (n) => mais687(U, n);
+  await com687(U, '08:00', {
+    fichas: ['Luna', 'Bia', 'Kiko', 'Lua', 'Velha'].map((n) => ({ n, dias: [] })).concat([{ n: 'Romeo', dias: FIXO687(DU687) }]),
+    est: [E687('Romeo', m(-1), m(1), 'ativa', 1),
+      E687('Luna', m(-2), U, 'ativa', 2), E687('Luna', U, m(2), 'ativa', 3),
+      E687('Bia', m(-1), m(1), 'ativa', 4), E687('Bia', m(5), m(7), 'ativa', 5),
+      E687('Kiko', m(-2), m(2), 'finalizada', 6, { co: U }),
+      E687('Lua', m(-3), U, 'ativa', 7), E687('Lua', U, m(2), 'finalizada', 8, { co: m(-1) }),
+      E687('Velha', '2026-08-01', '', 'ativa', 9), E687('Velha', '2026-09-20', '2026-09-25', 'ativa', 10)] }, async () => {
+    const r = J630(`(function(){ var ret=faltaDormiuAqui(orcMaisDias(zHojeISO(), -1), EST_TODAS, {}, {}, {}), rep=faltaNomesRepetidos(PELUDINHOS), na={};
+      hojeLista().forEach(function(o){ na[o.nome]=o.fonte; });
+      var out={}; PELUDINHOS.forEach(function(p){ out[p.n]=[faltaDormiuEste(p, ret, rep), na[p.n]||'']; }); return out; })()`);
+    igual(r, { Romeo: [true, 'hospede'], Luna: [true, 'hospede'], Bia: [true, 'hospede'], Kiko: [true, ''], Lua: [true, ''], Velha: [true, ''] });
+  });
+});
+provaAsync('6.87 P27 (AC4.2, AC4.5, guarda) — o texto fica idêntico, letra por letra: as 32 funções da tabela (hash de 16 do texto, num sandbox novo), as 155 protegidas (ck*, ckt*, pt*, pendAvisarChegada), a PERM, o #v-daycare e as declarações ck*/pt*; nenhuma função nova começa com ck, ckt ou pt', async () => {
+  const src = fs.readFileSync(APP, 'utf8');
+  const ctxN = vm.createContext(makeSandbox());
+  vm.runInContext(extractMainScript(src), ctxN, { filename: 'index.html#script', timeout: 15000 });
+  const runN = (c) => vm.runInContext(c, ctxN);
+  const h = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
+  const FIX = { turmaDoDia: '8d6a4b2d286378be', turmaDeHoje: '0e2d0a6f88eb36d3', turmaIsoSeguro: '55ddc8b4bbaabd89', pelDias: '5fd229f705b5d897', renderDaycare: '384b207e96711bb8',
+    aplicarFaltaAutomatica: 'eb9f31ff8f8e02d1', faltaDormiuAqui: 'aa1fc8a5d36febec', faltaDormiuEste: '749b65edfd2f3601', faltaDormiuLer: '7928610c8c3c3e75', hospTemEstadiaNoDia: '0d9964b394b6d192',
+    estadiaCobreDia: 'b714f3526530b7eb', hospEstadiaGanha: '3a2e8383be7d4167', _cfIndexarEstadias: 'f1f8a48b029c8958', contatoPerfil: 'fd3697be92d30628', contatoEstadiaDoDia: '9289d32a881ddf7a',
+    contatoEstadiasDe: '31094b610108ddd5', contatoEstadiaNaLista: '79a2d76704419739', contatoEstadiaFim: '6c62f1fe7f3ae31c', contatoEstIndice: 'aa167d96ae325692', contatoEstadiaChave: '67d335c6df4d09ea',
+    vencEhDiaDayCare: 'af81280079fff828', orcDiaSemana: '193c380832f92f79', orcEhFeriado: '77df0299778edc76', renderKPIs: '67414b248747832d', poTurma: '07fad43ff8fcba9b',
+    hojeFrasePresenca: 'c18761ca7572d436', hojeSemCkDe: '7d7d96d4273a07dc', hojeContagem: '76841caec3dca587', hojeAtualizarBadge: '81a9ec159c06b924', hojeTexto: '7d6f582e669d652c',
+    hojeRender: '3c41edfd834bc0cb', relHojeNaCasa: '7dfcb47caf092ebb' };
+  // Junção com a 6.67 (3ª passada da 6.87, 12/out/2026; a 6.67 publicada na 73af013, versão -27, pull request #14). Dois esperados
+  // trocados, e só eles; o resto da guarda não muda (as 155 protegidas, o #v-daycare e as declarações continuam os da 3d6910b):
+  //  · faltaDormiuAqui — antes (3d6910b) 'aa1fc8a5d36febec'; depois (73af013) '369fe5802dadaf74'. Por quê: a 6.67 acrescentou duas
+  //    linhas («trazido de volta — não foi tirado» e «o que mudou de dia vale pelo lançamento novo»), as do lançamento à mão do Plantão;
+  //    a 6.87 não a muda (o texto aqui é, letra por letra, o da 73af013), e as provas da 6.67 e as da falta automática passam;
+  //  · PERM — antes 'f79140b1c2844dd5' (39 capacidades); depois '02898b691c0a839c' (42). Por quê: a 6.67 ganhou três capacidades (quem
+  //    lança à mão no Plantão, quem trabalha no Plantão e quem confere); a 6.87 não mexe na PERM (a mesma da 73af013, conferida também
+  //    pelo número de capacidades).
+  FIX.faltaDormiuAqui = '369fe5802dadaf74';
+  const agora = {}; Object.keys(FIX).forEach((n) => { agora[n] = h(String(runN('String(' + n + ')'))); });
+  igual([Object.keys(FIX).length, agora], [32, FIX], 'as 32 funções da tabela');
+  const prot = runN("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
+  igual([prot.length, h(prot.map((n) => n + '\n' + runN('String(' + n + ')')).join('\n')), h(runN('JSON.stringify(PERM)')), runN('Object.keys(PERM).length')], [155, '5bac486c669007ec', '02898b691c0a839c', 42]);
+  const i = src.indexOf('id="v-daycare"'), j = src.indexOf('id="v-', i + 10);
+  igual([h(src.slice(i, j)), h(src.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n'))], ['d350ca846ae9d05e', '2c2151bda9539396']);
+  igual(NOVAS687.filter((n) => /^(ck|ckt|pt)/.test(n)), []);
+});
+provaAsync('6.87 P28 (AC3.5) — o guardador: a varredura das estadias que cobrem hoje acontece uma vez por versão de EST_TODAS (o objeto) e por dia; a 2ª chamada sem mudança não varre, a troca do objeto e a virada do dia varrem; só as estadias que cobrem o dia chegam à busca da ficha (3 de 3.000). Base: o guardador não existe', async () => {
+  const est = [E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Romeo', '2026-10-09', '2026-10-13', 'ativa', 2), E687('Bud', DOM687, '2026-10-12', 'ativa', 3)];
+  await com687(DOM687, '14:00', { fichas: [{ n: 'Luna', dias: [] }, { n: 'Romeo', dias: FIXO687('seg') }, { n: 'Bud', dias: [] }], est }, async () => {
+    // 2.997 estadias antigas de outros FILHOts (setembro), no mesmo objeto
+    run(`(function(){ var T=Object.assign({}, EST_TODAS); for(var i=0;i<2997;i++) T['velha'+i]={nome:'V'+i, tutor:'T'+i+' Teste', refKey:'v'+i+'__t'+i+' teste', entrada:'2026-09-0'+(1+i%8), saida:'2026-09-1'+(i%9), status:(i%3?'ativa':'finalizada'), _ts:i}; EST_TODAS=T; })();`);
+    run('HOJE_HOSP_DIA=null;');
+    const n0 = run('HOJE_HOSP_VARRIDAS');
+    igual(L687(), ['Bud:hospede', 'Luna:hospede', 'Romeo:hospede']);
+    const n1 = run('HOJE_HOSP_VARRIDAS');
+    L687(); run('hojeRender(); hojeContagem();');
+    const n2 = run('HOJE_HOSP_VARRIDAS');
+    igual([n1 - n0, n2 - n1, J630('hojeEstadiasDoDia(zHojeISO()).length')], [1, 0, 3], 'uma varredura; a 2ª chamada não varre; 3 das 3.000 cobrem o dia');
+    run('EST_TODAS=Object.assign({}, EST_TODAS);'); L687();
+    const n3 = run('HOJE_HOSP_VARRIDAS');
+    igual(n3 - n2, 1, 'a troca do objeto varre');
+    relogio687(SEG687 + 'T08:00:00'); igual(L687(), ['Bud:hospede', 'Luna:hospede', 'Romeo:hospede'], 'a segunda 12/10 (feriado)');
+    igual(run('HOJE_HOSP_VARRIDAS') - n3, 1, 'a virada do dia varre');
+    relogio687('2026-10-14T08:00:00'); igual(L687(), [], 'quarta 14/10: ninguém');
+  });
+});
+provaAsync('6.87 P29 (AC1.2) — o dia é o do aparelho (zHojeISO), em UTC e em São Paulo: no domingo às 21:30 de Brasília (em UTC já é a segunda 12/10, feriado), o Romeo (dia fixo) hospedado de dois dias antes a dois dias depois do dia local aparece; nenhuma função nova lê o relógio por conta própria (getUTC, toISOString, Date.UTC, new Date). Base: não aparece', async () => {
+  await com687(Date.UTC(2026, 9, 12, 0, 30), null, {}, async () => {
+    const hoje = run('zHojeISO()');
+    igual(['2026-10-11', '2026-10-12'].indexOf(hoje) >= 0, true, hoje);
+    ctx.__cfg687 = { fichas: [{ n: 'Romeo', dias: FIXO687('seg') }], est: [E687('Romeo', mais687(hoje, -2), mais687(hoje, 2), 'ativa', 1)] };
+    run('__solta687(); __arma687(__cfg687);');
+    igual(L687(), ['Romeo:hospede'], hoje);
+  });
+  const txt = NOVAS687.filter((n) => run('typeof ' + n) === 'function').map((n) => String(run('String(' + n + ')'))).join('\n');
+  igual([/getUTC|toISOString|Date\.UTC|new Date\b|Date\.now|HOJE_DIA|selectedDate|dcDia/.test(txt), (txt.match(/dataKeyAtual\(/g) || []).length, (txt.match(/dataKeyAtual\(\)!==hoje/g) || []).length], [false, 1, 1],
+    'o dia do Plantão só serve para saber se ele está em outro dia');
+});
+provaAsync('6.87 P30 (AC4.6) — nenhum texto novo: a Hoje reaproveita «hóspede da AuAulândia — está na casa» (hojeFrasePresenca idêntica, P27); o registro de hojeLista ganha só o campo hospedadoHoje; as funções novas não trazem frase de tela, emoji nem palavra fora do vocabulário', async () => {
+  await com687(DOM687, '14:00', DOM_ROMEO687(), async () => {
+    igual(J630('Object.keys(hojeLista()[0]).sort()'), ['antAbertos', 'antGrupos', 'antReg', 'antec', 'banho', 'chave', 'fonte', 'hora', 'hospedadoHoje', 'hospede', 'i', 'itens', 'morador',
+      'nome', 'p', 'pend', 'pesa', 'proxima', 'raca', 'remedio', 'respostas', 'sexo', 'tel', 'tutor']);
+  });
+  const txt = NOVAS687.map((n) => String(run('String(' + n + ')'))).join('\n');
+  const lits = (txt.match(/'(?:\\.|[^'\\])*'/g) || []).filter((x, i, a) => a.indexOf(x) === i).sort();
+  // 2ª rodada: o passo a2 (REL-001 do QA) cita os nomes de status 'finalizada' e 'encerrada', e a estadia sem data (REL-002) o tipo 'string'
+  // (nomes do dado e do JavaScript, não texto de tela)
+  const PODE = ["''", "'9999-12-31'", "'ativa'", "'cancelada'", "'encerrada'", "'finalizada'", "'function'", "'hosp'", "'hospede'", "'object'", "'recusada'", "'string'", "'undefined'"];
+  igual(lits.filter((x) => PODE.indexOf(x) < 0), [], 'nenhum texto novo nas funções novas');
+  // 2ª rodada: o nome da marca escrito errado fora de identificador (a regra do morador cita a função ehMoradorZeluz do app)
+  igual([/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u.test(txt), /\b(cachorro|cão|cães|bicho|dono|donos|funcionári[oa]s?)\b|\banimal/i.test(txt), /(?<![A-Za-z])(Zeluz|Zéluz)/.test(txt)], [false, false, false]);
+});
+provaAsync('6.87 P31 (AC2.5; PO687-K, K2, L, G) — o check-out ou a baixa lançados na extensão: a Luna de 09/10 a 13/10 com a extensão de 13/10 a 15/10 e o check-out feito na extensão no domingo não está na lista no domingo depois do check-out nem na segunda; com a extensão ainda sem check-out, está; com a baixa da extensão marcada para um dia que ainda não chegou, está. Base: nas duas últimas, não está', async () => {
+  const luna = (st2, extra2) => ({ fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Luna', '2026-10-13', '2026-10-15', st2, 2, extra2)] });
+  await com687(DOM687, '15:00', luna('finalizada', { co: DOM687 }), async () => { igual(L687(), [], 'K2: domingo, depois do check-out'); });
+  await com687(SEG687, '10:00', luna('finalizada', { co: DOM687 }), async () => { igual(L687(), [], 'K: segunda'); });
+  await com687(DOM687, '14:00', luna('ativa'), async () => { igual(L687(), ['Luna:hospede'], 'L: sem check-out'); });
+  await com687(DOM687, '14:00', luna('encerrada'), async () => { igual(L687(), ['Luna:hospede'], 'G: a baixa para um dia que ainda não chegou'); });
+});
+provaAsync('6.87 P32 (AC3.2, AC2.4; PO687-O, O3) — o Plantão em outro dia não muda a lista de hoje para a entrada que a turma já marcou hospede: domingo com o Plantão na segunda, o Bud que chega na segunda não está; dia útil com o Plantão amanhã, o Bud que chega amanhã não está; com o Plantão no dia de hoje, as entradas hospede da turma passam como vieram (os oito cenários da P22, iguais à turma de sempre). Base: o Bud aparece', async () => {
+  await com687(DOM687, '14:00', { plantao: SEG687, fichas: [{ n: 'Bud', dias: [] }], est: [E687('Bud', SEG687, '2026-10-14', 'ativa', 1)] }, async () => { igual(L687(), [], 'O'); });
+  await com687(UTIL687, '08:00', { plantao: mais687(UTIL687, 1), fichas: [{ n: 'Bud', dias: [] }], est: [E687('Bud', mais687(UTIL687, 1), mais687(UTIL687, 3), 'ativa', 1)] }, async () => { igual(L687(), [], 'O3'); });
+  for (const [rot, cfg, quer] of PARIDADE687()) {
+    await com687(DOM687, '14:00', cfg, async () => { igual([L687(), LB687()], [quer, quer], rot); });
+  }
+});
+provaAsync('6.87 P33 (AC2.5, AC3.3, guarda; PO687 probe7) — a estadia mais recente achada pela refKey das estadias da hospedagem, não só pela pelKey da ficha: a Mel, com a ficha do tutor «José Teste» e as estadias gravadas com «Jose Teste» (o dcKey casa, a pelKey não), com o check-out feito na extensão no domingo, não aparece na segunda', async () => {
+  await com687(SEG687, '10:00', { fichas: [{ n: 'Mel', tutor: 'José Teste', dias: [] }],
+    est: [E687('Mel', '2026-10-09', '2026-10-13', 'ativa', 1, { tutorEst: 'Jose Teste', rk: 'mel__jose teste' }), E687('Mel', '2026-10-13', '2026-10-15', 'finalizada', 2, { tutorEst: 'Jose Teste', rk: 'mel__jose teste', co: DOM687 })] }, async () => {
+    igual([run('pelKey(PELUDINHOS[0])'), run("dcKey('Mel','José Teste')===dcKey('Mel','Jose Teste')")], ['mel__josé teste', true]);
+    igual(L687(), []);
+  });
+});
+// ---------------------------------------------------------------- as provas a mais do @dev
+provaAsync('6.87 P34 (AC1.2, AC2.3) — num dia útil que NÃO é o dia fixo dele, quem chega hoje para a hospedagem aparece, como o hóspede de sempre: o dia é o do relógio (orcDiaSemana de hoje), nunca o HOJE_DIA da aba. O Nico, com os dias fixos da turma e não o de hoje: aparece; a Tina, com o dia de hoje: não. Base: nenhum', async () => {
+  await com687(UTIL687, '08:00', { fichas: [{ n: 'Nico', dias: [HD687] }, { n: 'Tina', dias: FIXO687(DU687) }],
+    est: [E687('Nico', UTIL687, mais687(UTIL687, 2), 'ativa', 1), E687('Tina', UTIL687, mais687(UTIL687, 2), 'ativa', 2)] }, async () => {
+    igual([HD687 !== DU687, TD687().sort()], [true, ['Nico', 'Tina']], 'os dois pelos dias fixos da turma');
+    igual(LF687(), [{ n: 'Nico', f: 'hospede', h: false, hh: true, frase: FRASE687 }]);
+  });
+});
+provaAsync('6.87 P36 (AC2.4, AC3.2, guarda) — o hóspede SEM ficha que chega hoje num dia útil continua na lista com o Plantão deste aparelho em amanhã: a turma o monta com o dia da aba, e esse dia não vira «dia fixo» dele (sem ficha não há dia fixo)', async () => {
+  const dia = DIA621[HD687], amanha = mais687(DIA621[HD687], 1);
+  await com687(dia, '08:00', { plantao: amanha, fichas: [{ n: 'Bud', dias: [OUTRO687] }], est: [E687('Zeca', dia, mais687(dia, 2), 'ativa', 1, { tutor: 'Zeca Teste' })] }, async () => {
+    igual([run(`vencEhDiaDayCare('${dia}') && orcDiaSemana('${dia}')==='${HD687}'`), TD687()], [true, ['Zeca(h)']], 'dia útil, o dia da aba; a turma traz o Zeca pelo Plantão');
+    igual(LT687(), ['Zeca|Zeca Teste:hospede']);
+  });
+});
+provaAsync('6.87 P37 (AC2.5; 2ª rodada, REL-001) — a saída que caiu numa estadia ANTES de esta hospedagem começar não a encerra: a Luna, hospedada de 09/10 a 13/10, tem uma reserva para 20/10 gravada depois e finalizada em 05/10 (a saída da vinda anterior caiu nela): no domingo e na segunda ela continua na casa. Base: não aparece', async () => {
+  const cfg = { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-10-01', '2026-10-05', 'ativa', 1), E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 2),
+    E687('Luna', '2026-10-20', '2026-10-22', 'finalizada', 3, { co: '2026-10-05' })] };
+  await com687(DOM687, '14:00', cfg, async () => {
+    igual(J630("Object.keys(CF_ESTADIAS).map(function(k){ return CF_ESTADIAS[k].e.entrada+':'+CF_ESTADIAS[k].e.status; })"), ['2026-10-20:finalizada'], 'a mais recente é a reserva, fechada em 05/10');
+    igual(L687(), ['Luna:hospede'], 'domingo');
+  });
+  await com687(SEG687, '10:00', cfg, async () => { igual(L687(), ['Luna:hospede'], 'segunda'); });
+});
+provaAsync('6.87 P38 (AC2.5, guarda; 2ª rodada) — o check-out lançado na extensão que começava hoje (foi embora no dia da troca): a Luna de 09/10 a 14/10 com a extensão de 14/10 a 16/10 e o check-out feito nela em 14/10 não está na lista à tarde; o mesmo com a baixa (a Bia) e com a Mel, da ficha «José Teste», com as estadias gravadas com «Jose Teste» (a estadia mais recente achada pela refKey das estadias)', async () => {
+  await com687('2026-10-14', '15:00', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-10-09', '2026-10-14', 'ativa', 1), E687('Luna', '2026-10-14', '2026-10-16', 'finalizada', 2, { co: '2026-10-14' })] }, async () => {
+    igual(L687(), [], 'a Luna');
+  });
+  await com687('2026-10-14', '15:00', { fichas: [{ n: 'Bia', dias: [] }], est: [E687('Bia', '2026-10-09', '2026-10-14', 'ativa', 1), E687('Bia', '2026-10-14', '2026-10-16', 'encerrada', 2, { x: { encerradaEm: '2026-10-14' } })] }, async () => {
+    igual(L687(), [], 'a Bia, com a baixa (encerrada) dada na extensão hoje');
+  });
+  await com687('2026-10-14', '15:00', { fichas: [{ n: 'Mel', tutor: 'José Teste', dias: [] }],
+    est: [E687('Mel', '2026-10-09', '2026-10-14', 'ativa', 1, { tutorEst: 'Jose Teste', rk: 'mel__jose teste' }), E687('Mel', '2026-10-14', '2026-10-16', 'finalizada', 2, { tutorEst: 'Jose Teste', rk: 'mel__jose teste', co: '2026-10-14' })] }, async () => {
+    igual(L687(), [], 'a Mel');
+  });
+});
+provaAsync('6.87 P39 (AC2.4, guarda; 2ª rodada) — com o Plantão no dia de hoje, a entrada que a turma trouxe com a marca hospede passa como veio, mesmo quando a regra, sozinha, a recusaria: a turma (de mentira) traz a Tina, de dia fixo hoje, que chega hoje para a hospedagem, como hóspede; a Hoje a lista como a base', async () => {
+  await com687(UTIL687, '08:00', { fichas: [{ n: 'Tina', dias: FIXO687(DU687) }], est: [E687('Tina', UTIL687, mais687(UTIL687, 2), 'ativa', 1)] }, async () => {
+    run('__td687=turmaDeHoje; turmaDeHoje=function(){ return [{p:PELUDINHOS[0], i:0, hospede:true}]; };');
+    try { igual([L687(), LB687()], [['Tina:hospede'], ['Tina:hospede']]); } finally { run('turmaDeHoje=__td687;'); }
+  });
+});
+provaAsync('6.87 P40 (AC2.5, guarda; 3ª passada, REL-003 do re-gate) — a última estadia DESTA hospedagem (a de maior _ts entre as partes) com check-out e o fim já chegado encerra a hospedagem, também com uma reserva gravada depois: a Luna e o Romeo de dia fixo (09/10 a 13/10, a extensão de 13/10 a 15/10 com o check-out feito nela em 13/10, a reserva de 20/10) não estão à tarde; com o check-out na 1ª parte e a extensão ativa (a mais recente), a Luna continua; a saída gravada na reserva de OUTRO FILHOt do mesmo tutor não tira a Luna', async () => {
+  const dia = '2026-10-13', est = (n, t) => [E687(n, '2026-10-09', dia, 'ativa', t + 1), E687(n, dia, '2026-10-15', 'finalizada', t + 2, { co: dia }), E687(n, '2026-10-20', '2026-10-22', 'ativa', t + 3)];
+  await com687(dia, '15:00', { fichas: [{ n: 'Luna', dias: [] }, { n: 'Romeo', dias: FIXO687('ter') }], est: est('Luna', 0).concat(est('Romeo', 10)) }, async () => {
+    igual(J630("Object.keys(CF_ESTADIAS).map(function(k){ return CF_ESTADIAS[k].e.entrada+':'+CF_ESTADIAS[k].e.status; })"), ['2026-10-20:ativa', '2026-10-20:ativa'], 'a mais recente de cada um é a reserva');
+    igual(L687(), [], 'o check-out na extensão, no 1º dia dela, com a reserva depois');
+  });
+  await com687(dia, '15:00', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-10-09', dia, 'finalizada', 1, { co: dia }), E687('Luna', dia, '2026-10-15', 'ativa', 2), E687('Luna', '2026-10-20', '2026-10-22', 'ativa', 3)] }, async () => {
+    igual(L687(), ['Luna:hospede'], 'o check-out na 1ª parte, no dia da troca: a extensão (a mais recente desta hospedagem) segue ativa');
+  });
+  await com687(DOM687, '14:00', { fichas: [{ n: 'Luna', tutor: 'Ana Teste', dias: [] }, { n: 'Bud', tutor: 'Ana Teste', dias: [] }],
+    est: [E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Bud', '2026-10-20', '2026-10-22', 'finalizada', 2, { co: DOM687 }), E687('Bud', '2026-10-27', '2026-10-29', 'ativa', 3)] }, async () => {
+    igual(L687(), ['Luna:hospede'], 'a saída na reserva do Bud não é a saída da Luna');
+  });
+});
+provaAsync('6.87 P41 (AC2.5, guarda; 3ª passada) — a última estadia desta hospedagem é a de maior _ts, a mesma régua do passo a (a estadia que o Plantão abre): a Luna com o check-out na 1ª parte, gravada depois da extensão, não está no dia da troca, com ou sem uma reserva gravada depois (sem a reserva, a mesma resposta da base); e a estadia finalizada sem o registro do check-out ou encerrada sem a data da baixa (dado antigo), com a saída marcada no futuro, não hospeda ninguém (a Luna e a Bia, de dia fixo, que a turma traz)', async () => {
+  const dia = '2026-10-13', partes = [E687('Luna', '2026-10-09', dia, 'finalizada', 3, { co: dia }), E687('Luna', dia, '2026-10-15', 'ativa', 2)];
+  await com687(dia, '15:00', { fichas: [{ n: 'Luna', dias: [] }], est: partes }, async () => {
+    igual([L687(), LB687()], [[], []], 'sem a reserva: o passo a (a estadia que o Plantão abre é a 1ª parte, de maior _ts)');
+  });
+  await com687(dia, '15:00', { fichas: [{ n: 'Luna', dias: [] }], est: partes.concat([E687('Luna', '2026-10-20', '2026-10-22', 'ativa', 4)]) }, async () => {
+    igual(L687(), [], 'com a reserva gravada depois: o passo a1, a mesma resposta');
+  });
+  await com687(dia, '15:00', { fichas: [{ n: 'Luna', dias: FIXO687('ter') }, { n: 'Bia', dias: FIXO687('ter') }],
+    est: [E687('Luna', '2026-10-09', '2026-10-15', 'finalizada', 1), E687('Bia', '2026-10-09', '2026-10-15', 'encerrada', 2)] }, async () => {
+    igual(TD687(), ['Bia', 'Luna'], 'a turma traz as duas pelos dias fixos (assim a regra é chamada para elas)');
+    igual([L687(), LB687()], [[], []], 'a finalizada sem o check-out e a encerrada sem a data da baixa, com a saída no futuro');
+  });
+});
+provaAsync('6.87 P42 (AC2.5, guarda; 3ª passada) — a BAIXA que caiu na reserva para outra data também é a saída desta hospedagem (como o check-out, QA687-A01): a Luna e o Romeo de dia fixo (09/10 a 13/10), com a baixa dada no domingo na reserva de 20/10 (a estadia mais recente), não estão na segunda; a base também não os lista', async () => {
+  const est = (n, t) => [E687(n, '2026-10-09', '2026-10-13', 'ativa', t + 1), E687(n, '2026-10-20', DOM687, 'encerrada', t + 2, { x: { encerradaEm: DOM687, saida_combinada: '2026-10-22' } })];
+  await com687(SEG687, '10:00', { fichas: [{ n: 'Luna', dias: [] }, { n: 'Romeo', dias: FIXO687('seg') }], est: est('Luna', 0).concat(est('Romeo', 10)) }, async () => {
+    igual(J630("Object.keys(CF_ESTADIAS).map(function(k){ return CF_ESTADIAS[k].e.entrada+':'+CF_ESTADIAS[k].e.status; })"), ['2026-10-20:encerrada', '2026-10-20:encerrada'], 'a mais recente de cada um é a reserva, com a baixa');
+    igual([L687(), LB687()], [[], []]);
+  });
+});
+provaAsync('6.87 P35 (AC6, guarda) — as provas da 3d6910b continuam no arquivo, com os mesmos títulos (os 2.538 títulos escritos no arquivo da 3d6910b, conferidos um por um pelo sha-256 de 8 caracteres; as 2.545 provas que rodam lá incluem as de título montado num laço; o único renomeado é o da 6.67 AC12.7, documentado), e nenhuma prova de fora da 6.87 falhou; a 6.87 tem 57 provas com títulos únicos (42 «6.87 P» do @dev, 10 «6.87 QA · QA687-» e 5 «6.87 QA · QA687R2-» do QA)', async () => {
+  const me = fs.readFileSync(__filename, 'utf8');
+  const re = /\bprova(?:Async)?\(\s*(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g; let m; const tit = [], t687 = [];
+  while ((m = re.exec(me)) !== null) (/^6\.87 /.test(m[2]) ? t687 : tit).push(m[2]);
+  // 3ª passada: a P40 (REL-003), a P41 e a P42 (guardas) e as 5 provas do re-gate 2 do QA (C07 a C09, A05 e A06). Antes: [49, 49, 39, 10]. Depois: as mesmas
+  // contas, com 57 e 42, e a conta à parte das 5 do re-gate 2.
+  igual([t687.length, new Set(t687).size, t687.filter((x) => /^6\.87 P\d\d /.test(x)).length, t687.filter((x) => /^6\.87 QA · QA687-[CA]\d\d /.test(x)).length,
+    t687.filter((x) => /^6\.87 QA · QA687R2-[CA]\d\d /.test(x)).length], [57, 57, 42, 10, 5], 'os títulos da 6.87');
+  const h8 = (x) => require('crypto').createHash('sha256').update(x).digest('hex').slice(0, 8);
+  const BASE687 = '000efdc4001027ad00369a91004e11870066d212007861e1008449b600a0450000ea162700edc84f011ba6a5014e9ff4016a4ad301773c2f017ae093017fcffd01a3dc9301c6876301d83416020dede30225d24d0234934b02379146025478c5025a9b24026a254902c9248d02daff5503256970032b4e9003437788039a2772039df2cb03a6d5e303adae2e03e11a8f03e9477003f8bc8203ffd03c0408bf68040de4bf043583480436c65a046d7d3c048629ea049e108304a27f2704addb6604b8066904c0142d04d397e904fc5509053515d9053fda8105544e7205896171058beb5d0592bede05cc20ef05cd099405e2d7e405e7c0f805edcb6e061ed89a0621098b06299885063d59510641f99d066ac2e70694eeb506bb1f6e06bca7a406c05c8006d26caf06f259cb06f6c823071383a8072acd3507588ec10760d05e07642d410764a73f076b07e8078088a9079ae05107a06b2c07a396e207b0eab007f6a47807f9780d080228d2081a09bd0843aabe084fc348086a442f087871540882c57808972cf708c02c770911935e092dd1ff09455daa097b554109e15ac20a04adae0a251ac10a38aea60a555e5c0a5dba950a74a2d80ac3ad9c0ae528b30afee9170b08bae90b0af8530b0bf6dd0b1c43970ba526de0bc650270bcdd6d10bce853e0bf434f00c129d960c15fd610c1f235a0c2b2ecb0c38e3820c3984420c63f7400c644c620cd5d7550d0b44b00d0c020d0d5eef310d8dcee00d9820280ddd8b690df673100e2109a40e2f41bb0e425fe70e5ea9d90e7e20ec0e8415c70ea012800eb94be80eb9c20a0f2fae8c0f71439a0fa32f6d0fac4cd50fb3c776103bd2e610415e6b104402a0104513db106b65781090c35810aa98fa10ae7f1a10d30aa310d8ccf810eb6f0210fb093d10ff8fbb113d6246115b507d115fd7121175300711a6828211aefff811b5fbaf11bfe93411d323ba11f3fb7f12494925128d7139128de80b12950d3312ad14d212fcc0251304ec301343d00613670f16138f6506139707b0139854f51398f86013da024f14249aea14a2115a14a9afe314c60d6114eb916a14f846c01514a053152cceff152f4eaa154a941815607cbe1574fb61158156981596e5eb159b3b6b15ae14db15b0c5d015ba768d15bc08e915be976b15c4e08915cb98fc15e8b3c215e8f9bd15f02c4515f0728116181758161905ee1619f19c161c0ffa161e9e0c162705801660170c16801a8f1695ab5b16b08edb16b6f0f716c8207117350d83173680f1173bce751742f3a11751135d1797629f17c3488f17c6efe8180e67c9187a4bea1884e022189f755018e21ef418fae2e019153b1b193952621953f4f019937a1d19a4edf919e3e1d619edd7ae1a5659e11a68b1451a7204671abd0be91abe0ff91acd38741ae745c11af338ff1b2373831b35bb861b61698f1b6ad78f1b6e62e91bafcc4f1c01d7821c0346cb1c1ba9581c3388a41c448b401ca5ad7e1ca7ed8c1ceab5ba1ced1a6f1d0622971d06940b1d0c843b1d2568cf1d32d3e91d549b861d724ee61d9b91e31dbb9adb1dcb146c1dd343bf1defb74b1dfa62341e35cf5a1e5720e11e5b6ab51e6d0cbd1e9cf83c1eba15691ecbfafb1edfff611f0b550b1f130c551f156b861f63770b1f9b34f51fa140a41fa952201fd04a371fd73f59201071c820256309203cdd392043dd5e2054adcf20bcb7c620c65dc720df244520e6501b20f30f0220f37a3b210e6a0e214b439e2153ea2a2153f70a216376b821861bd92196bac521b884c321c19d7821d1ce1821f895842226fdd0223a4391228069bf22988b6d22a68aa422b1403d22cf5903230b9fc3231d2ea92346c8f8235994b72372913023787351239b5a2123beeb7223d8aa5423e71ccf23fa91aa2413d6a12414aa78243945d8245ab306246298b72467681e24accd7324b2c05c24c4d73524e64fde24f9be9424ffe4292518c7f02535a51f2548e175256134d625c2377225e840d8262da2c32634dc5e2638b7e9264280ad264c853726524c98267215b7267debee2698b71a26a06d0726bd424926e84e7a26f5e4972721e2d12747c017275d52de276ffaf9277b43a0277b880e27ddba1427e5e1b527ea3d4128061208280dd3d42817cd77285f184228608da028aa7eaa28e2456228ea319f2917612d2959fce42960294129ca9c2f29e304df29f50fac29fa631d2a04d90a2a09789c2a0ad2fd2a2ce5332a6fc45b2a79d48c2a7fb3ce2a8585ea2af066792afc9c5e2b2071582b27b7da2b39f9272b43d7982b6988032bccc0e62c1fde982c229ea82c521d9d2c81db9c2c86d67d2cc844f22cdab6de2cf01f452cf557322cf63fc92d07af332d17816a2d2e506e2d4ec87a2d779dc42d9dcf672dadbd932dc901ef2dcf7cfc2e0d08602e11caca2e1b8b492e1d7ab32e3ddbbf2e442e352e5ac28d2eb98eb02eca66652edaedf02f03c15d2f09d8012f0b22df2f0ed3802f227e7e2f276fff2f49d0bc2f4affd52f9bebcb2fed444d2feef4c8303eb2ba3041e6543045d0ea30554b353070c93a309e3c7330af2f4430c91f6830ce813730d32d553132b6043141a2d63161693131a540c531bed32831d42a6331eac09031f8a40f32032b5c3218df35325cc42d326bd7d0326fd658328ab964328db367328f48ad328f5e9832a762ff32bdf06b32bed1e032cbd5d132d6c0ab32dbe3b0330444453308c5a6330e244f332e42223330af76335e007c33618c583362b46a336882c43373c05f3387b2433388ad1133b677b133b7b6d133dc48e733f08bde3405534b3417e90a343da5473446cd97346520bf346536b8346eca2134b7e01e351f049a3562a1493565a3f13565f428356ef738358001cc358dbf5d358f85f13595165935a9361f35ab5faa35b9438435bd46e435c24e4e35de1a0835e88ff335f0f34435f1ad573607ad323615a3cf36271352363e5a023645d65f3648c438366d41b036ad8d2b36b9a88d36cc1cca36cee58f36e94cd03700c65f370cb0f53719f5e33743aa26374bb4d53757cc3837780080378150e43784d4a337a1471537b221c837c0fbb637cdbcf737f349283800bd88380614e3380ec6f1387ec7a43888ce5d38bc8be238da841b38dcf61b38f4b5d43904d8063932a42e3959cfac39686d75397449f83978ccd639acdbb839adc58939c43af039da344d3a14a8543a657ec43a973fc93a983a933a9bf6883a9cf0f63ab6f3663ab965693abd11a53add535b3adf03043aecf1c43b0925cd3b1a900a3b31e5a03b481e403b5064c23b5ec3c43b6705763bfa449f3bfcd92b3c0f08e23c2c2e473c31e5533c4d022b3c52a62a3c6b10893ca59cc33cb9f7513cdf34a63d0d365f3d340e283d3e497d3d41864b3d4272893d6d2f6f3d902e793d9192ce3d9b2b9a3daec1ad3db302d93dc72ffe3dce200c3de304623e0bbc643e1dc8303e53be363eae49433ec8afb53ed01f153edffceb3efe2e753f1576f53f1cb9c93f2f8a2f3f33551b3f551c5c3f6a988a3f7f65653f938a1d3f98af6e3ff2d9bb40064dfc401b51a0402908b5403afc30403edcf44053e93a407e44b640807818408a809240955aeb4099f1b7409a034f409ee78440abffae40b31d4d41005e054168f2c0417eac6041878f7941b4908441c1117641cb153b41ea6fa742044fe842052be042229f80428b921842c93d9f42e551eb42fd72be432092bc4355037b437c13e8438b263b43aaa94a43af438543d08a9843d9823e43da9b2e440e4de14429fd9d448fdea244930a3144b05ce044bb34f844f999a14528789a45593fbe455f0d3a456b098c456b10a9458cae5345c130ac45daa7f44615c8134658903f465a122546888dde46abdb4b46bc290346daf22b46f8ff89470a5ffb470f70234718e3ff4749b259478731b94795a04b4799d26147b3eee347bfe62647c050074802489e480fd83748146e72482d14c7482fcbc24848c3df4866f1b14899bbc548dadb0948e1381248e9086149012d6f4934a21b49b0121a49c47f074a1e7e7d4a29427e4a37092d4a3b288b4a3c06ce4a5c5b194a5e8cfd4a6c1aed4a8189424a8561404a9759ea4aa9dbaf4ac76e9e4ac8bea64acdc2724ae734fe4b0de2974b2d00df4b58c5114b5984c14b6400044b6587904b686b7e4b73df654b8340c24b85b9e54baaac9e4bb6727b4bde78164beca56a4c01b04e4c2c066c4c3c978a4c6f75ff4c850b594c9c58204cb7fcda4cc208134ce455504cf2aeb54d33210f4d3a2fd94d5bc8174d679b614d73c80b4d96f4a94dea9f754df0409c4e0ad4ad4e2e9f614e2fbd144e52a8c24e8c8f8a4ec2740e4ec6ae804ed803d04ede5b0b4efad9964f0363184f11f1524f1a76714f443b4d4fa1e9924fb4eb064fc3f3db4fe4fd1e4ffef29850406a70504820be50604ab950d20ba050eda48250f0075a51180e6f5118233751188e8a5136a47f5136e07551d40f7b5213408d52171562521d1a7d5224ccf3526417245279f34752805c19529233cd529a4ddd52bbb3bf52c4ce5c52d7cea45327e62a5364b8e85376f4685378d8d253aa70ec53b390b953d3380c53f6ec73541122ad54474c4c5448911254603c17546f6d6a5483049f549e2dd154af35d054bd3e9654c9150d54cbf9a854db2b9a5508619c55119edd5521df715529b0985539781c554f0a1555526da4558d8c6b561c4620562b7cba5678d4e5569a46cd570a6cdc574452bd5747988957484df6575b7a40577b74cb578f0df457a809c857b32d6757c695bf57d5583857d98cf257f42707580149565804769758195d12582b5f32583321595869fedf5874668a58769b9658868b1f58b8592a58c8792458cf9aeb592dd3825961fc4c5963734b59838fbc5993c44559a1eddd59bde71959ccf0ed59f904e65a0ed48a5a1012b05a1b04025ab981975abad1765ad55d895b3c48dd5b4cb9ca5b51447c5b64036a5b6723285bd4afce5bf850c25c0ae64c5c1476ca5c6122755c686b725c70709d5c8eacc65cb0b3005cb68ec65cd9d6475ce138965d2a19ab5d99891c5db112f95dd1d1bd5dee3d5c5df6e9b85df8d23a5dfaa6305e06e6505e1221675e26c59a5e670c9d5e88d51c5ea47e985eb11fba5eb16c995ece78405eecd0145ef6ade15f07d6ae5f1c6d335f219e605f315bb65f466c035f4f44b55f6ad08b5f852ad95f9f87715fa913e55fb2478a5fc90ec15fce857a5fceecee5ff5304c603a880f6052011e6072a8b56084e33360ac5aa860b0cf1d60b3f29960c373d360cb864b60d9663b60e4ddc660e71a6a60e88d4460f99f6c61301eec616bccc56185f49761866f5861895bb26196042961a2eec761ac55b061b8649a61ca9dc261db919e61f4509f61fbbeb06221465c624c0c63625ed7e1626697a7627cbf8862a701f262b1c8fc62c64c3a62d26bed62e38a5d62e5b99262f99db9630229866322aebe63423bc5636a9586636ae10c6374738c638ee52a63b6b7e963ccb30463d9de47640aaf326449611d644a1d7e6455738a645b849364d079fc64e15e1064e9e27464f1d16964f748a364fc2a2a650157c965399e8165545bcf6557f151656a13bd659f45f16630f2a6663325fe665148b3665c63d0665f465066630dec666860c1667d592066a2333a66a5134666a892d166a8f18f66ecc66b66f0102266fdab73672c3264673bd5d36742a3346759673267638c57678c85ad679dda2c67a9c1ea67c945d667daf41167dcb53767ee87a867fa2e0e681d20f1684c07fc686a35fd68739a3c68818155688a965e68a4506c68f95b23690dd9146916c494691a754e692f117f693689896979b5cf69b9084669ead4df69f753326a34e0456a45f9dc6a5279386a76ad4a6a79c1b46a97124a6ab24c536ab69af86abb50ad6afece266b0374a16b0e2bc56b48ec466b98e07b6b9e6adc6bb300c66bc00df56bdb60c86bddc9776bdf70af6c140c006c1564086c4e3cc56c57a4186c63e53a6c7c60146c91c2296c93ada06c953c716c9a12496ce5af7e6cf33e5c6cff26366d10249a6d218e346d2d670f6d5e7e2f6d68f4c36d91d27f6da2b03d6dff52a86e0599506e0a79746e0d01746e34f9c66e5e5e9a6e6ca32d6e77f62a6e8f9a656ee1389d6ee655516efbb20e6f016c516f15c96d6f540cf46f578b5f6fcbdf65701529f970683dab70772666707f4240709bf7eb70aa7dd770b6a27e70caea8070d3c7c470ef551c70f5d0da71159451714e2052718c5d53719886cc71a233d471b0f76971b74d3371c1705571caa6e071d77b6d71f3c98272080d197230c881723ae3a47255f456729d749c72ea4e7372f6dba97303e01a7316a3be7335f621734459e77379d2327381668e73821e1c7382de927386f0ee738f7208739f9b3973b580f573bda83073df88937466230774bdecb174c5de3074c929e374efb71e74fc08dc75047fcf752e6169754beef4757a85e27591a10175b3584b75b5873575ef79967667afe976714ae376a5824c76c1464276c3084176d41a6076dbfabe77313d0b774af68a775d4a3a77878c81779f1f7877c094a777dccf817807fb2078350c247877adab787811fa78ceaa4278fa41367909144a790cb5eb790d446b79346b5b7936876c7940aeac7968e13979705672797ae1d0797debcb79a8fd307a2114f97a4127f17a449fb27a4ef25f7a5e80007a6850d77a6c7adf7a7140577a74e9a17a7901917aa466c47aab52bf7acd81c87ae1302a7ae496187ae855ab7afc7ae47b363c9e7b3c31087b50d2a87b69ea827b7b81837b9b33407bac21777bc3e16f7bd86ad87bff0e597c2657e07ca1df2c7ca25bc97cb5e7857ce4016a7d02b9727d22926d7d362dfd7d468fd17d486aa37d4a3b907d7734da7d7b36457da323bd7da5da5b7dbfa1aa7dcab3e47dcc2c037dcc9b857de6cf5b7dfeb4647e1811fb7e33d7d47e449f447e48ac967e65bb3a7e67e5477e68fb147e78c63d7e88937a7e96897f7eb8efdb7eb998d67f146fde7f1563fc7f18c3457f5273aa7f7297a97fa7085b7fd50e267ff19f457ff8fd3d8003f6628018aff8801f69e38021440a8044c18d804799d1807227a48092269280acf31880c3908180c8e56580dc59178106d04e813e4aa08183781d819a293381d2f3e1821101a082129e4382347cfa824f5c54825160bf825e5b69826f9900829399ce82a9073d82c0285582e0545282f75834830e91bf831f2d2b835cf62b835f352d83721d3c83764e2c83796887838b41cb83908ef683a435b883b0a76283da6d468403783c841398e1842f9e1f844ba2af8450e3de84546a258463a40984b30f3084b3429e84c5252984eadc3d850db360851f77d8853a7bd4854b38808561b7338572886c8574b4ba8594c3ba85afa17d85d149b085d474a385d7f5888641f203864c705086688d02868d900b869dfbb986c5544d8742c866874bc1d687561e538769bda287a3094487ae6d3a87ccc24187ccd52c8819ce40884980ee886453a388648b9e88854e0a8896345788a7fbc488be8dbc88fed7be893fc31b894da7f38951456a89e4a6d28a1eb8008a48383a8a6f9cf78a79debc8a81fe6f8a8349438a83bfa78aaa6e848ac2e11e8b0056ab8b1d62868b5b79d78b66aae78b74aac48b9241098ba178a98bb3d78a8bb8f1488bb9e4c38bbf6ad18bc81ee08be9c4778c18a2258c3310ac8c38faa38c47cd1a8c5ce61b8c6c295b8cd4f0598cdeae488cfa3d328cfcb6948d0161528d07f70c8d1663538d1d46818d2fab308d3d003e8d5be7458d6353c58d6db5b98d7260fe8d82cca48db2b2a48de361968dfceef48e0e32238e6273088e68c6148e85b0d88e8a4a598e8c9eab8e8d64878e95510e8ec2d9218ecbe0fe8ed5b01a8edf04438ef73dd18f2f165c8f5f8d9e8f7971958f7aa0418f94359d8f99e15b8fa0e7958fa18dd99025b2299039ffd99042bfb8904f82bc905c236f906e3b7e908ca77c9093dcc790a0518090a25f2390a92be390d4da6590d5728d90f1a2fb91385ef7913a6ecc917d46419188196691933bf591abfd2491cc03e891f8ffbc91fda001921a5bd592255ab492339b04926c8abc927368ce9274291d92742cbb9290b916929ad43e92ab3e1992bcd3d592fd0cf1931bb3f09346a40f934e1433935a031c9391337a939eef9493ab9a2793abce3093e32e8093f1fb2c93fa75aa943f90cd9467f3f2947ec4c994814c1294893676949476f494cd72be94e657da95765ec8957fcf299595ab3d95b0b91995c7b8e59616e737965255f1967eea2f968a02219695a5e796c9284a96cbbe9697038069972640ad975bf9ce97616f0d976397b997838da197adf8c197d0897097fda2e7980831b9981e9fa198415bff9848026e984e45ac9879ea0d9883328a9891bf9a99018c089938c7499957ac25997f257999891752998a8b4a999bf09499afcd4299b2ec059a04367f9a1008509a1747df9a2196229a3c96fd9a6ce6939a9a42b49a9d64fe9aa392e49aa84c429ad44db69aef5ba89b2468299b75f8129b86cb819ba332489bb9a7139bce9d739bee4b8c9befd9919c486fe39c4a6a169c5118589c641d8e9ca56c099cabadc09cae9ffc9cc9ed279ccc43e59ce8b6a59cfcc0d49cfd42709d0c4a709d1beb6b9d23484e9d33c6049d48687c9d7066fd9da0ce6e9daa50c59df03ba99e0bfd989e304fe59e4c31169e8a15c89e8a3f649ebc4ef99ee79d0b9ee9086d9efc68499f4692809f79d3229fc47ddd9fd42219a02646c4a044c991a05d2a92a05de458a08b9167a0a4e4d4a0a7bf1ea0ba3a1da0bb1282a0be1ddea0c82071a0e6537fa1188257a12da420a16c2c96a16cafb1a187d991a1a62fdca1a651fda1b27834a1da5de3a1ece5e5a1f0534ea21ab982a2233549a2276d3ca24660a1a2543160a2587940a26fa144a281b84ba2ab1cf4a2c46766a2c5d864a2d26f2ea2f943d9a3084420a32b8fa5a38230b7a38fc572a3b2e683a3b5ee5da3fe2b88a41a3091a4237b30a4388be8a44f41eca4697268a4ac6b9da4dd8728a4e0f543a4e11edba4f6560ea50e00f8a52b15a5a546a099a5751f31a57c1e1ea59c4bafa5d68113a5e5e63ba5f84f75a60a9617a63f091fa656953fa66579eca6763e85a6a8376ba6af4907a6c0e460a6da4f8ca6e17528a6fa89bca6fb948ba707b5a7a7248c8ea7347e60a73c82eda7579cd1a761384ba770989aa7cf2abaa7d98752a7e05c16a8087a69a809fa8aa8555b01a85f533fa861cca8a86ee955a87039b6a87438caa8a89d5fa8bd3bafa8dd4346a8f6bfa5a91f6a5ba929076da9778d12a97aae3ba98e2d4ba9942275a99e9b66a9aa9e77a9b1be05a9b2e513a9d486c3a9ee3bb8a9f1cd81a9f38854a9f84ee5aa7b6eb6aa9c40ebaab1039caad49493ab07ba3cab0a0699ab14564aab2c8ae4ab591c29ab5df748ab93c2b1abac98a6abfb3fc7abff6ed2ac2c8846ac545448ac5b1182ac5cfe7fac6efa47ac72cbc5ac73f1c4accb2ffbacea2063acf459a9acf6beeeacfef1a4ad19b63aad1b452ead641455ad88e1ddadd00db4addecff7ae14f48bae296e05ae2be5c6ae51e6f0ae6afc72aeb24c95af1e4e2baf479b34af75ea94af971f3eafa8a30cafceed34afe99dfbafea0954b00fa7dbb02b62bab045b1f6b05f0240b0b47ccab0d486d4b0d8abf4b0e78e74b0ea9b25b0ef6f88b0f169bab0ff05a9b1097590b1216987b1654180b1738f8fb17ac81fb18d2fa8b1b347eab1bbdb62b1c80c56b1e1729db24a4cc6b24f92c7b25fe132b26be0d8b26ce4aeb28b6c48b29183e4b2de3c06b2f5a4c6b3191d89b327c669b33e7e54b34d6e8eb37252e0b3df5f16b409fbb9b4136c77b4387159b43fd89bb442e86eb4a2cf13b4b51cf0b5458e5cb55f2a16b55fcd31b56aa132b575a8b1b5984e5db59b3cccb5a69e50b5b04daeb5d3fb55b5e0183eb5f80430b60cff51b61283a7b622471eb62983e9b6352100b66e5554b67d8246b6809a53b6d94eafb6ec5233b6ed86abb70b7c28b71504f5b721b6cbb74253fab7532d31b75c515eb7625dfeb77b8f5bb7c50611b7da93d7b80231a1b81b0338b820f8aab846ab01b858c402b85bddb6b8a1a9bbb8ae39d5b8b6416ab8f85077b92291b0b936d49fb94c7204b960cd92b98f230bb9e4f3a2ba463102ba5453c8ba58e2adba6b3d03ba7b39cdba8912f6baab8255bacd64e0bad60ecebb186d00bb1af04abb2e2bb5bb8aabe4bb9038c6bbdd00fabbdd4553bbfde432bc0b7f0cbc17918dbc2cee35bc3881c0bc4f3747bc60f0d6bc73b3b9bc82f035bcb4f46bbcca6c6bbce7b207bcf92fc9bd0b0af4bd189bbfbd2236d9bd3e935cbd46f053bd6163c4bd969d75bdbf54c8bdf0e14dbdf7827abe14b14bbe370977be6e957fbeacdde2bed5df9fbedd5235bedf9e2ebef3abb2befa8652bf07cdf1bf0c530bbf12db94bf20f306bf23d431bf360091bf37f1ccbf3cf1d3bfd4592cbfdc5b2bbfe26e76c009552bc0256070c02f784bc03e41d5c07fe078c0a3786cc0af67a2c0daff0fc0eb5f14c116643dc139e82bc13e7a4dc14be551c16b202bc1b83333c1d3cbe5c1e554b5c1f847a8c21de44dc225c083c22d617ac24095adc2632793c2664173c26729e6c28dc2a9c2c20f4bc366adbbc383b275c3e96519c3f8f1e2c4094ae8c4116156c418e9cbc459e9d2c478be68c4958bd4c4b91ee9c4c7d076c4cd4f63c4d1a436c4e6968bc4fcaccbc514021cc5178523c51e39aec52f99f1c5322905c54360c3c55e93ccc57d7aacc586b173c58b11b4c5b7d181c5bdfd2fc5cf1f6ec5cfe4b0c5d28f65c5dbd5eac5e1d78bc5fc95afc6126ae9c61d2c5fc64dc930c64fe051c66b1fe8c67be3c1c6960410c6ac78bcc6adeaa2c6f745b0c6f7c0c9c6f8d58fc736841ec745bd7bc759fe76c75de556c77d719ec79b793cc7c30ba2c7ce3775c7fd4b60c80d4563c83651b9c8378025c85ea149c86b96f5c86df1abc87e02b7c87f161ec8af33f4c8cdc919c8f545a4c8ffaae0c9060fc6c9131e26c929e5aac9309a23c96336cec990096ec996104ec997b0dec9b7a93cc9bf28f0c9ff6ee5ca50644bca74de74ca764d7eca785a10ca911be4ca941436cac2aa58cac80900cb1bdad0cb2e4f10cb30f387cb3f0b23cb6603e0cb6ce308cb705cf2cb7ab82ccb895b27cbbd708dcbc60286cbcc60edcc174c6acc1b2cc8cc2d96cbcc3e665dcc47a567cc535d18cc787088cc9fc9feccb75d69ccb9b434ccd0ad66cce262f3cd1e7660cd2179bdcd2219b9cd3460dacd43df6fcd530cf7cd7f1124cd987ff6cd9f64fccdbec7dfcde41e25ce12ffa9ce138bf5ce25b35bce27b415ce2990fdce2a7728ce317604ce38bb4ace4cecacce4cfdbbce510151ce7e77c2ce7e7c38ce84d9ecce8b5500ceac356ccee03c28cf0d5a45cf271573cf534b92cf5c9c04cf5dad61cf60526dcf6ea5c3cfc94f0dcfd0ff32cfdc47d3cfe9dc25cfeb8498d0267504d0451b1dd058abe2d06125b0d0a129e3d0a2d2a1d0b0c1c2d0de46b2d0e06196d0e26c2ed0eeda24d0fdb49bd12a7ea7d13d8d05d1629231d1755b04d19b7191d19ea0fcd1b6e1ded1bff6cad1c1c0cbd1dd335cd1ec6f22d1fddba6d210901ed216b720d23e5ef0d25ab069d27e650fd281b193d2ab04a8d2b27991d2d1b365d2dd5b96d2e4d208d30ed06cd30f5093d32b91b3d33191ded33fb7c5d357277cd375d174d37fd2b6d385b467d3907e3ed3a09b35d3a2c13bd3a90e04d3b383cdd3c3f3a9d3d422dbd3d9b85fd3e55479d3ea4635d40945f3d4108a50d4673344d47c95b4d4883f32d4b2c2b9d4c488bad4cb0b1ad50bc982d510dae4d5137c6ed5154f5fd54d30f0d565338bd5ab2e39d5bb2769d5c59886d5d48735d60a40ebd624918cd62a4ae4d632fd95d6719abdd675d8b8d68ce48ad692f5e7d69921c0d6f33319d73d3ff0d743b0c4d74a94dad7609c16d76734bdd76c8ffed771a7ffd778765bd7d11f5ad8143819d84ea1aad852f4d3d86fb9d8d8c4445cd8cfc52ad8e15bedd8e89381d8e9b30bd943e96ad977712fd97e358bd97ee5a7d99f92b8d9d104afd9e0112ed9e0e457d9f9a132da0b9eb1da13bdefda163aafda1daabfda21c7ddda27c34eda452435da56af3fda80f3b0dab0640bdad36006dad72cbcdaeeba79db02e7b6db343e92db36c0fbdb42dfb6db4bc70edb67a66bdb697179db7f1b18db863ae9db87f4ecdbae0753dbb39ad2dbd12307dbf0d12ddbff2143dc67a95fdc6b9c8ddc919f8cdc98cd69dcae8496dcdb0c9ddcfc6d91dd0796b6dd0c96fddd1b492ddd29e42cdd4d9c95dddf6433ddf5553fddfbf2c1de058439de0d5519de1dee1bde254aa6de2a2fbcde2d8277de2ea1acde30b2bade65006fde7aece7dea73c96dea784b0deaa5360deb12cc2ded7bbd9deed555fdef2d5c4def515a0df48e19adf5832bddf5bc1e9df5f1e72df64b81ddfa47a67dfd04d4fdfdb50cce001e6fbe02514cbe02febe3e0489f34e0537ef6e072f073e07b0304e0ae3b2ce0c3988de0c8145de10a9570e11d6d82e128b596e13b47f3e1525006e1b31197e1b393d4e1d3aa77e1d7aecae1d81379e237d413e242d13ce27b57d7e2920835e2a49f63e2c2598de2e62914e2e98cade2f11a6be3308b00e33ece24e38953cfe39afc66e3d192eee40c9bb3e40e5b4de4236a3be42b0a6ae43506c3e43759bae44dde01e49544c5e4c6623de4d19861e4d7833ee4e1c68be4e2651fe4f4cbaee501ba1de518aea6e51ca01ee546d4cfe555b2b7e56d6e3fe58836c8e59509e3e5cec756e5d5d07ee61f3fa3e63077dbe633295be63782f8e6465406e6570d3ee66271fee686c870e689c821e697d119e6a1b01de6a59faee6b48516e6daf854e7039055e72d4f34e753cbf5e76f2cdde76f8498e781bf92e7c6ec6ae7d3c58ce7dbdb6de7ebb24be7eed183e815da0ce81baa0ee820a361e8b24d35e8c10407e8c57e13e90d5efae915e1dee91b21f4e952c363e957878ce9665850e999e092e9b820bae9d4d588ea29a6c3ea8c8adfeaa91142eacfdb33eb18a893eb378e8deb4d9c7deb5626eceb8497e1eb87de5aeb8af4c0ec058572ec3e290dec55df28ec561223ec619549ec7a77a8ec89fd5fec9a2495eccb4983ed3153aeed325cb9ed495351ed667c04ed6f6943ed752ccbed8fdf21ed94944ceda85a3dedd223d9ede0f224ede1ab9cee09b325ee268ce8ee276465ee4b7b97ee6a2a34ee93c2d1eeac87a7eeb80919eebb0275eed4984beee1a442ef08e2bdef135851ef181fb1ef1c67bbef3ca025ef4db6b4ef68a56def74c102ef8bd936ef96b1f3efac9032efd3f704eff72278f0289d44f029556df03489f5f04b2babf04daa37f0a2464af0ab88bcf0ce5569f0f97433f120e985f12ad58cf14353adf14cfd54f1507f94f19ffb42f1a4263ef1c61cc7f1d0c0e4f1ee0c00f2075c51f23590e8f27557d4f2a5cbb0f2aa1a05f2ad61fcf2d9fdb0f2dd2d67f2e9468ef2ec33eef3426071f362ed89f39c88d5f3b92b93f3bf6eedf3d8b5e3f3e339e0f4b7bc3df4cda861f4d8b977f4de64a6f5009915f506d17ff535300bf55a482cf56dd5f6f57638e1f57c108ff5a3c65cf5d9712ff5e25843f5e74598f5ee9ab8f60ad4f6f61f29a6f6326060f6446adff649f29ff6555cd5f65dcf32f67d359ff6855fd1f68b6c9df6b21ab4f6c0d89ef6f00b58f710ad9df7176c4ef71ecfa7f7700df9f7741acdf7754402f79e7a66f79fdfd6f7a5df56f7a77aa0f7e4d00ff7f8ad44f80fbccaf8135c73f8422189f86a5804f86e332ff8731387f87dbf69f8ba074df92c6de8f94aaaedf94e541cf976073df97911edf9929325f9b653f6f9c8ff11f9dfb3c3f9e5916ffa091197fa2fb0b3fa6a2e43fa6e7013fa9323a4fab6202dfabb3339fabe96b0fac9b658faece505fb042e4cfb16cc38fb2c4b54fb3b0286fb81464bfb81d512fbe572cefbfb3d76fc03eeeafc09bb91fc11a7aefc13b56bfc2604e9fc274e98fc38ae89fc3c843dfc502017fc54f4eefc58d892fc6154d3fc6fa40ffc8b54b9fca84b3ffcb92252fcec5ca3fd20b76ffd30b1fbfd505066fd609794fd66e068fd71288bfdd81ad4fe1e8794fe27cb64fe3252f2fe5f9d0ffea78e8efec2eb66fec3c5c8fed49c5afedecde3ff1a5274ff34dcd0ff3e4597ff499fbbff4e72f7ff8c6d17ff950b73ff9a14a0ffb1abc1ffd9d656';
+  const tem = new Set(tit.map(h8)), base = BASE687.match(/.{8}/g);
+  // Junção com a 6.67 (3ª passada, 12/out/2026): a 6.67 (publicada na 73af013) trocou DE PROPÓSITO uma guarda da 6.66 (AC12.7: «Mudar
+  // datas» na estadia finalizada não reabre mais; a tela manda «Reabrir o check-out»), e o título mudou junto — o mesmo renomeado que a
+  // 6.80 P35 documenta (RENOMEADOS680). Antes: os 2.538 conferidos um por um, nenhum faltando. Depois: os mesmos 2.538 (o conjunto e o
+  // número não mudam); os 2.537 fora da lista abaixo continuam conferidos um por um, nenhum faltando; o renomeado é um título da 3d6910b
+  // (pelo hash de 8), o antigo saiu do arquivo e o novo está nele, uma vez, com a story e o AC. Por quê: só passa o renomeado
+  // documentado aqui; qualquer outro título da 3d6910b que saia ou mude de nome continua derrubando a guarda. As 111 provas da 6.67
+  // entram como provas novas (não estão na lista da 3d6910b) e passam: a conta de baixo as cobre.
+  const RENOMEADOS687 = [
+    { antigo: 'c9309a23', novo: '6.66 P24 (AC7.5, guarda; trocada pela 6.67 AC12.7) — a estadia finalizada (check-out feito): «Mudar datas» não reabre — nada é gravado e a tela manda «Reabrir o check-out» (a guarda da 6.66 dizia «como hoje, até a 6.67»)', story: '6.67 AC12.7' }];
+  const ren687 = new Set(RENOMEADOS687.map((r) => r.antigo));
+  igual([base.length, new Set(base).size, base.filter((x) => !ren687.has(x) && !tem.has(x)).length, base.filter((x) => !ren687.has(x)).length],
+    [2538, 2538, 0, 2537], 'os títulos da 3d6910b, um por um (os 2.537 que não estão entre os renomeados documentados)');
+  igual(RENOMEADOS687.map((r) => [r.antigo, base.includes(r.antigo), tem.has(r.antigo), tit.filter((t) => t === r.novo).length, h8(r.novo) !== r.antigo, r.story]),
+    [['c9309a23', true, false, 1, true, '6.67 AC12.7']], 'o renomeado documentado: da 3d6910b, o título antigo fora do arquivo, o novo dentro (uma vez), com a story e o AC');
+  igual(falhas.filter((f) => !/^6\.87 /.test(f)), [], 'nenhuma prova antiga falhou');
+});
+// ================================================================== QA 6.87 (Quinn) — provas do QA (dentro do bloco da 6.87, depois da P35; usam os moldes dela)
+// «QA687 C…» = confirmação: passam no código do @dev e pegam os defeitos plantados do QA que a Fase 0 deixava passar.
+// «QA687 A…» = ataque: falhavam no código da 1ª rodada (os achados REL-001, REQ-001 e REL-002 do gate); passam com a 2ª rodada.
+// Na Fase 0 (2ª rodada da 6.87), os títulos levam o prefixo «6.87 QA · QA687-…»: a P35 os conta à parte (10).
+provaAsync('6.87 QA · QA687-C01 (AC2.3; defeito q02) — «o dia dele» vem da ficha do banco (pelDias), não do cadastro em memória: a Tina com o dia de hoje SÓ na ficha do banco, que chega hoje para a hospedagem, segue o Day Care (fora da lista)', async () => {
+  await com687(UTIL687, '08:00', { fichas: [{ n: 'Tina', dias: [HD687] }], est: [E687('Tina', UTIL687, mais687(UTIL687, 2), 'ativa', 1)] }, async () => {
+    run(`pelCadCache[pelKey(PELUDINHOS[0])].dias=['${HD687}','${DU687}'];`);
+    igual([J630('PELUDINHOS[0].dias'), J630('pelDias(PELUDINHOS[0], zHojeISO())')], [[HD687], [HD687, DU687]]);
+    igual(L687(), []);
+  });
+});
+provaAsync('6.87 QA · QA687-C02 (AC2.4; defeito q20) — com o Plantão no dia de hoje, a entrada hospede da turma passa como veio: a estadia antiga sem data de entrada (dado antigo) continua listando a Luna, igual à base', async () => {
+  await com687(DOM687, '14:00', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '', '', 'ativa', 1)] }, async () => {
+    igual([L687(), LB687()], [['Luna:hospede'], ['Luna:hospede']]);
+  });
+});
+provaAsync('6.87 QA · QA687-C03 (AC1.3; defeitos q22 e q28) — o AVULSO do dia (dcAvulsos) que dormiu aqui aparece pela hospedagem (a marca nova vale para quem a turma traz sem a marca hospede: dias fixos, reposição, avulso)', async () => {
+  await com687(UTIL687, '08:00', { fichas: [{ n: 'Bia', dias: [] }], est: [E687('Bia', mais687(UTIL687, -1), mais687(UTIL687, 1), 'ativa', 1)] }, async () => {
+    run("dcAvulsos=[{nome:'Bia', tutor:'Bia Teste', raca:'SRD'}];");
+    igual(TD687(), ['Bia'], 'a turma de sempre traz a Bia como avulso, sem a marca');
+    igual(LF687(), [{ n: 'Bia', f: 'hospede', h: false, hh: true, frase: FRASE687 }]);
+  });
+});
+provaAsync('6.87 QA · QA687-C04 (AC3.3; defeitos q04 e q23) — a estadia achada pela refKey: (a) a do Romeo gravada com outro tutor (a refKey é a da ficha) o põe na lista; (b) a Mel (ficha «José», estadias «Jose») que só a 2ª varredura enxerga entra com a FICHA (o tutor e o índice da ficha), não como «sem ficha»', async () => {
+  await com687(DOM687, '14:00', { fichas: [{ n: 'Romeo', dias: FIXO687('seg') }], est: [E687('Romeo', '2026-10-09', '2026-10-13', 'ativa', 1, { tutorEst: 'R. Teste' })] }, async () => {
+    igual(L687(), ['Romeo:hospede'], '(a)');
+  });
+  await com687(DOM687, '14:00', { plantao: '2026-10-15', fichas: [{ n: 'Mel', tutor: 'José Teste', dias: [] }],
+    est: [E687('Mel', '2026-10-09', '2026-10-13', 'ativa', 1, { tutorEst: 'Jose Teste', rk: 'mel__jose teste' })] }, async () => {
+    igual(TD687(), [], 'a turma (Plantão em 15/10) não a traz');
+    igual([LT687(), J630('hojeLista().map(function(o){ return o.i; })')], [['Mel|José Teste:hospede'], [0]], '(b)');
+  });
+});
+provaAsync('6.87 QA · QA687-C05 (AC2.5; defeito q08) — a BAIXA lançada hoje na extensão (a estadia mais recente) encerra a hospedagem: a Luna de 09/10 a 13/10 com a extensão de 13/10 a 15/10 encerrada hoje não está no domingo nem na segunda', async () => {
+  const cfg = { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Luna', '2026-10-13', DOM687, 'encerrada', 2, { x: { encerradaEm: DOM687, saida_combinada: '2026-10-15' } })] };
+  await com687(DOM687, '16:00', cfg, async () => { igual(L687(), [], 'domingo'); });
+  await com687(SEG687, '10:00', cfg, async () => { igual(L687(), [], 'segunda'); });
+});
+provaAsync('6.87 QA · QA687-C06 (AC2.4; defeito q25) — o só-hóspede que só a 2ª varredura traz (a reserva nova gravada depois) e que foi marcado «veio» sem check-in: frase da hospedagem e FORA do quadro vermelho, como o só-hóspede de sempre', async () => {
+  await com687(DOM687, '14:00', { fichas: [{ n: 'Luna', dias: [] }], cham: { Luna: 'veio' },
+    est: [E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Luna', '2026-10-20', '2026-10-22', 'ativa', 2)] }, async () => {
+    igual([LF687(), Q687()], [[{ n: 'Luna', f: 'chamada', h: true, hh: false, frase: FRASE687 }], []]);
+  });
+});
+// ---- ataques (falham no código do @dev)
+provaAsync('6.87 QA · QA687-A01 (AC2.5; REL-001) — a Luna de 09/10 a 13/10 com uma reserva nova (20/10 a 22/10) gravada depois foi embora no domingo; o Check-out (coAbrirFicha → CF_ESTADIAS) abre a RESERVA, e o check-out cai nela: a Luna não está mais na casa no domingo depois do check-out nem na segunda', async () => {
+  const cfg = { fichas: [{ n: 'Luna', dias: [] }, { n: 'Romeo', dias: FIXO687('seg') }],
+    est: [E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Luna', '2026-10-20', '2026-10-22', 'finalizada', 2, { co: DOM687 }),
+      E687('Romeo', '2026-10-09', '2026-10-13', 'ativa', 3), E687('Romeo', '2026-10-20', '2026-10-22', 'finalizada', 4, { co: DOM687 })] };
+  await com687(DOM687, '15:00', cfg, async () => {
+    igual(J630("Object.keys(CF_ESTADIAS).map(function(k){ return CF_ESTADIAS[k].e.entrada+':'+CF_ESTADIAS[k].e.status; })"), ['2026-10-20:finalizada', '2026-10-20:finalizada'], 'o check-out caiu na reserva');
+    igual(L687(), [], 'domingo, depois do check-out');
+  });
+  await com687(SEG687, '10:00', cfg, async () => { igual(L687(), [], 'segunda'); });
+});
+provaAsync('6.87 QA · QA687-A02 (AC2.5; REL-001) — a baixa dada na extensão (13/10 a 15/10, encerrada em 11/10) quando há uma reserva nova (20/10 a 22/10) gravada depois: a Luna não está na segunda', async () => {
+  await com687(SEG687, '10:00', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 1),
+    E687('Luna', '2026-10-13', DOM687, 'encerrada', 2, { x: { encerradaEm: DOM687, saida_combinada: '2026-10-15' } }), E687('Luna', '2026-10-20', '2026-10-22', 'ativa', 3)] }, async () => {
+    igual(L687(), []);
+  });
+});
+provaAsync('6.87 QA · QA687-A03 (AC2.6; REQ-001) — moradores como hoje: o Kako (FILHOt da casa, categoria morador), com uma estadia ativa (os moradores dormem aqui e não passam por check-in nem check-out), continua «morador da casa», fonte morador', async () => {
+  await com687(DOM687, '14:00', { fichas: [{ n: 'Kako', dias: [], ex: { categoria: 'morador' } }], est: [E687('Kako', '2026-10-09', '2026-10-13', 'ativa', 1)] }, async () => {
+    igual(J630("hojeLista().map(function(o){ return o.nome+':'+o.fonte+':'+hojeFrasePresenca(o); })"), ['Kako:morador:morador da casa']);
+    igual(LB687(), ['Kako:morador'], 'a base');
+  });
+});
+provaAsync('6.87 QA · QA687-A04 (AC3.2; REL-002) — a lista não muda com o dia do Plantão: a Luna com a estadia antiga sem data de entrada (dado antigo), que a base lista, continua na lista com o Plantão em segunda', async () => {
+  await com687(DOM687, '14:00', { plantao: SEG687, fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '', '', 'ativa', 1)] }, async () => {
+    igual(L687(), ['Luna:hospede']);
+  });
+});
+// ================================================================== QA 6.87 re-gate 2 (Quinn) — as provas do re-gate da 2ª rodada (3ª passada da 6.87)
+// «QA687R2 C…» = confirmação: passam no código da 2ª rodada e pegam os defeitos r13, r14 e r15 do QA (TEST-002).
+// «QA687R2 A…» = ataque: falhavam no código da 2ª rodada (o REL-003 do re-gate); passam com a 3ª passada.
+// O corpo é o de qa687r2/blocoqa687r2.js, letra por letra; o título ganha o prefixo «6.87 QA · QA687R2-…»: a P35 os conta à parte (5).
+provaAsync('6.87 QA · QA687R2-C07 (AC3.2; REL-002 da 2ª rodada; defeito r13) — a estadia antiga sem data de entrada cuja saída marcada já passou não segura a entrada: com o Plantão em ontem (sábado), a Luna (saída marcada no sábado) não está no domingo', async () => {
+  await com687(DOM687, '14:00', { plantao: SAB687, fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '', SAB687, 'ativa', 1)] }, async () => {
+    igual(TD687(), ['Luna(h)'], 'a turma (Plantão no sábado) a traz');
+    igual(L687(), []);
+  });
+});
+provaAsync('6.87 QA · QA687R2-C08 (AC3.2; defeito r14) — a estadia antiga sem data de entrada ENCERRADA não segura a entrada: o Bud, que só chega na segunda (Plantão na segunda), não está no domingo', async () => {
+  await com687(DOM687, '14:00', { plantao: SEG687, fichas: [{ n: 'Bud', dias: [] }], est: [E687('Bud', '', '', 'encerrada', 1, { rk: 'bud__bud velho', tutorEst: 'Bud Teste' }), E687('Bud', SEG687, '2026-10-14', 'ativa', 2)] }, async () => {
+    igual(L687(), []);
+  });
+});
+provaAsync('6.87 QA · QA687R2-C09 (AC3.2; defeito r15) — a estadia antiga sem data de entrada de OUTRO FILHOt (o Zeca, sem ficha) não segura a entrada do Bud, que só chega na segunda (Plantão na segunda): só o Zeca está', async () => {
+  await com687(DOM687, '14:00', { plantao: SEG687, fichas: [{ n: 'Bud', dias: [] }], est: [E687('Zeca', '', '', 'ativa', 1, { tutor: 'Zeca Teste' }), E687('Bud', SEG687, '2026-10-14', 'ativa', 2)] }, async () => {
+    igual(LT687(), ['Zeca|Zeca Teste:hospede']);
+  });
+});
+provaAsync('6.87 QA · QA687R2-A05 (AC2.5; REL-003 do re-gate) — a saída que caiu numa reserva que DEIXOU de ser a mais recente: a Luna (09/10 a 13/10) foi embora no domingo, o check-out caiu na reserva de 20/10 (a mais recente naquele momento) e na segunda gravaram outra reserva (27/10 a 29/10); na segunda ela não está na casa (o Romeo de dia fixo, igual)', async () => {
+  const cfg = { fichas: [{ n: 'Luna', dias: [] }, { n: 'Romeo', dias: FIXO687('seg') }],
+    est: [E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 1), E687('Luna', '2026-10-20', '2026-10-22', 'finalizada', 2, { co: DOM687 }), E687('Luna', '2026-10-27', '2026-10-29', 'ativa', 3),
+      E687('Romeo', '2026-10-09', '2026-10-13', 'ativa', 4), E687('Romeo', '2026-10-20', '2026-10-22', 'finalizada', 5, { co: DOM687 }), E687('Romeo', '2026-10-27', '2026-10-29', 'ativa', 6)] };
+  await com687(SEG687, '10:00', cfg, async () => {
+    igual(J630("Object.keys(CF_ESTADIAS).map(function(k){ return CF_ESTADIAS[k].e.entrada+':'+CF_ESTADIAS[k].e.status; })"), ['2026-10-27:ativa', '2026-10-27:ativa'], 'a mais recente agora é a reserva nova');
+    igual(L687(), []);
+  });
+});
+provaAsync('6.87 QA · QA687R2-A06 (AC2.5; REL-003 do re-gate) — a baixa dada na extensão NO DIA em que ela começa (13/10), com uma reserva (20/10) gravada depois: a Luna foi embora e não está na lista à tarde', async () => {
+  await com687('2026-10-13', '15:00', { fichas: [{ n: 'Luna', dias: [] }], est: [E687('Luna', '2026-10-09', '2026-10-13', 'ativa', 1),
+    E687('Luna', '2026-10-13', '2026-10-13', 'encerrada', 2, { x: { encerradaEm: '2026-10-13', saida_combinada: '2026-10-15' } }), E687('Luna', '2026-10-20', '2026-10-22', 'ativa', 3)] }, async () => {
+    igual(L687(), []);
+  });
+});
+}
 // ------------------------------------------------ o fim
 fila.then(() => {
   console.log('\n' + ok + ' provas passaram' + (falhas.length ? (', ' + falhas.length + ' falharam:') : '.'));
