@@ -1,6 +1,6 @@
 # Histórico de hospedagens
 
-Versão: `2026-10-13-05`. Consulta das quatro etapas, integrada aos componentes e painéis existentes. A publicação foi autorizada pela responsável pelo projeto.
+Versão: `2026-10-13-06`. Consulta das quatro etapas, integrada aos componentes e painéis existentes. A publicação foi autorizada pela responsável pelo projeto.
 
 ## Acesso da equipe
 
@@ -48,3 +48,7 @@ A atualização de sinalizador de versão, quando aplicável, deve acompanhar a 
 ## Verificação
 
 Os testes dedicados cobrem interface, autorização dos adaptadores, seleção da estadia, checklist, fotos, falhas e PDFs. O teste de navegação usa o app completo com dados locais e emulador, viewport de celular em Chromium; não representa validação em Safari físico nem teste de autenticação por senha. A comparação ampla usa snapshot datado e mantém falhas preexistentes documentadas nas evidências locais da entrega.
+
+## Correção de confiabilidade — 06
+
+O preparo da bolsa e o fechamento da conferência de entrada preservam a estadia e a autoria selecionadas no início do salvamento. Uma resposta atrasada não altera nem fecha uma ficha que foi aberta depois. As marcas enviadas da bolsa são uma cópia do momento da confirmação. Toques repetidos na mesma confirmação aguardam a gravação já em andamento; outra hospedagem pode ser atendida normalmente. Uma falha libera a tentativa seguinte. Regras de conferência, fotos, assinatura, pontuação e visual permanecem iguais.

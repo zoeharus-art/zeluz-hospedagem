@@ -2573,7 +2573,7 @@
   .mcr-bt-plantao{display:block;margin-top:8px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:10px;padding:8px 14px;min-height:44px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
   .mcr-bt-entrada{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue);font-weight:800;min-height:44px}
 </style>
-<link rel="stylesheet" href="historico-checkins.css?v=2026-10-13-05">
+<link rel="stylesheet" href="historico-checkins.css?v=2026-10-13-06">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -5206,13 +5206,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-13-05"></script>
+<script src="resposta-tutor.js?v=2026-10-13-06"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-13-05"></script>
+<script src="painel-logica.js?v=2026-10-13-06"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5224,10 +5224,10 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-13-05"></script>
-<script src="autoria-logica.js?v=2026-10-13-05"></script>
-<script src="historico-checkins.js?v=2026-10-13-05"></script>
-<script src="historico-checkins-pdf.js?v=2026-10-13-05"></script>
+<script src="financeiro-logica.js?v=2026-10-13-06"></script>
+<script src="autoria-logica.js?v=2026-10-13-06"></script>
+<script src="historico-checkins.js?v=2026-10-13-06"></script>
+<script src="historico-checkins-pdf.js?v=2026-10-13-06"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -27222,7 +27222,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-13-05';
+  const APP_VERSAO='2026-10-13-06';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -81114,6 +81114,9 @@
   }
   function cfFecharConferencia(){
     var st=document.getElementById('cf-status'); if(!cfEstadiaId) return;
+    var estAntes=cfEstadia, idAntes=cfEstadiaId, confAntes=cfConf, nomeAntes=(cfHosp&&cfHosp.nome)||(cfEstadia&&cfEstadia.nome)||'';
+    var emCurso=cfFecharConferencia._emCurso||(cfFecharConferencia._emCurso=Object.create(null));
+    if(emCurso[idAntes]) return emCurso[idAntes];
     var pend=cfPendencias();
     if(pend.length){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Ainda falta: '+pend[0]; } renderCfGate(); return; }
     var assina=(document.getElementById('cfAssina').value||'').trim();
@@ -81121,11 +81124,15 @@
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando…'; } return; }
     if(st){ st.style.color='var(--muted)'; st.textContent='Fechando conferência…'; }
     var dados={concluida:true, concluida_por:assina, concluida_ts:Date.now()};
-    DB.ref('auaulandia/estadias/'+cfEstadiaId+'/conferencia').update(dados).then(function(){
-      cfConf=Object.assign({},cfConf,dados);
+    var pedido=DB.ref('auaulandia/estadias/'+idAntes+'/conferencia').update(dados).then(function(){
+      if(typeof audit==='function') audit('conferencia-fechada',idAntes,{pet:nomeAntes,quem:assina});
+      if(cfEstadia!==estAntes||cfEstadiaId!==idAntes) return;
+      cfConf=Object.assign({},confAntes,dados);
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Conferência fechada por '+assina+'.'; }
-      if(typeof audit==='function') audit('conferencia-fechada',cfEstadiaId,{pet:(cfHosp&&cfHosp.nome)||'',quem:assina});
-    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
+    }).catch(function(e){ if(st&&cfEstadia===estAntes&&cfEstadiaId===idAntes){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+e.message; } });
+    emCurso[idAntes]=pedido;
+    pedido.then(function(){ if(emCurso[idAntes]===pedido) delete emCurso[idAntes]; },function(){ if(emCurso[idAntes]===pedido) delete emCurso[idAntes]; });
+    return pedido;
   }
 
   // =====================================================================================
@@ -83202,23 +83209,30 @@
     }
   }
   function coFecharEtapa1(){
-    if(!coEstadiaId||!DB) return;
-    var st=document.getElementById('co-status');
-    var itens=coItensLista(), falta=itens.filter(function(it){ return !coConf[it.k]; });
+    if(!coEstadiaId||!coEstadia||!DB) return;
+    var estAntes=coEstadia, idAntes=coEstadiaId, nomeAntes=coEstadia.nome||(coHosp&&coHosp.nome)||'';
+    var emCurso=coFecharEtapa1._emCurso||(coFecharEtapa1._emCurso=Object.create(null));
+    if(emCurso[idAntes]) return emCurso[idAntes];
+    var confAntes=Object.assign({},coConf||{}), st=document.getElementById('co-status');
+    var itens=coItensLista(), falta=itens.filter(function(it){ return !confAntes[it.k]; });
     if(falta.length){
       zAlertao('AINDA FALTA JUNTAR', falta.map(function(f){ return f.label; }),
         {rodape:'Marque tudo que você já separou. Se alguma coisa não vai voltar (ração consumida, remédio acabado), marque assim mesmo e escreva na observação.', botao:'Voltar e conferir'});
       return;
     }
-    var reg={conferido:coConf, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), obs:(document.getElementById('coObs').value||'').trim()};
+    var reg={conferido:confAntes, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), obs:(document.getElementById('coObs').value||'').trim()};
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando…'; }
-    DB.ref('auaulandia/estadias/'+coEstadiaId+'/checkout_etapa1').set(reg).then(function(){
-      coEstadia.checkout_etapa1=reg;
-      if(typeof audit==='function') audit('checkout','etapa 1: bolsa montada',{pet:(coHosp&&coHosp.nome)||''});
+    var pedido=DB.ref('auaulandia/estadias/'+idAntes+'/checkout_etapa1').set(reg).then(function(){
+      estAntes.checkout_etapa1=reg;
+      if(typeof audit==='function') audit('checkout','etapa 1: bolsa montada',{pet:nomeAntes,quem:reg.quem});
+      if(coEstadia!==estAntes||coEstadiaId!==idAntes) return;
       zAlertao('✅ PRONTO PARA A RECEPÇÃO',
-        [(coEstadia.nome||'O FILHOt')+' já pode descer com a bolsa.','A recepção vai conferir tudo com o tutor e colher a assinatura.'],
-        {ok:true, botao:'Fechar', aoFechar:function(){ coRenderEtapa(); coVoltar(); }});
-    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+((e&&e.message)||e); } });
+        [(nomeAntes||'O FILHOt')+' já pode descer com a bolsa.','A recepção vai conferir tudo com o tutor e colher a assinatura.'],
+        {ok:true, botao:'Fechar', aoFechar:function(){ if(coEstadia===estAntes&&coEstadiaId===idAntes){ coRenderEtapa(); coVoltar(); } }});
+    }).catch(function(e){ if(st&&coEstadia===estAntes&&coEstadiaId===idAntes){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Erro: '+((e&&e.message)||e); } });
+    emCurso[idAntes]=pedido;
+    pedido.then(function(){ if(emCurso[idAntes]===pedido) delete emCurso[idAntes]; },function(){ if(emCurso[idAntes]===pedido) delete emCurso[idAntes]; });
+    return pedido;
   }
   function coItensLista(){
     var out=[];
