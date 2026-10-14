@@ -2573,7 +2573,7 @@
   .mcr-bt-plantao{display:block;margin-top:8px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:10px;padding:8px 14px;min-height:44px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
   .mcr-bt-entrada{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue);font-weight:800;min-height:44px}
 </style>
-<link rel="stylesheet" href="historico-checkins.css?v=2026-10-13-07">
+<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-01">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -2651,7 +2651,7 @@
          REGRA: ninguém ganhou nem perdeu acesso — cada <a> manteve exatamente as
          classes so-*/op-only que já tinha. Só mudou grupo, ordem, título e dica. -->
     <a class="active op-only" data-v="inicio" title="Visão geral do dia"><span data-icon="home"></span><span>Início</span></a>
-    <a data-v="mesa" class="so-mesa" title="Tudo o que espera por você hoje — toque num quadro para ir direto ao item."><span data-icon="list-check"></span><span>O que fazer hoje</span></a>
+    <a data-v="mesa" class="so-mesa" title="Visão das ações por setor — preserva a lista existente por papel."><span data-icon="list-check"></span><span>Visão por setor</span></a>
 
     <!-- DASHBOARDS (08/set/2026, noite) — Adriana: "painel mudar para Dashboards" e
          "colocar nomes: Adriana / Márcia / Amanda". A categoria nasceu de manhã como
@@ -2666,13 +2666,13 @@
          escondidos e quem mostra é o aplicarPermMenu() (tabela PERM); o Painel do Dia
          segue so-master, como era na Operação. -->
     <div class="acc" data-acc="paineis">
-      <a class="grp nav-parent" data-acc-toggle="paineis"><span data-icon="chart"></span><span>Dashboards</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <a class="grp nav-parent" data-acc-toggle="paineis"><span data-icon="chart"></span><span>Meu dia e Gestão</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
-        <a data-v="painelmeu" style="display:none" title="A sua fatia do dia: o seu horário, o seu plano, o que ficou aberto e os seus pontos."><span data-icon="sun"></span><span>Meu Dashboard</span></a>
-        <a data-v="consultoras" style="display:none" title="A sua mesa do dia: o Seu dia e os seis quadros que precisam de você."><span data-icon="sun"></span><span>Dashboard das Consultoras</span></a>
-        <a data-v="painel-amanda" style="display:none" title="O seu dia e as duas listas: o que está esperando você e o que você já resolveu hoje."><span data-icon="list-check"></span><span>Dashboard da Amanda</span></a>
-        <a data-v="paineloperacao" style="display:none" title="A casa de hoje num lugar só: quem veio, quem faltou, o tempo do time, as noites que vêm aí e o acerto."><span data-icon="chart"></span><span>Dashboard da Márcia</span></a>
-        <a data-v="painel-diretoria" style="display:none" title="A casa inteira e o dinheiro do mês — a visão de quem responde por tudo."><span data-icon="chart"></span><span>Dashboard da Adriana</span></a>
+        <a data-v="painelmeu" style="display:none" title="A sua rota: horário, plano e o que ficou aberto."><span data-icon="sun"></span><span>Meu dia</span></a>
+        <a data-v="consultoras" style="display:none" title="Chegadas, saídas e contatos com as famílias."><span data-icon="sun"></span><span>Recepção</span></a>
+        <a data-v="painel-amanda" style="display:none" title="Acompanhe as ações pendentes e concluídas da equipe."><span data-icon="list-check"></span><span>Supervisão</span></a>
+        <a data-v="paineloperacao" style="display:none" title="Faltas, ritmo do time, Hotel e operação do dia."><span data-icon="chart"></span><span>Gestão da operação</span></a>
+        <a data-v="painel-diretoria" style="display:none" title="A casa, o recebido no mês e os valores a receber."><span data-icon="chart"></span><span>Diretoria</span></a>
         <!-- O "Painel do Dia" saiu daqui em 08/set/2026 (noite). Adriana: "o Painel do Dia é
              um dashboard e precisa ir para quem precisa ver." Cada bloco dele foi para o
              dashboard da PESSOA que age sobre aquilo — o mapa está em docs/INDICE-MENU-APP.md.
@@ -2701,10 +2701,10 @@
          Daycare". Só o NOME VISÍVEL muda: o data-acc="servicos" (a chave do aberto/fechado
          guardada em cada aparelho), os data-v e as classes so-* continuam idênticos. -->
     <div class="acc" data-acc="servicos">
-      <a class="grp nav-parent" data-acc-toggle="servicos"><span data-icon="paw"></span><span>Ecossistema Daycare</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <a class="grp nav-parent" data-acc-toggle="servicos"><span data-icon="paw"></span><span>Day Care e Hotel</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
         <div class="acc" data-acc="s-auaulandia">
-          <a class="grp grp-sub nav-parent" data-acc-toggle="s-auaulandia"><span>AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
+          <a class="grp grp-sub nav-parent" data-acc-toggle="s-auaulandia"><span>Hotel — AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
           <a data-v="conferencia" class="so-conferencia" title="O monitor confere corpo e pertences de quem chegou (2º passo)."><span data-icon="clipboard"></span><span>Conferência do check-in</span></a>
           <a data-v="hospedes" class="so-hosp" title="Quem está na casa, medicação e alimentação."><span data-icon="bed"></span><span>Hóspedes de hoje</span></a>
@@ -2741,10 +2741,10 @@
          rótulo, porque sub-cabeçalho dentro de sub-cabeçalho não existe.
          Nenhum item mudou de classe so-*/op-only: mudou grupo e ordem, nunca acesso. -->
     <div class="acc" data-acc="central">
-      <a class="grp nav-parent" data-acc-toggle="central"><span data-icon="bell"></span><span>Central Zêluz</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <a class="grp nav-parent" data-acc-toggle="central"><span data-icon="bell"></span><span>Recepção</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
         <div class="acc" data-acc="c-peludinhos">
-          <a class="grp grp-sub nav-parent" data-acc-toggle="c-peludinhos"><span>Peludinhos</span><span class="acc-caret" aria-hidden="true"></span></a>
+          <a class="grp grp-sub nav-parent" data-acc-toggle="c-peludinhos"><span>Peludinhos e famílias</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
           <!-- 15/set/2026 — Adriana: "Peludinhos apenas cadastro e busca, caso precise
                olhar algo rápido dentro da ficha." Prevenção, Peso e Pesquisa com a Família
@@ -2765,7 +2765,7 @@
              lado — o que o monitor faz com o FILHOt na casa — continua em Serviços, e
              nenhuma tela aparece nos dois lugares: os nomes se repetem, os itens não. -->
         <div class="acc" data-acc="c-auaulandia">
-          <a class="grp grp-sub nav-parent" data-acc-toggle="c-auaulandia"><span>AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
+          <a class="grp grp-sub nav-parent" data-acc-toggle="c-auaulandia"><span>Hotel — AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
           <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="login"></span><span>Check-in</span></a>
           <a data-v="historicocheckins" style="display:none" title="Consulte a hospedagem e os responsáveis pela entrada e pela saída."><span data-icon="search"></span><span>Histórico de hospedagens</span></a>
@@ -2833,7 +2833,7 @@
           <!-- Renomeada em 08/set/2026 (noite): "Conversa com o Tutor" → "Pesquisa com a
                Família Multiespécie". É pesquisa, não conversa — e quem responde é a família
                inteira, não só quem assina. O data-v e a classe so-gestao não mudaram. -->
-          <a data-v="alergia" class="so-gestao" title="A pesquisa com a família: enviar, colar a resposta, e ela vira ficha sozinha."><span data-icon="drop"></span><span>Pesquisa com a Família Multiespécie</span></a>
+          <a data-v="alergia" class="so-gestao" title="Conheça a família: envie, registre a resposta e atualize a ficha."><span data-icon="drop"></span><span>Conhecer a família</span></a>
           <a data-v="vacinas" class="so-gestao" title="Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer."><span data-icon="shield"></span><span>Prevenção</span></a>
           <!-- VENCE AMANHÃ (Adriana, 21/set/2026) — "tudo que for vencer no dia, eu ter um
                calendário do dia para o setor de consultoria... isso tem que mandar para o peludo
@@ -2897,7 +2897,7 @@
          ORDEM ALFABÉTICA, como ela pediu em 08/set: Configurações · Escala e plano do dia ·
          Financeiro do plantão · Time. -->
     <div class="acc so-gestao" data-acc="operacao">
-      <a class="grp nav-parent" data-acc-toggle="operacao"><span data-icon="settings"></span><span>Configurações</span><span class="acc-caret" aria-hidden="true"></span></a>
+      <a class="grp nav-parent" data-acc-toggle="operacao"><span data-icon="settings"></span><span>Cadastros e ajustes</span><span class="acc-caret" aria-hidden="true"></span></a>
       <div class="acc-panel">
         <a data-v="config" class="so-master" title="Valores da hospedagem, Telegram, ponte da planilha, horários esperados e os logins."><span data-icon="settings"></span><span>Configurações</span></a>
         <!-- ESCALA E PLANO DO DIA (Fase 2.1) — o que alimenta o "Meu dia" de cada monitor.
@@ -3029,71 +3029,10 @@
        Agora tem hierarquia: 1) o que precisa de você AGORA · 2) a casa hoje ·
        3) a carteira. A cor só aparece onde ela informa alguma coisa. -->
   <section class="view active" id="v-inicio">
-    <div class="dash">
-
-      <section class="dash-sec" id="cardPendencias">
-        <div class="dash-h">
-          <div>
-            <div class="dash-eyebrow">Agora</div>
-            <h2 class="dash-t">O que precisa de você</h2>
-          </div>
-          <span class="dash-meta" id="pendAtualizado"></span>
-        </div>
-        <div id="pendGrid"></div>
-        <!-- Aniversariantes: aparece todo dia, inclusive fim de semana (Adriana, 20/ago/2026). -->
-        <div id="adaptPendCard"></div>
-        <div id="anivCard"></div>
-      </section>
-
-      <section class="dash-sec">
-        <div class="dash-h">
-          <div>
-            <div class="dash-eyebrow">Hoje</div>
-            <h2 class="dash-t">A casa</h2>
-          </div>
-          <span class="dash-meta">a turma do dia e os hóspedes de hoje — ninguém contado duas vezes</span>
-        </div>
-        <div class="dash-strip">
-          <div class="ds-item"><img class="ds-st" src="assets/stickers/pata.png" alt=""><div class="ds-n" id="kpiTotal">—</div><div class="ds-l">Peludinhos</div></div>
-          <div class="ds-item"><img class="ds-st" src="assets/stickers/vasilha.png" alt=""><div class="ds-n coral" id="kpiDay">—</div><div class="ds-l">Turma do dia</div></div>
-          <div class="ds-item"><img class="ds-st" src="assets/stickers/osso.png" alt=""><div class="ds-n aqua" id="kpiAua">—</div><div class="ds-l">Hóspedes de hoje</div></div>
-          <div class="ds-item"><img class="ds-st" src="assets/stickers/coracao.png" alt=""><div class="ds-n gold" id="kpiAdapt">—</div><div class="ds-l">Em adaptação</div></div>
-        </div>
-      </section>
-
-      <!-- Carteira: quem paga o quê (Adriana, 04/ago/2026) — a cobrar, em dia, sem plano,
-           e a quebra por tipo: mensal, trimestral, semestral, avulso, hospedagem, moradores. -->
-      <section class="dash-sec so-carteira" id="cardCarteira">
-        <div class="dash-h">
-          <div>
-            <div class="dash-eyebrow">Comercial</div>
-            <h2 class="dash-t">Carteira de planos</h2>
-          </div>
-          <span class="dash-meta" id="cartTotal"></span>
-        </div>
-        <div id="cartCobranca"></div>
-        <div id="cartTipos"></div>
-      </section>
-
-      <!-- Entrou / Saiu no mês (Adriana, 11/ago/2026): "quem entrou no mês e quem saiu —
-           importantíssimo para aparecer no dashboard — e quem suspendeu conta como saiu". -->
-      <section class="dash-sec so-carteira" id="cardMovimento">
-        <div class="dash-h">
-          <div>
-            <div class="dash-eyebrow">Comercial</div>
-            <h2 class="dash-t">Entrou e saiu no mês</h2>
-          </div>
-          <span class="dash-meta" id="movMesLabel"></span>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-          <button class="btn" type="button" style="padding:6px 12px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="movMes(-1)">&lsaquo; mês anterior</button>
-          <button class="btn" type="button" style="padding:6px 12px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="movMes(1)">próximo mês &rsaquo;</button>
-          <button class="btn" type="button" style="padding:6px 12px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="movMes(0)">hoje</button>
-        </div>
-        <div id="movBody"></div>
-      </section>
-
-    </div>
+    <div class="dash"><section class="dash-sec" id="inicioPorta">
+      <div class="dash-h"><div style="display:flex;align-items:center;gap:9px"><img src="assets/stickers/pata.png" alt="" width="32" height="32"><div><div class="dash-eyebrow">Seu trabalho</div><h2 class="dash-t">Começar o dia</h2></div></div></div>
+      <div id="inicioPortaConteudo"><div class="dash-zen"><span class="zt">Preparando a sua área de trabalho…</span></div></div>
+    </section></div>
   </section>
 
   <!-- ===== PELUDINHOS (cadastro mestre) ===== -->
@@ -3526,10 +3465,10 @@
            ficha ou excluir, com motivo e senha); o texto e o campo do motivo mudam em hospZonaRiscoRotulo(). -->
       <div class="card so-equipe" id="hf-zonarisco" style="display:none;border:1.5px solid var(--crm-critico);background:rgba(197,49,37,.05);margin-top:14px">
         <h2 style="font-size:16px;color:var(--crm-critico);margin-bottom:6px">Zona de risco</h2>
-        <div class="hint" id="hfZrHint" style="margin-bottom:10px">Tira só o lançamento de hoje. O cadastro do FILHOt continua salvo: se ele voltar outro dia, é só adicionar de novo. Escreva o motivo (pelo menos 4 palavras) e toque duas vezes no botão.</div>
+        <div class="hint" id="hfZrHint" style="margin-bottom:10px">Tirar do Plantão hoje não cancela uma hospedagem já criada. Aqui sai somente o lançamento deste dia; o cadastro continua salvo. Escreva o motivo e confirme no segundo toque.</div>
         <div id="hfZrMotivoBox" style="margin-bottom:10px"><label for="hfZrMotivo" style="display:block;font-size:13.5px;font-weight:800;color:var(--crm-critico)">Por que este lançamento sai? (pelo menos 4 palavras)</label>
           <input id="hfZrMotivo" class="cad-in" type="text" autocomplete="off" placeholder="Ex.: lancei o FILHOt no dia errado" style="margin-top:5px"></div>
-        <button class="btn" id="hfZrBtn" style="background:var(--crm-critico);color:#fff;font-weight:800;white-space:normal" onclick="cancelarPernoiteFicha(this)">🗑️ Deletar este peludinho do Hotel (hoje)</button>
+        <button class="btn" id="hfZrBtn" style="background:var(--crm-critico);color:#fff;font-weight:800;white-space:normal" onclick="cancelarPernoiteFicha(this)">Tirar do Plantão hoje</button>
       </div>
 
     </div>
@@ -4128,7 +4067,7 @@
       <div class="card" id="coCardFinal">
         <div id="coPendHint" class="hint" style="margin-bottom:10px"></div>
         <div class="ci-actions">
-          <button class="btn btn-primary" onclick="coFinalizar()">✅ Finalizar check-out</button>
+          <button class="btn btn-primary" onclick="coFinalizar()">✅ Confirmar entrega e finalizar</button>
           <button class="btn btn-gold" onclick="coGerarPDF()">🖨️ Gerar PDF</button>
           <button class="btn" style="background:#25D366;color:#08351b" onclick="coEnviarWhats()">📲 Enviar ao tutor</button>
         </div>
@@ -5206,13 +5145,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-13-07"></script>
+<script src="resposta-tutor.js?v=2026-10-14-01"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-13-07"></script>
+<script src="painel-logica.js?v=2026-10-14-01"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5224,10 +5163,12 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-13-07"></script>
-<script src="autoria-logica.js?v=2026-10-13-07"></script>
-<script src="historico-checkins.js?v=2026-10-13-07"></script>
-<script src="historico-checkins-pdf.js?v=2026-10-13-07"></script>
+<script src="financeiro-logica.js?v=2026-10-14-01"></script>
+<script src="autoria-logica.js?v=2026-10-14-01"></script>
+<script src="navegacao-inicio.js?v=2026-10-14-01"></script>
+<script src="presenca-logica.js?v=2026-10-14-01"></script>
+<script src="historico-checkins.js?v=2026-10-14-01"></script>
+<script src="historico-checkins-pdf.js?v=2026-10-14-01"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -5617,7 +5558,7 @@
   // docs/INDICE-MENU-APP.md): o título é curto e a dica explica em uma frase o que a tela
   // faz — a mesma frase que aparece como title= no menu e no cabeçalho da tela. Fonte única:
   // se mudar aqui, muda no menu, no cabeçalho e no aviso de pendência (navPend).
-  const titles={inicio:['Início','Visão geral do dia'],ficha:['Cadastro de Peludinhos','Um cadastro só, para Day Care e AuAulândia — tudo começa aqui.'],inativos:['Inativos','Peludinhos que saíram do Day Care'],
+  const titles={inicio:['Início','Escolha a área do seu dia.'],ficha:['Cadastro de Peludinhos','Um cadastro só, para Day Care e AuAulândia — tudo começa aqui.'],inativos:['Inativos','Peludinhos que saíram do Day Care'],
     renovacao:['Renovação de planos','Quem está no fim do plano.'],adaptacao:['Adaptação · 45 dias','Como está se adaptando'],
     reposicao:['Reposições','Créditos de dias por falta avisada.'],
     daycare:['Day Care','Chamada, almoço, atividades, EA.'],hospedagem:['Plantão da noite','O relatório de cada hóspede, turno a turno.'],
@@ -5634,7 +5575,7 @@
     checkin:['Check-in','O tutor chega: entrada, alimentação, medicação, assinatura (1º passo).'],
     conferencia:['Conferência do check-in','O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz).'],
     orcamento:['Orçamento de hospedagem','Monte e envie o orçamento ao tutor.'],
-    alergia:['Pesquisa com a Família Multiespécie','A pesquisa: enviar, colar a resposta — e ela vira ficha sozinha.'],
+    alergia:['Conhecer a família','Conheça a família: envie, registre a resposta e atualize a ficha.'],
     peso:['Peso','Pesar qualquer FILHOt: recepção, veterinária e gestão.'],
     eahist:['Enriquecimento Ambiental','O que foi feito e quem não participou.'],
     relatorios:['Relatórios','Resumo do dia, aniversariantes, exportações.'],
@@ -5649,17 +5590,40 @@
     recepcao:['Pendências com o tutor','Ração acabando, remédio faltando, algo que ficou.'],
     agenda:['Agenda','Frequência e reservas'],pessoas:['Time','Pessoas, senhas e quem acessa o quê.'],
     painel:['Detalhe do tempo','O que sobrou do Painel do Dia: o tempo por dia e por pessoa, e o plantão.'],
-    mesa:['O que fazer hoje','A sua mesa do dia.'],
+    mesa:['Visão por setor','Ações já agrupadas por setor.'],
     // Dica curta de propósito: no celular ela divide a barra com o seletor de data, e uma
     // frase longa vira uma coluna estreita e alta em cima da tela.
-    painelmeu:['Meu Dashboard','A sua rota de hoje.'],
-    'painel-diretoria':['Dashboard da Adriana','A casa inteira e o dinheiro do mês.'],
-    consultoras:['Dashboard das Consultoras','A sua mesa do dia na Central.'],
-    'painel-amanda':['Dashboard da Amanda','O seu dia, o que espera por você e o que você resolveu hoje.'],
+    painelmeu:['Meu dia','A sua rota de hoje.'],
+    'painel-diretoria':['Diretoria','A casa, o recebido no mês e os valores a receber.'],
+    consultoras:['Recepção','Chegadas, saídas e contatos com as famílias.'],
+    'painel-amanda':['Supervisão','Ações pendentes e concluídas da equipe.'],
     'lancar-pagamento':['Lançar pagamento','O recebimento do plano vira registro — é o que faz o Financeiro sair de R$ 0,00.'],
-    paineloperacao:['Dashboard da Márcia','A casa de hoje: quem veio, o time, as noites e o acerto.'],
+    paineloperacao:['Gestão da operação','Faltas, ritmo do time, Hotel e operação do dia.'],
     planodia:['Escala e plano do dia','A escala de cada um e qual plano vale hoje.'],
     abertura:['Abertura do dia','Monitor 1: como a casa abre.'],sair:['Sair','Encerra a sessão neste aparelho.']};
+
+
+  function inicioPortaEscolher(){
+    var api=(typeof ZeluzNavegacaoInicio!=='undefined')?ZeluzNavegacaoInicio:null, usuario=null;
+    try{ usuario=(typeof usuarioAtual==='function')?usuarioAtual():null; }catch(e){}
+    if(!usuario||!usuario.role||!api||typeof api.escolherPorta!=='function'||typeof podePapel!=='function') return null;
+    return api.escolherPorta(function(capacidade){ return podePapel(capacidade); });
+  }
+  function inicioPortaIr(rota){
+    var porta=inicioPortaEscolher(), capacidade='';
+    if(!porta) return;
+    if(porta.rota===rota) capacidade=porta.capacidade;
+    else (porta.atalhos||[]).some(function(a){ if(a.rota===rota){ capacidade=a.capacidade; return true; } return false; });
+    if(!capacidade||!podePapel(capacidade)) return;
+    irParaView(rota);
+  }
+  function inicioPortaRender(){
+    var el=document.getElementById('inicioPortaConteudo'); if(!el) return;
+    var porta=inicioPortaEscolher();
+    if(!porta){ el.innerHTML='<div class="dash-zen"><span class="zt">Use o menu para abrir sua área autorizada.</span><span class="zs">As opções disponíveis respeitam o seu acesso.</span></div>'; return; }
+    var atalhos=(porta.atalhos||[]).map(function(a){ return '<button type="button" class="btn" style="padding:9px 12px" data-rota="'+escAttr(a.rota)+'" onclick="inicioPortaIr(this.dataset.rota)">'+esc(a.rotulo)+'</button>'; }).join('');
+    el.innerHTML='<div class="card" style="margin:0"><h3 style="margin:0;color:var(--z-blue)">'+esc(porta.titulo)+'</h3><p class="hint" style="margin:6px 0 12px">'+esc(porta.resumo)+'</p><button type="button" class="btn btn-primary" style="min-height:44px" data-rota="'+escAttr(porta.rota)+'" onclick="inicioPortaIr(this.dataset.rota)">'+esc(porta.acao)+'</button>'+(atalhos?'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'+atalhos+'</div>':'')+'</div>';
+  }
 
   document.getElementById('nav').addEventListener('click',e=>{
     const a=e.target.closest('a'); if(!a) return;
@@ -5709,6 +5673,7 @@
   function aoAbrirView(v){
     if(v==='hospedagem'){ if(typeof fecharPlantao==='function') fecharPlantao(); }
     if(v==='gestdia'){ GD_TENT=0; GD_MED_TENT=0; if(typeof gdCarregar==='function') gdCarregar(); }
+    if(v==='inicio'){ try{ inicioPortaRender(); }catch(e){} }
     if(v==='inicio'||v==='hospedagem'){ try{ if(typeof ckLimparFotosEnviadas==='function') setTimeout(ckLimparFotosEnviadas, 4000); }catch(e){} /* silencioso de propósito: faxina é conveniência — falhar não pode derrubar a tela */ }
     if(v==='cuidadovet'){ if(typeof abrirCuidadoVet==='function') abrirCuidadoVet(); }
     if(v==='checkin'){ if(typeof abrirCheckin==='function') abrirCheckin(); }
@@ -5911,12 +5876,14 @@
     'hoje-na-casa':             ['consultora','supervisor','gestao','diretoria'],
     // ===== 6.53 — corrigir a hospedagem (o caso da Frida, 08/out/2026) ================
     // "Precisa de justificar e assinar quem fez e porque" (Adriana, 08/10). Quem ABRE o
-    // cartaz "Corrigir esta hospedagem" é quem faz o check-in: a recepção (consultoras),
-    // a Supervisão, a Gestão e a Diretoria. Quem ASSINA a troca de ficha e a exclusão, com a
-    // própria senha, é a Supervisão, a Gestão e a Diretoria (FR1): a Consultora abre e chama
-    // uma delas, que digita a senha ali mesmo. O app grava o nome, nunca a senha (FR2).
-    'corrigir-hospedagem':          ['consultora','supervisor','gestao','diretoria'],
-    'assinar-correcao-hospedagem':  ['supervisor','gestao','diretoria'],
+    // A correção comum pode ser aberta pela recepção, Supervisão, Gestão e Diretoria.
+    // Troca e reabertura seguem assinadas somente por Supervisão, Gestão ou Diretoria.
+    // A anulação de lançamento errado tem capacidades próprias: consultora assina só essa ação,
+    // com senha individual; ela não recebe a assinatura genérica de correção.
+    'corrigir-hospedagem':                    ['consultora','supervisor','gestao','diretoria'],
+    'assinar-correcao-hospedagem':            ['supervisor','gestao','diretoria'],
+    'anular-hospedagem-engano':               ['consultora','supervisor','gestao','diretoria'],
+    'assinar-anulacao-hospedagem-engano':     ['consultora','supervisor','gestao','diretoria'],
     // ===== Story 6.55 — desfazer o «Finalizar» de uma conversa com o tutor ============
     // No mesmo dia, quem finalizou desfaz (regra na própria função). Depois do dia, só a
     // Supervisão, a Gestão e a Diretoria — sempre com o motivo, que fica no histórico.
@@ -6370,6 +6337,7 @@
   // Substituiu a lista de peludinhos de exemplo que ficava no Início (04/ago/2026).
   // Usa só dado que o app já tem em memória — não faz consulta nova ao banco.
   function renderPendencias(){
+    try{ inicioPortaRender(); }catch(e){}
     const el=document.getElementById('pendGrid'); if(!el) return;
     const hoje=(function(){ const d=new Date(),p=x=>String(x).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); })();
     // A MESMA conta do menu (contarPendencias). Antes este painel somava por conta própria,
@@ -17146,7 +17114,8 @@
     });
   }
   function aplicarFaltaAutomatica(){
-    if(!DB) return Promise.resolve();
+    // Ausência sem confirmação humana nunca grava falta nem efeitos derivados.
+    return Promise.resolve();
     var r=(document.body&&document.body.dataset&&document.body.dataset.role)||'';
     if(!r || r==='tutor') return Promise.resolve();      // ninguém logado, ou tutor: não fecha o dia da casa
     if(typeof appDiaVelho==='function' && appDiaVelho()) return Promise.resolve();  // aberto desde ontem: a turma daqui é a de ontem (01/out/2026)
@@ -17266,7 +17235,8 @@
   setInterval(function(){ try{ gravarTurmaDoDia(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }, 30000);
   // Quem ainda não chegou, na visão de quem está na porta.
   function ckAindaNaoChegou(){
-    const agora=new Date(), limite=(agora.getHours()>=CK_HORA_FALTA);
+    // O corte muda a apresentação para “a conferir”; nunca transforma em falta.
+    const limite=false;
     const lista=turmaDoDia().filter(function(o){ return !ckFeito(o); });
     return {lista:lista, virouFalta:limite};
   }
@@ -27222,7 +27192,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-13-07';
+  const APP_VERSAO='2026-10-14-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -30070,8 +30040,8 @@
       return;
     }
     var _rotulo=(_acao==='manual')
-      ? ('Confirmar — deletar '+_nome+' da AuAulândia de hoje')
-      : ('Confirmar — tirar '+_nome+' do Hotel só de hoje');
+      ? ('Confirmar — retirar o lançamento manual de '+_nome+' (somente hoje)')
+      : ('Confirmar — tirar '+_nome+' do Plantão somente hoje; não cancela hospedagem');
     if(btn && btn.dataset.armed!=='1'){
       btn.dataset.armed='1';
       if(!btn.dataset.label) btn.dataset.label=btn.textContent;
@@ -45210,7 +45180,9 @@
     const cur=dcChamada[k]; const next=(cur===val)?'':val;
     if(next) dcChamada[k]=next; else delete dcChamada[k];
     if(DB){
-      DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set(next||null).catch(function(e){ _logFalhaGrav('presença na chamada '+k, e); });
+      var dia=dcDataKey(),patch={};patch['daycare/chamada/'+dia+'/'+k]=next||null;var meta=null;
+      if(next){meta={estado:next,origem:'manual',ts:Date.now()};try{var operador=(typeof quemSou==='function'?String(quemSou()||'').trim():'');if(operador&&operador!=='-')meta.quem=operador;}catch(e){}try{var hora=(typeof horaAgora==='function'?String(horaAgora()||'').trim():'');if(hora)meta.hora=hora;}catch(e){}}
+      patch['daycare/chamada-meta/'+dia+'/'+k]=meta;DB.ref().update(patch).catch(function(e){ _logFalhaGrav('presença na chamada '+k, e); });
     } else {
       // A chamada é a resposta de "quem está no prédio" — recepção, Gestão e o almoço leem
       // dela. Marcada só neste aparelho, ela some para todo mundo e o FILHOt presente
@@ -46645,7 +46617,7 @@
             ? '<div class="dc-faltas"><strong>FALTARAM HOJE ('+f.lista.length+'):</strong> '+nomes
               +'<div style="font-weight:600;margin-top:4px">Passou das '+CK_HORA_FALTA+'h e nao fizeram o check-in &mdash; entraram como falta. Se algum chegou e ninguem registrou, faca o check-in dele que a falta cai sozinha.</div></div>'
             : '<div class="dc-meia"><strong>AINDA NAO CHEGARAM ('+f.lista.length+'):</strong> '+nomes
-              +'<div style="font-weight:600;margin-top:4px">Fica em aberto ate as '+CK_HORA_FALTA+'h. Depois disso, quem nao passar pelo check-in entra como falta.</div></div>';
+              +'<div style="font-weight:600;margin-top:4px">Aguardando a confirmação humana na Chamada. Depois das '+CK_HORA_FALTA+'h, a situação fica a conferir — não vira falta sozinha.</div></div>';
         })()
       +ckFaltaramHTML(faltaram, lista)
       +avisoPlanilha();
@@ -77496,8 +77468,8 @@
     if(hospAbaBaixa===id){
       return '<div class="hosp-est he-edit">'
         + av
-        + '<div class="he-main"><div class="he-nome">Dar baixa — '+escAttr(e.nome||'')+'</div>'
-        + '<div class="he-sub">Em que dia ele foi embora? Pode ser uma data passada. Depois da baixa ele sai do Plantão e deixa de bloquear um check-in novo.</div></div>'
+        + '<div class="he-main"><div class="he-nome">Registrar saída (dar baixa) — '+escAttr(e.nome||'')+'</div>'
+        + '<div class="he-sub">Registra quando ele foi embora e tira a hospedagem do Plantão. Não finaliza o check-out com tutor, itens e assinatura.</div></div>'
         + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Foi embora em<br><input type="date" class="cad-in" id="hospBxData" value="'+escAttr(e.saida||hospHojeISO())+'" max="'+escAttr(hospHojeISO())+'" min="2015-01-01" onkeydown="return dataSoNoCalendario(event)"></label>'
         + '<div class="he-acoes"><button class="btn btn-primary" onclick="hospConfirmarBaixa(\''+id+'\')">Confirmar baixa</button>'
         + '<button class="btn" onclick="hospCancelarBaixa()">Cancelar</button></div></div>';
@@ -77561,7 +77533,7 @@
       + _x6.botoes   // 6.66 (AC7.3, AC8.2, AC9.1): «Mudar datas» (ou «Reabrir a hospedagem», na excluída) e os «Desfazer»
       + ((typeof mcrBotaoHospedesHTML==='function')?mcrBotaoHospedesHTML(id, e, st):'')
       + ((hospAbaPode()&&(e.status||'ativa')==='ativa')
-          ?'<button class="btn" style="background:#1E8449;color:#fff" onclick="hospDarBaixa(\''+id+'\')">Dar baixa</button>':'')
+          ?'<button class="btn" style="background:#1E8449;color:#fff" onclick="hospDarBaixa(\''+id+'\')">Registrar saída (dar baixa)</button>':'')
       // Só quem está na casa AGORA pode sair antes — e só Gestão, Diretoria ou Supervisão,
       // porque lançar crédito é mexer no que o tutor paga.
       + ((hospPodeAntecipada()&&st==='agora'&&hospNoitesNaoUsadas(e, hospHojeISO())>0&&!hospAntecipadaDesfeita(e))   // 6.66 (AC9.6, EN2): desfeita, não volta
@@ -78148,17 +78120,22 @@
     return {ok:true, erro:''};
   }
   // ===== A ASSINATURA: A SENHA DA PRÓPRIA PESSOA (FR1, FR2) ===========================
-  // Mesmo jeito do Cancelar reserva (orcQuemPelaSenha): a senha é conferida e esquecida.
-  // Senha de posto (Plantonista, Monitor 1, Recepção) não assina: o posto não responde por
-  // nada. Assina quem tem 'assinar-correcao-hospedagem' (Supervisão, Gestão e Diretoria).
-  // 6.57: a régua mora na função geral (corrAssinar); aqui ficam só as frases da 6.53, letra por letra.
+  // Troca e reabertura continuam na capacidade genérica, exclusiva de Supervisão, Gestão e Diretoria.
+  // A anulação de lançamento errado usa uma capacidade separada: a Consultora assina somente essa ação.
+  // Em ambos os casos, corrAssinar confere a senha de pessoa e a esquece; senha de posto não assina.
   function hospAssinarPorSenha(senha){
     return corrAssinar(senha, 'assinar-correcao-hospedagem', 'a correção da hospedagem', {
       vazia:'Digite a sua senha: é ela que assina a correção.',
       posto:function(nome){ return 'Essa senha é de um posto ('+nome+'), não de uma pessoa: senha de posto não assina. Chame a Gestão ou a Supervisão.'; },
       semPapel:function(nome){ return 'Essa senha é de '+nome+', que não pode assinar a correção da hospedagem. Chame a Gestão ou a Supervisão para digitar a senha delas aqui.'; }});
   }
-  var HOSP_PAPEL_ROTULO={gestao:'Gestão', supervisor:'Supervisão', diretoria:'Diretoria'};
+  function hospAssinarExclusaoPorSenha(senha){
+    return corrAssinar(senha, 'assinar-anulacao-hospedagem-engano', 'a anulação deste lançamento errado', {
+      vazia:'Digite a sua senha: é ela que assina a anulação.',
+      posto:function(nome){ return 'Essa senha é de um posto ('+nome+'), não de uma pessoa: senha de posto não assina. Use a senha de quem está assumindo a anulação.'; },
+      semPapel:function(nome){ return 'Essa senha é de '+nome+', que não pode assinar a anulação deste lançamento. Nada foi gravado.'; }});
+  }
+  var HOSP_PAPEL_ROTULO={consultora:'Consultora', gestao:'Gestão', supervisor:'Supervisão', diretoria:'Diretoria'};
   // ===== DATAS E RÓTULOS ==============================================================
   // O id que o Firebase dá à estadia guarda o milissegundo em que ela nasceu (os 8 primeiros
   // caracteres). É a hora do check-in — o _ts não serve, porque o Corrigir regrava (K8).
@@ -78764,7 +78741,10 @@
       });
       return;
     }
-    if(op==='excluir'){ hospExcluirPreparar(); return; }
+    if(op==='excluir'){
+      if(!podePapel('anular-hospedagem-engano')){ S.passo='menu'; S.msg='Você não pode anular este lançamento. Nada foi gravado.'; hospCorrRender(); return; }
+      hospExcluirPreparar(); return;
+    }
     if(op==='corrigir'){ hospCorrigirInformacao(S.id); return; }
     S.passo='menu'; hospCorrRender();
   }
@@ -79286,11 +79266,14 @@
     if(S.provas&&S.provas.bloqueia) return falha('Esta hospedagem tem prova de que o FILHOt dormiu aqui: ela não pode ser excluída. Use "Trocar a ficha".');
     if(S.gravando) return falha('Já estou gravando: espere o aviso.');
     var m=motivoQuatroPalavras(motivo); if(!m.ok) return falha(m.erro);
-    var ass=hospAssinarPorSenha(senha); senha=null;
+    var ass=hospAssinarExclusaoPorSenha(senha); senha=null;
     if(!ass.ok) return falha(ass.erro);
     var pl=String(escolhas.planilha||''), oc=String(escolhas.orcamento||'');
     if(S.card && !/^(tirar|manter)$/.test(pl)) return falha('Diga o que fazer com a linha da planilha: tirar do Plantão nos dias desta estadia, ou deixar.');
-    if(S.orcId && !/^(cancelar|manter)$/.test(oc)) return falha('Diga o que fazer com o orçamento desta hospedagem: cancelar a reserva também, ou deixar como está.');
+    // Consultora pode anular o lançamento, mas não cancelar reserva: orçamento fica preservado.
+    // Supervisão, Gestão e Diretoria mantêm exatamente as opções anteriores.
+    if(S.orcId && ass.papel==='consultora') oc='manter';
+    else if(S.orcId && !/^(cancelar|manter)$/.test(oc)) return falha('Diga o que fazer com o orçamento desta hospedagem: cancelar a reserva também, ou deixar como está.');
     if(!/^(tirar|manter)$/.test(pl)) pl='';
     if(!S.orcId) oc='';
     if(!DB) return falha('Sem conexão com o banco agora. Nada foi gravado: tente de novo em instantes.');
@@ -79543,22 +79526,29 @@
     var e=S.e||{};
     var cab=hospRotulo({nome:e.nome, raca:e.raca, tutor:e.tutor});
     var per=(e.entrada?hospDiaBR(e.entrada):'—')+' → '+(e.saida?hospDiaBR(e.saida):'a confirmar');
+    var identidade='Animal: '+String(e.nome||'não informado')+' · Tutor: '+String(e.tutor||'não informado')+' · Raça: '+String(e.raca||'não informada')+' · Referência da hospedagem: '+String(S.id||'não registrada');
     var titulo={menu:'Corrigir esta hospedagem', trocar:'Trocar a ficha — para qual FILHOt?', carregando:'Um momento…',
       'trocar-confirmar':'Trocar a ficha — confira antes de gravar', excluir:'Excluir a hospedagem', feito:'Correção gravada',
       conferir:'Conferir depois da troca de ficha'}[S.passo]||'Corrigir esta hospedagem';
     var h='<div style="background:#FFFDF6;border-radius:18px;max-width:620px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.45);overflow:hidden;margin:0 auto;font-family:Poppins,system-ui,-apple-system,sans-serif">'
       +'<div style="background:#234D67;color:#FFFDF6;padding:16px 18px"><div style="font-weight:800;font-size:20px;line-height:1.2">'+esc(titulo)+'</div>'
-      +'<div style="font-size:14px;font-weight:600;opacity:.92;margin-top:4px;overflow-wrap:anywhere">'+esc(cab)+' · '+esc(per)+'</div></div>'
+      +'<div style="font-size:14px;font-weight:600;opacity:.92;margin-top:4px;overflow-wrap:anywhere">'+esc(cab)+' · '+esc(per)+'</div>'
+      +'<div style="font-size:12.5px;font-weight:600;opacity:.92;margin-top:6px;overflow-wrap:anywhere">'+esc(identidade)+'</div></div>'
       +'<div style="padding:16px 18px;color:#234D67;font-size:15.5px;line-height:1.45;overflow-wrap:anywhere">';
     if(S.msg) h+='<div role="alert" style="background:#FDECEA;border:2px solid #B3261E;color:#B3261E;border-radius:12px;padding:10px 12px;font-weight:800;margin-bottom:12px">'+esc(S.msg)+'</div>';
     if(S.okMsg){ h+='<div style="background:#E8F5EC;border:2px solid #1E8449;color:#1E8449;border-radius:12px;padding:10px 12px;font-weight:800;margin-bottom:12px">'+esc(S.okMsg)+'</div>'; S.okMsg=''; }
-    var motivoSenha=function(rotuloBotao, onclick, trava){
+    var motivoSenha=function(rotuloBotao, onclick, trava, op){
+      op=op||{};
+      var tituloSenha=op.anulacao?'Senha de quem assina a anulação':'Senha de quem assina (Gestão ou Supervisão)';
+      var ajudaSenha=op.anulacao
+        ?'A Consultora pode assinar a anulação com senha individual válida. O app grava o nome de quem assinou, nunca a senha.'
+        :'A Consultora pode abrir e chamar a Gestão ou a Amanda para digitar a senha aqui. O app grava o nome de quem digitou a senha, nunca a senha.';
       return '<label for="hospCorrMotivo" style="display:block;margin-top:14px;font-weight:800">Por que esta correção? (pelo menos 4 palavras)</label>'
         +'<input id="hospCorrMotivo" type="text" autocomplete="off" oninput="hospCorrContar()" value="'+escAttr(S.motivoTxt||'')+'" placeholder="Ex.: não é a ficha dela, cliente nova" style="'+HOSP_CORR_IN+'">'
         +'<div id="hospCorrConta" style="font-size:13px;font-weight:700;color:#6b5f4b;margin-top:4px">Escreva o que aconteceu em pelo menos 4 palavras.</div>'
-        +'<label for="hospCorrSenha" style="display:block;margin-top:12px;font-weight:800">Senha de quem assina (Gestão ou Supervisão)</label>'
+        +'<label for="hospCorrSenha" style="display:block;margin-top:12px;font-weight:800">'+esc(tituloSenha)+'</label>'
         +'<input id="hospCorrSenha" type="password" autocomplete="new-password" style="'+HOSP_CORR_IN+'">'
-        +'<div style="font-size:13px;font-weight:600;color:#6b5f4b;margin-top:4px">A Consultora pode abrir e chamar a Gestão ou a Amanda para digitar a senha aqui. O app grava o nome de quem digitou a senha, nunca a senha.</div>'
+        +'<div style="font-size:13px;font-weight:600;color:#6b5f4b;margin-top:4px">'+esc(ajudaSenha)+'</div>'
         +(trava?('<div id="hospCorrTrava" style="margin-top:10px;font-weight:800;color:#B3261E">'+esc(trava)+'</div>'
           +'<button type="button" disabled aria-disabled="true" style="display:block;width:100%;box-sizing:border-box;border:0;border-radius:14px;background:#B3261E;opacity:.45;color:#FFFDF6;font-family:inherit;font-weight:800;font-size:16px;padding:14px;margin:8px 0 0;cursor:not-allowed">'+esc(rotuloBotao)+'</button>')
           :hospCorrBotao(rotuloBotao, onclick, '#B3261E'));
@@ -79586,7 +79576,7 @@
         } else {
           var op=function(qual, tit, quando){ return '<button type="button" style="'+HOSP_CORR_BTN+'" onclick="hospCorrEscolher(\''+qual+'\')"><strong>'+esc(tit)+'</strong><br><span style="font-size:14px;font-weight:600;color:#6b5f4b">'+esc(quando)+'</span></button>'; };
           h+=op('trocar', 'Foi lançada no FILHOt errado — trocar a ficha', 'Quando o FILHOt que está aqui é outro: a estadia passa para a ficha certa e tudo o que foi registrado continua.')
-            +op('excluir', 'Não aconteceu (lançada por engano) — excluir', 'Quando o FILHOt não veio: a hospedagem sai do Plantão e fica no histórico como EXCLUÍDA. Nada é apagado.')
+            +op('excluir', 'Excluir hospedagem lançada por engano', 'Use somente quando o FILHOt não veio: sai do Plantão e fica no histórico como EXCLUÍDA, com motivo e assinatura. Nada é apagado.')
             +op('corrigir', 'Corrigir comida, remédio, datas ou pertences', 'Quando o FILHOt é o certo, mas uma informação está errada: abre o ✎ Corrigir do Check-in.');
         }
       }
@@ -79669,13 +79659,16 @@
         if(S.orcId){
           var o=(ORC_LISTA_CACHE||{})[S.orcId]||{};
           var oPet=(o.pets||[]).filter(function(p){ return p && jsNorm(p.nome||'')===jsNorm(e.nome||''); })[0]||{};
+          var sessaoConsultora=false; try{ sessaoConsultora=papelDoCorpo()==='consultora'; }catch(x){} /* sem papel, a validação da assinatura decide */
           h+='<div style="margin-top:12px;font-weight:800">O orçamento desta hospedagem</div>'
             +(S.orcOutro?('<div style="font-size:14.5px;font-weight:700;color:#B3261E">Este orçamento é de '+esc(oPet.nome||e.nome||'')+', de '+esc(String(oPet.tutor||o.tutor||'outro tutor'))
               +' (outro tutor): a hospedagem pode ter sido lançada na ficha errada. Cancele a reserva só se ela era desta hospedagem.</div>'):'')
-            +radio('hospCorrOrc','cancelar','Cancelar também a reserva (orçamento fechado de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+'), com o mesmo motivo e a mesma senha')
-            +radio('hospCorrOrc','manter','Deixar o orçamento como está (a reserva continua valendo)');
+            +(sessaoConsultora
+              ?'<div style="font-size:14.5px;font-weight:800;color:#6b5f4b;margin-top:8px">Orçamento preservado: a Consultora anula somente o lançamento de hospedagem.</div>'
+              :radio('hospCorrOrc','cancelar','Cancelar também a reserva (orçamento fechado de '+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+'), com o mesmo motivo e a mesma senha')
+                +radio('hospCorrOrc','manter','Deixar o orçamento como está (a reserva continua valendo)'));
         }
-        h+=motivoSenha('Excluir esta hospedagem', 'hospExcluirGravarTela()')+voltar();
+        h+=motivoSenha('Excluir esta hospedagem', 'hospExcluirGravarTela()', '', {anulacao:true})+voltar();
       }
     } else if(S.passo==='feito'){
       var R=S.resultado||{};
@@ -80250,10 +80243,10 @@
     var cr=hospZrEstadia(h);
     var bt=document.getElementById('hfZrBtn'), hint=document.getElementById('hfZrHint'), box=document.getElementById('hfZrMotivoBox'), inp=document.getElementById('hfZrMotivo');
     if(bt){ try{ clearTimeout(bt._armT); }catch(e){} /* silencioso de propósito: sem relógio armado, nada a parar */ bt.dataset.armed=''; bt.dataset.motivo=''; bt.style.background='var(--crm-critico)';
-      bt.textContent=cr?'Corrigir esta hospedagem (trocar a ficha ou excluir)':'🗑️ Deletar este peludinho do Hotel (hoje)'; bt.dataset.label=bt.textContent; }
+      bt.textContent=cr?'Corrigir esta hospedagem (trocar a ficha ou excluir)':'Tirar do Plantão hoje'; bt.dataset.label=bt.textContent; }
     if(hint) hint.textContent=cr
       ?'Esta hospedagem tem check-in: a correção pede o motivo (pelo menos 4 palavras) e a senha da Gestão ou da Supervisão. O cadastro do FILHOt continua salvo.'
-      :'Tira só o lançamento de hoje. O cadastro do FILHOt continua salvo: se ele voltar outro dia, é só adicionar de novo. Escreva o motivo (pelo menos 4 palavras) e toque duas vezes no botão.';
+      :'Tira somente o lançamento deste dia do Plantão; não cancela uma hospedagem já criada. O cadastro continua salvo. Escreva o motivo e confirme no segundo toque.';
     if(box) box.style.display=cr?'none':'block';
     if(inp) inp.value='';
   }
@@ -87400,12 +87393,11 @@
       return Promise.resolve(PO_CACHE.dados);
     }
     if(!DB) return Promise.resolve(null);
-    var pega=function(caminho){
-      return DB.ref(caminho).once('value').then(function(s){ return s.val(); })
-        .catch(function(e){ _logLeituraFalhou(caminho+' (Painel da Operação)', e); return null; });
-    };
+    var pega=function(caminho){ return DB.ref(caminho).once('value').then(function(s){ return s.val(); }).catch(function(e){ _logLeituraFalhou(caminho+' (Painel da Operação)',e); return null; }); };
+    var pegaComEstado=function(caminho){ return DB.ref(caminho).once('value').then(function(s){ return {ok:true,valor:s.val()||{}}; }).catch(function(e){ _logLeituraFalhou(caminho+' (Painel da Operação)',e); return {ok:false,valor:{}}; }); };
     return Promise.all([
-      pega('daycare/chamada/'+dia),
+      pegaComEstado('daycare/chamada/'+dia),
+      pegaComEstado('daycare/chamada-meta/'+dia),
       pega('daycare/ea/'+dia),
       pega('daycare/tempo-atividade/'+dia),
       pega('daycare/almoco/'+dia),
@@ -87414,11 +87406,9 @@
       pega('daycare/ocorrencias/'+dia),
       pega('daycare/avisos-plantao/'+dia),
       pega('auaulandia/avisos-vet-fila'),
-      pega('daycare/avulsos/'+dia)
+      pegaComEstado('daycare/avulsos/'+dia)
     ]).then(function(r){
-      var d={ dia:dia, chamada:r[0]||{}, ea:r[1]||{}, tempo:r[2]||{}, almoco:r[3]||{},
-              almoco2:r[4]||{}, avisosComida:r[5]||{}, ocorrDC:r[6]||{}, avisosPlantao:r[7]||{},
-              vetFila:r[8]||{}, avulsos:r[9]||{} };
+      var d={ dia:dia, chamada:(r[0]&&r[0].valor)||{}, chamadaEstado:(r[0]&&r[0].ok)?'pronto':'falha', chamadaMeta:(r[1]&&r[1].valor)||{}, chamadaMetaEstado:(r[1]&&r[1].ok)?'pronto':'falha', ea:r[2]||{}, tempo:r[3]||{}, almoco:r[4]||{}, almoco2:r[5]||{}, avisosComida:r[6]||{}, ocorrDC:r[7]||{}, avisosPlantao:r[8]||{}, vetFila:r[9]||{}, avulsos:(r[10]&&r[10].valor)||{}, avulsosEstado:(r[10]&&r[10].ok)?'pronto':'falha' };
       PO_CACHE={quando:Date.now(), dia:dia, dados:d};
       return d;
     }).catch(function(e){ _logLeituraFalhou('Painel da Operação (leitura geral)', e); return null; });
@@ -87757,6 +87747,34 @@
       +'<div class="pm-tile'+(faltaram?' pm-t-alerta':'')+'"><b data-pm-alvo="'+faltaram+'">0</b><span>'+(faltaram===1?'faltou':'faltaram')+' na chamada</span></div>'
       +'</div></div>';
   }
+
+
+  var PO_PRESENCA_ATUAL=null;
+  function poPresencaDados(d,T){
+    if(typeof ZeluzPresencaLogica==='undefined'||!ZeluzPresencaLogica.montar) return null;
+    var pronta=(typeof CARTEIRA_CARREGADA!=='undefined'&&CARTEIRA_CARREGADA===true&&typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS)&&PELUDINHOS.length&&d.avulsosEstado==='pronto')?'pronto':'carregando';
+    var pessoas=T.aulunos.concat(T.avulsos).map(function(o){ var p=o.p||{},motivo=''; try{var m=poMotivoDaFalta(p,d.dia)||'';motivo=(m&&typeof m==='object')?[m.motivo,m.obs].filter(function(v){return typeof v==='string'&&v.trim();}).join(' · '):m;}catch(e){} return {id:dcKey(p.n,p.tutor),nome:(typeof pelNome==='function'?pelNome(p):p.n)||p.n||'',tutor:(typeof pelGet==='function'?pelGet(p,'tutor'):p.tutor)||p.tutor||'',motivo:motivo}; });
+    return ZeluzPresencaLogica.montar({dia:d.dia,agora:Date.now(),participantes:pessoas,turmaEstado:pronta,chamada:{estado:d.chamadaEstado||'falha',valores:d.chamada||{}},chamadaMeta:{estado:d.chamadaMetaEstado||'falha',valores:d.chamadaMeta||{}}});
+  }
+  function poCardPresenca(d,T){ PO_PRESENCA_ATUAL=poPresencaDados(d,T); return PO_PRESENCA_ATUAL?ZeluzPresencaLogica.cardHTML(PO_PRESENCA_ATUAL):poSemLeituraHTML('o módulo de presença'); }
+  function presencaAtualizar(){ try{poAbrir(true);}catch(e){_logLeituraFalhou('atualizar presença',e);} }
+  function presencaConfirmarFalta(k){
+    var api=(typeof ZeluzPresencaLogica!=='undefined')?ZeluzPresencaLogica:null,hoje=api&&api.agoraSP?api.agoraSP(Date.now()).dia:'';
+    if(!PO_PRESENCA_ATUAL||PO_PRESENCA_ATUAL.dia!==hoje||dcDataKey()!==hoje){alert('A data do painel mudou. Atualize antes de confirmar.');return;}
+    if(typeof podePapel!=='function'||!podePapel('painel-operacao')){alert('Sua sessão não pode confirmar faltas.');return;}
+    var assinou='';try{assinou=(typeof quemSou==='function'?String(quemSou()||'').trim():'');}catch(e){}
+    if(!assinou||assinou==='-'){alert('Não encontrei sua identificação na sessão. Atualize e tente de novo.');return;}
+    var linha=(PO_PRESENCA_ATUAL.itens||[]).filter(function(x){return x.id===k&&x.estado==='falta-registrada-conferir';})[0];
+    if(!linha||!DB||typeof DB.ref!=='function'){alert('Esta falta precisa ser lida de novo antes da confirmação.');return;}
+    var chamada='daycare/chamada/'+hoje+'/'+k;
+    DB.ref(chamada).once('value').then(function(s){
+      if(!s||typeof s.val!=='function'||s.val()!=='faltou'){alert('A chamada mudou. Atualizei a presença sem alterar o registro atual.');presencaAtualizar();return false;}
+      var meta={estado:'faltou',origem:'manual',ts:Date.now(),quem:assinou};try{var h=(typeof horaAgora==='function'?String(horaAgora()||'').trim():'');if(h)meta.hora=h;}catch(e){}
+      return DB.ref('daycare/chamada-meta/'+hoje+'/'+k).set(meta).then(function(){presencaAtualizar();return true;});
+    }).catch(function(e){_logFalhaGrav('confirmar falta '+k,e);alert('Não consegui confirmar a falta. Ela continua a conferir.');});
+  }
+  function presencaImprimir(modo){ var api=(typeof ZeluzPresencaLogica!=='undefined')?ZeluzPresencaLogica:null,hoje=api&&api.agoraSP?api.agoraSP(Date.now()).dia:''; if(!PO_PRESENCA_ATUAL||PO_PRESENCA_ATUAL.dia!==hoje){alert('A data do painel mudou. Atualize a tela antes de imprimir.');return;} var doc=api&&api.impressaoHTML?api.impressaoHTML(PO_PRESENCA_ATUAL,modo):null; if(!doc||!doc.ok){alert('Ainda não há uma leitura completa da chamada para imprimir. Isto não confirma presença nem falta.');return;} var w=null;try{w=window.open('','_blank');}catch(e){} if(!w){alert('O navegador bloqueou a janela. Libere os pop-ups deste site e toque de novo.');return;} w.document.open();w.document.write(doc.html);w.document.close();setTimeout(function(){try{w.focus();w.print();}catch(e){}},400); }
+  function presencaAbrirChamada(){ try{if(typeof HOJE_DIA!=='undefined')dcDia=HOJE_DIA;if(typeof abrirAtividade==='function')abrirAtividade('chamada');else if(typeof irParaView==='function')irParaView('daycare');}catch(e){_logFalhaGrav('abrir a Chamada pela presença',e);} }
 
   // ---- 1 · quem não veio — e por quê ----
   function poCardFaltas(T, dia){
@@ -88191,6 +88209,7 @@
 
   // ------------------------------------------------------------------------ a tela toda
   function poAbrir(forcar){
+    PO_PRESENCA_ATUAL=null;
     var raiz=document.getElementById('poRoot'); if(!raiz) return;
     // A trava é a MESMA tabela que esconde o item do menu. Quem chegar por link direto e
     // não puder ver, lê o porquê — nunca uma tela em branco.
@@ -88209,7 +88228,7 @@
     }); }catch(e){} /* silencioso de propósito: sem a fila o quadro diz que ainda não leu */
     if(!DB){
       raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Sem conexão com o banco agora</h3>'
-        +'<p class="pm-sub">Assim que a rede voltar, abra esta tela de novo. Nada aqui é gravado — o painel só observa.</p></div>';
+        +'<p class="pm-sub">Assim que a rede voltar, abra esta tela de novo para carregar a presença e as atividades.</p></div>';
       return;
     }
     var eu=(typeof quemSou==='function'?quemSou():'').trim();
@@ -88231,7 +88250,7 @@
     cargas.rapidas.then(function(){ return poLer(forcar===true); }).then(function(d){
       if(!d){
         raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui ler a casa de hoje</h3>'
-          +'<p class="pm-sub">Nada foi perdido — este painel não grava nada. Abra esta tela de novo em instantes.</p></div>';
+          +'<p class="pm-sub">Abra esta tela de novo em instantes para tentar carregar os dados.</p></div>';
         return;
       }
       var T=poTurma(d.chamada);
@@ -88246,16 +88265,15 @@
       raiz.innerHTML = poSaudacaoHTML((eu && eu!=='-')?eu:'Operação', T.total)
         + histCiAtalhoHTML()
         + poCaixasHTML(T)
-        +'<p class="pm-nota"><strong>Este painel observa.</strong> Cada quadro abre a tela onde a senhora decide. '
-        +'A única exceção é <strong>Pedidos de encaixe</strong>, entre os pedidos do dia: o botão «Autorizar» é a decisão, e é só sua — '
-        +'por isso ele pergunta antes e já lança. No dinheiro, o quadro <strong>Recebimentos do mês</strong> grava daqui mesmo «Fechar o mês», «Reabrir o mês» e os ajustes com motivo, sempre com a senha da Adriana e o rastro.</p>'
+        +'<div class="pm-grid">'+poCardPresenca(d,T)+'</div>'
+        +'<p class="pm-nota"><strong>Resolva por aqui.</strong> Confirme as faltas na lista de presença ou abra a atividade desejada. '
+        +'As autorizações de encaixe e os registros financeiros mantêm suas confirmações.</p>'
         + poAreaHTML('DAY CARE','Pedidos de encaixe',
             'Dias que estouraram o limite de vagas e esperam a sua palavra.', PO_IC_ALERTA)
         +'<div id="poCardEncaixes" style="display:contents">'+vagasEncaixesCardHTML()+'</div>'
         + poAreaHTML('DAY CARE','A turma de hoje',
-            'Quem não veio, quanto tempo o time levou em cada etapa e quem deixou comida no prato.', PO_IC_PATA)
+            'Tempo do time em cada etapa e quem deixou comida no prato.', PO_IC_PATA)
         +'<div class="pm-grid">'
-        + poCardFaltas(T, d.dia)
         + poCardTempo(Tempo)
         + poCardComida(comida, Object.keys(d.almoco||{}).length+Object.keys(d.almoco2||{}).length)
         +'</div>'
@@ -88328,7 +88346,7 @@
     }).catch(function(e){
       _logLeituraFalhou('Painel da Operação (montagem da tela)', e);
       raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui montar o painel agora</h3>'
-        +'<p class="pm-sub">Nada foi perdido — este painel não grava nada. Abra esta tela de novo em instantes.</p></div>';
+        +'<p class="pm-sub">Abra esta tela de novo em instantes para tentar carregar os dados.</p></div>';
     });
   }
 
