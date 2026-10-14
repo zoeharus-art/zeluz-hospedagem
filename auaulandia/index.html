@@ -2603,7 +2603,7 @@
   .mcr-bt-plantao{display:block;margin-top:8px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:10px;padding:8px 14px;min-height:44px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
   .mcr-bt-entrada{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue);font-weight:800;min-height:44px}
 </style>
-<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-06">
+<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-07">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -5182,13 +5182,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-14-06"></script>
+<script src="resposta-tutor.js?v=2026-10-14-07"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-14-06"></script>
+<script src="painel-logica.js?v=2026-10-14-07"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5200,14 +5200,14 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-14-06"></script>
-<script src="autoria-logica.js?v=2026-10-14-06"></script>
-<script src="navegacao-inicio.js?v=2026-10-14-06"></script>
-<script src="presenca-logica.js?v=2026-10-14-06"></script>
-<script src="historico-checkins.js?v=2026-10-14-06"></script>
-<script src="historico-checkins-pdf.js?v=2026-10-14-06"></script>
-<script src="orcamento-acompanhamento.js?v=2026-10-14-06"></script>
-<script src="dash-lancamentos-performance.js?v=2026-10-14-06"></script>
+<script src="financeiro-logica.js?v=2026-10-14-07"></script>
+<script src="autoria-logica.js?v=2026-10-14-07"></script>
+<script src="navegacao-inicio.js?v=2026-10-14-07"></script>
+<script src="presenca-logica.js?v=2026-10-14-07"></script>
+<script src="historico-checkins.js?v=2026-10-14-07"></script>
+<script src="historico-checkins-pdf.js?v=2026-10-14-07"></script>
+<script src="orcamento-acompanhamento.js?v=2026-10-14-07"></script>
+<script src="dash-lancamentos-performance.js?v=2026-10-14-07"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -7424,17 +7424,10 @@
     // AS VAGAS DO DIA DE REPOR. Cheio: a Gestão encaixa (e a autorização fica registrada);
     // quem não pode encaixar lança a falta e o dia fica esperando a Márcia — o que NÃO
     // acontece é o dia entrar por cima do limite sem ninguém saber.
-    let voltaEfetiva=volta, autVaga=null, pedirVaga=!!op.pedirEncaixe, diaLotado=false;
-    if(volta){
-      const vg=vagasDoDia(volta);
-      if(!vg.lido){ w.textContent='Ainda estou conferindo as vagas de '+repBRdata(volta)+'. Espere um instante e confirme de novo.'; return; }
-      if(vg.cheio){
-        diaLotado=true;
-        if(vagasPodeEncaixar()) autVaga={quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now()};
-        else voltaEfetiva='';           // a falta entra; o dia de repor fica com a Márcia
-      }
-    }
-    if(pedirVaga && !diaLotado) pedirVaga=false;   // o dia tem vaga: não há o que pedir
+    // Reposição 14: o limite de cinco continua visível, mas não bloqueia reposição nem exige Gestão.
+    // A diária avulsa mantém sua régua independente na porta dxConfirmar.
+    let voltaEfetiva=volta, autVaga=null, pedirVaga=false, diaLotado=false;
+    if(volta){ const vg=vagasDoDia(volta); diaLotado=!!(vg&&vg.lido&&vg.cheio); }
     // CASO C (6.46): o dia de repor que JÁ TEM a troca ou a reposição dele não recebe outra — a
     // mesma regra da «Marcar troca». Sem isto, a troca 13→14 e depois a falta 20 com repor em 14
     // davam dois créditos para o mesmo 14/10, sem aviso. A mesma falta de novo (a mesma data, o
@@ -7602,7 +7595,9 @@
       // A confirmação vem com a mensagem pronta para o tutor: é a consultora quem manda,
       // e é agora que ela está com o telefone na mão (Adriana, 31/ago/2026).
       // 6.38: a troca não soma no saldo de reposição (só a falta avisada comum).
-      var _info={qtd:regs.length, data:(regs[0]||{}).data, volta:voltaEfetiva||'', saldo:_saldoAntes+regs.length-((regs.length===1&&regs[0].troca)?1:0)+_jaVivas};
+      // O wrapper atualizou o cache com o snapshot confirmado da transação: crédito já marcado
+      // entra +1 e reserva -1 no mesmo gesto, sem a projeção otimista do modelo anterior.
+      var _info={qtd:regs.length, data:(regs[0]||{}).data, volta:voltaEfetiva||'', saldo:repSaldoReposicao(p)};
       if(regs.length>1 && regs[0].periodo){ _info.de=regs[0].periodo.de; _info.ate=regs[0].periodo.ate; }
       if(regs.length>1 && regs[0].alguns){ _info.datas=regs.map(function(r){ return r.data; }); }
       var _troca=!!(regs.length===1 && regs[0].troca);
@@ -7845,11 +7840,15 @@
     var nome=pelNome(p), fem=repEhFemea(p), Ele=fem?'Ela':'Ele', D=String(repBRdata(dia)).slice(0,5);
     var quemD=(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou();
     var de=cm.de||String(cred.data||'');
-    var refC=function(){ return DB.ref('daycare/reposicao/'+pelKey(p)+'/lancamentos/'+cred._id); };
-    // 6.48 (K1): `gravou` = o dia já saiu do crédito; o erro de depois não diz "Nada foi mudado".
+    // Toda retirada fica com justificativa no mesmo evento contábil; cancelar a pergunta não altera saldo.
+    var rep14Just=((await zTexto('Por que esta reposição será desmarcada?',
+      ['A justificativa fica no Extrato, junto de quem cancelou e quando.'],
+      {rotulo:'Motivo (ex.: Viagem, Doença, Tutor desistiu)',botao:'Continuar',validar:function(v){ return String(v||'').trim().length>=3?'':'Escreva um motivo curto.'; },cor:'#234D67'}))||'').trim();
+    if(rep14Just.length<3){ if(rep14Just) alert('Escreva um motivo curto. Nada foi mudado.'); return; }
+    // 6.48 (K1): `gravou` = o dia e o saldo mudaram juntos na transação do peludinho.
     var gravou=false;
     var tirarDia=function(marca){
-      return refC().update({volta:'', volta_desmarcada:Object.assign({dia:dia, quem:quemD, ts:Date.now(), relogio:repRelogio()}, marca||{})})
+      return rep14CancelarDia(p,cred,dia,Object.assign({},marca||{},{justificativa:rep14Just}))
         .then(function(x){ gravou=true; return x; });
     };
     var depois=function(){ try{ if(typeof vagasCarregarDia==='function') vagasCarregarDia(dia, true); }catch(e){ /* as vagas se refazem na próxima leitura */ }
@@ -8181,10 +8180,11 @@
       gravouU=true;
       if(jaRegistrado(x)) return;
       if(typeof audit==='function') audit('reposicao-uso', pelNome(p), {obs:obs});
-      var _sd=Math.max(0, s-1);   // s foi lido antes de gravar; o cache ainda não desceu
+      // A transação atualizou o cache e devolveu o disponível real, inclusive reservas de hospedagem.
+      var _sd=(x&&isFinite(Number(x.disponivel)))?Math.max(0,Number(x.disponivel)):Math.max(0,s-1);
       repMsgModal('✅ Reposição usada',
-        [pelNome(p)+' repôs hoje. Saldo agora: '+_sd+'.'],
-        repMensagem(p,'uso',{saldo:_sd}), repTelDe(p));
+        [pelNome(p)+' repôs hoje. Saldo disponível confirmado: '+_sd+'.'],
+        repMensagem(p,'uso',{saldo:_sd,livres:_sd,saldo_contabil:x&&x.saldo_contabil}), repTelDe(p));
       setTimeout(renderReposicao, 300);
     }).catch(function(e){ alert(repUsarFalhou(e, gravouU)); });
   }
@@ -13388,7 +13388,7 @@
     if(bt){
       var cheio=dxDia?vagasDoDia(dxDia).cheio:false;
       bt.textContent=dxBotaoRotulo();
-      bt.disabled=!!(v.ok && cheio && !vagasPodeEncaixar());
+      bt.disabled=!!(v.ok && v.tipo==='avulso' && cheio && !vagasPodeEncaixar());
     }
   }
   function dxConfirmar(){
@@ -13402,11 +13402,12 @@
     if(!REPO_LIDO){ diz(repExtratoEsperaTexto()); return; }
     var vg=vagasDoDia(dia);
     if(!vg.lido){ diz('Ainda estou conferindo as vagas de '+repBRdata(dia)+'. Espere um instante e confirme de novo.'); return; }
-    if(vg.cheio && !vagasPodeEncaixar()){
-      diz('O dia '+repBRdata(dia)+' está lotado ('+vg.usadas+' de '+vg.limite+'). Toque em «Avisar a Márcia» — só ela abre o encaixe.');
+    // Acima de cinco, reposição segue sem senha ou Gestão; a trava permanece só para diária avulsa.
+    if(v.tipo==='avulso' && vg.cheio && !vagasPodeEncaixar()){
+      diz('O dia '+repBRdata(dia)+' está lotado ('+vg.usadas+' de '+vg.limite+'). Toque em «Avisar a Márcia» — só ela abre o encaixe da diária avulsa.');
       return;
     }
-    var aut=vg.cheio?{quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now()}:null;
+    var aut=(v.tipo==='avulso'&&vg.cheio)?{quem:(typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(), ts:Date.now()}:null;
     var bt=document.getElementById('dxOk');
     if(bt){ bt.disabled=true; bt.textContent='Lançando…'; }
     var solta=function(){ if(bt){ bt.disabled=false; bt.textContent=dxBotaoRotulo(); } };
@@ -27311,7 +27312,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-14-06';
+  const APP_VERSAO='2026-10-14-07';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -90619,7 +90620,770 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
   var PDIR_IC_MOEDA='<circle cx="16" cy="16" r="10.5" fill="none" stroke="currentColor" stroke-width="2.2"></circle>'
     +'<path d="M16 10.5v11M12.8 13.2c0-1.5 1.4-2.7 3.2-2.7s3.2 1.2 3.2 2.7-1.4 2.3-3.2 2.8-3.2 1.3-3.2 2.8 1.4 2.7 3.2 2.7 3.2-1.2 3.2-2.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>';
 
-  // INIT do Day Care (no fim: garante todas as variaveis e funcoes definidas)
+  // ===== REPOSIÇÕES 14 · CONTABILIDADE POR CICLO =====
+(function(raiz, fabrica){
+  var api=fabrica();
+  if(typeof module==='object' && module.exports) module.exports=api;
+  raiz.ZeluzReposicao14Core=api;
+})(typeof globalThis!=='undefined'?globalThis:this, function(){
+  'use strict';
+
+  var FUSO='America/Sao_Paulo';
+
+  function copia(v){ return JSON.parse(JSON.stringify(v==null?{}:v)); }
+  function objeto(v){ return v && typeof v==='object' && !Array.isArray(v); }
+  function noNormalizado(no){
+    no=objeto(no)?copia(no):{};
+    if(!objeto(no.lancamentos)) no.lancamentos={};
+    if(!objeto(no.reservas)) no.reservas={};
+    return no;
+  }
+  function lista(no){
+    var o=(noNormalizado(no).lancamentos)||{};
+    return Object.keys(o).map(function(k){ return Object.assign({_id:k}, o[k]||{}); });
+  }
+  function anulados(L){
+    var existe={}, out={};
+    (L||[]).forEach(function(l){ if(l&&l._id) existe[l._id]=true; });
+    (L||[]).forEach(function(l){ if(l&&l.tipo==='estorno'&&l.estornaId&&existe[l.estornaId]) out[l.estornaId]=true; });
+    return out;
+  }
+  function saldoDe(L){
+    L=L||[];
+    var existe={}, an=anulados(L), s=0;
+    L.forEach(function(l){ if(l&&l._id) existe[l._id]=true; });
+    L.forEach(function(l){
+      if(!l) return;
+      if(l.tipo==='estorno'){
+        if(!(l.estornaId&&existe[l.estornaId])) s--;
+        return;
+      }
+      if(an[l._id]) return;
+      s+=(l.tipo==='credito')?1:-1;
+    });
+    return s;
+  }
+  function saldo(no){ return saldoDe(lista(no)); }
+  function reservasHotel(no, exceto){
+    var R=noNormalizado(no).reservas, n=0;
+    Object.keys(R).forEach(function(id){ if(id!==String(exceto||'')) n+=Math.max(0, Number((R[id]||{}).n)||0); });
+    return n;
+  }
+  function ehReservaAtiva(l, an){
+    return !!(l && l.tipo==='uso' && l.reserva===true && l.desfecho==='reservado' && !(an||{})[l._id]);
+  }
+  function reservaAtiva(L, creditoId, ciclo){
+    var an=anulados(L||[]), porCiclo=null, porCredito=null;
+    (L||[]).some(function(l){
+      if(!ehReservaAtiva(l,an)) return false;
+      if(ciclo && l._id===ciclo){ porCiclo=l; return true; }
+      if(String(l.credito||'')===String(creditoId||'')) porCredito=l;
+      return false;
+    });
+    return porCiclo||porCredito;
+  }
+  function usoFinal(l, an){
+    return !!(l && l.tipo==='uso' && !(an||{})[l._id] && !(l.reserva===true && l.desfecho==='reservado'));
+  }
+  function legadosPendentes(no){
+    var L=lista(no), an=anulados(L), finaisCredito={}, finaisDia={};
+    L.forEach(function(l){
+      if(!usoFinal(l,an)) return;
+      if(l.credito) finaisCredito[String(l.credito)]=true;
+      if(l.data) finaisDia[String(l.data)]=(finaisDia[String(l.data)]||0)+1;
+    });
+    return L.filter(function(c){
+      if(!c || c.tipo!=='credito' || an[c._id] || !c.volta) return false;
+      if(reservaAtiva(L,c._id,c.agenda_ciclo)) return false;
+      if(finaisCredito[c._id]) return false;
+      if(finaisDia[c.volta]>0){ finaisDia[c.volta]--; return false; }
+      return true;
+    });
+  }
+  function disponivel(no, excetoReserva){
+    return Math.max(0, saldo(no)-reservasHotel(no,excetoReserva)-legadosPendentes(no).length);
+  }
+  function chaveSegura(v){ return String(v||'credito').replace(/[.#$\[\]\/]/g,'-'); }
+  function proximaSequencia(L, creditoId, cred){
+    var n=Math.max(0,Number((cred||{}).agenda_seq)||0);
+    (L||[]).forEach(function(l){
+      if(String((l||{}).credito||'')===String(creditoId||'')) n=Math.max(n,Number(l.agenda_seq)||0);
+    });
+    return n+1;
+  }
+  function partesNoFuso(ms){
+    var p=new Intl.DateTimeFormat('en-CA',{timeZone:FUSO,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(ms));
+    var o={}; p.forEach(function(x){ if(x.type!=='literal') o[x.type]=Number(x.value); });
+    return o;
+  }
+  function instanteNoFuso(iso,hora,minuto){
+    var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||''));
+    if(!m) return NaN;
+    var alvo=Date.UTC(+m[1],+m[2]-1,+m[3],hora||0,minuto||0,0), chute=alvo;
+    for(var i=0;i<3;i++){
+      var p=partesNoFuso(chute);
+      var visto=Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second);
+      chute+=alvo-visto;
+    }
+    return chute;
+  }
+  function prazo(volta, agoraMs){
+    var meioDia=instanteNoFuso(volta,12,0), limite=meioDia-24*60*60*1000;
+    var agora=(agoraMs==null)?Date.now():Number(agoraMs);
+    return {valido:isFinite(limite), dentro:isFinite(limite)&&agora<=limite, limite_ts:limite, agora_ts:agora, fuso:FUSO};
+  }
+  function ator(op){ return String((op&&op.quem)||'-'); }
+
+  function marcar(no, op){
+    op=op||{};
+    var original=noNormalizado(no), n=noNormalizado(no), id=String(op.creditoId||''), dia=String(op.volta||''), ts=Number(op.ts)||Date.now();
+    if(!id || !/^\d{4}-\d{2}-\d{2}$/.test(dia)) return {ok:false,codigo:'DADOS_INVALIDOS',no:original};
+    var cred=n.lancamentos[id];
+    if(!cred || cred.tipo!=='credito') return {ok:false,codigo:'CREDITO_AUSENTE',no:original};
+    var L=lista(n), atual=reservaAtiva(L,id,cred.agenda_ciclo);
+    // O chamador informa o estado que a consultora viu antes de confirmar. Se outro aparelho
+    // marcou/remarcou o mesmo crédito nesse intervalo, não transformamos a segunda escolha em
+    // remarcação silenciosa. O mesmo dia/ciclo continua sendo retry idempotente.
+    if(op.estadoEsperado){
+      var esp=op.estadoEsperado, mudou=String(cred.volta||'')!==String(esp.volta||'')
+        ||String(cred.agenda_ciclo||'')!==String(esp.ciclo||'')
+        ||Number(cred.agenda_seq||0)!==Number(esp.seq||0);
+      if(mudou && !(atual&&String(cred.volta||'')===dia))
+        return {ok:false,codigo:'CONFLITO_AGENDA',no:original,saldo:saldo(original),disponivel:disponivel(original)};
+    }
+    if(atual && String(cred.volta||'')===dia){
+      return {ok:true,idempotente:true,ciclo:atual._id,saldo:saldo(n),disponivel:disponivel(n),no:n};
+    }
+    var velhoDia=String(cred.volta||''), velhoCiclo=atual&&atual._id;
+    if(velhoDia && velhoDia!==dia && !prazo(velhoDia,ts).dentro)
+      return {ok:false,codigo:'REMARCACAO_FORA_PRAZO',no:original,saldo:saldo(original),disponivel:disponivel(original)};
+    if(atual){
+      var estId='est-'+atual._id;
+      if(!n.lancamentos[estId]) n.lancamentos[estId]={tipo:'estorno',estornaId:atual._id,data:dia,motivo:'remarcacao',obs:'Reserva anterior liberada para remarcar',quem:ator(op),ts:ts,agenda_ciclo:atual._id};
+    }
+    cred=n.lancamentos[id]=Object.assign({},cred);
+    delete cred.volta; delete cred.agenda_ciclo;
+    if(disponivel(n)<1) return {ok:false,codigo:'SEM_SALDO',no:original,saldo:saldo(original),disponivel:disponivel(original)};
+    L=lista(n);
+    var seq=proximaSequencia(L,id,cred), ciclo='agenda-'+chaveSegura(id)+'-'+seq, pz=prazo(dia,ts);
+    n.lancamentos[ciclo]={tipo:'uso',data:dia,motivo:'reposicao',credito:id,reserva:true,desfecho:'reservado',reserva_status:'ativa',
+      agenda_seq:seq,agenda_ciclo:ciclo,quem:ator(op),ts:ts,relogio:String(op.relogio||''),prazo_corte_ts:pz.limite_ts,prazo_fuso:FUSO,prazo_referencia:'12:00',marcado_apos_corte:!pz.dentro,
+      obs:'Saldo debitado ao marcar a reposição'};
+    cred.volta=dia; cred.volta_por=ator(op); cred.volta_ts=ts; cred.prazo24h=dia;
+    cred.prazo_corte_ts=pz.limite_ts; cred.prazo_fuso=FUSO; cred.prazo_referencia='12:00'; cred.marcado_apos_corte=!pz.dentro; cred.agenda_seq=seq; cred.agenda_ciclo=ciclo;
+    if(velhoDia && velhoDia!==dia) cred.volta_desmarcada={dia:velhoDia,quem:ator(op),ts:ts,motivo:'remarcada para '+dia,agenda_ciclo:velhoCiclo||''};
+    return {ok:true,idempotente:false,ciclo:ciclo,saldo:saldo(n),disponivel:disponivel(n),aposCorte:!pz.dentro,limiteTs:pz.limite_ts,no:n};
+  }
+
+  function cancelar(no,op){
+    op=op||{};
+    var original=noNormalizado(no), n=noNormalizado(no), id=String(op.creditoId||''), ts=Number(op.ts)||Date.now();
+    var cred=n.lancamentos[id];
+    if(!cred || cred.tipo!=='credito') return {ok:false,codigo:'CREDITO_AUSENTE',no:original};
+    var dia=String(op.volta||cred.volta||''), L=lista(n), res=reservaAtiva(L,id,cred.agenda_ciclo);
+    if(op.estadoEsperado){
+      var esp=op.estadoEsperado, espDia=String(esp.volta||''), espCiclo=String(esp.ciclo||'');
+      var atualCiclo=String(cred.agenda_ciclo||(res&&res._id)||''), mudou=String(cred.volta||'')!==espDia
+        ||atualCiclo!==espCiclo||dia!==espDia;
+      if(mudou){
+        if(res&&res._id!==espCiclo)
+          return {ok:false,codigo:'CONFLITO_AGENDA',no:original,saldo:saldo(original),disponivel:disponivel(original)};
+        // Retry de um cancelamento já confirmado devolve o mesmo resultado sem tocar eventual
+        // ciclo novo. Estorno por remarcação não vale como cancelamento confirmado.
+        var usoEsperado=espCiclo&&n.lancamentos[espCiclo], estEsperado=espCiclo&&n.lancamentos['est-'+espCiclo];
+        var devolvido=!!(estEsperado&&estEsperado.tipo==='estorno'&&estEsperado.estornaId===espCiclo&&estEsperado.motivo!=='remarcacao');
+        var consumido=!!(usoEsperado&&usoEsperado.desfecho==='fora_prazo'&&usoEsperado.cancelamento);
+        if(devolvido||consumido)
+          return {ok:true,idempotente:true,devolveu:devolvido,ciclo:espCiclo,saldo:saldo(n),disponivel:disponivel(n),no:n};
+        return {ok:false,codigo:'CONFLITO_AGENDA',no:original,saldo:saldo(original),disponivel:disponivel(original)};
+      }
+    }
+    if(!cred.volta && !res) return {ok:true,idempotente:true,saldo:saldo(n),disponivel:disponivel(n),no:n};
+    var pz=prazo(dia,op.agoraMs==null?ts:op.agoraMs);
+    if(op.esperavaDentro===true && !pz.dentro)
+      return {ok:false,codigo:'PRAZO_ENCERROU',no:original,saldo:saldo(original),disponivel:disponivel(original)};
+    var devolve=(op.devolve===true)||(op.devolve!==false&&pz.dentro);
+    if(res){
+      if(devolve){
+        var estId='est-'+res._id;
+        if(!n.lancamentos[estId]) n.lancamentos[estId]={tipo:'estorno',estornaId:res._id,data:dia,motivo:String(op.motivo||'cancelamento_no_prazo'),
+          obs:String(op.obs||'Reserva devolvida ao saldo'),justificativa:String(op.justificativa||op.obs||''),quem:ator(op),ts:ts,agenda_ciclo:res._id};
+      }else{
+        var uso=Object.assign({},n.lancamentos[res._id]);
+        uso.desfecho='fora_prazo'; uso.reserva_status='consumida';
+        uso.cancelamento={quem:ator(op),ts:ts,motivo:String(op.motivo||'cancelamento_fora_prazo'),justificativa:String(op.justificativa||op.obs||'')};
+        n.lancamentos[res._id]=uso;
+      }
+    }
+    cred=n.lancamentos[id]=Object.assign({},cred);
+    cred.volta=''; cred.ultima_agenda_ciclo=cred.agenda_ciclo||''; delete cred.agenda_ciclo;
+    cred.volta_desmarcada=Object.assign({dia:dia,quem:ator(op),ts:ts,dentro_prazo:devolve,fora_prazo:!devolve},op.marca||{});
+    return {ok:true,idempotente:false,devolveu:!!(res&&devolve),ciclo:res&&res._id,saldo:saldo(n),disponivel:disponivel(n),no:n};
+  }
+
+  function concluir(no,op){
+    op=op||{};
+    var original=noNormalizado(no), n=noNormalizado(no), id=String(op.creditoId||''), cred=n.lancamentos[id];
+    if(!cred || cred.tipo!=='credito') return {ok:false,codigo:'CREDITO_AUSENTE',no:original};
+    var L=lista(n), res=reservaAtiva(L,id,cred.agenda_ciclo);
+    if(!res){
+      var encerrado=(cred.agenda_ciclo&&n.lancamentos[cred.agenda_ciclo])||(cred.ultima_agenda_ciclo&&n.lancamentos[cred.ultima_agenda_ciclo]);
+      if(encerrado) return {ok:true,idempotente:true,ciclo:String(encerrado._id||cred.agenda_ciclo||cred.ultima_agenda_ciclo||''),registro:encerrado,saldo:saldo(n),disponivel:disponivel(n),no:n};
+      if(Number(cred.agenda_seq)>0) return {ok:true,idempotente:true,ciclo:'',registro:null,saldo:saldo(n),disponivel:disponivel(n),no:n};
+      return {ok:false,codigo:'LEGADO_SEM_RESERVA',no:original};
+    }
+    var ts=Number(op.ts)||Date.now(), desfecho=String(op.desfecho||'veio'), uso=Object.assign({},n.lancamentos[res._id]);
+    uso.desfecho=desfecho; uso.reserva_status='consumida';
+    if(desfecho==='veio'){
+      uso.presenca={quem:ator(op),ts:ts,auto:!!op.auto,relogio:String(op.relogio||'')};
+      uso.presenca_quem=ator(op); uso.presenca_ts=ts; uso.presenca_quem_ts=ts;
+      uso.presenca_eventos=Object.assign({},uso.presenca_eventos||{});
+      uso.presenca_eventos.p1=uso.presenca;
+    }else{
+      uso.desfecho_registro={quem:ator(op),ts:ts,auto:!!op.auto,relogio:String(op.relogio||'')};
+    }
+    if(op.avisou_em!=null) uso.avisou_em=Number(op.avisou_em);
+    if(op.conferido) uso.conferido=copia(op.conferido);
+    if(op.lanc) uso.lanc=copia(op.lanc);
+    if(op.obs) uso.presenca_obs=String(op.obs);
+    n.lancamentos[res._id]=uso;
+    return {ok:true,idempotente:false,ciclo:res._id,registro:uso,saldo:saldo(n),disponivel:disponivel(n),no:n};
+  }
+
+  function criarCreditoEAgendar(no,op){
+    op=op||{};
+    var original=noNormalizado(no), n=noNormalizado(no), id=String(op.creditoId||'');
+    if(!id || n.lancamentos[id]) return {ok:false,codigo:'CREDITO_EXISTE',existente:n.lancamentos[id]||null,no:original};
+    n.lancamentos[id]=Object.assign({},op.credito||{}, {tipo:'credito'});
+    var r=marcar(n,Object.assign({},op,{creditoId:id}));
+    if(!r.ok) return Object.assign({},r,{no:original});
+    return r;
+  }
+
+  return {FUSO:FUSO,copia:copia,lista:lista,anulados:anulados,saldoDe:saldoDe,saldo:saldo,reservasHotel:reservasHotel,
+    reservaAtiva:reservaAtiva,ehReservaAtiva:ehReservaAtiva,usoFinal:usoFinal,legadosPendentes:legadosPendentes,disponivel:disponivel,
+    instanteNoFuso:instanteNoFuso,prazo:prazo,marcar:marcar,cancelar:cancelar,concluir:concluir,criarCreditoEAgendar:criarCreditoEAgendar};
+});
+
+/* Zêluz · reposições 14 · integração contábil
+ * Inserido pelo patcher estrito antes do INIT. Depende de reposicao14-core.js, que o patcher inclui antes.
+ */
+  var REP14_CORE=globalThis.ZeluzReposicao14Core;
+  var REP14_ANTIGO={
+    gravar:repGravar,
+    agendar:repAgendarVolta,
+    desmarcar:repDesmarcar,
+    desfecho:repDesfechoGravar,
+    veio:repVeioGravar,
+    agendaDeL:repAgendaDeL,
+    voltasVencidas:repVoltasVencidas,
+    diaTemUso:repDiaTemUso,
+    livresParaMarcar:repLivresParaMarcar,
+    livresSemDia:repLivresSemDia,
+    tetosDe:repTetosDe,
+    saldoReposicao:repSaldoReposicao,
+    saldoParaUsarHoje:repSaldoParaUsarHoje,
+    prazo:repPrazo,
+    prazoTexto:repPrazoTexto,
+    mensagemPrazo:repMensagemPrazo,
+    botaoRotulo:repBotaoRotulo,
+    dxBotaoRotulo:dxBotaoRotulo
+  };
+  var REP14_ULTIMO=null;
+
+  function rep14Quem(){
+    try{ return (typeof pessoaDoTurno==='function')?pessoaDoTurno():quemSou(); }
+    catch(e){ return '-'; }
+  }
+  function rep14ListaNo(no){ return REP14_CORE.lista(no||{}); }
+  function rep14NoCache(p){
+    try{ return (REPO_CACHE&&REPO_CACHE[pelKey(p)])||{}; }catch(e){ return {}; }
+  }
+  function rep14TransacaoPet(p, decide){
+    if(!p) return Promise.reject(new Error('sem o peludinho'));
+    if(!DB) return Promise.reject(new Error('sem conexão com o banco'));
+    var chavePet=pelKey(p), autor=rep14Quem(), caminho='daycare/reposicao/'+chavePet, ref=DB.ref(caminho), ultimo=null;
+    // O SDK pode chamar a transação primeiro com cache null. A leitura confirma o nó no servidor e
+    // evita tratar cache frio como crédito ausente. A decisão, porém, usa SOMENTE o valor entregue
+    // pela transação: um snapshot aquecido nunca pode ressuscitar um nó apagado concorrentemente.
+    function valor(s){ try{ return (s&&typeof s.val==='function')?s.val():null; }catch(e){ return null; } }
+    function executar(confirmado,tentativa){
+      var cacheFrio=false; ultimo=null;
+      return ref.transaction(function(atual){
+        if(!(atual&&typeof atual==='object')){
+          if(confirmado&&typeof confirmado==='object'){
+            cacheFrio=true; ultimo={ok:false,codigo:'CACHE_FRIO'}; return;
+          }
+          atual={};
+        }
+        ultimo=decide(atual)||{ok:false,codigo:'RECUSADO'};
+        if(!ultimo.ok) return;
+        return ultimo.no;
+      },undefined,false).then(function(r){
+        if(!r.committed&&cacheFrio&&tentativa<1)
+          return ref.once('value').then(function(s){ return executar(valor(s),tentativa+1); });
+        return r;
+      });
+    }
+    return ref.once('value').then(function(s){ return executar(valor(s),0); }).then(function(r){
+      var committed=!!(r&&r.committed), snap=null;
+      try{ snap=(r&&r.snapshot&&typeof r.snapshot.val==='function')?r.snapshot.val():null; }catch(e){ snap=null; }
+      if(committed&&snap){ try{ REPO_CACHE[chavePet]=snap; }catch(e){ /* o listener repõe o cache; a gravação já foi confirmada */ } }
+      var sessaoValida=false;
+      try{ sessaoValida=(pelKey(p)===chavePet && rep14Quem()===autor); }catch(e){ sessaoValida=false; }
+      var out=Object.assign({},ultimo||{}, {committed:committed,sessaoValida:sessaoValida});
+      REP14_ULTIMO=out;
+      return out;
+    });
+  }
+  function rep14Erro(r, padrao){
+    var t=(r&&r.codigo)==='SEM_SALDO'?'Não há saldo disponível para marcar esta reposição. O Extrato não foi alterado.'
+      :((r&&r.codigo)==='REMARCACAO_FORA_PRAZO'?'O prazo da marcação anterior já terminou. Ela continua debitada; cancele com justificativa antes de usar outro crédito.':(padrao||'Não consegui alterar a reposição.'));
+    if(r&&r.codigo==='PRAZO_ENCERROU') t='O prazo terminou enquanto esta confirmação estava aberta. Nada foi mudado; abra “desmarcar” novamente para registrar o cancelamento sem devolução.';
+    if(r&&r.codigo==='CONFLITO_AGENDA') t='Outra pessoa alterou este crédito enquanto a confirmação estava aberta. Nada foi mudado; confira o dia atual antes de tentar novamente.';
+    var e=new Error(t); e.repAviso=true; e.rep14=r||null; return e;
+  }
+  function rep14ReservaAtivaDoCredito(p,cred,L){
+    L=L||repLancamentos(p)||[];
+    return REP14_CORE.reservaAtiva(L,String((cred&&cred._id)||''),String((cred&&cred.agenda_ciclo)||''));
+  }
+  function rep14UsoFinal(l,an){ return REP14_CORE.usoFinal(l,an); }
+
+  function rep14AgendarVolta(p, creditoId, volta, aut){
+    if(!p||!creditoId) return Promise.reject(new Error('sem o crédito'));
+    var Lv=[], velho=null;
+    try{ Lv=repLancamentos(p)||[]; velho=Lv.filter(function(l){ return l._id===creditoId; })[0]||null; }catch(e){ velho=null; }
+    var bar=repRemarcarBarrado(velho,String(volta||''),Lv);
+    if(bar) return Promise.reject(bar);
+    var ts=Date.now(), quem=rep14Quem();
+    var estadoEsperado={volta:String((velho&&velho.volta)||''),ciclo:String((velho&&velho.agenda_ciclo)||''),seq:Number((velho&&velho.agenda_seq)||0)};
+    return rep14TransacaoPet(p,function(no){
+      return REP14_CORE.marcar(no,{creditoId:String(creditoId),volta:String(volta||''),quem:quem,ts:ts,relogio:repRelogio(),estadoEsperado:estadoEsperado});
+    }).then(function(r){
+      if(!r.committed || !r.ok) throw rep14Erro(r);
+      if(r.sessaoValida&&typeof audit==='function') audit('reposicao-agendada',pelNome(p)+' vem repor em '+repBRdata(volta)+(r.aposCorte?' — marcada depois do corte; cancelar não devolve saldo':''),
+        {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''),pet:pelNome(p),saldo:r.saldo,agenda_ciclo:r.ciclo});
+      return true;
+    });
+  }
+  repAgendarVolta=rep14AgendarVolta;
+
+  repGravar=function(p,reg,chave){
+    var troca=false;
+    try{ troca=!!(reg&&reg.troca); }catch(e){ troca=false; }
+    // "Veio repor hoje" e Lançamentos do dia concluem a reserva já debitada, inclusive se o
+    // crédito ainda não chegou ao cache deste aparelho. Sem reserva14, o lançamento legado segue igual.
+    if(p&&reg&&reg.tipo==='uso'&&reg.motivo==='reposicao'&&/^\d{4}-\d{2}-\d{2}$/.test(String(reg.data||''))){
+      var tsU=Date.now(), quemU=rep14Quem();
+      return rep14TransacaoPet(p,function(no){
+        var L=REP14_CORE.lista(no), an=REP14_CORE.anulados(L);
+        var encerradas=L.filter(function(l){
+          if(!(l&&l.tipo==='uso'&&l.reserva===true&&!an[l._id]&&l.data===reg.data&&l.desfecho!=='reservado')) return false;
+          var cred=no.lancamentos&&no.lancamentos[String(l.credito||'')];
+          var lancIgual=!!(reg.lanc&&reg.lanc.id&&l.lanc&&String(l.lanc.id||'')===String(reg.lanc.id));
+          return lancIgual||!!(cred&&cred.tipo==='credito'&&cred.volta===reg.data&&cred.agenda_ciclo===l._id);
+        });
+        if(encerradas.length){
+          var feito=encerradas[0];
+          return {ok:true,idempotente:true,ciclo:feito._id,registro:feito,saldo:REP14_CORE.saldo(no),disponivel:REP14_CORE.disponivel(no),no:REP14_CORE.copia(no)};
+        }
+        var res=L.filter(function(l){ return REP14_CORE.ehReservaAtiva(l,an)&&l.data===reg.data; })[0]||null;
+        if(!res) return {ok:false,codigo:'LEGADO_SEM_RESERVA',no:no};
+        return REP14_CORE.concluir(no,{creditoId:String(res.credito||''),desfecho:'veio',quem:quemU,ts:tsU,relogio:repRelogio(),lanc:reg.lanc,obs:reg.obs});
+      }).then(function(r){
+        if(r&&r.codigo==='LEGADO_SEM_RESERVA') return REP14_ANTIGO.gravar(p,reg,chave);
+        if(!r.ok) throw rep14Erro(r);
+        return {committed:!!(r.committed&&!r.idempotente),key:r.ciclo||'',existente:r.idempotente?(r.registro||null):null,
+          saldo:r.disponivel,saldo_contabil:r.saldo,disponivel:r.disponivel};
+      });
+    }
+    if(!(p&&reg&&reg.tipo==='credito'&&reg.volta&&chave&&!troca)) return REP14_ANTIGO.gravar(p,reg,chave);
+    var ts=Date.now(), quem=rep14Quem(), novo=Object.assign({},reg,{quem:quem,ts:ts});
+    return rep14TransacaoPet(p,function(no){
+      return REP14_CORE.criarCreditoEAgendar(no,{creditoId:String(chave),credito:novo,volta:String(reg.volta),quem:quem,ts:ts,relogio:repRelogio()});
+    }).then(function(r){
+      if(r.committed&&r.ok) return {committed:true,key:String(chave),existente:null,saldo:r.saldo,agenda_ciclo:r.ciclo};
+      if(r&&r.codigo==='CREDITO_EXISTE') return {committed:false,key:String(chave),existente:r.existente||null};
+      throw rep14Erro(r);
+    });
+  };
+
+  function rep14CancelarDia(p,cred,dia,marca){
+    marca=marca||{};
+    var devolve=null;
+    if(marca.fora_prazo||marca.so_tira) devolve=false;
+    // A única devolução especial preservada é casa fechada. Cancelamento normal sempre relê o relógio
+    // dentro da transação; justificativa, Gestão ou tela aberta antes do corte não mudam as 24 horas.
+    if(marca.casa_fechada) devolve=true;
+    var motivo=marca.fora_prazo?'cancelamento_fora_prazo':(marca.casa_fechada?'casa_fechada':(marca.zeluz?'zeluz_desmarcou':(marca.excecao?'excecao':'cancelamento_no_prazo')));
+    var ts=Date.now(), quem=rep14Quem();
+    var estadoEsperado={volta:String((cred&&cred.volta)||dia||''),ciclo:String((cred&&cred.agenda_ciclo)||''),seq:Number((cred&&cred.agenda_seq)||0)};
+    return rep14TransacaoPet(p,function(no){
+      return REP14_CORE.cancelar(no,{creditoId:String(cred._id),volta:String(dia||cred.volta||''),quem:quem,ts:ts,agoraMs:repAgoraServidor(),devolve:devolve,esperavaDentro:marca.dentro_prazo===true,motivo:motivo,marca:marca,
+        justificativa:String(marca.justificativa||''),obs:String(marca.motivo||marca.justificativa||''),estadoEsperado:estadoEsperado});
+    }).then(function(r){ if(!r.committed||!r.ok) throw rep14Erro(r); return r; });
+  }
+
+  // Ciclos novos cancelam em UMA transação e anunciam somente o saldo confirmado. O fluxo legado
+  // continua na função antiga, inclusive para lançamentos históricos sem agenda_ciclo.
+  repDesmarcar=async function(i,dia){
+    var p=PELUDINHOS[i]; if(!p) return;
+    var L=repLancamentos(p)||[], an=repAnulados(L), cred=L.filter(function(l){ return l&&l.tipo==='credito'&&l.volta===dia&&!an[l._id]; })[0]||null;
+    var reserva=cred?rep14ReservaAtivaDoCredito(p,cred,L):null;
+    if(!cred||!reserva) return REP14_ANTIGO.desmarcar(i,dia);
+    if(!repPodeLancar()){ alert('Quem marca e desmarca reposição é a recepção, a Supervisão ou a Gestão.'); return; }
+    if(!DB){ alert('Sem conexão com o banco agora. Nada foi mudado — tente de novo em instantes.'); return; }
+    var justificativa=((await zTexto('Por que esta reposição será desmarcada?',
+      ['A justificativa fica no Extrato, junto de quem cancelou e quando.'],
+      {rotulo:'Motivo (ex.: Viagem, Doença, Tutor desistiu)',botao:'Continuar',validar:function(v){ return String(v||'').trim().length>=3?'':'Escreva um motivo curto.'; },cor:'#234D67'}))||'').trim();
+    if(justificativa.length<3){ if(justificativa) alert('Escreva um motivo curto. Nada foi mudado.'); return; }
+    var agora=repAgoraServidor(), pz=REP14_CORE.prazo(dia,agora), casa=!!repFeriadoNome(dia), dentro=casa||pz.dentro;
+    var linhas=[dentro
+      ?('Dentro do prazo ('+repPrazoTexto(dia)+'): o débito será devolvido uma vez ao saldo.')
+      :('O prazo terminou ('+repPrazoTexto(dia)+'): a vaga será liberada, mas o débito não volta.'),
+      'Justificativa: '+justificativa+'.'];
+    if(!await zPergunta('Desmarcar a reposição de '+pelNome(p)+' '+repNoDia(dia)+'?',linhas,{sim:'Desmarcar',nao:'Manter o dia'})) return;
+    try{
+      var r=await rep14CancelarDia(p,cred,dia,{dentro_prazo:!casa&&pz.dentro,fora_prazo:!casa&&!pz.dentro,casa_fechada:casa,
+        justificativa:justificativa,motivo:casa?('a Zêluz não abriu ('+repFeriadoNome(dia)+')'):''});
+      if(typeof audit==='function') audit('reposicao-desmarcada',pelNome(p)+' — '+repBRdata(dia)+' — '+justificativa,
+        {alvo:(typeof dcKey==='function'?dcKey(p.n,p.tutor):''),pet:pelNome(p),saldo:r.saldo,agenda_ciclo:r.ciclo||''});
+      repMsgModal(r.devolveu?'✅ Reposição desmarcada e devolvida':'Reposição desmarcada sem devolução',
+        [pelNome(p)+' não vem mais '+repNoDia(dia)+'.',r.devolveu?'O débito voltou uma vez ao saldo.':'O cancelamento foi depois do corte; o débito permaneceu.',
+         'Saldo disponível confirmado: '+r.disponivel+'.','Justificativa: '+justificativa+'.'],
+        repMensagem(p,r.devolveu?'desmarcada':'desmarcada-fora',{volta:dia,livres:r.disponivel,saldo:r.disponivel,saldo_contabil:r.saldo}),repTelDe(p));
+      try{ if(typeof vagasCarregarDia==='function') vagasCarregarDia(dia,true); }catch(e){ /* o listener atualizará */ }
+      repDepoisDeMudar(i);
+      return r;
+    }catch(e){
+      alert((e&&e.message)||'Não consegui desmarcar. Nada foi confirmado; confira o Extrato.');
+      return null;
+    }
+  };
+
+  repDesfechoGravar=function(p,cred,desfecho,extra,L){
+    extra=extra||{};
+    if(!p||!cred||!cred._id) return REP14_ANTIGO.desfecho(p,cred,desfecho,extra,L);
+    var ts=Date.now(), quem=extra.auto?'sistema':rep14Quem();
+    return rep14TransacaoPet(p,function(no){
+      return REP14_CORE.concluir(no,{creditoId:String(cred._id),desfecho:String(desfecho||''),quem:quem,ts:ts,auto:!!extra.auto,relogio:extra.relogio||repRelogio(),avisou_em:extra.avisou_em,conferido:extra.conferido,lanc:extra.lanc,obs:extra.obs});
+    }).then(function(r){
+      if(r&&r.codigo==='LEGADO_SEM_RESERVA') return REP14_ANTIGO.desfecho(p,cred,desfecho,extra,L);
+      if(!r.ok) throw rep14Erro(r);
+      if(r.idempotente) return {committed:false,key:r.ciclo||'',existente:r.registro||null};
+      if(!r.committed) return {committed:false,key:r.ciclo||'',existente:r.registro||null};
+      return {committed:true,key:r.ciclo,reg:r.registro};
+    });
+  };
+  repVeioGravar=function(p,cred,auto,L){
+    return repDesfechoGravar(p,cred,'veio',{auto:!!auto},L).then(function(r){ return !!(r&&r.committed); });
+  };
+
+  repDiaTemUso=function(L,dia){
+    var an=repAnulados(L||[]);
+    return (L||[]).some(function(l){ return !!(l&&l.tipo==='uso'&&!an[l._id]&&l.data===dia&&rep14UsoFinal(l,an)); });
+  };
+  repAgendaDeL=function(L,hoje){
+    var an=repAnulados(L||[]), usosCredito={}, usoNoDia={};
+    (L||[]).forEach(function(l){
+      if(!rep14UsoFinal(l,an)) return;
+      if(l.credito) usosCredito[String(l.credito)]=true;
+      if(l.data) usoNoDia[l.data]=(usoNoDia[l.data]||0)+1;
+    });
+    return (L||[]).filter(function(l){ return l&&l.tipo==='credito'&&l.volta&&l.volta>=hoje&&!an[l._id]; })
+      .sort(function(a,b){ return String(a.volta).localeCompare(String(b.volta))||String(a.data||'').localeCompare(String(b.data||'')); })
+      .filter(function(l){ if(usosCredito[l._id]) return false; if(usoNoDia[l.volta]>0){ usoNoDia[l.volta]--; return false; } return true; });
+  };
+  repVoltasVencidas=function(L,hoje){
+    var an=repAnulados(L||[]), usosCredito={}, usoNoDia={};
+    (L||[]).forEach(function(l){
+      if(!rep14UsoFinal(l,an)) return;
+      if(l.credito) usosCredito[String(l.credito)]=true;
+      if(l.data) usoNoDia[l.data]=(usoNoDia[l.data]||0)+1;
+    });
+    return (L||[]).filter(function(l){ return l&&l.tipo==='credito'&&!an[l._id]&&/^\d{4}-\d{2}-\d{2}$/.test(l.volta||'')&&hoje&&l.volta<hoje; })
+      .sort(function(a,b){ return String(a.volta).localeCompare(String(b.volta))||String(a.data||'').localeCompare(String(b.data||'')); })
+      .filter(function(l){ if(usosCredito[l._id]) return false; if(usoNoDia[l.volta]>0){ usoNoDia[l.volta]--; return false; } return true; });
+  };
+  repLivresParaMarcar=function(p,ajuste){
+    var d=0; try{ d=REP14_CORE.disponivel(rep14NoCache(p)); }catch(e){ d=0; }
+    return Math.max(0,d-(Number(ajuste)||0));
+  };
+  repLivresSemDia=function(p,ajuste){ return repLivresParaMarcar(p,ajuste); };
+  // Número público: o que ainda pode ser usado, já descontadas reservas de hospedagem e agendas
+  // legadas pendentes. O saldo contábil bruto continua disponível no Extrato por REP14_CORE.saldo.
+  repSaldoReposicao=function(p){
+    try{ return REP14_CORE.disponivel(rep14NoCache(p)); }catch(e){ return 0; }
+  };
+  repTetosDe=function(L,hoje,reservado){
+    var s=repSaldoDe(L||[]), no={lancamentos:{},reservas:{hotel:{n:Math.max(0,Number(reservado)||0)}}};
+    (L||[]).forEach(function(l,i){ var k=String((l&&l._id)||('l'+i)); no.lancamentos[k]=Object.assign({},l); delete no.lancamentos[k]._id; });
+    return {fut:Math.max(0,s),teto:REP14_CORE.disponivel(no)};
+  };
+  repSaldoParaUsarHoje=function(p,dia){
+    var extra=0,L=[],cred=null;
+    try{ L=repLancamentos(p)||[]; cred=L.filter(function(l){ return l&&l.tipo==='credito'&&l.volta===(dia||repHojeISO()); })[0]||null; extra=rep14ReservaAtivaDoCredito(p,cred,L)?1:0; }catch(e){ extra=0; }
+    return repSaldoReposicao(p)+(repTrocaPendenteDoDia(p,dia||repHojeISO())?1:0)+extra;
+  };
+
+  repPrazo=function(volta,avisouMs){
+    var agora=(avisouMs!=null&&isFinite(+avisouMs))?+avisouMs:repAgoraServidor(), p=REP14_CORE.prazo(volta,agora);
+    p.dia=repDiaBrasilia(agora); p.limite=repDiaAnterior(volta); p.texto=repPrazoTexto(volta); p.relogio=repRelogio();
+    return p;
+  };
+  repPrazoTexto=function(volta){ return 'até 12h de '+repDiaSemanaComData(repDiaAnterior(volta)); };
+  repBotaoRotulo=function(){
+    var v=String((document.getElementById('repVolta')||{}).value||'').slice(0,10);
+    if(repEhDiaDele(repPelSel,v)) return REP_DIA_DELE_BOTAO;
+    return 'Lançar reposição';
+  };
+  dxBotaoRotulo=function(){
+    var v=dxVeredito(dxPel,dxDia,dxTrocaAtual(),dxMudarAtual());
+    if(!v.ok) return 'Confirmar';
+    if(v.tipo==='avulso') return REP14_ANTIGO.dxBotaoRotulo();
+    if(v.tipo==='troca') return 'Fazer a troca';
+    if(repEhDiaDele(dxPel,dxDia)) return REP_DIA_DELE_BOTAO;
+    if(v.mudar) return 'Mudar o dia';
+    if(v.tipo==='avulso') return 'Lançar o avulso';
+    return 'Marcar a reposição';
+  };
+
+  globalThis.ZeluzReposicao14={
+    versao:'2026-10-14-contabilidade-1',ultimo:function(){ return REP14_ULTIMO; },
+    agendar:rep14AgendarVolta,cancelar:rep14CancelarDia,reservaAtiva:rep14ReservaAtivaDoCredito
+  };
+
+
+
+
+/* REPOSICAO14_INTERFACE_INICIO */
+/* Interface de reposições: linguagem para tutor e extrato. Sem gravações aqui. */
+(function(){
+  var _repMensagem=repMensagem;
+  var _repMensagemPrazo=repMensagemPrazo;
+  var _repPrazoLinha=repPrazoLinha;
+  var _repExtratoRotulo=repExtratoRotulo;
+  var _repExtratoLinhaHTML=repExtratoLinhaHTML;
+
+  function rep14N(n, um, muitos){ return Number(n)===1 ? um : muitos; }
+  function rep14DiaAnterior(iso){
+    var d=new Date(String(iso||'')+'T12:00:00');
+    if(isNaN(d)) return '';
+    d.setDate(d.getDate()-1);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function rep14DataHora(ms){
+    var d=new Date(ms); if(isNaN(d)) return '';
+    try{ var p=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',weekday:'long',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(d), o={}; p.forEach(function(x){o[x.type]=x.value;}); return o.weekday+', '+o.day+'/'+o.month+' às '+o.hour+'h'+o.minute; }catch(e){ return ''; }
+  }
+  function rep14Corte(iso, meta){
+    meta=meta||{};
+    var salvo=meta.prazo_corte_ts||meta.limite_cancelamento||meta.limiteCancelamento;
+    if(salvo && isFinite(new Date(salvo).getTime())) return rep14DataHora(salvo);
+    try{
+      var core=(typeof REP14_CORE!=='undefined'&&REP14_CORE)?REP14_CORE:((typeof globalThis!=='undefined')?globalThis.ZeluzReposicao14Core:null);
+      var regra=core&&typeof core.prazo==='function'?core.prazo(String(iso||'')):null;
+      if(regra && isFinite(Number(regra.limite_ts))) return rep14DataHora(Number(regra.limite_ts));
+    }catch(e){}
+    // Fallback explícito de Brasília: nunca interpreta a data no fuso do aparelho.
+    var hora=String(meta.horario_reposicao||meta.volta_hora||meta.horario||'12:00');
+    if(/^\d{2}:\d{2}$/.test(hora)) hora+=':00';
+    var eventoMs=Date.parse(String(iso||'')+'T'+hora+'-03:00');
+    if(isFinite(eventoMs)) return rep14DataHora(eventoMs-24*60*60*1000);
+    var anterior=rep14DiaAnterior(iso);
+    return anterior?repDiaSemanaComData(anterior)+' às 12h':'24 horas completas antes da reposição';
+  }
+  function rep14Assinatura(l, campo){
+    var por=String(l && (l[campo||'quem'] || l.quem) || 'sem autoria registrada');
+    var quando=l && (l[(campo||'quem')+'_ts'] || l.ts);
+    var data=quando && typeof repQuandoDe==='function' ? repQuandoDe(quando) : '';
+    return por+(data ? ' · '+data : '');
+  }
+  function rep14AssinaturaCancelamento(l){
+    var c=(l&&l.cancelamento)||(l&&l.volta_desmarcada)||{};
+    var por=c.quem||c.por||'', quando=c.ts||c.quando_ts||c.em||0;
+    if(!por && !quando) return '';
+    var data=quando&&typeof repQuandoDe==='function'?repQuandoDe(quando):'';
+    return String(por||'sem autoria registrada')+(data?' · '+data:'');
+  }
+  function rep14SaldoDisponivel(p){
+    var saldo=0;
+    try{ saldo=Number(repLivresParaMarcar(p,0)); }
+    catch(e){ try{ saldo=Number(repSaldoReposicao(p)); }catch(x){ saldo=0; } }
+    return Math.max(0,isFinite(saldo)?saldo:0);
+  }
+  function rep14MarcadaAposCorte(dia, info){
+    if(info && info.marcado_apos_corte===true) return true;
+    try{
+      if(typeof repPrazo==='function'){
+        var prazo=repPrazo(dia);
+        if(prazo && prazo.dentro===false) return true;
+      }
+    }catch(e){}
+    return false;
+  }
+  function rep14Agendado(l){
+    return !!(l && l.tipo==='uso' && (l.reserva===true || l.agenda_id || l.agenda_ciclo));
+  }
+  function rep14AgendaDia(l){ return String((l&&l.tipo==='credito'?(l.volta||l.data):(l&&(l.data||l.volta)))||''); }
+  function rep14AgendaChave(l){
+    var ciclo=String((l&&l.agenda_ciclo)||(l&&l.tipo==='uso'&&l._id)||'');
+    if(ciclo) return 'ciclo:'+ciclo;
+    var credito=String((l&&l.credito)||(l&&l.tipo==='credito'&&l._id)||'');
+    if(credito) return 'credito:'+credito+'|'+rep14AgendaDia(l);
+    return 'registro:'+String((l&&l._id)||'')+'|'+rep14AgendaDia(l);
+  }
+  function rep14ListaAgendada(p){
+    var L=[]; try{ L=repLancamentos(p)||[]; }catch(e){}
+    var an=(typeof repAnulados==='function')?repAnulados(L):{};
+    var hoje=''; try{ hoje=(typeof repHojeISO==='function')?repHojeISO():''; }catch(e){}
+    if(!hoje) hoje=new Date().toISOString().slice(0,10);
+    var out=[], vistos={};
+    L.filter(rep14Agendado).filter(function(l){ return !an[l._id] && l.desfecho==='reservado'; }).forEach(function(l){
+      var k=rep14AgendaChave(l); if(!vistos[k]){ vistos[k]=1; out.push(l); }
+    });
+    try{
+      if(typeof repAgendaDeL==='function') (repAgendaDeL(L,hoje)||[]).forEach(function(l){
+        var k=rep14AgendaChave(l); if(!vistos[k]){ vistos[k]=1; out.push(l); }
+      });
+    }catch(e){}
+    return out.sort(function(a,b){ return rep14AgendaDia(a).localeCompare(rep14AgendaDia(b)); });
+  }
+
+  repPrazoLinha=function(dia, troca){
+    var alvo=troca?'a troca':'a reposição';
+    return 'Cancelamento de '+alvo+' até '+rep14Corte(dia)+' (24 horas completas antes da reposição; referência de entrada: 12h): '+(troca?'a troca volta a ficar disponível.':'1 crédito volta para o saldo disponível.')+' Depois desse horário, podemos cancelar e liberar a vaga, mas o crédito não volta.';
+  };
+  repMensagemPrazo=function(tipo, dia){
+    return '🗓️ Se precisarem desmarcar, avisem com *pelo menos 24 horas de antecedência*, até *'+(dia?rep14Corte(dia):'o mesmo horário do dia anterior')+'*. Assim, o crédito volta. Depois desse horário, podemos cancelar, mas o crédito não volta. Organizamos as reposições com cinco vagas por dia para cuidar de cada peludinho com atenção.';
+  };
+  repMensagem=function(p, modo, info){
+    info=info||{};
+    // A falta lançada junto da volta já confirmou o débito no mesmo gesto.
+    if(modo==='credito' && info.volta && Number(info.qtd||1)===1) modo='agendada';
+    if(['agendada','desmarcada','desmarcada-fora'].indexOf(modo)<0 && !(modo==='uso' && (info.reserva===true||info.agenda_id||info.desfecho==='veio'))) return _repMensagem(p, modo, info);
+    var tutor=(typeof primeiroNome==='function')?primeiroNome(pelGet(p,'tutor')||p.tutor||''):'';
+    var nome=pelNome(p), saldo=Number(info.saldo);
+    if(!isFinite(saldo)) saldo=rep14SaldoDisponivel(p);
+    saldo=Math.max(0,saldo);
+    var ola='Oi'+(tutor?', '+tutor:'')+'!';
+    var dia=info.volta||info.data||'';
+    var saldoTxt='Saldo disponível: *'+saldo+' '+rep14N(saldo,'crédito','créditos')+'*.';
+    if(modo==='agendada'){
+      var prazoMsg=rep14MarcadaAposCorte(dia,info)
+        ?'🗓️ Esta marcação foi feita com menos de 24 horas de antecedência. Se precisarem cancelar, liberamos a vaga, mas o crédito não volta. Organizamos as reposições com cinco vagas por dia para cuidar de cada peludinho com atenção.'
+        :repMensagemPrazo('reposicao',dia);
+      return ola+' 💛\n\n🗓️ *Reposição de '+nome+' agendada para '+repDiaSemanaComData(dia)+'.*\n🐾 *1 crédito foi usado para reservar esse dia.*\n'+saldoTxt+'\n\n'+prazoMsg+'\n\nEstamos por aqui. 💛';
+    }
+    if(modo==='uso') return ola+' 💛\n\n🐾 A presença de *'+nome+'* foi confirmada. O crédito já tinha sido usado quando o dia foi agendado, então não houve novo desconto.\n'+saldoTxt+'\n\nEstamos por aqui. 💛';
+    if(modo==='desmarcada') return ola+' 💛\n\n🗓️ A reposição de *'+nome+'* em '+repDiaSemanaComData(dia)+' foi cancelada dentro do prazo.\n🐾 *1 crédito voltou para o saldo disponível.*\n'+saldoTxt+'\n\nQuando quiserem, combinamos uma nova data. 💛';
+    return ola+' 💛\n\n🗓️ O agendamento de *'+nome+'* em '+repDiaSemanaComData(dia)+' foi cancelado depois do prazo.\n🐾 A vaga foi liberada, mas *o crédito não voltou* ao saldo.\n'+saldoTxt+'\n\nEstamos por aqui. 💛';
+  };
+  repExtratoRotulo=function(l, X, hoje){
+    if(rep14Agendado(l)){
+      if(X && X.an && X.an[l._id]) return {rot:'−1 AGENDAMENTO CANCELADO', cls:'uso', corpo:'Agendamento cancelado · crédito devolvido', meta:' · devolução registrada separadamente'};
+      if(l.desfecho==='veio') return {rot:'−1 AGENDADO', cls:'uso', corpo:'Presença confirmada · sem novo desconto', meta:' · 0 na confirmação de presença'};
+      if(l.desfecho==='fora_prazo') return {rot:'−1 AGENDADO', cls:'uso', corpo:'Cancelamento fora do prazo · vaga liberada · crédito não devolvido', meta:''};
+      return {rot:'−1 AGENDADO', cls:'uso', corpo:'Presença confirmada para '+repBRdata(l.data), meta:' · 1 crédito reservado'};
+    }
+    if(l && l.tipo==='estorno' && l.motivo==='cancelamento_no_prazo')
+      return {rot:'+1 DEVOLVIDO', cls:'credito', corpo:'Cancelamento dentro do prazo · 1 crédito devolvido', meta:' · saldo disponível atualizado'};
+    return _repExtratoRotulo(l, X, hoje);
+  };
+  repExtratoLinhaHTML=function(p, i, l, c){
+    if(!rep14Agendado(l) && !(l && l.tipo==='estorno' && l.motivo==='cancelamento_no_prazo')) return _repExtratoLinhaHTML(p,i,l,c);
+    var cancelado=!!((c.X&&c.X.an&&c.X.an[l._id])||(c.anulado&&c.anulado[l._id]));
+    var rx=cancelado?{rot:'−1 AGENDAMENTO CANCELADO',cls:'uso',corpo:'Agendamento cancelado · crédito devolvido',meta:' · devolução registrada separadamente'}:repExtratoRotulo(l,c.X,c.hojeServ), confirmado=!cancelado&&l.desfecho==='veio', data=repBRdata(l.data);
+    var autor=rep14Assinatura(l,'quem');
+    var presenca=confirmado ? '<div class="lc-meta" style="color:var(--z-blue);font-weight:700">0 PRESENÇA CONFIRMADA · '+escAttr(rep14Assinatura(l,'presenca_quem'))+' · sem descontar de novo</div>' : '';
+    var limite=!cancelado&&l.desfecho==='reservado'
+      ?('<div class="lc-meta">Cancelar até '+escAttr(rep14Corte(l.data,l))+' · 24 horas completas antes</div>')
+      :(confirmado?('<div class="lc-meta">Prazo que valia: '+escAttr(rep14Corte(l.data,l))+' · 24 horas completas antes</div>'):'' );
+    var justificativa=l.justificativa||(l.cancelamento||{}).justificativa||l.motivo_cancelamento||'';
+    var motivo=justificativa?('<div class="lc-meta">Justificativa: '+escAttr(justificativa)+'</div>'):'';
+    var cancelAss=rep14AssinaturaCancelamento(l);
+    var cancelMeta=cancelAss?('<div class="lc-meta">Cancelamento: '+escAttr(cancelAss)+'</div>'):'';
+    return '<div class="rep-lanc"><span class="lc-tipo '+rx.cls+'">'+esc(rx.rot)+'</span><div style="flex:1;min-width:0"><span class="lc-corpo">'+esc(data)+' · '+esc(rx.corpo)+'</span><div class="lc-meta">Operação: '+(l.tipo==='estorno'?'devolução':'agendamento')+' · autoria: '+escAttr(autor)+escAttr(rx.meta||'')+'</div>'+limite+cancelMeta+motivo+presenca+'</div></div>';
+  };
+  var _repAbrirExtrato=repAbrirExtrato;
+  repAbrirExtrato=function(i){
+    _repAbrirExtrato(i);
+    var p=PELUDINHOS[i]; if(!p) return;
+    var saldo=rep14SaldoDisponivel(p);
+    var ag=rep14ListaAgendada(p), el=document.getElementById('repExtSub');
+    if(el) el.innerHTML='<strong>Saldo disponível: '+saldo+' '+rep14N(saldo,'crédito','créditos')+'.</strong> '
+      +'<strong>Agendado'+(ag.length===1?'':'s')+': '+ag.length+'.</strong> Cada agendamento reserva 1 crédito; a confirmação de presença não desconta de novo. '
+      +'No extrato, cada operação mostra data, autoria e cancelamento. <button type="button" class="btn" style="margin:8px 0 0;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="repBaixarExtratoPdf('+i+')">Baixar PDF</button> <button type="button" class="btn" style="margin:8px 0 0;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="repCompartilharExtratoPdf('+i+')">Compartilhar PDF</button>';
+  };
+  function rep14PdfLinhas(p){
+    var saldo=rep14SaldoDisponivel(p);
+    var L=[],ctx={L:[],X:{an:{}},hojeServ:''}; try{ ctx=repExtratoCtx(p,0)||ctx; L=ctx.L||[]; }catch(e){ try{L=repLancamentos(p)||[];}catch(x){} }
+    var out=[];
+    var pdfTxt=function(v){ return String(v==null?'':v).replace(/[−–—]/g,'-'); };
+    var add=function(t,size,gap,bold){
+      var partes=zPdfQuebra(pdfTxt(t),483,size||10);
+      partes.forEach(function(x,i){ out.push({t:x,size:size||10,bold:!!bold,gap:i===partes.length-1?(gap==null?4:gap):2}); });
+    };
+    var dataEmissao='';
+    try{ dataEmissao=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date()); }
+    catch(e){ dataEmissao=new Date().toLocaleString('pt-BR'); }
+    add('Zêluz · Extrato de reposições',11,8,true);
+    add('Peludinho: '+pelNome(p),11,3,true);
+    add('Tutor: '+(pelGet(p,'tutor')||p.tutor||'não informado'),10,3,false);
+    add('Emitido em: '+dataEmissao,10,3,false);
+    add('Saldo DISPONÍVEL: '+saldo+' '+rep14N(saldo,'crédito','créditos'),11,9,true);
+    add('AGENDAMENTOS ATIVOS',11,5,true);
+    var ag=rep14ListaAgendada(p);
+    if(!ag.length) add('Nenhum agendamento ativo.',10,7,false);
+    ag.forEach(function(l){
+      var dia=rep14AgendaDia(l);
+      add((repBRdata(dia)||'data não informada')+' · cancelar até '+rep14Corte(dia,l),10,5,false);
+    });
+    add('HISTÓRICO',11,5,true);
+    if(!L.length) add('Nenhum lançamento registrado.',10,5,false);
+    L.forEach(function(l){
+      var r=repExtratoRotulo(l,ctx.X,ctx.hojeServ)||{};
+      var rot=r.rot||((l.tipo==='credito')?'+1 CRÉDITO':(l.tipo==='uso'?'-1 USO':(l.dia_devolvido?'+1 DEVOLVIDA':(l.estornaId?'ESTORNO':'-1 ESTORNO'))));
+      var j=l.justificativa||(l.cancelamento||{}).justificativa||l.motivo_cancelamento||'';
+      var pr=l.presenca||{}, cancel=l.cancelamento||l.volta_desmarcada||{};
+      var t=(repBRdata(l.data)||'data não informada')+' · '+rot+' · '+(r.corpo||repMotivoRotulo(l.motivo))+' · autoria: '+rep14Assinatura(l,'quem');
+      if(j) t+=' · justificativa: '+j;
+      if(l.presenca_quem) t+=' · presença confirmada por '+rep14Assinatura(l,'presenca_quem');
+      else if(pr.quem) t+=' · presença confirmada por '+pr.quem;
+      var cancelAss=rep14AssinaturaCancelamento(l);
+      if(cancelAss) t+=' · cancelamento: '+cancelAss;
+      if(l.desfecho==='fora_prazo') t+=' · cancelamento fora do prazo';
+      add(t,10,5,false);
+    });
+    add('Cancelamento: 24 horas completas antes da reposição (referência de entrada: 12h).',10,3,false);
+    return out;
+  }
+  window.rep14ExtratoPdfLinhas=rep14PdfLinhas;
+  window.rep14ExtratoPdfBlob=function(p){ return zPdfTextBlob(rep14PdfLinhas(p)); };
+  function rep14PdfNome(p){ return 'extrato-reposicoes-'+String(pelNome(p)||'zeluz').replace(/[^a-z0-9]+/ig,'-').replace(/^-|-$/g,'').toLowerCase()+'.pdf'; }
+  window.repBaixarExtratoPdf=function(i){
+    var p=PELUDINHOS[i]; if(!p) return;
+    var blob=null; try{ blob=window.rep14ExtratoPdfBlob(p); }catch(e){}
+    if(!blob){ alert('Não foi possível gerar o PDF deste extrato neste aparelho.'); return; }
+    ciBaixarBlob(blob,rep14PdfNome(p));
+  };
+  window.repCompartilharExtratoPdf=function(i){
+    var p=PELUDINHOS[i]; if(!p) return;
+    var blob=null; try{ blob=window.rep14ExtratoPdfBlob(p); }catch(e){}
+    if(!blob){ alert('Não foi possível gerar o PDF deste extrato neste aparelho.'); return; }
+    var nome=rep14PdfNome(p), file=null; try{ file=new File([blob],nome,{type:'application/pdf'}); }catch(e){}
+    if(file && navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){ navigator.share({files:[file],title:'Extrato de reposições — '+pelNome(p),text:'PDF pronto para compartilhar.'}).catch(function(){}); return; }
+    ciBaixarBlob(blob,nome); alert('PDF baixado. Escolha o arquivo no WhatsApp ou outro canal para enviar ao tutor.');
+  };
+  var _dxVeredictoHTML=dxVeredictoHTML;
+  dxVeredictoHTML=function(v){
+    var html=_dxVeredictoHTML(v);
+    if(v && v.ok && v.tipo==='reposicao') html+='<div class="rep-previa" style="margin-top:6px">🗓️ Ao confirmar, 1 crédito fica reservado e o saldo disponível é atualizado. Organizamos as reposições com cinco vagas por dia; a equipe avalia cada caso com cuidado.</div>';
+    return html;
+  };
+})();
+/* REPOSICAO14_INTERFACE_FIM */
+// INIT do Day Care (no fim: garante todas as variaveis e funcoes definidas)
   montarSubnav();
   renderAtual();
   // O relógio de 30 s do Painel do Dia SAIU em 08/set/2026, junto com a tela que ele
