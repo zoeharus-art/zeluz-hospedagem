@@ -1018,6 +1018,31 @@
   .vd-perto{background:rgba(222,180,40,.22);color:var(--z-blue)}
   .vd-venc{background:rgba(192,57,43,.14);color:var(--crm-critico)}
   .vd-sem{background:rgba(35,77,103,.09);color:var(--muted)}
+  /* Tópicos compactos da ficha: o nome e a situação continuam visíveis mesmo fechados. */
+  details.ficha-topico{border:1.5px solid var(--line);border-radius:12px;background:var(--z-cream);margin:0 0 12px;overflow:hidden}
+  details.ficha-topico>summary{min-height:44px;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;list-style:none;color:var(--z-blue);font-size:14px;font-weight:800}
+  details.ficha-topico>summary::-webkit-details-marker{display:none}
+  details.ficha-topico>summary:focus-visible{outline:3px solid var(--z-gold);outline-offset:-3px}
+  .ficha-topico-nome{min-width:0;flex:1;overflow-wrap:anywhere}
+  .ficha-topico-estado{font-size:11px;font-weight:800;padding:3px 7px;border-radius:7px;white-space:nowrap}
+  .ficha-topico-ok{background:rgba(94,155,107,.16);color:#3d6b47}
+  .ficha-topico-breve{background:rgba(222,180,40,.22);color:var(--z-blue)}
+  .ficha-topico-vencido,.ficha-topico-conferir{background:rgba(192,57,43,.14);color:var(--crm-critico)}
+  .ficha-topico-sem,.ficha-topico-dispensado,.ficha-topico-rascunho{background:rgba(35,77,103,.09);color:var(--muted)}
+  .ficha-topico-seta{font-size:18px;line-height:1;transition:transform .15s ease}
+  details.ficha-topico[open] .ficha-topico-seta{transform:rotate(180deg)}
+  .ficha-topico-corpo{padding:0 12px 12px;border-top:1px solid var(--line)}
+  .ficha-topico-corpo .prev-bloco{border:0;border-radius:0;padding:12px 0 0;margin:0;background:transparent}
+  @media(max-width:480px){
+    details.ficha-topico>summary{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'nome seta' 'estado seta';column-gap:8px;row-gap:5px;align-items:center}
+    .ficha-topico-nome{grid-area:nome;min-width:0}
+    .ficha-topico-estado{grid-area:estado;justify-self:start;white-space:normal;max-width:100%;overflow-wrap:anywhere}
+    .ficha-topico-seta{grid-area:seta;align-self:center}
+  }
+  @media(max-width:560px){
+    .ficha-topico-corpo .vac-row{grid-template-columns:minmax(0,1fr)!important}
+    .ficha-topico-corpo .vac-row .field,.ficha-topico-corpo .vac-row .cad-in{min-width:0;width:100%;box-sizing:border-box}
+  }
   /* renovação de planos */
   .renov-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
   .renov-item{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:11px 14px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);cursor:pointer}
@@ -2573,7 +2598,7 @@
   .mcr-bt-plantao{display:block;margin-top:8px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:10px;padding:8px 14px;min-height:44px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
   .mcr-bt-entrada{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue);font-weight:800;min-height:44px}
 </style>
-<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-01">
+<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-02">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -5145,13 +5170,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-14-01"></script>
+<script src="resposta-tutor.js?v=2026-10-14-02"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-14-01"></script>
+<script src="painel-logica.js?v=2026-10-14-02"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5163,12 +5188,12 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-14-01"></script>
-<script src="autoria-logica.js?v=2026-10-14-01"></script>
-<script src="navegacao-inicio.js?v=2026-10-14-01"></script>
-<script src="presenca-logica.js?v=2026-10-14-01"></script>
-<script src="historico-checkins.js?v=2026-10-14-01"></script>
-<script src="historico-checkins-pdf.js?v=2026-10-14-01"></script>
+<script src="financeiro-logica.js?v=2026-10-14-02"></script>
+<script src="autoria-logica.js?v=2026-10-14-02"></script>
+<script src="navegacao-inicio.js?v=2026-10-14-02"></script>
+<script src="presenca-logica.js?v=2026-10-14-02"></script>
+<script src="historico-checkins.js?v=2026-10-14-02"></script>
+<script src="historico-checkins-pdf.js?v=2026-10-14-02"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -27192,7 +27217,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-14-01';
+  const APP_VERSAO='2026-10-14-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -38818,7 +38843,11 @@
     try{ var _ae=document.activeElement; if(_ae && _ae.tagName==='INPUT' && _ae.value===dt) campoEl=_ae; }catch(e){} /* silencioso de propósito: sem o campo, só o «Vence em» volta */
     var feitoAntes=(campoT==='checkup_t')?prevCheckupData(ex):String(ex[campoT]||''), venceAntes=String(ex[campoP]||'');
     prevGravar(pU, patch, {tela:'Ficha › Prevenção'}).then(function(r){
-      if((r && r.ok===true) || pelAtual!==pU) return;
+      if(r && r.ok===true){
+        if(pelAtual===pU) fichaTopicosDiretosAtualizar(Object.assign({},ex,patch));
+        return;
+      }
+      if(pelAtual!==pU) return;
       try{
         if(campoEl && campoEl.value===dt) campoEl.value=feitoAntes;
         var vA=document.getElementById('prevVence_'+campoP);
@@ -38869,6 +38898,21 @@
     if(r.sem.length) h+='<div class="dc-meia"><strong>Falta preencher:</strong> '+r.sem.join(' · ')+'</div>';
     if(!h) h='<div class="alm-fora">'+nome+' em dia.</div>';
     return h;
+  }
+  // A ficha não usa o verde do resumo geral quando uma data legada está inválida.
+  function fichaPrevValorInvalido(v){
+    v=String(v||'').trim();
+    if(!v) return false;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(v) || prevDataQuebrada(v)) return true;
+    var a=v.split('-').map(Number), d=new Date(Date.UTC(a[0],a[1]-1,a[2]));
+    return d.getUTCFullYear()!==a[0] || d.getUTCMonth()!==a[1]-1 || d.getUTCDate()!==a[2];
+  }
+  function fichaAlertaPrevencao(ex, grupo, rotulo){
+    var ruins=(PREV_ITENS||[]).filter(function(it){
+      return it.grupo===grupo && !prevForaDaCobranca(ex||{},it) && fichaPrevValorInvalido(prevValor(ex||{},it));
+    }).map(function(it){ return it.nome; });
+    if(ruins.length) return '<div class="dc-meia"><strong>Dados a conferir:</strong> '+ruins.map(escAttr).join(' · ')+'.</div>';
+    return alertaPrevencao(ex,grupo,rotulo);
   }
   // ===== RELATÓRIO DE PREVENÇÃO — quem falta o quê ================================
   // Adriana, 18/ago/2026: "preciso conseguir emitir um relatório de quem falta algum
@@ -41965,6 +42009,49 @@
     };
     passo(0, []);
   }
+  // Estado local só de abertura: os dados continuam nos mesmos campos e nos mesmos salvamentos.
+  var FICHA_TOPICOS_ABERTOS={};
+  function fichaTopicoChave(id){ return String((pelAtual&&pelKey(pelAtual))||'sem-ficha')+'|'+String(id||''); }
+  function fichaTopicoAberto(id, chave){ return !!FICHA_TOPICOS_ABERTOS[chave||fichaTopicoChave(id)]; }
+  function fichaTopicoAlternar(id, aberto, chave){ FICHA_TOPICOS_ABERTOS[chave||fichaTopicoChave(id)]=!!aberto; }
+  function fichaTopicoAlternarDaFicha(chave, aberto){ if(chave) FICHA_TOPICOS_ABERTOS[String(chave)]=!!aberto; }
+  function fichaTopicoTemRascunho(bloco, prefixo){
+    var pend=(typeof PB_PEND!=='undefined' && PB_PEND && PB_PEND[bloco])||{};
+    var ks=Object.keys(pend);
+    return prefixo ? ks.some(function(k){ return k.indexOf(prefixo)===0; }) : ks.length>0;
+  }
+  function fichaTopicoFluxo(bloco){
+    if(!bloco) return null;
+    var recusas=(typeof pbRecusa==='function')?pbRecusa():{};
+    if(recusas&&recusas[bloco]) return {texto:'Não foi salvo',classe:'conferir'};
+    var gravando=(typeof pbGravando==='function')?pbGravando():{};
+    if(gravando&&gravando[bloco]) return {texto:'Salvando…',classe:'rascunho'};
+    return null;
+  }
+  function fichaTopicoEstado(valor, opcoes){
+    opcoes=opcoes||{};
+    var fluxo=fichaTopicoFluxo(opcoes.bloco);
+    if(fluxo) return fluxo;
+    if(opcoes.rascunho) return {texto:'Alterações por salvar',classe:'rascunho'};
+    if(opcoes.dispensado) return {texto:opcoes.dispensado,classe:'dispensado'};
+    var v=String(valor||'').trim();
+    if(!v) return {texto:'Sem informação',classe:'sem'};
+    if(fichaPrevValorInvalido(v)) return {texto:'Dados a conferir',classe:'conferir'};
+    if(venceuISO(v)) return {texto:'Vencido',classe:'vencido'};
+    var dias=diasAteISO(v), aviso=(typeof avisoColeiraMax==='function'?avisoColeiraMax():15);
+    if(dias!==null && dias>=0 && dias<=aviso) return {texto:'Vence em breve',classe:'breve'};
+    return {texto:'OK',classe:'ok'};
+  }
+  function fichaTopicoInicio(id, nome, estado){
+    estado=estado||fichaTopicoEstado('');
+    var chave=fichaTopicoChave(id);
+    return '<details class="ficha-topico" data-ficha-topico="'+escAttr(id)+'" id="fichaTopico_'+escAttr(id)+'"'+(fichaTopicoAberto(id,chave)?' open':'')
+      +' ontoggle="fichaTopicoAlternarDaFicha(\''+jsAspas(chave)+'\',this.open)"><summary><span class="ficha-topico-nome">'
+      +escAttr(nome)+'</span><span class="ficha-topico-estado ficha-topico-'+estado.classe+'">'+escAttr(estado.texto)
+      +'</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary><div class="ficha-topico-corpo">';
+  }
+  function fichaTopicoFim(){ return '</div></details>'; }
+
   // --- Ectoparasitas (Pulgas e Carrapatos) ---
   function ectoDur(ex){ if(ex.ecto_prod==='Outro') return parseInt(ex.ecto_outro_dias,10)||0;
     return ECTO_DUR[ex.ecto_prod]||0; }
@@ -41974,7 +42061,9 @@
     const comp=ectoComprimidos().concat((prod && prod!=='Outro' && prod!=='Pipeta' && ectoComprimidos().indexOf(prod)<0)?[prod]:[]);
     const prox=(ex.ecto_t&&dur)?addDiasISO(ex.ecto_t,dur):'';
     return '<div class="prev-bloco" id="pb-ecto">'
+      +fichaTopicoInicio('ecto','Carrapaticida / antiparasitário',fichaTopicoEstado(ex.ecto_p,{bloco:'ecto',rascunho:fichaTopicoTemRascunho('ecto')}))
       +'<div class="prev-tit">Ectoparasitas (Pulgas e Carrapatos) '+(ex.ecto_p?seloValidade(ex.ecto_p):'')+'</div>'
+      +prevAjudaVenceHTML()
       +'<div class="cad-grid">'
         +'<div class="field"><label>Tipo</label><div class="seg gold" data-single>'
           +['Pipeta','Comprimido'].map(function(t){ return '<button type="button" class="'+(ex.ecto_tipo===t?'on':'')+'" onclick="pick(this);pbSet(\'ecto\',{ecto_tipo:\''+t+'\',ecto_prod:\''+(t==='Pipeta'?'Pipeta':'')+'\'})">'+t+'</button>'; }).join('')
@@ -41992,7 +42081,7 @@
         +'<div class="field"><label>Última aplicação</label><input type="date" class="cad-in" value="'+(ex.ecto_t||'')+'" onchange="pbSet(\'ecto\',{ecto_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
         +prevVenceCampoHTML(ex,'ecto_p','ecto_t',"prevVenceManualSet('ecto_p',this.value,'ecto')",
           {calcTexto:(prox?('Pela conta: '+fmtBR(prox)+(dur?' · '+dur+' dias':'')+' — é o que vale ao salvar.'):'Preencha o produto e a última aplicação, ou digite aqui o vencimento.')})
-      +'</div>'+pbRodape('ecto','antiparasitário')+'</div>';
+      +'</div>'+pbRodape('ecto','antiparasitário')+fichaTopicoFim()+'</div>';
   }
   // --- Coleira repelente ---
   function coleiraDur(ex){ if(ex.col_nome==='Outra') return parseInt(ex.col_outro_dias,10)||0;
@@ -42025,6 +42114,7 @@
     const nome=ex.col_nome||'', dur=coleiraDur(ex);
     const prox=(ex.col_t&&dur)?addDiasISO(ex.col_t,dur):'';
     return '<div class="prev-bloco" id="pb-col">'
+      +fichaTopicoInicio('col','Coleira repelente',fichaTopicoEstado(ex.col_p,{bloco:'col',rascunho:fichaTopicoTemRascunho('col')}))
       +'<div class="prev-tit">Coleira repelente '+(ex.col_p?seloValidade(ex.col_p):'')+'</div>'
       +'<div class="cad-grid">'
         +'<div class="field" style="grid-column:1/-1"><label>Qual coleira</label><div class="seg gold" data-single>'
@@ -42037,7 +42127,7 @@
         +'<div class="field"><label>Última colocação</label><input type="date" class="cad-in" value="'+(ex.col_t||'')+'" onchange="pbSet(\'col\',{col_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
         +prevVenceCampoHTML(ex,'col_p','col_t',"prevVenceManualSet('col_p',this.value,'col')",
           {rot:'Vence em (trocar em)', calcTexto:(prox?('Pela conta: '+fmtBR(prox)+(dur?' · '+Math.round(dur/30)+' meses':'')+' — é o que vale ao salvar.'):'Escolha a coleira e a última colocação, ou digite aqui o vencimento.')})
-      +'</div>'+pbRodape('col','coleira')+'</div>';
+      +'</div>'+pbRodape('col','coleira')+fichaTopicoFim()+'</div>';
   }
   // --- Vermifugação ---
   // A DOSE PELO PESO na ficha (Adriana, 21/set/2026): quem abre a Prevenção para conferir
@@ -42117,6 +42207,7 @@
     const vr=vermBlocoRascunho(ex, duas, t1, dada);
     const d2ant=vr.d2ant, exV=vr.refaz?Object.assign({}, ex, {verm_p:prox, verm_p_manual:''}):ex;
     return '<div class="prev-bloco" id="pb-verm">'
+      +fichaTopicoInicio('verm','Vermífugo',fichaTopicoEstado(exV.verm_p,{bloco:'verm',rascunho:fichaTopicoTemRascunho('verm'),dispensado:(fez?'Alternativa: exame de fezes':'')}))
       +'<div class="prev-tit">Vermifugação '+(exV.verm_p?seloValidade(exV.verm_p):'')+'</div>'
       +(fez?'<div class="prev-nota">Fez exame de fezes em '+fmtBR(ex.fezes_t)+' — não precisa de vermífugo.</div>':'')
       +'<div class="cad-grid">'
@@ -42142,12 +42233,13 @@
         +prevVenceCampoHTML(exV,'verm_p','verm_t',"prevVenceManualSet('verm_p',this.value,'verm')",
           {rot:'Vence em (próximo vermífugo)', calcTexto:(prox?('Pela conta: '+fmtBR(prox)+' · 4 meses'+(ex.verm_doses==='2 doses'?' após a 2ª dose':'')+' — é o que vale ao salvar.'):'Informe a última dose, ou digite aqui o vencimento.')})
         +'<div class="field" style="grid-column:1/-1"><label>Dose pelo peso</label><div class="prev-calc">'+vermFichaTextoHTML(ex)+'</div></div>'
-      +'</div>'+pbRodape('verm','vermífugo')+'</div>';
+      +'</div>'+pbRodape('verm','vermífugo')+fichaTopicoFim()+'</div>';
   }
   // --- Exame de fezes ---
   function blocoFezes(ex){
     const prox=ex.fezes_t?addDiasISO(ex.fezes_t,FEZES_PROX):'';
     return '<div class="prev-bloco" id="pb-fezes">'
+      +fichaTopicoInicio('fezes','Exame de fezes',fichaTopicoEstado(ex.fezes_p,{bloco:'fezes',rascunho:fichaTopicoTemRascunho('fezes')}))
       +'<div class="prev-tit">Exame de fezes '+(ex.fezes_p?seloValidade(ex.fezes_p):'')+'</div>'
       +'<div class="prev-nota">Quem faz exame de fezes não precisa de vermífugo.</div>'
       +'<div class="cad-grid">'
@@ -42155,18 +42247,20 @@
         +prevVenceCampoHTML(ex,'fezes_p','fezes_t',"prevVenceManualSet('fezes_p',this.value,'fezes')",
           {rot:'Vence em (renovar em)', calcTexto:(prox?('Pela conta: '+fmtBR(prox)+' · 4 meses — é o que vale ao salvar.'):'Informe o último exame, ou digite aqui o vencimento.')})
         +'<div class="field" style="grid-column:1/-1"><label>Resultado</label><input class="cad-in" value="'+escAttr(ex.fezes_res||'')+'" placeholder="Ex: negativo para giárdia e helmintos" onchange="pbSet(\'fezes\',{fezes_res:this.value})"></div>'
-      +'</div>'+pbRodape('fezes','exame de fezes')+'</div>';
+      +'</div>'+pbRodape('fezes','exame de fezes')+fichaTopicoFim()+'</div>';
   }
   // --- Vacinas (as três num bloco só, com nome da vacina e um Salvar) ---
   function blocoVacinas(ex){
     const row=function(key,label){
-      return '<div class="vac-row" style="grid-template-columns:1fr 1fr 1fr">'
+      return fichaTopicoInicio('vac-'+key,label,fichaTopicoEstado(ex[key+'_p'],{bloco:'vac',rascunho:fichaTopicoTemRascunho('vac',key+'_')}))
+        +(key==='vac_mult'?prevAjudaVenceHTML():'')
+        +'<div class="vac-row" style="grid-template-columns:1fr 1fr 1fr">'
         +'<div class="vac-nome" style="grid-column:1/-1">'+label+' '+seloValidade(ex[key+'_p'])+'</div>'
         +'<div class="field" style="margin:0"><label style="font-size:11px">Qual vacina / laboratório</label><input class="cad-in" value="'+escAttr(ex[key+'_nome']||'')+'" placeholder="Ex: V10 Nobivac" onchange="pbSet(\'vac\',{'+key+'_nome:this.value})"></div>'
         +'<div class="field" style="margin:0"><label style="font-size:11px">Última dose (tomou em)</label><input type="date" class="cad-in" value="'+(ex[key+'_t']||'')+'" onchange="pbSet(\'vac\',{'+key+'_t:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
         +prevVenceCampoHTML(ex,key+'_p',key+'_t',"prevVenceManualSet('"+key+"_p',this.value,'vac')",
           {compacto:true, calcTexto:(ex[key+'_t']?('Pela conta: '+fmtBR(addDiasISO(ex[key+'_t'],365))+' · 1 ano.'):'')})
-        +'</div>';
+        +'</div>'+fichaTopicoFim();
     };
     return '<div id="pb-vac">'
       +row('vac_mult','Vacina Múltipla (V7 / V8 / V10)')
@@ -42981,13 +43075,27 @@
   }
   function pelPrevVistoMarcar(p){ var k=p?pelKey(p):''; PEL_PREV_VISTO={k:k, j:k?pelPrevAssinatura(k):''}; }
   // Os avisos da aba Prevenção (os recipientes do modelo da ficha) com o que está gravado — o alertaPrevencao não muda.
+  function fichaTopicoResumoAplicar(id, estado){
+    try{
+      var raiz=document.getElementById('fichaTopico_'+id), selo=raiz&&raiz.querySelector?raiz.querySelector('.ficha-topico-estado'):null;
+      if(!selo) return;
+      selo.textContent=estado.texto;
+      selo.className='ficha-topico-estado ficha-topico-'+estado.classe;
+    }catch(e){} /* somente apresentação; dado e foco não dependem deste selo */
+  }
+  function fichaTopicosDiretosAtualizar(ex){
+    ex=ex||{};
+    fichaTopicoResumoAplicar('checkup',fichaTopicoEstado(prevCheckupVence(ex)));
+    fichaTopicoResumoAplicar('escova',fichaTopicoEstado(ex.escova_p,{dispensado:(escovaNaoEscova(ex)?'Dispensada no Day Care':'')}));
+  }
   function pelAlertasPrevRedesenhar(){
     if(!pelAtual) return;
     var ex=pelExtra(pelAtual)||{};
     [['saude','Escova e check-up'],['vacina','Vacinas'],['antip','Antiparasitários']].forEach(function(g){
-      try{ var el=document.getElementById('pelAlertaPrev_'+g[0]); if(el) el.innerHTML=alertaPrevencao(ex, g[0], g[1]); }
+      try{ var el=document.getElementById('pelAlertaPrev_'+g[0]); if(el) el.innerHTML=fichaAlertaPrevencao(ex, g[0], g[1]); }
       catch(e){} /* silencioso de propósito: redesenho de tela — falhar não muda dado nenhum */
     });
+    fichaTopicosDiretosAtualizar(ex);
   }
   function pelFichaPrevOuvinte(){
     var k=pelAtual?pelKey(pelAtual):'', f=document.getElementById('pel-ficha');
@@ -43163,6 +43271,7 @@
     return rC;
   }
   function abrirPeludinho(i){
+    fichaTopicosGuardar(document.getElementById('pel-ficha'),pelAtual);
     const p=PELUDINHOS[i]; pelAtual=p; pelAtualIdx=i; pelFotoPend=null; const ex=pelExtra(p);
     // A validade da coleira mudou (Seresto: 6 → 8 meses) e as fichas antigas guardaram o
     // "Trocar em" velho. Abrir a ficha conserta o dela — uma vez só, com rastro.
@@ -43241,12 +43350,17 @@
       </div>
 
       <div class="ppanel2" id="ps-ident"><div class="card">
+        <h2 style="font-size:20px">Dados do peludinho</h2>
         <div class="cad-grid">
           <div class="field"><label>Raça</label><input id="pelFichaRaca" class="cad-in" list="racasList" value="${escAttr(pelGet(p,'raca'))}" onchange="onRacaPel(this.value)"></div>
           <div class="field"><label>Data de nascimento</label><input type="date" class="cad-in" value="${pelNasc(p)||''}" onchange="setPelNasc(this.value,this)" min="${nascMinISO()}" max="${zHojeISO()}" onkeydown="return dataSoNoCalendario(event)"></div>
           <div class="field"><label>Sexo</label><div class="seg" data-single>${segBtnsPel('sexo',sexo,['Macho','Fêmea'])}</div></div>
           <div class="field"><label>Castrado?</label><div class="seg gold" data-single>${segBtnsPel('castrado',castr,['Sim','Não'])}</div></div>
           <div class="field"><label>Microchip</label><input class="cad-in" value="${escAttr(zChipNumero(ex))}" placeholder="Número do microchip" onchange="setPelExtra(pelAtual,zChipPatch(this.value))">${iaRevMarcaFicha(p,'microchip')}${pelChipNaoTemHTML(ex)}</div>
+        </div>
+        <details class="ficha-topico" data-ficha-topico="ident-contatos" open>
+          <summary><span class="ficha-topico-nome">Família e contatos</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
+          <div class="ficha-topico-corpo"><div class="cad-grid">
           <div class="field"><label>Tutor 1 (nome)</label>${can
             ? `<input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" onchange="onTutorPel(this.value)">`
             : `<input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="Só a recepção, a Supervisão ou a Gestão mudam o nome do tutor">`}</div>
@@ -43257,6 +43371,11 @@
           ${fieldSens('bairro','Bairro',`<input class="cad-in" value="${escAttr(ex.bairro||'')}" placeholder="Bairro" onchange="setPelExtra(pelAtual,{bairro:this.value})">`)}
           ${fieldSens('indicou','Quem indicou',`<input class="cad-in" value="${escAttr(ex.indicou||'')}" placeholder="Indicação" onchange="setPelExtra(pelAtual,{indicou:this.value})">`)}
           <div class="field"><label>Data de matrícula</label><input type="date" class="cad-in" value="${ex.matricula||''}" onchange="setPelExtra(pelAtual,{matricula:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
+          </div></div>
+        </details>
+        <details class="ficha-topico" data-ficha-topico="ident-plano">
+          <summary><span class="ficha-topico-nome">Plano atual</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
+          <div class="ficha-topico-corpo"><div class="cad-grid">
           <!-- SOMENTE LEITURA (Adriana, 15/set/2026): estes dois campos gravavam o plano
                direto, sem escolher plano, sem resumo e sem rastro — a segunda porta que
                deixou a Cookie com plano de 2x e um dia só marcado. Agora só MOSTRAM; quem
@@ -43266,14 +43385,15 @@
           <div class="field"><label>Plano Day Care — fim (vencimento)</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.fim)||''}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="O vencimento é calculado pelo sistema na aba Plano" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="font-size:11px;margin-top:3px">Calculado pelo sistema a partir do plano e da data do pagamento. <a href="#" onclick="irParaAbaPlano();return false" style="color:var(--z-blue);font-weight:800">Alterar na aba Plano</a>.</div></div>
           <div class="field"><label>Frequência (automática pelos dias)</label><input id="pelFreqInput" class="cad-in" value="${escAttr(pelFreq(p))} por semana${pelPlanoMesHoje(p)?' (hoje — os dias mudam por mês do plano)':''}" readonly></div>
-        </div>
+          </div></div>
+        </details>
         <div id="pel-saved" style="font-size:12px;color:var(--crm-ok);font-weight:700;margin-top:8px"></div>
         ${blocoReposicaoFicha(p)}
       </div></div>
 
       <div class="ppanel2" id="ps-saude"><div class="card">
         <h2 style="font-size:20px">Prevenção</h2>
-        <div class="hint">Obrigatório para frequentar o Day Care. O que estiver vencido aparece como urgente para a Gestão, a Supervisora e a Consultora. Preencha o bloco inteiro e toque em <strong>Salvar</strong> no fim dele — nada grava sozinho, e a tela não sobe.</div>
+        <div class="hint">Obrigatório para frequentar o Day Care. O que estiver vencido aparece como urgente para a Gestão, a Supervisora e a Consultora. Nos tópicos com <strong>Salvar</strong>, confirme no fim do bloco; check-up e escova atualizam ao escolher.</div>
 
         <!-- CHECK-UP E ESCOVA NO TOPO (Adriana, 02/out/2026, na ficha da Cookie: "tô aqui tentando
              achar onde que está a troca de escova de dente. Não tô achando [...] a escova de dente
@@ -43281,18 +43401,23 @@
              O check-up vivia em DOIS lugares da aba, em campos diferentes (o de cima sem "Vence
              em"); agora é um só, com "Fez em" e "Vence em", e grava as duas casas antigas juntas.
              A escova, que ficava no fim da aba, sobe para o lado dele. -->
-        <h3 class="cad-sub">Check-up e escova</h3>
+        <div id="pelAlertaPrev_saude">${fichaAlertaPrevencao(ex,'saude','Escova e check-up')}</div>
+        ${fichaTopicoInicio('checkup','Check-up',fichaTopicoEstado(prevCheckupVence(ex)))}
         ${prevAjudaVenceHTML()}
-        <div id="pelAlertaPrev_saude">${alertaPrevencao(ex,'saude','Escova e check-up')}</div>
         <div class="cad-grid">
           <div class="field" style="grid-column:1/-1"><label>Já fez check-up?</label><div class="seg gold" data-single>${segBtnsPel('checkup_fez',ex.checkup_fez||'',['Sim','Nunca fez'])}</div></div>
           <div class="field"><label>Último check-up (fez em)</label><input type="date" class="cad-in" value="${escAttr(prevCheckupData(ex))}" onchange="prevUltimaDireta('checkup_t','checkup_p',365,this.value,{checkup_data:1,checkup:1})" min="2015-01-01" max="${zHojeISO()}" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="margin-top:3px">O check-up vale por 12 meses. Quem nunca fez, ou está vencido, aparece na tela Prevenção com o convite pronto.</div></div>
           ${prevVenceCampoHTML(Object.assign({},ex,{checkup_t:prevCheckupData(ex), checkup_p:prevCheckupVence(ex)}),'checkup_p','checkup_t',"prevVenceManualSet('checkup_p',this.value)",{rot:'Vence em (próximo check-up)', calcTexto:(prevCheckupData(ex)?('Pela conta: '+fmtBR(addDiasISO(prevCheckupData(ex),365))+' · 1 ano.'):'')})}
+        </div>
+        ${fichaTopicoFim()}
+        ${fichaTopicoInicio('escova','Troca de escova de dentes',fichaTopicoEstado(ex.escova_p,{dispensado:(escovaNaoEscova(ex)?'Dispensada no Day Care':'')}))}
+        <div class="cad-grid">
           <div class="field"><label>Última troca de escova de dentes</label><input type="date" class="cad-in" value="${escAttr(ex.escova_t||'')}" onchange="prevUltimaDireta('escova_t','escova_p',90,this.value)" min="2015-01-01" max="${zHojeISO()}" onkeydown="return dataSoNoCalendario(event)"></div>
           ${prevVenceCampoHTML(ex,'escova_p','escova_t',"prevVenceManualSet('escova_p',this.value)",{rot:'Vence em (próxima troca)', calcTexto:(ex.escova_t?('Pela conta: '+fmtBR(addDiasISO(ex.escova_t,90))+' · 90 dias.'):'')})}
         </div>
         ${escovaFichaHTML(ex)}
+        ${fichaTopicoFim()}
         <div class="cad-grid" style="margin-top:12px">
           <!-- EMERGÊNCIA (Adriana, 31/ago/2026): o PDF do check-in precisa dos dados de
                emergência — veterinário(a) de confiança do tutor, clínica e endereço.
@@ -43311,14 +43436,12 @@
         ${blocoOportunidades(p)}
 
         <h3 class="cad-sub">Vacinas</h3>
-        ${prevAjudaVenceHTML()}
-        <div id="pelAlertaPrev_vacina">${alertaPrevencao(ex,'vacina','Vacinas')}</div>
+        <div id="pelAlertaPrev_vacina">${fichaAlertaPrevencao(ex,'vacina','Vacinas')}</div>
         ${blocoVacinas(pbEx('vac'))}
 
         <h3 class="cad-sub">Antiparasitários</h3>
         <div class="hint" style="margin-top:-2px">Pipeta, comprimido, coleira, vermífugo e exame de fezes. <strong>Nada aqui é vacina</strong> — o que vencer neste bloco não é dose de vacina atrasada.</div>
-        ${prevAjudaVenceHTML()}
-        <div id="pelAlertaPrev_antip">${alertaPrevencao(ex,'antip','Antiparasitários')}</div>
+        <div id="pelAlertaPrev_antip">${fichaAlertaPrevencao(ex,'antip','Antiparasitários')}</div>
         ${blocoEcto(pbEx('ecto'))}
         ${blocoColeira(pbEx('col'))}
         ${blocoVerm(pbEx('verm'))}
@@ -43368,11 +43491,15 @@
         </div>
         <!-- O almoço da creche mora AQUI, junto da rotina — é onde a consultora procura.
              É o MESMO dado que aparece na grade do Day Care, não uma cópia. -->
-        <h3 class="cad-sub">Almoço na creche &mdash; é o que aparece na grade do Day Care</h3>
-        <div id="pelAlmocoAviso">${avisoAlmocoFicha()}</div>
-        <div class="cad-grid">
-          ${camposAlmocoFicha()}
-        </div>
+        <details class="ficha-topico" data-ficha-topico="rotina-almoco" open>
+          <summary><span class="ficha-topico-nome">Almoço na creche — aparece na grade do Day Care</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
+          <div class="ficha-topico-corpo">
+            <div id="pelAlmocoAviso">${avisoAlmocoFicha()}</div>
+            <div class="cad-grid">
+              ${camposAlmocoFicha()}
+            </div>
+          </div>
+        </details>
       </div></div>
 
       <div class="ppanel2" id="ps-comp"><div class="card">
@@ -43391,8 +43518,9 @@
         <h2 style="font-size:20px">Plano</h2>
         <div class="hint">Planos DayCare 2026. A tabela é por mês (a mensalidade); o valor do plano é a mensalidade vezes os meses do tipo (1 no mensal, 3 no trimestral, 6 no semestral), pago à vista. Desconto: 2º peludinho ${descontosPlano()[2]}%, 3º ${descontosPlano()[3]}%.</div>
         ${blocoPlano(ex,p)}
-        <h3 class="cad-sub">Mensagens para o tutor</h3>
-        <div class="renov-msgs">
+        <details class="ficha-topico" data-ficha-topico="plano-mensagens">
+          <summary><span class="ficha-topico-nome">Mensagens para o tutor</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
+          <div class="ficha-topico-corpo"><div class="renov-msgs">
           <div class="renov-msg"><div class="renov-msg-tit">Plano finalizou &mdash; oferecer renovação</div>
             <textarea class="gest-txt" readonly>${escAttr(msgPlanoFinalizou(p,ex))}</textarea>
             <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button>
@@ -43400,17 +43528,20 @@
           <div class="renov-msg"><div class="renov-msg-tit">Renovação confirmada</div>
             <textarea class="gest-txt" readonly>${escAttr(msgRenovado(p,ex))}</textarea>
             <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button></div>
-        </div>
+        </div></div>
+        </details>
         <!-- Sair do Day Care ENCERRA o plano — por isso mora aqui (Adriana, 11/ago/2026).
              Mas em bloco próprio, separado por linha e no FIM da aba: nunca misturado com os
              campos de plano, que era o que confundia. -->
-        <div style="border-top:2px solid var(--line);margin-top:22px;padding-top:16px">
-          <h3 class="cad-sub" style="margin-top:0">Saída do Day Care</h3>
+        <details class="ficha-topico" data-ficha-topico="plano-saida">
+          <summary><span class="ficha-topico-nome">Saída do Day Care</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
+          <div class="ficha-topico-corpo" style="border-top:2px solid var(--line);margin-top:8px;padding-top:16px">
           <div class="hint" style="margin-bottom:8px">Só quando o FILHOt deixa de ser auluno. Ele sai das listas do dia, mas o cadastro e todo o histórico continuam guardados em Relatórios › Inativos.</div>
           <div class="cad-grid">
             ${camposSaidaFicha()}
           </div>
-        </div>
+          </div>
+        </details>
       </div></div>
 
       <!-- Atenção · Saúde e Cuidados — agora é aba, não mais um bloco fixo no topo -->
@@ -43440,6 +43571,10 @@
           <div class="field"><label>Medicação</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()">${iaRevMarcaFicha(p,'medicacao')}</div>
           <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()">${iaRevMarcaFicha(p,'problema')}</div>
           <!-- O veterinário de emergência mudou para a aba Prevenção, junto do Check-up (Adriana, 01/set). -->
+        </div>
+        <details class="ficha-topico" data-ficha-topico="atencao-rotina">
+          <summary><span class="ficha-topico-nome">Rotina, adaptação e relato do tutor</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
+          <div class="ficha-topico-corpo"><div class="cad-grid">
           <div class="field" style="grid-column:1/-1"><label>O que o tutor contou</label><input class="cad-in" value="${escAttr(ex.obs_tutor||'')}" placeholder="Check-up, cio, mudanças em casa — o que veio na resposta do tutor" onchange="setPelExtra(pelAtual,{obs_tutor:this.value})">${iaRevMarcaFicha(p,'obs_tutor')}</div>
           ${(function(){ var ev=ex.entrevista; if(!(ev&&ev.itens&&ev.itens.length)) return '';
             return '<div class="field" style="grid-column:1/-1;background:rgba(35,77,103,.06);border-left:4px solid var(--z-blue);border-radius:10px;padding:10px 12px">'
@@ -43456,6 +43591,11 @@
           <div class="field"><label>Adaptacao de que?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao_tipo',ex.adaptacao_tipo||'Day Care',['Day Care','Hospedagem'])}</div>
             <div class="hint" style="margin-top:4px">Day Care conta ${ADAPT_DIAS} dias corridos. Hospedagem só registra a data — sem contagem automática.</div></div>
           <div class="field"><label>Come em comedouro lento?</label><div class="seg gold" data-single>${segBtnsPel('ansioso',ex.ansioso||'',['Sim','Nao'])}</div></div>
+          </div></div>
+        </details>
+        <details class="ficha-topico" data-ficha-topico="atencao-ea">
+          <summary><span class="ficha-topico-nome">Enriquecimento ambiental</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
+          <div class="ficha-topico-corpo"><div class="cad-grid">
           <!-- MICROCHIP (Adriana, 19/ago/2026): "preciso de relatório de cães sem microchip".
                O campo não existia — sem ele o relatório listaria todo mundo. Guarda o número;
                quem fica em branco é exatamente quem falta. -->
@@ -43477,15 +43617,18 @@
           <!-- O EA acontece em DUAS matilhas: pequeno e médio porte. É por elas que a tela
                do EA se divide em duas colunas. -->
           <div class="field"><label>Matilha (EA)</label><div class="seg gold" data-single>${segBtnsPel('matilha',ex.matilha||'',['Pequeno porte','Médio porte','Outro'])}</div></div>
-        </div>
+          </div></div>
+        </details>
         <!-- O histórico dos check-ins mudou para a aba Exames do corpo (Adriana, 01/set). -->
       </div></div>
 
       <div class="actions" style="margin-top:4px">
-        <button class="btn btn-primary" onclick="salvarFichaPel()">💾 Salvar ficha</button>
+        <button class="btn btn-primary" onclick="salvarFichaPel()">🔎 Conferir alterações</button>
         <button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="voltarPel()">Voltar</button>
       </div>
       <div id="pel-saved2" style="text-align:center;font-size:13px;font-weight:700;color:var(--crm-ok);margin-top:8px;min-height:18px"></div>`;
+    fichaTopicosRestaurar(f,p);
+    fichaTopicosPreparar(f);
     if(!can){
       f.querySelectorAll('input,select,textarea').forEach(el=>{ el.disabled=true; });
       f.querySelectorAll('.seg button, .vac-row button').forEach(el=>{ el.disabled=true; });
@@ -43573,7 +43716,33 @@
         if((t.getAttribute('onclick')||'').indexOf("'"+alvo+"'")>=0) t.classList.add('active'); });
     }catch(e){ _logFalhaGrav('abrirAbaInicialPel', e); }
   }
-  function salvarFichaPel(){ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); const s=document.getElementById('pel-saved2'); if(s){ s.textContent='✓ Ficha salva! Disponível em todos os aparelhos.'; setTimeout(()=>{ if(s) s.textContent=''; },2200); } if(typeof renderDaycare==='function') renderDaycare(); }
+  function salvarFichaPel(){ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); const s=document.getElementById('pel-saved2'); if(s){ s.textContent='Confira acima o status da gravação de cada alteração.'; s.style.color='var(--muted)'; setTimeout(()=>{ if(s) s.textContent=''; },3200); } if(typeof renderDaycare==='function') renderDaycare(); }
+  // Tópicos usam <details> nativo: recolher não redesenha nem descarta o que foi digitado.
+  // O estado é por ficha (pelKey), nunca por nome; uma ficha homônima não herda a outra.
+  var FICHA_SECOES_ABERTAS=Object.create(null);
+  function fichaTopicosChave(p){ try{ return p&&typeof pelKey==='function'?String(pelKey(p)||''):''; }catch(e){ return ''; } }
+  function fichaTopicosGuardar(raiz,p){
+    var chave=fichaTopicosChave(p); if(!chave || !raiz || !raiz.querySelectorAll) return;
+    var estado={}; raiz.querySelectorAll('details.ficha-topico[data-ficha-topico]').forEach(function(d){ estado[d.getAttribute('data-ficha-topico')]=!!d.open; });
+    FICHA_SECOES_ABERTAS[chave]=estado;
+  }
+  function fichaTopicosRestaurar(raiz,p){
+    var estado=FICHA_SECOES_ABERTAS[fichaTopicosChave(p)]||null; if(!estado || !raiz || !raiz.querySelectorAll) return;
+    raiz.querySelectorAll('details.ficha-topico[data-ficha-topico]').forEach(function(d){ var k=d.getAttribute('data-ficha-topico'); if(Object.prototype.hasOwnProperty.call(estado,k)) d.open=estado[k]; });
+  }
+  function fichaTopicoEstaAberto(p,topico){
+    var estado=FICHA_SECOES_ABERTAS[fichaTopicosChave(p)]||null;
+    return !!(estado && Object.prototype.hasOwnProperty.call(estado,topico) && estado[topico]);
+  }
+  // Se o navegador apontar erro de validação em um campo recolhido, ele abre somente o tópico daquele campo.
+  function fichaTopicosPreparar(raiz){
+    if(!raiz || !raiz.addEventListener || raiz.__fichaTopicosInvalid) return;
+    raiz.__fichaTopicosInvalid=true;
+    raiz.addEventListener('invalid', function(ev){
+      var campo=ev && ev.target, top=(campo && campo.closest)?campo.closest('details.ficha-topico'):null;
+      if(top) top.open=true;
+    }, true);
+  }
   function pelSubtab(el,id){ el.parentNode.querySelectorAll('.subtab2').forEach(x=>x.classList.remove('active')); el.classList.add('active'); document.querySelectorAll('.ppanel2').forEach(x=>x.classList.remove('active')); const t=document.getElementById(id); if(t) t.classList.add('active'); }
 
   /* ===== ABA MEDICAMENTOS DA FICHA — Adriana, 22/set/2026 ============================
@@ -43631,7 +43800,11 @@
     // Rascunhos que a pessoa acabou de acrescentar e ainda não salvou continuam na tela.
     const rascunhos=[];
     wrap.querySelectorAll('.magitem[data-id^="fmn_"]').forEach(function(el){ rascunhos.push(el.outerHTML); });
-    let h='';
+    const resumoMed=[];
+    resumoMed.push(o.vivos.length===1 ? '1 medicamento de uso contínuo cadastrado.' : o.vivos.length+' medicamentos de uso contínuo cadastrados.');
+    if(o.parados.length) resumoMed.push(o.parados.length===1 ? '1 encerrado permanece no histórico.' : o.parados.length+' encerrados permanecem no histórico.');
+    if(o.anulados.length) resumoMed.push(o.anulados.length===1 ? '1 lançamento por engano permanece identificado.' : o.anulados.length+' lançamentos por engano permanecem identificados.');
+    let h='<div class="hint" style="margin-bottom:8px"><strong>Resumo da lista:</strong> '+resumoMed.join(' ')+'</div>';
     if(!o.vivos.length && !rascunhos.length) h+='<div class="hint">Nenhum medicamento de uso contínuo cadastrado.</div>';
     h+=o.vivos.map(function(id){ return medAgendaRowHTML(id, FMED_ITENS[id], {ficha:true}); }).join('');
     h+=rascunhos.join('');
@@ -64577,6 +64750,7 @@
     var ele=fem?'ela':'ele';
     var dd=function(iso){ return (((typeof fmtBR==='function')?fmtBR(iso):'')||iso||'').slice(0,5); };
     var quando=function(x){ return x&&x.ts?(escAttr(x.quem||'-')+', '+escAttr(dd(zDiaDoTs(x.ts)))+' às '+escAttr(vencHora(x.ts))):''; };
+    var histAberto=false; try{ var histAtual=raiz.querySelector('details[data-ficha-topico="tutor-historico"]'); histAberto=histAtual?!!histAtual.open:fichaTopicoEstaAberto(p,'tutor-historico'); }catch(e){}
     var h='<div class="card"><h2 style="font-size:19px">Agora</h2>';
     // a ficha
     var devendo=d.ficha.filter(function(x){ return x.atrasado||x.sem_registro||x.vence===d.hoje; });
@@ -64606,6 +64780,7 @@
       +'</div></div>';
     // as conversas
     h+='<div class="card"><h2 style="font-size:19px">Conversas com o tutor</h2>'
+      +'<details class="ficha-topico" data-ficha-topico="tutor-historico"'+(histAberto?' open':'')+'><summary><span class="ficha-topico-nome">Ver histórico de conversas</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary><div class="ficha-topico-corpo">'
       +'<div class="hint">Os últimos '+VENC_PEND_DIAS+' dias e os próximos já combinados: cada mensagem, quem mandou, o que o tutor respondeu e as cobranças. Nada aqui se apaga.</div>';
     if(!d.lido.conversas) h+='<div style="padding:8px 0">'+lendo+'</div>';
     else if(!d.conversas.length) h+='<div class="hint" style="padding:8px 0">Nenhuma conversa registrada neste período.</div>';
@@ -64624,7 +64799,7 @@
     });
     if(d.lido.conversas && d.conversas.length && !d.historicoLido)
       h+='<div class="hint" style="padding:6px 0">Lendo o histórico de cada mensagem&hellip;</div>';
-    h+='</div>';
+    h+='</div></details></div>';
     raiz.innerHTML=h;
   }
   // O dia (AAAA-MM-DD) de um carimbo de hora, no relógio do aparelho.
