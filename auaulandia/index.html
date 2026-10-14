@@ -2603,7 +2603,7 @@
   .mcr-bt-plantao{display:block;margin-top:8px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:10px;padding:8px 14px;min-height:44px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
   .mcr-bt-entrada{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue);font-weight:800;min-height:44px}
 </style>
-<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-05">
+<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-06">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -4797,7 +4797,6 @@
       <div id="orcMensagemTipo" style="display:flex;gap:7px;flex-wrap:wrap;margin:7px 0 4px">
         <button type="button" class="btn" style="flex:1 1 170px;min-width:145px;min-height:44px" id="orcMsgTipoPrimeira" onclick="orcSetMsgTipo('primeira')">Primeira hospedagem</button>
         <button type="button" class="btn" style="flex:1 1 170px;min-width:145px;min-height:44px" id="orcMsgTipoRetorno" onclick="orcSetMsgTipo('retorno')">Já é cliente da AuAulândia</button>
-        <button type="button" class="btn" style="flex:1 1 160px;min-width:145px;min-height:44px" id="orcMsgTipoAuluno" onclick="orcSetMsgTipo('auluno')">É Auluno do DayCare</button>
         <button type="button" class="btn" style="flex:1 1 210px;min-width:170px;min-height:44px" id="orcMsgTipoImpedimento" onclick="orcSetMsgTipo('impedimento')">Impedimento por castração</button>
       </div>
       <div id="orcMsgTipoNota" class="hint" style="margin-bottom:8px"></div>
@@ -5183,13 +5182,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-14-05"></script>
+<script src="resposta-tutor.js?v=2026-10-14-06"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-14-05"></script>
+<script src="painel-logica.js?v=2026-10-14-06"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5201,14 +5200,14 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-14-05"></script>
-<script src="autoria-logica.js?v=2026-10-14-05"></script>
-<script src="navegacao-inicio.js?v=2026-10-14-05"></script>
-<script src="presenca-logica.js?v=2026-10-14-05"></script>
-<script src="historico-checkins.js?v=2026-10-14-05"></script>
-<script src="historico-checkins-pdf.js?v=2026-10-14-05"></script>
-<script src="orcamento-acompanhamento.js?v=2026-10-14-05"></script>
-<script src="dash-lancamentos-performance.js?v=2026-10-14-05"></script>
+<script src="financeiro-logica.js?v=2026-10-14-06"></script>
+<script src="autoria-logica.js?v=2026-10-14-06"></script>
+<script src="navegacao-inicio.js?v=2026-10-14-06"></script>
+<script src="presenca-logica.js?v=2026-10-14-06"></script>
+<script src="historico-checkins.js?v=2026-10-14-06"></script>
+<script src="historico-checkins-pdf.js?v=2026-10-14-06"></script>
+<script src="orcamento-acompanhamento.js?v=2026-10-14-06"></script>
+<script src="dash-lancamentos-performance.js?v=2026-10-14-06"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -21518,13 +21517,13 @@
     if(status){ status.style.color=''; status.textContent='Texto revisado pela consultora. A cópia usará exatamente esta versão.'; }
   }
   function orcSetMsgTipo(tipo){
-    if(['primeira','retorno','auluno','impedimento'].indexOf(tipo)<0) return;
+    if(['primeira','retorno','impedimento'].indexOf(tipo)<0) return;
     ORC_MSG_TIPO=tipo;
     ORC_MSG_GERADA='';
     orcRenderMsg(true);
   }
   function orcRenderMsgTipo(){
-    var tipos={primeira:'Primeira hospedagem',retorno:'Já é cliente da AuAulândia',auluno:'É Auluno do DayCare',impedimento:'Impedimento por castração'};
+    var tipos={primeira:'Primeira hospedagem',retorno:'Já é cliente da AuAulândia',impedimento:'Impedimento por castração'};
     Object.keys(tipos).forEach(function(k){
       var b=document.getElementById('orcMsgTipo'+k.charAt(0).toUpperCase()+k.slice(1));
       if(!b) return;
@@ -21534,8 +21533,7 @@
     });
     var nota=document.getElementById('orcMsgTipoNota'); if(!nota) return;
     if(ORC_MSG_TIPO==='primeira') nota.innerHTML='Use quando esta for a <strong>primeira hospedagem</strong>. A conferência de requisitos, a avaliação e a disponibilidade continuam sendo etapas separadas.';
-    else if(ORC_MSG_TIPO==='retorno') nota.textContent='Use para quem já se hospedou. A escolha é da consultora e não é inferida pelo cadastro.';
-    else if(ORC_MSG_TIPO==='auluno') nota.textContent='Use para Auluno do DayCare. Não apresenta avaliação nem adaptação como etapa nova.';
+    else if(ORC_MSG_TIPO==='retorno') nota.textContent='Use para Aulunos do DayCare e peludinhos que já se hospedaram na AuAulândia. A mensagem é a mesma; os valores e descontos seguem o orçamento calculado.';
     else nota.innerHTML='<strong>Use somente quando a consultora confirmar o impedimento.</strong> Este texto não deduz idade, sexo ou condição de nenhum peludinho e não pede mudança de decisão à família. Depois de salvar o orçamento, registre “Pausar por protocolo” no acompanhamento para retirar da fila de contatos. Escolher ou copiar esta mensagem não pausa o atendimento automaticamente.';
   }
   function orcNomesDaMensagem(C){
@@ -21599,7 +21597,7 @@
     var tutor=nomeProprio((typeof primeiroNome==='function')?primeiroNome(C.pets[0]&&C.pets[0].sel.tutor||''):((C.pets[0]&&C.pets[0].sel.tutor)||''));
     var nomes=orcNomesDaMensagem(C), L;
     if(ORC_MSG_TIPO==='impedimento') L=orcMensagemImpedimento(C,tutor,nomes);
-    else if(ORC_MSG_TIPO==='retorno'||ORC_MSG_TIPO==='auluno') L=orcMensagemRetorno(C,tutor,nomes);
+    else if(ORC_MSG_TIPO==='retorno') L=orcMensagemRetorno(C,tutor,nomes);
     else L=orcMensagemPrimeira(C,tutor,nomes);
     el.value=L.join('\n'); ORC_MSG_GERADA=el.value; ORC_MSG_ASSINATURA=assinatura;
     orcRenderMsgTipo();
@@ -27313,7 +27311,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-14-05';
+  const APP_VERSAO='2026-10-14-06';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
