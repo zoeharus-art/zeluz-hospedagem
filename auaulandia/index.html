@@ -2598,7 +2598,7 @@
   .mcr-bt-plantao{display:block;margin-top:8px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:10px;padding:8px 14px;min-height:44px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
   .mcr-bt-entrada{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue);font-weight:800;min-height:44px}
 </style>
-<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-02">
+<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-03">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -4787,10 +4787,17 @@
 
     <div class="card" id="orcCardMsg" style="display:none">
       <h2 style="font-size:19px">Mensagem para o tutor</h2>
-      <div class="hint">Confira, copie e mande. Nada é enviado automaticamente.</div>
-      <textarea id="orcMsg" class="gest-txt" style="min-height:230px" readonly></textarea>
+      <div class="hint">Escolha o tipo manualmente, revise o texto e copie. Nada é enviado automaticamente; orçamento não confirma reserva.</div>
+      <div class="hint" style="margin-top:9px"><strong>Tipo da mensagem</strong> — escolha conforme o atendimento da família.</div>
+      <div id="orcMensagemTipo" style="display:flex;gap:7px;flex-wrap:wrap;margin:7px 0 4px">
+        <button type="button" class="btn" style="flex:1 1 170px;min-width:145px;min-height:44px" id="orcMsgTipoPrimeira" onclick="orcSetMsgTipo('primeira')">Primeira hospedagem</button>
+        <button type="button" class="btn" style="flex:1 1 110px;min-width:110px;min-height:44px" id="orcMsgTipoRetorno" onclick="orcSetMsgTipo('retorno')">Retorno</button>
+        <button type="button" class="btn" style="flex:1 1 210px;min-width:170px;min-height:44px" id="orcMsgTipoImpedimento" onclick="orcSetMsgTipo('impedimento')">Impedimento por castração</button>
+      </div>
+      <div id="orcMsgTipoNota" class="hint" style="margin-bottom:8px"></div>
+      <textarea id="orcMsg" class="gest-txt" style="min-height:260px" oninput="orcMensagemEditada()"></textarea>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-        <button class="btn btn-gold" onclick="orcCopiar()">Copiar mensagem</button>
+        <button class="btn btn-gold" onclick="orcCopiar()">Copiar mensagem revisada</button>
         <button class="btn btn-primary" onclick="orcSalvar()">Salvar orçamento</button>
       </div>
       <div id="orcSalvoStatus" class="hint" style="margin-top:6px"></div>
@@ -5170,13 +5177,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-14-02"></script>
+<script src="resposta-tutor.js?v=2026-10-14-03"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-14-02"></script>
+<script src="painel-logica.js?v=2026-10-14-03"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5188,12 +5195,13 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-14-02"></script>
-<script src="autoria-logica.js?v=2026-10-14-02"></script>
-<script src="navegacao-inicio.js?v=2026-10-14-02"></script>
-<script src="presenca-logica.js?v=2026-10-14-02"></script>
-<script src="historico-checkins.js?v=2026-10-14-02"></script>
-<script src="historico-checkins-pdf.js?v=2026-10-14-02"></script>
+<script src="financeiro-logica.js?v=2026-10-14-03"></script>
+<script src="autoria-logica.js?v=2026-10-14-03"></script>
+<script src="navegacao-inicio.js?v=2026-10-14-03"></script>
+<script src="presenca-logica.js?v=2026-10-14-03"></script>
+<script src="historico-checkins.js?v=2026-10-14-03"></script>
+<script src="historico-checkins-pdf.js?v=2026-10-14-03"></script>
+<script src="orcamento-acompanhamento.js?v=2026-10-14-03"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -21170,10 +21178,10 @@
     orcNovoComecou();
     orcRenderSel(); orcCalcular();
   }
-  function orcRemover(key){ ORC_SEL=ORC_SEL.filter(function(s){ return s.key!==key; }); delete ORC_REP[key]; orcRenderSel(); orcCalcular(); }
+  function orcRemover(key){ ORC_SEL=ORC_SEL.filter(function(s){ return s.key!==key; }); delete ORC_REP[key]; orcMensagemNovaFamilia(); orcRenderSel(); orcCalcular(); }
   // Mexeu na lista de FILHOts depois de salvar? Entao comecou outro orcamento: a reserva do
   // anterior volta a bloquear. Sem isto, dois orcamentos seguidos prometeriam o mesmo dia.
-  function orcNovoComecou(){ if(!ORC_EDITANDO) ORC_RESERVA_IGNORAR=''; }
+  function orcNovoComecou(){ if(!ORC_EDITANDO) ORC_RESERVA_IGNORAR=''; orcMensagemNovaFamilia(); }
   function orcRenderSel(){
     var el=document.getElementById('orcSelecionados'); if(!el) return;
     if(!ORC_SEL.length){ el.innerHTML='<div class="hint">Nenhum FILHOt escolhido ainda.</div>'; return; }
@@ -21481,43 +21489,124 @@
     if(!comDe) return art+' '+pal;
     return (art==='a'?'da ':art==='o'?'do ':art==='as'?'das ':'dos ')+pal;
   }
-  function orcRenderMsg(){
-    var el=document.getElementById('orcMsg'); if(!el||!ORC_CALC) return;
-    var C=ORC_CALC;
-    var tutor=nomeProprio((typeof primeiroNome==='function')?primeiroNome(C.pets[0]&&C.pets[0].sel.tutor||''):((C.pets[0]&&C.pets[0].sel.tutor)||''));
-    var nomes=C.pets.map(function(p){ return nomeProprio(p.sel.nome); }).join(' e ');
-    var um=(C.pets.length===1);
-    var ele=um?(orcEhFemea(C.pets[0].sel)?'ela':'ele'):'eles';
-    var L=[];
-    L.push(tutor+', será uma alegria receber '+(um?(orcArtigo(C.pets[0].sel)==='a'?'a ':'o '):'')+nomes+' em nossa AuAulândia.');
-    L.push('Segue o orçamento:');
-    L.push('Período: '+orcBR(C.entrada)+' a '+orcBR(C.saida));
+  var ORC_MSG_TIPO='primeira', ORC_MSG_FAMILIA='', ORC_MSG_GERADA='', ORC_MSG_ASSINATURA='';
+  function orcMensagemNovaFamilia(){
+    var familia=ORC_SEL.map(function(s){ return String(s.key||'')+'@'+String(s.tutor||''); }).filter(Boolean).sort().join('|');
+    if(!familia){ ORC_MSG_FAMILIA=''; ORC_MSG_TIPO='primeira'; ORC_MSG_GERADA=''; ORC_MSG_ASSINATURA=''; return; }
+    if(familia!==ORC_MSG_FAMILIA){
+      ORC_MSG_FAMILIA=familia;
+      ORC_MSG_TIPO='primeira';
+      ORC_MSG_GERADA=''; ORC_MSG_ASSINATURA='';
+    }
+  }
+  function orcAssinaturaMensagem(C){
+    return JSON.stringify({entrada:C.entrada||'',saida:C.saida||'',total:C.total||0,p1:C.p1||0,p2:C.p2||0,
+      pets:C.pets.map(function(p){ return {key:(p.sel||{}).key||'',tutor:(p.sel||{}).tutor||'',nome:(p.sel||{}).nome||'',nDia:p.nDia||0,nPer:p.nPer||0,repUsa:p.repUsa||0,repEconomia:p.repEconomia||0,off:p.off||0,total:p.total||0}; })});
+  }
+  function orcMensagemEditada(){
+    var status=document.getElementById('orcSalvoStatus');
+    if(status){ status.style.color=''; status.textContent='Texto revisado pela consultora. A cópia usará exatamente esta versão.'; }
+  }
+  function orcSetMsgTipo(tipo){
+    if(['primeira','retorno','impedimento'].indexOf(tipo)<0) return;
+    ORC_MSG_TIPO=tipo;
+    ORC_MSG_GERADA='';
+    orcRenderMsg(true);
+  }
+  function orcRenderMsgTipo(){
+    var tipos={primeira:'Primeira hospedagem',retorno:'Retorno',impedimento:'Impedimento por castração'};
+    Object.keys(tipos).forEach(function(k){
+      var b=document.getElementById('orcMsgTipo'+k.charAt(0).toUpperCase()+k.slice(1));
+      if(!b) return;
+      var ativo=(k===ORC_MSG_TIPO);
+      b.className=ativo?'btn btn-gold':'btn';
+      b.setAttribute('aria-pressed',ativo?'true':'false');
+    });
+    var nota=document.getElementById('orcMsgTipoNota'); if(!nota) return;
+    if(ORC_MSG_TIPO==='primeira') nota.innerHTML='Use quando esta for a <strong>primeira hospedagem</strong>. A conferência de requisitos, a avaliação e a disponibilidade continuam sendo etapas separadas.';
+    else if(ORC_MSG_TIPO==='retorno') nota.textContent='Use para retorno. A escolha é da consultora; ela não é inferida a partir de auluno ou não auluno.';
+    else nota.innerHTML='<strong>Use somente quando a consultora confirmar o impedimento.</strong> Este texto não deduz idade, sexo ou condição de nenhum peludinho e não pede mudança de decisão à família. Depois de salvar o orçamento, registre “Pausar por protocolo” no acompanhamento para retirar da fila de contatos. Escolher ou copiar esta mensagem não pausa o atendimento automaticamente.';
+  }
+  function orcNomesDaMensagem(C){
+    return C.pets.map(function(p){ return nomeProprio(p.sel.nome); }).join(' e ');
+  }
+  function orcLinhasValores(C, L){
+    L.push('🗓️ Período: '+orcBR(C.entrada)+' a '+orcBR(C.saida));
     C.pets.forEach(function(p){
-      var pre=um?'':(p.sel.nome+' — ');
+      var pre=C.pets.length===1?'':(nomeProprio(p.sel.nome)+': ');
       var partes=[];
       if(p.nDia) partes.push(p.nDia+' diária'+(p.nDia===1?'':'s'));
       if(p.nPer) partes.push(p.nPer+' pernoite'+(p.nPer===1?'':'s'));
-      L.push(pre+'Total de '+partes.join(' e '));
-      if(p.repUsa) L.push(pre+'Já usando '+p.repUsa+' '+(p.repUsa===1?'dia de reposição':'dias de reposição')
-        +' que '+(orcEhFemea(p.sel)?'ela':'ele')+' tinha — economia de '+fmtCent(p.repEconomia)+'.');
+      L.push('🐶 '+pre+(partes.length?partes.join(' e '):'período calculado'));
+      if(p.repUsa) L.push(pre+'Já usando '+p.repUsa+' '+(p.repUsa===1?'dia de reposição':'dias de reposição')+' que '+(orcEhFemea(p.sel)?'ela':'ele')+' tinha — economia de '+fmtCent(p.repEconomia)+'.');
     });
     L.push('');
-    L.push('Total: '+fmtCent(C.total));
+    L.push('💛 Total: '+fmtCent(C.total)+'.');
+    var descs=C.pets.filter(function(p){ return p.off>0; });
+    if(descs.length) L.push('Já com o desconto de '+descs.map(function(p){ return p.off+'% '+orcArtigoDe(p.sel)+' '+nomeProprio(p.sel.nome); }).join(' e ')+'.');
+    L.push('Pagamento, caso a hospedagem seja confirmada: '+fmtCent(C.p1)+' na reserva da data e '+fmtCent(C.p2)+' no dia da entrada.');
+  }
+  function orcMensagemPrimeira(C, tutor, nomes){
+    var L=[];
+    L.push(tutor+', preparei o orçamento para você conhecer nossa proposta de cuidado para '+nomes+'. 💛');
+    L.push('');
+    L.push('Na AuAulândia, nossa Colônia de Férias combina brincadeiras, convivência supervisionada, enriquecimento ambiental e descanso. Sem gaiolas ou baias, com manejo em grupo e uma equipe que acompanha os hóspedes dia e noite. Nosso cuidado começa por conhecer cada peludinho e respeitar seu jeito de ser. 🐾');
+    L.push('');
+    orcLinhasValores(C,L);
+    L.push('');
+    L.push('Para a primeira hospedagem, precisamos conferir a vacinação e os demais critérios de atendimento, além da aprovação na avaliação comportamental com a Márcia Nascimento, nossa especialista em comportamento canino. Ela orienta se será necessária adaptação antes da estadia. A avaliação deve acontecer pelo menos 10 dias antes da entrada.');
+    L.push('');
+    L.push('Este orçamento apresenta os valores; a reserva depende dessas etapas e da disponibilidade para o período.');
+    L.push('');
+    L.push(tutor+', posso te explicar como funciona a avaliação e o que precisamos conhecer sobre '+nomes+' antes de seguir? Assim, vocês conseguem decidir com calma se a nossa proposta combina com a família. 💛');
+    return L;
+  }
+  function orcMensagemRetorno(C, tutor, nomes){
+    var um=(C.pets.length===1), ele=um?(orcEhFemea(C.pets[0].sel)?'ela':'ele'):'eles', L=[];
+    L.push(tutor+', será uma alegria receber '+(um?(orcArtigo(C.pets[0].sel)==='a'?'a ':'o '):'')+nomes+' em nossa AuAulândia. 💛');
+    L.push('Segue o orçamento:');
+    L.push('Período: '+orcBR(C.entrada)+' a '+orcBR(C.saida));
+    C.pets.forEach(function(p){
+      var pre=um?'':(p.sel.nome+' — '), partes=[];
+      if(p.nDia) partes.push(p.nDia+' diária'+(p.nDia===1?'':'s'));
+      if(p.nPer) partes.push(p.nPer+' pernoite'+(p.nPer===1?'':'s'));
+      L.push(pre+'Total de '+partes.join(' e '));
+      if(p.repUsa) L.push(pre+'Já usando '+p.repUsa+' '+(p.repUsa===1?'dia de reposição':'dias de reposição')+' que '+(orcEhFemea(p.sel)?'ela':'ele')+' tinha — economia de '+fmtCent(p.repEconomia)+'.');
+    });
+    L.push(''); L.push('Total: '+fmtCent(C.total));
     var descs=C.pets.filter(function(p){ return p.off>0; });
     if(descs.length){
       if(um&&descs[0].sel.compromisso) L.push('Já com o desconto de '+descs[0].off+'% do plano '+descs[0].sel.compromisso+' '+orcArtigoDe(descs[0].sel)+' '+descs[0].sel.nome+'.');
       else L.push('Já com o desconto de '+descs.map(function(p){ return p.off+'% '+orcArtigoDe(p.sel)+' '+p.sel.nome; }).join(' e ')+'.');
     }
-    L.push('Forma de pagamento: '+fmtCent(C.p1)+' na reserva da data e '+fmtCent(C.p2)+' no dia da hospedagem.');
-    // O aviso de feriado saiu da mensagem em 13/ago/2026 ("tire esse detalhe por enquanto,
-    // vejo em que momento iremos introduzir"). O AJUSTE das datas continua acontecendo — só
-    // não é explicado ao tutor. A consultora continua vendo o aviso na tela do orçamento.
+    L.push('Forma de pagamento, caso a hospedagem seja confirmada: '+fmtCent(C.p1)+' na reserva da data e '+fmtCent(C.p2)+' no dia da hospedagem.');
     L.push('');
-    L.push('Podemos confirmar a Colônia de Férias '+orcPequeno(C.pets,true)+'?');
-    // "vão se divertir" está correto (divertir-se é pronominal), mas o "se" incomodou a
-    // Adriana. Trocamos o verbo por um que dispensa o pronome: fica natural E correto.
-    L.push('Temos certeza de que '+ele+' e os aumiguinhos vão aproveitar muito!');
-    el.value=L.join('\n');
+    L.push('Este orçamento apresenta valores; a reserva depende da disponibilidade para o período e da confirmação das etapas necessárias.');
+    L.push('Temos certeza de que '+ele+' e os aumiguinhos vão aproveitar muito! 💛');
+    return L;
+  }
+  function orcMensagemImpedimento(C, tutor, nomes){
+    return [
+      tutor+', como nosso cuidado acontece em grupo, não recebemos machos não castrados acima de 10 meses nem peludinhos com comportamento de monta. A decisão sobre castração é exclusivamente da família, e nós respeitamos isso. Por esse motivo, não conseguimos avançar com a hospedagem nas condições atuais.',
+      '',
+      'O orçamento fica como referência para vocês. Se em outro momento fizer sentido retomar essa conversa, estaremos por aqui para orientar os próximos passos de '+nomes+', sem compromisso de decidir nada agora. 💛'
+    ];
+  }
+  function orcRenderMsg(forcar){
+    var el=document.getElementById('orcMsg'); if(!el||!ORC_CALC) return;
+    var C=ORC_CALC;
+    var assinatura=orcAssinaturaMensagem(C);
+    var editada=!!(ORC_MSG_GERADA && el.value!==ORC_MSG_GERADA);
+    var contaMudou=!!(ORC_MSG_ASSINATURA && ORC_MSG_ASSINATURA!==assinatura);
+    if(!forcar && editada && !contaMudou){ orcRenderMsgTipo(); return; }
+    var tutor=nomeProprio((typeof primeiroNome==='function')?primeiroNome(C.pets[0]&&C.pets[0].sel.tutor||''):((C.pets[0]&&C.pets[0].sel.tutor)||''));
+    var nomes=orcNomesDaMensagem(C), L;
+    if(ORC_MSG_TIPO==='impedimento') L=orcMensagemImpedimento(C,tutor,nomes);
+    else if(ORC_MSG_TIPO==='retorno') L=orcMensagemRetorno(C,tutor,nomes);
+    else L=orcMensagemPrimeira(C,tutor,nomes);
+    el.value=L.join('\n'); ORC_MSG_GERADA=el.value; ORC_MSG_ASSINATURA=assinatura;
+    orcRenderMsgTipo();
+    if(contaMudou){ var status=document.getElementById('orcSalvoStatus'); if(status){ status.style.color='var(--z-gold-deep)'; status.textContent='Os valores ou o período mudaram. Revise a mensagem atualizada.'; } }
   }
   // A caixa de reposições. Só aparece para quem TEM saldo — perguntar a quem não tem é
   // ruído, e ruído ensina a equipe a ignorar a tela inteira.
@@ -21556,12 +21645,22 @@
     return h+'</div>';
   }
   function orcArtigoDe(sel){ return orcEhFemea(sel)?'da':'do'; }
-  function orcCopiar(){
-    var t=document.getElementById('orcMsg'); if(!t) return;
-    t.removeAttribute('readonly'); t.select();
-    try{ document.execCommand('copy'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-    t.setAttribute('readonly','readonly');
-    var s=document.getElementById('orcSalvoStatus'); if(s){ s.style.color='var(--crm-ok)'; s.textContent='Mensagem copiada — é só colar no WhatsApp do tutor.'; }
+  async function orcCopiar(){
+    var t=document.getElementById('orcMsg'); if(!t) return false;
+    var texto=t.value||'', s=document.getElementById('orcSalvoStatus');
+    function aviso(msg, cor){ if(s){ s.style.color=cor; s.textContent=msg; } }
+    try{
+      if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){
+        await navigator.clipboard.writeText(texto);
+        aviso('Mensagem copiada — é só colar no WhatsApp do tutor.','var(--crm-ok)');
+        return true;
+      }
+    }catch(e){} /* tenta o mecanismo manual abaixo */
+    var copiou=false;
+    try{ t.focus(); t.select(); copiou=(document.execCommand('copy')===true); }catch(e){ copiou=false; }
+    if(copiou){ aviso('Mensagem copiada — é só colar no WhatsApp do tutor.','var(--crm-ok)'); return true; }
+    aviso('Não consegui copiar automaticamente. Selecione o texto e copie manualmente.','var(--crm-critico)');
+    return false;
   }
   // ===== O ORÇAMENTO FICA SALVO (é a semente do CRM) ================================
   // Cada orçamento guarda o PREÇO DA ÉPOCA e o desfecho: aguardando → fechado / não fechou.
@@ -27217,7 +27316,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-14-02';
+  const APP_VERSAO='2026-10-14-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -86944,8 +87043,8 @@
       return Promise.resolve(PC_CACHE.dados);
     if(!DB) return Promise.resolve(null);
     var pSeu=pcSeuDiaLer(dia, forcar===true);          // a MESMA leitura do Meu Painel
-    var pOrc=DB.ref('auaulandia/orcamentos').limitToLast(60).once('value')
-      .then(function(s){ return {ok:true, v:s.val()||{}}; })
+    // Coleção inteira via ORC_VIVOS: cache/Promise de 3 minutos compartilhado com Orçamento e Amanda.
+    var pOrc=window.OrcAcompanhamento.lerOrcamentos(forcar===true)
       .catch(function(e){ _logLeituraFalhou('auaulandia/orcamentos (Painel das Consultoras)', e); return {ok:false, v:null}; });
     var pMed;
     if(typeof HOSP_PLANILHA!=='undefined'&&HOSP_PLANILHA===true){
@@ -87466,6 +87565,9 @@
         // três telas. Os botões são os MESMOS do cartão, e gravam pelo mesmo caminho.
         +'<div id="pcCardPend" style="display:contents">'+vencPendCardHTML()+'</div>'
         +'</div>';
+      // Acompanhamento usa a mesma leitura inteira/cache de três minutos do Orçamento; não grava ao renderizar.
+      try{ if(window.OrcAcompanhamento) window.OrcAcompanhamento.renderPainel('consultoras', raiz,
+        (d.orc&&d.orc.ok)?d.orc.v:null, {db:DB,hoje:PC_DIA,equipe:(typeof MONITORES!=='undefined'?MONITORES.filter(monAtivo):[]),recarregar:function(){pcAbrir(true);}}); }catch(e){ _logLeituraFalhou('Acompanhamento de orçamentos (Consultoras)', e); }
       // A varredura dos 30 dias pode ter CHEGADO antes de este HTML existir — e aí o aviso
       // de "ainda lendo" ficaria na tela para sempre. Pedir de novo depois de desenhar
       // resolve nos dois casos: já lido devolve na hora, ainda não lido avisa quando chegar.
@@ -88853,8 +88955,8 @@
     var ed=(typeof empDataKey==='function')?empDataKey():dia;
     var pEmp=Promise.all([paPega('daycare/almoco/'+ed), paPega('daycare/atividade/'+ed+'/almoco2'), paPega('daycare/avisos-comida/'+ed)])
       .then(function(r){ return {ok:(r[0].ok&&r[1].ok&&r[2].ok), a1:r[0].v||{}, a2:r[1].v||{}, avisos:r[2].v||{}}; });
-    var pOrc=DB.ref('auaulandia/orcamentos').limitToLast(60).once('value')
-      .then(function(s){ return {ok:true, v:s.val()||{}}; })
+    // Coleção inteira via ORC_VIVOS: cache/Promise de 3 minutos compartilhado com Orçamento e Consultoras.
+    var pOrc=window.OrcAcompanhamento.lerOrcamentos(forcar===true)
       .catch(function(e){ _logLeituraFalhou('auaulandia/orcamentos (Painel da Supervisão)', e); return {ok:false, v:null}; });
     return Promise.all([pEmp, pOrc, paPega('daycare/auditoria/'+dia),
                         paPega('daycare/alergia-confirmada'), paPega('daycare/entrevista-atencao')])
@@ -89055,6 +89157,9 @@
         + blocoFaltaPesarHTML()
         +'<div id="paCardPendPrev" style="display:contents">'+blocoPendPrevHTML()+'</div>'
         +'</div>';
+      // Acompanhamento usa a mesma leitura inteira/cache de três minutos do Orçamento; não grava ao renderizar.
+      try{ if(window.OrcAcompanhamento) window.OrcAcompanhamento.renderPainel('amanda', raiz,
+        (d.orc&&d.orc.ok)?d.orc.v:null, {db:DB,hoje:PA_DIA,equipe:(typeof MONITORES!=='undefined'?MONITORES.filter(monAtivo):[]),recarregar:function(){paAbrir(true);}}); }catch(e){ _logLeituraFalhou('Acompanhamento de orçamentos (Amanda)', e); }
       // O mesmo quadro da Márcia, com a mesma leitura: nasce com o que há e se troca sozinho.
       if(typeof pendCarregar==='function') pendCarregar().then(function(){
         var _c=document.getElementById('paCardPendPrev'); if(_c) _c.innerHTML=blocoPendPrevHTML();
