@@ -1,13 +1,10 @@
 /**
  * ZÊLUZ · Day Care — ponte entre o APP e a planilha que alimenta o dashboard da TV
  * ============================================================================
- * Versão 7 (29/set/2026) — UMA ESCRITA POR VEZ. lancar() grava na "primeira célula vazia
- *                           do dia": dois pedidos ao mesmo tempo (dois aparelhos, ou o
- *                           automático junto com a recepção) escolhiam a MESMA célula, e o
- *                           segundo apagava o primeiro, os dois respondendo ok. Foi assim
- *                           que o Ozzy sumiu da TV com a Charlotte no lugar (Adriana,
- *                           29/set/2026). Lançar e tirar agora passam por uma trava
- *                           (LockService) e gravam antes de soltá-la.
+ * Versão 8 (14/out/2026) — edição idempotente no mesmo lançamento/linha, com
+ *                           opId, busca legada exata e recusa segura de ambiguidades.
+ * Versão 7 (14/out/2026) — uma escrita por vez no Apps Script; evita duas recepções
+ *                           escolherem a mesma célula livre ao mesmo tempo.
  * Versão 6 (21/set/2026) — coluna "Troca de Escova". A escova de dentes do FILHOt é
  *                           prevenção, e a recepção precisa lançá-la no dia, como já
  *                           lança a troca de coleira. Sem hora: o que importa é que foi
@@ -140,14 +137,13 @@ function doPost(e) {
     var d = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     if (String(d.token || '') !== _senha()) return _json({ ok: false, erro: 'token invalido' });
     var acao = String(d.acao || 'lancar');
-    // Mexer na estrutura também espera a vez (QA36): duas criações ao mesmo tempo duplicavam
-    // coluna ou deslocavam a coluna de um lançamento em curso. `lancar` chama garantirColunas
-    // por dentro, já com a trava na mão — por isso a trava fica aqui, na porta, e não lá.
+    if (acao === 'capacidades')      return _json({ ok: true, versao: 8, capacidades: ['editar-v1'] });
     if (acao === 'garantirColunas') return _json(_umPorVez(function () { return garantirColunas(); }));
     if (acao === 'diagnostico')     return _json(diagnostico());
     if (acao === 'removerColunas')  return _json(_umPorVez(function () { return removerColunas(d); }));
     if (acao === 'criarMeses')      return _json(_umPorVez(function () { return criarMeses(d); }));
     if (acao === 'lancar')          return _json(_umPorVez(function () { return lancar(d); }));
+    if (acao === 'editar')          return _json(_umPorVez(function () { return editar(d); }));
     if (acao === 'remover')         return _json(_umPorVez(function () { return remover(d); }));
     if (acao === 'lerDia')          return _json(lerDia(d));
     return _json({ ok: false, erro: 'acao desconhecida: ' + acao });
@@ -156,10 +152,8 @@ function doPost(e) {
   }
 }
 
-/** Uma escrita por vez (versão 7): espera até 10 s pela vez — o app desiste em 12 s, e um
- *  pedido que ele já abandonou não pode gravar depois (QA36). Sem a vez, diz que a planilha
- *  está ocupada — o app mostra "NÃO foi para a TV" e a conferência tenta de novo. Grava
- *  (flush) antes de soltar, mesmo quando dá erro no meio. */
+/** Serializa toda escrita. A trava mora na porta para `lancar`, que pode criar colunas,
+ * não tentar adquirir a mesma trava duas vezes. */
 function _umPorVez(fn) {
   var trava = LockService.getScriptLock();
   if (!trava.tryLock(10000)) return { ok: false, erro: 'a planilha está ocupada; tente de novo em instantes' };
@@ -282,6 +276,151 @@ function lancar(d) {
   sh.getRange(nova, cAlvo).setValue(valor);
   if (cHora && d.hora) sh.getRange(nova, cHora).setValue(String(d.hora));
   return { ok: true, linha: nova, aba: sh.getName(), linhaNova: true, avisoHora: avisoHora };
+}
+
+
+/** Chave persistente curta. O opId é criado pelo app e só admite caracteres seguros. */
+function _editarOpChave(opId) {
+  opId = String(opId || '');
+  return /^[A-Za-z0-9_-]{12,80}$/.test(opId) ? ('PONTE_EDITAR_OP_' + opId) : '';
+}
+function _editarAssinatura(d) {
+  return JSON.stringify([String(d.id || ''), String(d.dia || ''), String(d.coluna || ''),
+    String(d.colunaHora || ''), String(d.valorAntes == null ? '' : d.valorAntes),
+    String(d.valorDepois == null ? '' : d.valorDepois), String(d.horaAntes == null ? '' : d.horaAntes),
+    String(d.horaDepois == null ? '' : d.horaDepois)]);
+}
+function _editarLimparOps(props) {
+  try {
+    var agora = Date.now(), todas = props.getProperties(), removidas = 0;
+    Object.keys(todas).some(function (chave) {
+      if (chave.indexOf('PONTE_EDITAR_OP_') !== 0) return false;
+      try {
+        var op = JSON.parse(todas[chave] || '{}'), ts = Number(op.atualizadoEm || op.criadoEm || 0);
+        var limite = op.estado === 'concluido' ? 30 * 86400000 : 90 * 86400000;
+        if (ts && agora - ts > limite) { props.deleteProperty(chave); removidas++; }
+      } catch (e) { /* entrada desconhecida fica preservada */ }
+      return removidas >= 25;
+    });
+  } catch (e) { /* limpeza de quota nunca muda o resultado da edição */ }
+}
+function _editarSalvarEstado(props, chave, op) {
+  op.atualizadoEm = Date.now();
+  if (!op.criadoEm) op.criadoEm = op.atualizadoEm;
+  props.setProperty(chave, JSON.stringify(op));
+  return op;
+}
+function _editarConcluir(props, chave, op, resposta) {
+  op.estado = 'concluido'; op.resposta = resposta;
+  try { _editarSalvarEstado(props, chave, op); return resposta; }
+  catch (e) { return { ok: false, pendente: true, erro: 'a planilha foi alterada, mas não consegui guardar a confirmação; repita o mesmo pedido' }; }
+}
+
+/**
+ * Edita a mesma linha do lançamento original. Sem linha, um legado só é aceito quando
+ * dia + coluna + texto anterior + hora anterior encontram uma única célula.
+ * Nunca procura vaga, nunca faz append e nunca reaproveita `lancar`.
+ */
+function editar(d) {
+  var dia = String(d.dia || ''), nomeCol = String(d.coluna || ''), id = String(d.id || '');
+  var antes = String(d.valorAntes == null ? '' : d.valorAntes).trim();
+  var depois = String(d.valorDepois == null ? '' : d.valorDepois).trim();
+  var horaAntes = String(d.horaAntes == null ? '' : d.horaAntes).trim();
+  var horaDepois = String(d.horaDepois == null ? '' : d.horaDepois).trim();
+  var linhaPedida = Number(d.linha || 0), opId = String(d.opId || '');
+  var chaveOp = _editarOpChave(opId);
+  if (!dia || !nomeCol || !id || !antes || !depois || !chaveOp)
+    return { ok: false, erro: 'faltou dia, coluna, id, valor anterior, valor novo ou opId válido' };
+
+  var assinatura = _editarAssinatura(d), props = PropertiesService.getScriptProperties(), op = null;
+  _editarLimparOps(props);
+  var salvo = props.getProperty(chaveOp);
+  if (salvo) try {
+    op = JSON.parse(salvo);
+    if (op.assinatura !== assinatura)
+      return { ok: false, conflito: true, erro: 'conflito: este opId pertence a outra edição' };
+    if (op.estado === 'concluido' && op.resposta) {
+      var repetida = op.resposta; repetida.jaAtualizado = true; return repetida;
+    }
+    if (op.estado !== 'preparado' || !Number(op.linha))
+      return { ok: false, conflito: true, erro: 'conflito: o pedido salvo está incompleto' };
+  } catch (e) {
+    return { ok: false, conflito: true, erro: 'conflito: não consegui validar a operação anterior' };
+  }
+
+  var alvo = _abaDoDia(dia);
+  if (!alvo.sh) return { ok: false, erro: alvo.erro };
+  var sh = alvo.sh, tit = _titulos(sh);
+  var cData = _acharCol(tit, COL.data), cAlvo = _acharCol(tit, nomeCol);
+  if (!cData || !cAlvo) return { ok: false, erro: 'coluna não encontrada' };
+  var nomeColHora = d.colunaHora ? String(d.colunaHora) : '';
+  var cHora = nomeColHora ? _acharCol(tit, nomeColHora) : 0;
+  if (nomeColHora && !cHora) return { ok: false, erro: 'coluna de hora não encontrada' };
+  var linhas = _linhasDoDia(sh, cData, dia);
+  if (!linhas.length) return { ok: false, erro: 'não achei linhas para este dia' };
+
+  function estado(l) {
+    return { linha: l, valor: String(sh.getRange(l, cAlvo).getValue() || '').trim(),
+      hora: cHora ? String(sh.getRange(l, cHora).getValue() || '').trim() : '' };
+  }
+  function ehAntes(x) { return x.valor === antes && (!cHora || x.hora === horaAntes); }
+  function ehDepois(x) { return x.valor === depois && (!cHora || x.hora === horaDepois); }
+
+  var atual = null;
+  if (op) {
+    if (op.aba !== sh.getName() || linhas.indexOf(Number(op.linha)) < 0)
+      return { ok: false, conflito: true, erro: 'conflito: o localizador salvo não pertence a este dia' };
+    atual = estado(Number(op.linha));
+  } else if (linhaPedida) {
+    if (linhas.indexOf(linhaPedida) < 0)
+      return { ok: false, conflito: true, erro: 'conflito: a linha informada não pertence a este dia' };
+    atual = estado(linhaPedida);
+  } else {
+    var candidatosAntes = [];
+    linhas.forEach(function (l) {
+      var x = estado(l);
+      if (ehAntes(x)) candidatosAntes.push(x);
+    });
+    if (candidatosAntes.length === 1) atual = candidatosAntes[0];
+    else return { ok: false, conflito: true, candidatos: candidatosAntes.length,
+      erro: candidatosAntes.length ? 'conflito: mais de uma linha corresponde exatamente ao lançamento anterior'
+                                   : 'conflito: não achei correspondência exata para o lançamento anterior' };
+  }
+
+  if (op && ehDepois(atual))
+    return _editarConcluir(props, chaveOp, op,
+      { ok: true, jaAtualizado: true, id: id, opId: opId, linha: atual.linha,
+        aba: sh.getName(), valor: atual.valor, hora: atual.hora });
+  if (!ehAntes(atual))
+    return { ok: false, conflito: true,
+      erro: atual.valor !== antes ? 'conflito: o texto na planilha mudou; recarregue antes de editar'
+                                 : 'conflito: o horário na planilha mudou; recarregue antes de editar' };
+
+  if (!op) {
+    op = { assinatura: assinatura, estado: 'preparado', linha: atual.linha, aba: sh.getName(),
+      antes: { valor: antes, hora: horaAntes }, depois: { valor: depois, hora: horaDepois } };
+    try { _editarSalvarEstado(props, chaveOp, op); }
+    catch (e) { return { ok: false, pendente: true, erro: 'não consegui guardar o localizador da operação; a planilha não foi alterada' }; }
+  }
+
+  var celula = sh.getRange(atual.linha, cAlvo), celulaHora = cHora ? sh.getRange(atual.linha, cHora) : null;
+  try {
+    celula.setValue(depois);
+    if (celulaHora) celulaHora.setValue(horaDepois);
+    SpreadsheetApp.flush();
+  } catch (e) {
+    var voltou = true;
+    try {
+      celula.setValue(antes);
+      if (celulaHora) celulaHora.setValue(horaAntes);
+      SpreadsheetApp.flush();
+    } catch (rollback) { voltou = false; }
+    return { ok: false, pendente: true, falhaParcial: !voltou,
+      erro: voltou ? 'a edição falhou e foi revertida; tente de novo com o mesmo pedido'
+                   : 'a edição falhou no meio; a linha precisa ser conferida antes de tentar novamente' };
+  }
+  return _editarConcluir(props, chaveOp, op,
+    { ok: true, id: id, opId: opId, linha: atual.linha, aba: sh.getName(), valor: depois, hora: horaDepois });
 }
 
 /** Tira o valor da coluna (a recepção desfez o lançamento no app). Limpa a hora junto. */

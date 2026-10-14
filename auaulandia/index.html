@@ -729,6 +729,11 @@
   .pair:last-child{border-bottom:none}
   .pair .k{font-size:13px;color:var(--muted);font-weight:600}
   .pair .val{font-size:14px;color:var(--z-blue);font-weight:600;text-align:right}
+  .dash-edit-box{flex:1 0 100%;margin-top:8px;padding:12px;border:1.5px solid var(--z-blue);border-radius:12px;background:var(--cream-warm,#f1ebde)}
+  .dash-edit-box label{display:block;font-size:13px;font-weight:800;color:var(--z-blue);margin-bottom:6px}
+  .dash-edit-box input[type=time]{width:100%;min-height:48px;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--z-cream);color:var(--z-blue);font:800 18px Inter,Arial,sans-serif}
+  .dash-edit-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .dash-edit-actions .btn{min-height:44px;flex:1 1 150px}
   .sensivel-badge{font-size:9px;background:var(--z-blue-soft);color:#fff;padding:2px 7px;border-radius:999px;margin-left:6px;font-weight:700;vertical-align:middle}
 
   /* toggles e chips */
@@ -2598,7 +2603,7 @@
   .mcr-bt-plantao{display:block;margin-top:8px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:10px;padding:8px 14px;min-height:44px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
   .mcr-bt-entrada{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue);font-weight:800;min-height:44px}
 </style>
-<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-03">
+<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-04">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -5177,13 +5182,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-14-03"></script>
+<script src="resposta-tutor.js?v=2026-10-14-04"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-14-03"></script>
+<script src="painel-logica.js?v=2026-10-14-04"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5195,13 +5200,14 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-14-03"></script>
-<script src="autoria-logica.js?v=2026-10-14-03"></script>
-<script src="navegacao-inicio.js?v=2026-10-14-03"></script>
-<script src="presenca-logica.js?v=2026-10-14-03"></script>
-<script src="historico-checkins.js?v=2026-10-14-03"></script>
-<script src="historico-checkins-pdf.js?v=2026-10-14-03"></script>
-<script src="orcamento-acompanhamento.js?v=2026-10-14-03"></script>
+<script src="financeiro-logica.js?v=2026-10-14-04"></script>
+<script src="autoria-logica.js?v=2026-10-14-04"></script>
+<script src="navegacao-inicio.js?v=2026-10-14-04"></script>
+<script src="presenca-logica.js?v=2026-10-14-04"></script>
+<script src="historico-checkins.js?v=2026-10-14-04"></script>
+<script src="historico-checkins-pdf.js?v=2026-10-14-04"></script>
+<script src="orcamento-acompanhamento.js?v=2026-10-14-04"></script>
+<script src="dash-lancamentos-performance.js?v=2026-10-14-04"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -27316,7 +27322,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-14-03';
+  const APP_VERSAO='2026-10-14-04';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -53893,6 +53899,8 @@
       {c:'tema', rot:'Tema da festa', ops:DASH_TEMAS, obrig:true}]}
   ];
   var DASH_DADOS={}, DASH_PONTE=null, dashBusca={};
+  // A edição só aparece depois que a própria ponte publicada confirma editar-v1.
+  var DASH_PONTE_EDITAR={lida:false,lendo:false,ok:false,erro:''}, DASH_EDITAR_UI=null;
 
   /* ===== O QUE O AUTOMÁTICO LANÇOU APARECE AQUI TAMBÉM (Adriana, 23/set/2026) ========
    * As palavras dela: "Acabei de lançar uma reposição agora, da Safira; foi para a tabela,
@@ -54160,7 +54168,9 @@
   // os banhos de ONTEM, e a conferência da planilha de HOJE os dava, em vermelho, por "banhos de
   // hoje que NÃO estão na planilha que a TV lê". O dashCarregar anota de que dia é o que ele leu;
   // com o dia virado, a tela não confere nada até reler os lançamentos de hoje — e relê sozinha.
-  var DASH_DADOS_DE={obj:null, dia:''}, DASH_TV_RELER_DIA='';
+  var DASH_DADOS_DE={obj:null, dia:'', ok:false, em:0}, DASH_TV_RELER_DIA='';
+  var DASH_ERRO_LEITURA='';
+  var DASH_CARREGANDO={};
   // O DASH_DADOS é o de hoje? Lido pelo dashCarregar: o dia anotado decide. Montado por outra porta
   // (sem anotação): vale, a não ser que o aparelho tenha virado o dia desde que abriu (appDiaVelho).
   function dashDadosDeHoje(hoje){
@@ -54268,7 +54278,7 @@
   // A ponte respondeu a um lançamento (ou reenvio, ou «tirar») de banho NESTE aparelho: a leitura de
   // antes não vale para ele, e uma nova é pedida para daqui a 30 s.
   function tvBanhoMexeu(id, acao){
-    if(acao==='lancar' && id) TV_BANHO_MEXEU[id]=Date.now();
+    if((acao==='lancar'||acao==='editar') && id) TV_BANHO_MEXEU[id]=Date.now();
     TV_BANHO_QUER=Date.now()+TV_BANHO_DEPOIS_MS;
   }
   // Pura: o estado de UMA linha. desde = quando o app pôs o texto na planilha (0 = não se sabe).
@@ -55856,7 +55866,9 @@
     });
     return limpo;
   }
-  function dashCarregar(){
+  function dashCarregar(forcar){
+    var __diaSolicitado=dashDia();
+    if(DASH_CARREGANDO[__diaSolicitado]) return DASH_CARREGANDO[__diaSolicitado];
     try{ dashCalCarregarMarcas(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     // O registro do automático daquele dia — é ele que põe a reposição da Safira na tela.
     // MESMO cache das vagas (REP_PLAN_CACHE, 60 s): a casa não paga a leitura duas vezes.
@@ -55878,11 +55890,11 @@
     if(!DASH_AUTO_LIGADO){ DASH_AUTO_LIGADO=true; try{ dashAutoLigar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ }
     try{ tvBanhoLigar(); }catch(e){} /* silencioso de propósito: sem o vigia, a tela confere a cada redesenho */
     var __diaLido=dashDia();   // de que dia é o que vai ser lido (2ª rodada do QA da 6.49, QA649-1)
-    Promise.all([
+    var __leitura=Promise.all([
       DB.ref('daycare/config/ponte-planilha').once('value').then(function(s){ DASH_PONTE=s.val()||null; })
         .catch(function(e){ try{ if(typeof audit==='function') audit('dashboard-daycare','NÃO consegui ler a configuração da ponte: '+((e&&e.message)||e),{}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */ }),
-      DB.ref(dashNo()).once('value').then(function(s){ DASH_DADOS=dashLimparFantasmas(s.val()||{}); DASH_DADOS_DE={obj:DASH_DADOS, dia:__diaLido}; })
-        .catch(function(){ DASH_DADOS={}; DASH_DADOS_DE={obj:DASH_DADOS, dia:__diaLido}; }),
+      DB.ref(dashNo()).once('value').then(function(s){ if(dashDia()!==__diaLido) return; DASH_DADOS=dashLimparFantasmas(s.val()||{}); DASH_DADOS_DE={obj:DASH_DADOS, dia:__diaLido, ok:true, em:Date.now()}; DASH_ERRO_LEITURA=''; })
+        .catch(function(){ if(dashDia()!==__diaLido) return; DASH_DADOS={}; DASH_DADOS_DE={obj:DASH_DADOS, dia:__diaLido, ok:false, em:0}; DASH_ERRO_LEITURA='Não foi possível atualizar os lançamentos.'; }),
       dashMedAnuladosCarregar(__diaLido)   // 6.58: as medicações tiradas do dia (o riscado do cartão de Medicação)
     ]).then(function(){
       var u=document.getElementById('dashPonteUrl'), t=document.getElementById('dashPonteToken');
@@ -55901,7 +55913,19 @@
         : '<span style="color:var(--crm-critico);font-weight:800">nenhuma senha guardada</span>';
       var _ap=document.getElementById('dashApagarPonte'); if(_ap) _ap.style.display=_dir?'':'none';
       renderDash();
+      dashPonteEditarCapacidade();
     });
+    var __ret=__leitura.then(function(v){
+      if(DASH_CARREGANDO[__diaLido]===__ret) delete DASH_CARREGANDO[__diaLido];
+      if(dashDia()!==__diaLido) return dashCarregar();
+      return v;
+    }, function(){
+      if(DASH_CARREGANDO[__diaLido]===__ret) delete DASH_CARREGANDO[__diaLido];
+      if(dashDia()!==__diaLido) return dashCarregar();
+      DASH_ERRO_LEITURA='Não foi possível atualizar os lançamentos.'; renderDash(); return null;
+    });
+    DASH_CARREGANDO[__diaLido]=__ret;
+    return __ret;
   }
   // Tira aspas das pontas ('senha' ou "senha") sem tocar no miolo. Copiar do Apps Script
   // com as aspas é o caminho natural — quem tem de se adaptar é o sistema, não a pessoa.
@@ -55931,6 +55955,7 @@
     DB.ref('daycare/config/ponte-planilha').set({url:url, token:tokenFinal}).then(function(){
       gravouPt=true;
       DASH_PONTE={url:url, token:tokenFinal};
+      DASH_PONTE_EDITAR={lida:false,lendo:false,ok:false,erro:''};
       var _t=document.getElementById('dashPonteToken'); if(_t) _t.value='';
       var _ts=document.getElementById('dashPonteTokenSt');
       if(_ts) _ts.innerHTML=tokenFinal
@@ -55938,7 +55963,7 @@
         : '<span style="color:var(--crm-critico);font-weight:800">nenhuma senha guardada</span>';
       if(st){ st.style.color='var(--crm-ok)'; st.textContent=url?'✅ Ponte salva. O que for lançado daqui vai para a planilha e aparece na TV.':'Ponte desligada — o app guarda tudo, mas a TV não recebe.'; }
       if(typeof audit==='function') audit('dashboard-daycare', url?'ligou a ponte com a planilha do Day Care':'desligou a ponte',{});
-      renderDash();
+      renderDash(); dashPonteEditarCapacidade();
     }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent=zErroSalvouTexto('Não salvou', e, gravouPt); } });
   }
   // Só a Diretoria vê a senha, e por 12 segundos — tempo de conferir, não de alguém copiar.
@@ -55980,7 +56005,7 @@
   // (integracao-daycare/Codigo.gs, versão 7) e a conferência que repõe o que sumiu.
   var DASH_PONTE_FILA=Promise.resolve();
   function dashPonteChamar(corpo){
-    if(!(corpo && /^(lancar|remover)$/.test(String(corpo.acao||'')))) return dashPonteChamarJa(corpo);
+    if(!(corpo && /^(lancar|remover|editar)$/.test(String(corpo.acao||'')))) return dashPonteChamarJa(corpo);
     var vez=DASH_PONTE_FILA.then(function(){ return dashPonteChamarJa(corpo); });
     DASH_PONTE_FILA=vez.then(function(){ return null; }, function(){ return null; });   // falha de um não trava a fila
     return vez;
@@ -56007,6 +56032,26 @@
       .then(function(t){ try{ return JSON.parse(t); }catch(e){ return {ok:false, erro:String(t).slice(0,140)}; } })
       .catch(function(e){ return {ok:false, erro:(e&&e.name==='AbortError')?'a ponte não respondeu em 12s':String((e&&e.message)||e)}; });
   }
+  function dashPonteEditarCapacidade(){
+    if(!(DASH_PONTE&&DASH_PONTE.url)){
+      DASH_PONTE_EDITAR={lida:true,lendo:false,ok:false,erro:'ponte não configurada'};
+      return Promise.resolve(false);
+    }
+    if(DASH_PONTE_EDITAR.lendo) return Promise.resolve(false);
+    if(DASH_PONTE_EDITAR.lida) return Promise.resolve(DASH_PONTE_EDITAR.ok);
+    DASH_PONTE_EDITAR.lendo=true;
+    return dashPonteChamar({acao:'capacidades'}).then(function(r){
+      var caps=(r&&Array.isArray(r.capacidades))?r.capacidades:[];
+      DASH_PONTE_EDITAR={lida:true,lendo:false,ok:!!(r&&r.ok&&caps.indexOf('editar-v1')>=0),
+        erro:(r&&r.erro)||''};
+      try{ renderDash(); }catch(e){} /* capacidade é apresentação; a próxima abertura tenta de novo */
+      return DASH_PONTE_EDITAR.ok;
+    },function(e){
+      DASH_PONTE_EDITAR={lida:false,lendo:false,ok:false,erro:String((e&&e.message)||e||'')};
+      return false;
+    });
+  }
+
   function dashCriarColunas(){
     var st=document.getElementById('dashPonteStatus');
     if(!(DASH_PONTE&&DASH_PONTE.url)){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Salve a ponte antes — sem ela não consigo mexer na planilha.'; } return; }
@@ -56110,6 +56155,281 @@
       finally{ de.style.scrollBehavior=sb; }
     }catch(e){} /* silencioso de propósito: devolver o lugar é conforto; nunca pode quebrar a tela */
   }
+  // P11: fonte única do HTML de um cartão; renderDash completo e atualização pontual usam a mesma regra.
+  function dashEditarRedesenhar(k){
+    try{ if(typeof dashAtualizarCard==='function') return dashAtualizarCard(k,{origem:'editar'}); }
+    catch(e){} /* o render completo abaixo mantém a tela utilizável */
+    try{ renderDash(); }catch(e){}
+    return false;
+  }
+  function dashEditarAtor(){
+    var u=null, nome='', papel='';
+    try{ u=(typeof usuarioAtual==='function')?usuarioAtual():JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); }catch(e){ u=null; }
+    try{ nome=String((typeof quemSou==='function'?quemSou():'')||'').trim(); }catch(e){ nome=''; }
+    try{ papel=String((typeof papelDoCorpo==='function'?papelDoCorpo():((u&&u.role)||''))||'').trim().toLowerCase(); }catch(e){ papel=''; }
+    var id=String((u&&(u.monId||u.id||u.uid))||nome||'').trim();
+    var permitido=['consultora','supervisor','gestao','diretoria'].indexOf(papel)>=0;
+    return {id:id,nome:nome,papel:papel,valido:!!(id&&nome&&nome!=='-'&&permitido),assinatura:[id,nome,papel].join('|')};
+  }
+  function dashEditarMemoria(dia,k,id,valor){
+    if(dia!==dashDia() || !DASH_DADOS_DE || DASH_DADOS_DE.dia!==dia || DASH_DADOS_DE.obj!==DASH_DADOS) return false;
+    DASH_DADOS[k]=DASH_DADOS[k]||{}; DASH_DADOS[k][id]=valor; return true;
+  }
+  function dashEditarPode(it,o){
+    var lockRecente=!!(o&&o.lockTs&&Date.now()-Number(o.lockTs)<120000);
+    return !!(DASH_PONTE_EDITAR.ok && dashEditarAtor().valido && it && (it.k==='banho'||it.k==='vet') && it.hora && it.colHora && o && o.planilha_ok===true && !lockRecente && !o.edicao_pendente);
+  }
+  function dashEditarEstadoHTML(o){
+    var p=o&&o.edicao_pendente;
+    if(!p) return '';
+    var h=(p.depois&&p.depois.hora)||o.hora||'';
+    return ' <span style="color:var(--crm-atencao-text);font-weight:800;font-size:11.5px">ALTERAÇÃO PENDENTE'+(h?(' PARA '+escAttr(h)):'')+'</span>';
+  }
+  function dashEditarBotaoHTML(it,id,o){
+    if(o&&o.edicao_pendente)
+      return '<button type="button" class="btn" style="background:none;border:none;color:var(--z-blue);font-weight:800;padding:7px 5px;text-decoration:underline" onclick="dashEditarReenviar(\''+it.k+'\',\''+id+'\',this)">tentar enviar de novo</button>';
+    if(!dashEditarPode(it,o)) return '';
+    return '<button type="button" class="btn" style="background:none;border:none;color:var(--z-blue);font-weight:800;padding:7px 5px;text-decoration:underline" onclick="dashEditarAbrir(\''+it.k+'\',\''+id+'\')">editar hora</button>';
+  }
+  function dashEditarAbrir(k,id){
+    var o=(DASH_DADOS[k]||{})[id], it=dashItem(k), ator=dashEditarAtor(), dia=dashDia();
+    if(!dashEditarPode(it,o)) return false;
+    DASH_EDITAR_UI={k:k,id:id,dia:dia,ator:ator,valorAntes:String(o.valor||''),horaAntes:String(o.hora||''),horaNova:String(o.hora||''),linha:Number(o.planilha_linha||0)};
+    dashEditarRedesenhar(k); return true;
+  }
+  function dashEditarFechar(k){ DASH_EDITAR_UI=null; dashEditarRedesenhar(k); }
+  function dashEditarHora(v){ if(DASH_EDITAR_UI) DASH_EDITAR_UI.horaNova=String(v||''); }
+  function dashEditarPainelHTML(it,id,o){
+    var u=DASH_EDITAR_UI;
+    if(!u || u.k!==it.k || u.id!==id || (o&&o.edicao_pendente)) return '';
+    return '<div class="dash-edit-box"><label for="dashEditHora">Nova hora de '+escAttr(o.valor||'')+'</label>'
+      +'<input id="dashEditHora" type="time" step="900" value="'+escAttr(u.horaNova||'')+'" onchange="dashEditarHora(this.value)">'
+      +'<div class="hint" style="margin-top:7px">A hora nova substitui a atual neste mesmo lançamento e no aviso da TV. Não cria outra linha.</div>'
+      +'<div class="dash-edit-actions"><button type="button" class="btn btn-primary" onclick="dashEditarSalvar(this)">Salvar nova hora</button>'
+      +'<button type="button" class="btn" style="background:var(--z-cream);color:var(--z-blue);border:1.5px solid var(--line)" onclick="dashEditarFechar(\''+it.k+'\')">Cancelar</button></div></div>';
+  }
+  function dashEditarOpId(){
+    var a=''; try{ var b=new Uint32Array(2); crypto.getRandomValues(b); a=b[0].toString(36)+b[1].toString(36); }
+    catch(e){ a=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2); }
+    return 'edit-'+Date.now().toString(36)+'-'+a.slice(0,24);
+  }
+  function dashEditarErroDominio(msg){ var e=new Error(String(msg||'')); e.dashDominio=true; return e; }
+  function dashEditarErroSeguro(e, origem, fallback){
+    if(e&&e.dashDominio) return String(e.message||fallback||'Não foi possível concluir.');
+    if(e&&e.conflito && /^conflito:/i.test(String(e.erro||''))) return String(e.erro);
+    try{
+      var m=(typeof zErroMotivo==='function')?zErroMotivo(e,origem||'banco','',{origem:origem==='planilha'?'ponte':'app'}):e;
+      var f=(typeof zErroFrase==='function')?zErroFrase(m):'';
+      if(String(f||'').trim()) return String(f).trim();
+    }catch(x){}
+    return String(fallback||'Não foi possível concluir agora. Tente novamente.');
+  }
+  function dashEditarReserva(cur, esperado, pendente){
+    if(cur===null||cur===undefined) return {ok:false,motivo:'sumiu'};
+    if(cur.edicao_pendente) return {ok:false,motivo:'pendente'};
+    if(String(cur.valor||'')!==String(esperado.valor||'') || String(cur.hora||'')!==String(esperado.hora||''))
+      return {ok:false,motivo:'mudou'};
+    var out=JSON.parse(JSON.stringify(cur));
+    out.valor=pendente.depois.valor; out.hora=pendente.depois.hora;
+    out.edicao_pendente=pendente; out.planilha_ok=false;
+    out.planilha_msg='alteração aguardando confirmação da planilha';
+    return {ok:true,valor:out};
+  }
+  function dashEditarConfirmar(cur, opId, linha, confirmadoTs){
+    if(cur===null||cur===undefined || !cur.edicao_pendente || cur.edicao_pendente.op_id!==opId) return {ok:false};
+    var out=JSON.parse(JSON.stringify(cur)), p=out.edicao_pendente, ev={op_id:opId,quem:p.quem,autor:p.autor||null,
+      solicitado_ts:p.solicitado_ts,confirmado_ts:confirmadoTs,antes:p.antes,depois:p.depois,planilha_linha:Number(linha||0)};
+    out.edicoes=out.edicoes||{}; out.edicoes[opId]=ev;
+    out.editado_por=p.quem; out.editado_ts=confirmadoTs;
+    if(linha) out.planilha_linha=Number(linha);
+    out.planilha_ok=true; out.planilha_msg=''; delete out.edicao_pendente;
+    return {ok:true,valor:out,evento:ev};
+  }
+  function dashEditarPrepararRegistro(dia,k,id){
+    var ref=DB.ref('daycare/dashboard/'+dia+'/'+k+'/'+id), observador=function(){}, ligado=false;
+    try{ if(ref&&typeof ref.on==='function'){ ref.on('value',observador,function(){}); ligado=true; } }catch(e){}
+    var desligar=function(){ if(ligado){ try{ ref.off('value',observador); }catch(e){} ligado=false; } };
+    if(!ref||typeof ref.once!=='function') return {ref:ref,pronto:Promise.reject(new Error('leitura indisponível')),desligar:desligar};
+    return {ref:ref,pronto:Promise.resolve(ref.once('value')),desligar:desligar};
+  }
+  function dashEditarTransacao(dia,k,id,fn){
+    var p=dashEditarPrepararRegistro(dia,k,id);
+    return p.pronto.then(function(s){
+      var existe=false; try{ existe=(typeof s.exists==='function')?s.exists():s.val()!=null; }catch(e){ existe=false; }
+      if(!existe) throw new Error('não achei mais este lançamento');
+      return p.ref.transaction(fn);
+    }).then(function(r){ p.desligar(); return r; },function(e){ p.desligar(); throw e; });
+  }
+  function dashEditarSalvar(btn){
+    var u=DASH_EDITAR_UI; if(!u||!DB) return Promise.resolve(false);
+    var ator=dashEditarAtor();
+    if(!ator.valido || ator.assinatura!==u.ator.assinatura){ alert('Sua sessão mudou. Abra a edição novamente para registrar a autoria correta.'); return Promise.resolve(false); }
+    if(dashDia()!==u.dia || !DASH_DADOS_DE || DASH_DADOS_DE.dia!==u.dia){ alert('O dia aberto mudou. Volte ao dia do lançamento e abra a edição novamente.'); return Promise.resolve(false); }
+    var nova=String(((document.getElementById('dashEditHora')||{}).value)||u.horaNova||'');
+    nova=(typeof normHora==='function')?(normHora(nova)||''):nova;
+    if(!((typeof horaOk==='function')?horaOk(nova):/^\d{2}:\d{2}$/.test(nova))){ alert('Escolha a nova hora, assim: 16:00.'); return Promise.resolve(false); }
+    if(nova===u.horaAntes){ alert('Escolha uma hora diferente da atual.'); return Promise.resolve(false); }
+    var opId=dashEditarOpId(), dia=u.dia;
+    var esperado={valor:u.valorAntes,hora:u.horaAntes}, pendente={op_id:opId,dia:dia,estado:'ponte_pendente',quem:ator.nome,
+      autor:{id:ator.id,nome:ator.nome,papel:ator.papel},solicitado_ts:Date.now(),tentativas:0,
+      antes:{valor:u.valorAntes,hora:u.horaAntes,planilha_linha:u.linha||0},depois:{valor:u.valorAntes,hora:nova}};
+    if(btn){ btn.disabled=true; btn.textContent='salvando…'; }
+    var motivo='';
+    return dashEditarTransacao(dia,u.k,u.id,function(cur){
+      var r=dashEditarReserva(cur,esperado,pendente); motivo=r.motivo||''; return r.ok?r.valor:undefined;
+    }).then(function(res){
+      if(!res||res.committed===false) throw dashEditarErroDominio(motivo==='pendente'?'já existe uma alteração pendente':motivo==='mudou'?'este lançamento mudou em outro aparelho':'não achei mais este lançamento');
+      var v=(res.snapshot&&res.snapshot.val)?res.snapshot.val():null;
+      if(v) dashEditarMemoria(dia,u.k,u.id,v);
+      if(DASH_EDITAR_UI===u) DASH_EDITAR_UI=null;
+      if(dia===dashDia()) dashEditarRedesenhar(u.k);
+      return dashEditarEnviarPendente(u.k,u.id,btn,dia,pendente);
+    }).catch(function(e){
+      if(btn){ btn.disabled=false; btn.textContent='Salvar nova hora'; }
+      if(typeof zAlertao==='function') zAlertao('NÃO ALTEREI A HORA',[dashEditarErroSeguro(e,'banco','O banco não confirmou a alteração.'),'Recarregue a linha e confira antes de tentar novamente.'],{botao:'Entendi'});
+      return false;
+    });
+  }
+  function dashEditarFalhaGuardar(dia,k,id,opId,r){
+    if(!DB) return Promise.resolve(false);
+    var agora=Date.now(), msg=dashEditarErroSeguro(r,'planilha','A planilha não confirmou a alteração.');
+    return dashEditarTransacao(dia,k,id,function(cur){
+      if(cur===null||cur===undefined || !cur.edicao_pendente || cur.edicao_pendente.op_id!==opId) return;
+      var out=JSON.parse(JSON.stringify(cur)); out.edicao_pendente.estado='ponte_pendente';
+      out.edicao_pendente.tentativas=Number(out.edicao_pendente.tentativas||0)+1;
+      out.edicao_pendente.ultima_tentativa_ts=agora; out.edicao_pendente.ultima_falha=msg;
+      out.planilha_ok=false; out.planilha_msg='alteração pendente: '+msg; return out;
+    }).then(function(res){
+      var v=res&&res.snapshot&&res.snapshot.val?res.snapshot.val():null;
+      if(v) dashEditarMemoria(dia,k,id,v);
+      if(dia===dashDia()) dashEditarRedesenhar(k); return false;
+    }).catch(function(e){ _logFalhaGrav('guardar falha da edição de hora',e); return false; });
+  }
+  function dashEditarEnviarPendente(k,id,btn,diaOpc,pendenteOpc){
+    var ator=dashEditarAtor(), reg=(DASH_DADOS[k]||{})[id], p=pendenteOpc||(reg&&reg.edicao_pendente), it=dashItem(k);
+    if(!ator.valido){ alert('Entre novamente com um perfil autorizado para reenviar esta alteração.'); return Promise.resolve(false); }
+    if(!p||!it||!DB) return Promise.resolve(false);
+    var opId=String(p.op_id||''), dia=String(diaOpc||p.dia||dashDia());
+    if(btn){ btn.disabled=true; btn.textContent='enviando…'; }
+    return dashPonteChamar({acao:'editar',dia:dia,coluna:it.col,colunaHora:it.colHora||'',id:id,opId:opId,
+      linha:Number((p.antes&&p.antes.planilha_linha)||((reg&&reg.planilha_linha)||0)),
+      valorAntes:String((p.antes&&p.antes.valor)||''),valorDepois:String((p.depois&&p.depois.valor)||''),
+      horaAntes:String((p.antes&&p.antes.hora)||''),horaDepois:String((p.depois&&p.depois.hora)||'')}).then(function(r){
+      if(!(r&&r.ok)){
+        if(btn){ btn.disabled=false; btn.textContent='tentar enviar de novo'; }
+        return dashEditarFalhaGuardar(dia,k,id,opId,r).then(function(){
+          var linhas=['A alteração ficou marcada como pendente; o app vai reutilizar o mesmo pedido, sem duplicar a linha.',dashEditarErroSeguro(r,'planilha','A planilha não confirmou.')];
+          if(typeof zAlertao==='function') zAlertao('A PLANILHA NÃO CONFIRMOU',linhas,{botao:'Entendi'}); return false;
+        });
+      }
+      var confirmado=Date.now(), motivo='';
+      return dashEditarTransacao(dia,k,id,function(cur){
+        var c=dashEditarConfirmar(cur,opId,r.linha,confirmado); if(!c.ok){ motivo='o lançamento mudou enquanto a planilha respondia'; return; } return c.valor;
+      }).then(function(res){
+        if(!res||res.committed===false) throw dashEditarErroDominio(motivo||'o banco não confirmou o fechamento da edição');
+        var v=res.snapshot&&res.snapshot.val?res.snapshot.val():null;
+        if(v) dashEditarMemoria(dia,k,id,v);
+        if(k==='banho'){ try{ tvBanhoMexeu(id,'editar'); }catch(e){} }
+        if(dia===dashDia()) dashEditarRedesenhar(k);
+        try{ if(typeof audit==='function') audit('dashboard-daycare','editou a hora de '+((p.depois&&p.depois.valor)||'')+' de '+((p.antes&&p.antes.hora)||'')+' para '+((p.depois&&p.depois.hora)||''),{pet:(p.depois&&p.depois.valor)||'',quem:p.quem,op_id:opId}); }catch(e){}
+        if(typeof zAlertao==='function') zAlertao('HORA ALTERADA',['A hora das '+((p.antes&&p.antes.hora)||'—')+' foi substituída por '+((p.depois&&p.depois.hora)||'—')+' no mesmo lançamento.','A planilha confirmou a mesma linha. A TV receberá a nova hora na próxima atualização.'],{botao:'Fechar',ok:true});
+        return true;
+      }).catch(function(e){
+        if(btn){ btn.disabled=false; btn.textContent='tentar enviar de novo'; }
+        if(typeof zAlertao==='function') zAlertao('A PLANILHA CONFIRMOU, O APP AINDA NÃO',['A mesma operação ficou pendente para finalizar no app. '+dashEditarErroSeguro(e,'banco','O banco ainda não confirmou.'),'Toque em «tentar enviar de novo». A ponte reconhecerá o mesmo opId e não criará outra linha.'],{botao:'Entendi'});
+        return false;
+      });
+    });
+  }
+  function dashEditarReenviar(k,id,btn){
+    var reg=(DASH_DADOS[k]||{})[id], p=reg&&reg.edicao_pendente;
+    return dashEditarEnviarPendente(k,id,btn,(p&&p.dia)||dashDia(),p);
+  }
+
+  function dashCartaoHTML(it, __diaDash){
+var lista=DASH_DADOS[it.k]||{};
+var ks=Object.keys(lista).sort(function(a,b){ return (lista[a].ts||0)-(lista[b].ts||0); });
+// O que o AUTOMÁTICO escreveu neste mesmo item, neste mesmo dia. É por isto que a
+// reposição da Safira deixou de sumir da tela (23/set/2026).
+var aut=DASH_ITEM_AUTO[it.k]
+  ? dashAutoLinhas(DASH_ITEM_AUTO[it.k], __diaDash, dashChavesDaMao(lista))
+  : {n:0, html:''};
+var tot=ks.length+aut.n;
+return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
+  +'<h2 style="font-size:16px">'+it.icone+' '+escAttr(it.t)
+  +(tot?(' <span style="font-weight:700;font-size:13px;color:var(--muted)">— '+tot+'</span>'):'')+'</h2>'
+  +(ks.length
+    ? ('<div style="margin-top:6px">'+ks.map(function(id){
+         var o=lista[id]||{};
+         return '<div class="pair" style="padding:6px 0;border-bottom:1px solid var(--line);flex-wrap:wrap">'
+           +'<span class="k"><strong>'+escAttr(o.valor||'')+'</strong>'
+           +(o.hora?(' <span style="color:var(--z-blue-soft);font-weight:800">'+escAttr(o.hora)+'</span>'):'')
+           +dashEditarEstadoHTML(o)
+           // Nome escrito à mão na avaliação, avulso de pré-cadastro, inativo que
+           // voltou por um dia: nada disso é erro de digitação nem FILHOt perdido. A
+           // tela diz, com todas as letras, de onde aquele nome veio.
+           +(dashEtiquetaFora(it.k,o)?(' <span style="color:var(--z-blue);font-weight:800;font-size:11.5px">'+escAttr(dashEtiquetaFora(it.k,o))+'</span>'):'')
+           // Item SEM coluna (a Pernoite) não tem estado de planilha para mostrar:
+           // o destino dele é o check-in, e é a etiqueta abaixo que conta essa história.
+           +(!dashVaiParaPlanilha(it)
+              ? dashPernEtiquetaHTML(it.k, o)
+              : (o.planilha_ok===false
+              ?(' <span style="color:var(--crm-critico);font-weight:800;font-size:11.5px">'+(dashPlanFilaMorto(o)?'NÃO foi para a TV — reenvio automático esgotado':'NÃO foi para a TV')+'</span>'
+                +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\',this)">reenviar</button>')
+              // planilha_ok null = "não sei" (era do aborto silencioso da confirmação —
+              // ver dashEspelhar). Sem alarme: só a saída manual, porque a ponte não
+              // duplica (valor que já está lá responde "já estava"). Recém-lançado
+              // ainda está a caminho; só depois de 2 minutos o botão aparece.
+              :(o.planilha_ok!==true&&(Date.now()-(o.ts||0))>120000
+                ?(' <span style="color:var(--muted);font-weight:700;font-size:11px">envio à planilha não confirmado</span>'
+                  +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\',this)">reenviar</button>')
+                :'')))
+           // 6.49: o banho de hoje diz se está na planilha que a TV lê (os avisos acima vêm antes).
+           +dashTvMaoHTML(it.k, o, id)
+           // 6.60: a falta avisada à mão sem crédito («Dar a reposição») e a Reposição sem abater («Abater agora»)
+           +((it.k==='faltas')?dashFaltaMaoHTML(o, id, __diaDash):'')+((it.k==='reposicao')?dashRepMaoHTML(o, id, __diaDash):'')
+           +'</span>'
+           +'<span class="val">'+((it.k==='medicacao')?dashMedCorrigirBotaoHTML(id):'')+dashEditarBotaoHTML(it,id,o)+(o.edicao_pendente?'':'<button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:800;padding:0 6px" onclick="dashRemover(\''+it.k+'\',\''+id+'\')">tirar</button>')+'</span>'
+           +dashEditarPainelHTML(it,id,o)+'</div>';
+       }).join('')+aut.html+'</div>')
+    : (aut.n
+      ? ('<div style="margin-top:6px">'+aut.html+'</div>')
+      : '<div class="hint">Ninguém lançado hoje.</div>'))
+  // 6.49: o banho fixo de hoje que não vai para a TV, com o motivo — ninguém some calado.
+  // 6.50: num dia futuro, o banho fixo pulado só naquele dia, com o «pôr de volta».
+  // 6.52: o banho de saída do dia que não está nas linhas do automático (sem hora, a caminho, tirado).
+  +((it.k==='banho')?(dashBanhoFixoForaHTML(lista, __diaDash)+banhoSaidaCartaoHTML(lista, __diaDash)):'')
+  // 6.58: a medicação tirada (lançada por engano) fica riscada no mesmo cartão, com «Reabrir»
+  +((it.k==='medicacao')?dashMedAnuladasHTML():'')
+  +'<div style="margin-top:8px">'
+  +(DASH_FORA[it.k]
+    ? dashForaPainelHTML(it)
+    : (it.campos&&DASH_SEL[it.k])
+    ? dashPainelHTML(it)
+    // A HORA PRIMEIRO (QA68): no Veterinário, no Sai mais cedo e na Avaliação, tocar no
+    // nome já lança — a hora tem de estar escolhida antes; e, em toda busca com hora, os
+    // nomes sugeridos ficam colados no campo (o teclado do celular não os esconde).
+    : ((it.hora?('<div style="margin-bottom:8px">'+dashHorarioHTML(it.k)+'</div>'):'')
+       +'<input class="cad-in" id="dashB_'+it.k+'" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" oninput="dashSugerir(\''+it.k+'\')">'
+       +'<div id="dashS_'+it.k+'" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>'
+       // O caminho de quem ainda não tem ficha. Fica SEMPRE visível, abaixo das
+       // sugestões: quem não achou o nome não pode ficar adivinhando se há saída.
+       +(it.foraDoCadastro?dashForaBotaoHTML(it.k):'')))
+  +'</div></div>';
+  }
+
+  // P11: o aviso superior também muda após a confirmação da ponte; atualizá-lo não exige recriar a lista.
+  function dashAvisosHTML(){
+    return (DASH_ERRO_LEITURA?('<div class="card" style="border-left:4px solid var(--crm-critico)"><strong>Não foi possível atualizar os lançamentos.</strong>'
+      +'<div class="hint" style="margin-top:3px">Os registros exibidos podem estar desatualizados.</div>'
+      +'<div style="margin-top:8px"><button class="btn" type="button" onclick="dashAtualizarLancamentos()">Atualizar</button></div></div>'):'')
+      +((DASH_PONTE&&DASH_PONTE.url)?''
+        : '<div class="card" style="border-left:4px solid var(--crm-atencao)"><strong>A ponte com a planilha ainda não foi ligada.</strong>'
+          +'<div class="hint" style="margin-top:3px">Pode lançar do mesmo jeito: fica tudo guardado aqui. Só que a TV do Day Care ainda lê a planilha, então enquanto a ponte não estiver ligada alguém precisa escrever lá à mão. O passo a passo está no arquivo <em>integracao-daycare/Codigo.gs</em>.</div></div>')
+      +((typeof dcNaoCasadosFaixaHTML==='function')?dcNaoCasadosFaixaHTML(true):'')
+      +dashFilaAvisoHTML()+dashTvAvisoHTML()+dashAutoFicouHTML()+banhoSaidaAlertaHTML('dash');
+  }
+
   function renderDash(){
     // A TELA ABERTA DURANTE A CARGA (2ª rodada do QA da 6.50; o erro de página já existia antes da 6.49, em outra
     // linha): o aplicarLogin leva quem só tem os Lançamentos do dia direto para eles enquanto o script ainda está
@@ -56121,22 +56441,7 @@
     var __anc=dashAncoraGuardar(__ancEl);
     try{ dashSincronizarSeletor(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     var av=document.getElementById('dashPonteAviso');
-    if(av){
-      av.innerHTML=((DASH_PONTE&&DASH_PONTE.url)?''
-        : '<div class="card" style="border-left:4px solid var(--crm-atencao)"><strong>A ponte com a planilha ainda não foi ligada.</strong>'
-          +'<div class="hint" style="margin-top:3px">Pode lançar do mesmo jeito: fica tudo guardado aqui. Só que a TV do Day Care ainda lê a planilha, então enquanto a ponte não estiver ligada alguém precisa escrever lá à mão. O passo a passo está no arquivo <em>integracao-daycare/Codigo.gs</em>.</div></div>')
-        // O lançamento que não existe no cadastro é avisado AQUI, onde ele nasceu —
-        // é a tela que a recepção já está olhando quando lança (Adriana, 04/set/2026).
-        +((typeof dcNaoCasadosFaixaHTML==='function')?dcNaoCasadosFaixaHTML(true):'')
-        // E o que não chegou à planilha também é avisado aqui — com a fila reenviando.
-        +dashFilaAvisoHTML()
-        // E o banho de hoje que NÃO está na planilha que a TV lê (6.49).
-        +dashTvAvisoHTML()
-        // E o que a conferência deixou na planilha na dúvida (3ª rodada do QA da 6.49).
-        +dashAutoFicouHTML()
-        // E o banho de saída sem hora, desde a véspera da saída (6.52).
-        +banhoSaidaAlertaHTML('dash');
-    }
+    if(av) av.innerHTML=dashAvisosHTML();
     var el=document.getElementById('dashBlocos'); if(!el) return;
     // Guardar o que está digitado: escolher uma quantidade redesenha a tela inteira, e sem
     // isto a busca que a colega estava fazendo em outro bloco sumia no meio da digitação.
@@ -56150,75 +56455,7 @@
       if(h && typeof DASH_HORA==='object' && DASH_HORA && h.value!==String(DASH_HORA[i.k]||'')) DASH_HORA[i.k]=h.value;
     });
     var __diaDash=dashDia();
-    el.innerHTML=DASH_ITENS.map(function(it){
-      var lista=DASH_DADOS[it.k]||{};
-      var ks=Object.keys(lista).sort(function(a,b){ return (lista[a].ts||0)-(lista[b].ts||0); });
-      // O que o AUTOMÁTICO escreveu neste mesmo item, neste mesmo dia. É por isto que a
-      // reposição da Safira deixou de sumir da tela (23/set/2026).
-      var aut=DASH_ITEM_AUTO[it.k]
-        ? dashAutoLinhas(DASH_ITEM_AUTO[it.k], __diaDash, dashChavesDaMao(lista))
-        : {n:0, html:''};
-      var tot=ks.length+aut.n;
-      return '<div class="card">'
-        +'<h2 style="font-size:16px">'+it.icone+' '+escAttr(it.t)
-        +(tot?(' <span style="font-weight:700;font-size:13px;color:var(--muted)">— '+tot+'</span>'):'')+'</h2>'
-        +(ks.length
-          ? ('<div style="margin-top:6px">'+ks.map(function(id){
-               var o=lista[id]||{};
-               return '<div class="pair" style="padding:6px 0;border-bottom:1px solid var(--line)">'
-                 +'<span class="k"><strong>'+escAttr(o.valor||'')+'</strong>'
-                 +(o.hora?(' <span style="color:var(--z-blue-soft);font-weight:800">'+escAttr(o.hora)+'</span>'):'')
-                 // Nome escrito à mão na avaliação, avulso de pré-cadastro, inativo que
-                 // voltou por um dia: nada disso é erro de digitação nem FILHOt perdido. A
-                 // tela diz, com todas as letras, de onde aquele nome veio.
-                 +(dashEtiquetaFora(it.k,o)?(' <span style="color:var(--z-blue);font-weight:800;font-size:11.5px">'+escAttr(dashEtiquetaFora(it.k,o))+'</span>'):'')
-                 // Item SEM coluna (a Pernoite) não tem estado de planilha para mostrar:
-                 // o destino dele é o check-in, e é a etiqueta abaixo que conta essa história.
-                 +(!dashVaiParaPlanilha(it)
-                    ? dashPernEtiquetaHTML(it.k, o)
-                    : (o.planilha_ok===false
-                    ?(' <span style="color:var(--crm-critico);font-weight:800;font-size:11.5px">'+(dashPlanFilaMorto(o)?'NÃO foi para a TV — reenvio automático esgotado':'NÃO foi para a TV')+'</span>'
-                      +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\',this)">reenviar</button>')
-                    // planilha_ok null = "não sei" (era do aborto silencioso da confirmação —
-                    // ver dashEspelhar). Sem alarme: só a saída manual, porque a ponte não
-                    // duplica (valor que já está lá responde "já estava"). Recém-lançado
-                    // ainda está a caminho; só depois de 2 minutos o botão aparece.
-                    :(o.planilha_ok!==true&&(Date.now()-(o.ts||0))>120000
-                      ?(' <span style="color:var(--muted);font-weight:700;font-size:11px">envio à planilha não confirmado</span>'
-                        +' <button class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" onclick="dashReenviar(\''+it.k+'\',\''+id+'\',this)">reenviar</button>')
-                      :'')))
-                 // 6.49: o banho de hoje diz se está na planilha que a TV lê (os avisos acima vêm antes).
-                 +dashTvMaoHTML(it.k, o, id)
-                 // 6.60: a falta avisada à mão sem crédito («Dar a reposição») e a Reposição sem abater («Abater agora»)
-                 +((it.k==='faltas')?dashFaltaMaoHTML(o, id, __diaDash):'')+((it.k==='reposicao')?dashRepMaoHTML(o, id, __diaDash):'')
-                 +'</span>'
-                 +'<span class="val">'+((it.k==='medicacao')?dashMedCorrigirBotaoHTML(id):'')+'<button class="btn" style="background:none;border:none;color:var(--crm-critico);font-weight:800;padding:0 6px" onclick="dashRemover(\''+it.k+'\',\''+id+'\')">tirar</button></span></div>';
-             }).join('')+aut.html+'</div>')
-          : (aut.n
-            ? ('<div style="margin-top:6px">'+aut.html+'</div>')
-            : '<div class="hint">Ninguém lançado hoje.</div>'))
-        // 6.49: o banho fixo de hoje que não vai para a TV, com o motivo — ninguém some calado.
-        // 6.50: num dia futuro, o banho fixo pulado só naquele dia, com o «pôr de volta».
-        // 6.52: o banho de saída do dia que não está nas linhas do automático (sem hora, a caminho, tirado).
-        +((it.k==='banho')?(dashBanhoFixoForaHTML(lista, __diaDash)+banhoSaidaCartaoHTML(lista, __diaDash)):'')
-        // 6.58: a medicação tirada (lançada por engano) fica riscada no mesmo cartão, com «Reabrir»
-        +((it.k==='medicacao')?dashMedAnuladasHTML():'')
-        +'<div style="margin-top:8px">'
-        +(DASH_FORA[it.k]
-          ? dashForaPainelHTML(it)
-          : (it.campos&&DASH_SEL[it.k])
-          ? dashPainelHTML(it)
-          // A HORA PRIMEIRO (QA68): no Veterinário, no Sai mais cedo e na Avaliação, tocar no
-          // nome já lança — a hora tem de estar escolhida antes; e, em toda busca com hora, os
-          // nomes sugeridos ficam colados no campo (o teclado do celular não os esconde).
-          : ((it.hora?('<div style="margin-bottom:8px">'+dashHorarioHTML(it.k)+'</div>'):'')
-             +'<input class="cad-in" id="dashB_'+it.k+'" placeholder="Buscar o FILHOt pelo nome…" autocomplete="off" oninput="dashSugerir(\''+it.k+'\')">'
-             +'<div id="dashS_'+it.k+'" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px"></div>'
-             // O caminho de quem ainda não tem ficha. Fica SEMPRE visível, abaixo das
-             // sugestões: quem não achou o nome não pode ficar adivinhando se há saída.
-             +(it.foraDoCadastro?dashForaBotaoHTML(it.k):'')))
-        +'</div></div>';
-    }).join('')
+    el.innerHTML=DASH_ITENS.map(function(it){ return dashCartaoHTML(it, __diaDash); }).join('')
     // As colunas que SÓ o automático preenche. Não há o que lançar à mão nelas — mas a
     // casa precisa ver o dia inteiro num lugar só (Adriana, 23/set/2026).
     +DASH_AUTO_SO_LEITURA.map(function(it){
@@ -57221,20 +57458,23 @@
     // `gravar` devolve a promessa (true = entrou, false = não salvou). Quem chama de fora
     // — as Pendências de prevenção — precisa SABER se o lançamento entrou antes de dar a
     // pendência por resolvida. Os outros pontos de chamada ignoram o retorno, como sempre.
+    var __diaLanc=dashDia();
     var gravar=function(abaterRep, pRep, saldoRep){
-      var ref=DB.ref(dashNo()+'/'+k).push(), gravou=false;
+      var ref=DB.ref('daycare/dashboard/'+__diaLanc+'/'+k).push(), gravou=false;
       return ref.set(reg).then(function(){
         gravou=true;   // 6.48 (K1): daqui em diante o lançamento já entrou
-        DASH_DADOS[k]=DASH_DADOS[k]||{}; DASH_DADOS[k][ref.key]=reg;
-        var b=document.getElementById('dashB_'+k); if(b) b.value='';
-        var s=document.getElementById('dashS_'+k); if(s) s.innerHTML='';
-        // zera tudo: a dose da Olivia não pode grudar no próximo FILHOt
-        if(it.campos){ DASH_DET[k]={}; delete DASH_SEL[k]; delete DASH_SEL_I[k]; }
-        // O preço do avulso segue a MESMA lei: o valor do Toshi não pode grudar no próximo.
-        if(k==='avulso'){ DASH_DET[k]={}; delete DASH_SEL[k]; delete DASH_SEL_I[k]; }
-        // O nome escrito à mão também não gruda: o painel fecha e volta para a busca.
-        if(__fora){ delete DASH_FORA[k]; DASH_DET[k]={}; }
-        DC_DASH_TURMA.quando=0;   // o avulso lançado agora entra na turma na hora, não em 60s
+        if(__diaLanc===dashDia() && DASH_DADOS_DE && DASH_DADOS_DE.dia===__diaLanc){
+          DASH_DADOS[k]=DASH_DADOS[k]||{}; DASH_DADOS[k][ref.key]=reg;
+          var b=document.getElementById('dashB_'+k); if(b) b.value='';
+          var s=document.getElementById('dashS_'+k); if(s) s.innerHTML='';
+          // zera tudo: a dose da Olivia não pode grudar no próximo FILHOt
+          if(it.campos){ DASH_DET[k]={}; delete DASH_SEL[k]; delete DASH_SEL_I[k]; }
+          // O preço do avulso segue a MESMA lei: o valor do Toshi não pode grudar no próximo.
+          if(k==='avulso'){ DASH_DET[k]={}; delete DASH_SEL[k]; delete DASH_SEL_I[k]; }
+          // O nome escrito à mão também não gruda: o painel fecha e volta para a busca.
+          if(__fora){ delete DASH_FORA[k]; DASH_DET[k]={}; }
+          DC_DASH_TURMA.quando=0;   // o avulso lançado agora entra na turma na hora, não em 60s
+        }
         // O PRÉ-CADASTRO nasce DEPOIS do lançamento: se o lançamento não entrou, não existe
         // pré-cadastro de um dia que não aconteceu. E é idempotente — o mesmo FILHOt
         // voltando atualiza o que já havia, não cria outro.
@@ -57242,7 +57482,10 @@
           try{ preCadGravar(__preDados, dashDia(), (__det&&__det.declaracao)||null); }
           catch(e){ _logFalhaGrav('gravar o pré-cadastro de '+((__det&&__det.nome)||''), e); }
         }
-        renderDash();
+        if(__diaLanc===dashDia()){
+          if(DASH_DADOS_DE && DASH_DADOS_DE.dia===__diaLanc && typeof dashAtualizarCard==='function') dashAtualizarCard(k,{origem:'lancar'});
+          else renderDash();
+        }
         if(typeof audit==='function') audit('dashboard-daycare','lançou '+valor+' em '+it.t,{pet:valor});
         // Adaptação: o lançamento é quem dá o dia 1 — grava a data (e o tipo) na ficha.
         if(it.dataIni) dashAdaptGravarFicha(pAdapt, tipoAdapt, dataIni, valorBase);
@@ -57266,7 +57509,7 @@
           try{ if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos(); }
           catch(e){ _logFalhaGrav('rearmar o alarme do remédio lançado de '+valorBase, e); }
         }
-        dashEspelhar(k, ref.key, reg, 'lancar');
+        dashEspelhar(k, ref.key, reg, 'lancar', __diaLanc);
         return true;
       }).catch(function(e){ alert(dashLancarFalhou(e, gravou)); return false; });
     };
@@ -62049,12 +62292,19 @@
         // onde já é null não ressuscita nada.
         DB.ref('daycare/dashboard/'+dia+'/'+k+'/'+id).transaction(function(atual){
           if(atual===null||atual===undefined) return null; // cache frio OU tirado — o SDK decide com o servidor
+          if(atual.edicao_pendente) return atual; // resposta atrasada de `lancar` não confirma uma edição
           atual.planilha_ok=ok;
           atual.planilha_msg=ok?'':((r&&r.erro)||'a ponte não respondeu');
+          if(ok && r && Number(r.linha)>0) atual.planilha_linha=Number(r.linha);
           return atual;
         }).catch(function(e){ _logFalhaGrav('dashEspelhar', e); });
-        if(dia===dashDia()&&DASH_DADOS[k]&&DASH_DADOS[k][id]) DASH_DADOS[k][id].planilha_ok=ok;
-        renderDash();
+        if(dia===dashDia()&&DASH_DADOS[k]&&DASH_DADOS[k][id]&&!DASH_DADOS[k][id].edicao_pendente){
+          DASH_DADOS[k][id].planilha_ok=ok;
+          DASH_DADOS[k][id].planilha_msg=ok?'':((r&&r.erro)||'a ponte não respondeu');
+          if(ok && r && Number(r.linha)>0) DASH_DADOS[k][id].planilha_linha=Number(r.linha);
+          if(typeof dashAtualizarCard==='function') dashAtualizarCard(k,{origem:'ponte'});
+          else renderDash();
+        }
       }
       if(!ok && dashPlanFilaSemColuna(r&&r.erro)){
         DASH_FILA_SEMCOL=true;   // a recepção vê na hora, não daqui a 10 minutos
@@ -64939,6 +65189,7 @@
         var o=lista[id]||{};
         if(!o||typeof o!=='object') return;
         if(o.planilha_ok!==false) return;              // fila só age sobre falha declarada
+        if(o.edicao_pendente) return;                           // edição usa `editar` e o mesmo opId; nunca relança
         out.push({k:k, id:id, reg:o});
       });
     });
@@ -64956,7 +65207,7 @@
     // mesma lição do dashEspelhar; `return;` aqui abortaria a fila para sempre).
     return DB.ref(no).transaction(function(atual){
       if(atual===null||atual===undefined) return null;            // cache frio OU tirado
-      if(atual.planilha_ok!==false) return;                       // confirmou (ou virou "não sei"): fila não age
+      if(atual.planilha_ok!==false || atual.edicao_pendente) return; // edição pendente nunca vira `lancar`
       if(atual.lockTs && Date.now()-atual.lockTs<120000) return;  // outro está tentando
       atual.lockTs=Date.now();
       return atual;
@@ -66465,7 +66716,7 @@
           if(c){ maoCh[kk]=maoCh[kk]||{}; maoCh[kk][c]=1; maoTxt[kk]=maoTxt[kk]||{}; maoTxt[kk][jsNorm(String(val))]=1; }
           // VIVO = o passo 3 repõe se sumir (não esgotou as tentativas, a coluna existe). É a
           // palavra da recepção que fica na planilha: o automático não põe outra por cima (QA37).
-          if(c && !dashPlanFilaMorto(itens[id]) && !dashPlanFilaSemColuna((itens[id]||{}).planilha_msg)){ maoVivo[kk]=maoVivo[kk]||{}; maoVivo[kk][c]=1; }
+          if(c && !(itens[id]||{}).edicao_pendente && !dashPlanFilaMorto(itens[id]) && !dashPlanFilaSemColuna((itens[id]||{}).planilha_msg)){ maoVivo[kk]=maoVivo[kk]||{}; maoVivo[kk][c]=1; }
         });
       });
       if(!(r[0]&&r[0].ok)){
@@ -66737,7 +66988,7 @@
           }); };
           Object.keys(itens).forEach(function(id){
             var reg=itens[id]||{};
-            if(!String(reg.valor||'').trim()) return;
+            if(!String(reg.valor||'').trim() || reg.edicao_pendente) return;
             if((Date.now()-(Number(reg.ts)||0)) < 120000) return;
             if(dashPlanFilaMorto(reg) || dashPlanFilaSemColuna(reg.planilha_msg)) return;
             // Sem ficha dos dois lados, vale o texto inteiro (6.49), nunca o primeiro nome: uma
@@ -66871,6 +67122,7 @@
   function dashReenviar(k,id,btn){
     var reg=(DASH_DADOS[k]||{})[id];
     if(!reg){ alert('Não achei este lançamento para reenviar. Atualize a tela e tente de novo.'); return; }
+    if(reg.edicao_pendente) return dashEditarReenviar(k,id,btn);
     // O botão nem aparece em item sem coluna (ver renderDash), mas quem chama de fora não
     // sabe disso. Aqui ele DIZ o porquê em vez de sair calado — a lição do bloqueio invisível.
     if(!dashVaiParaPlanilha(dashItem(k))){
@@ -67034,6 +67286,10 @@
     if(k==='medicacao') return dashMedAnularAbrir(id);   // 6.58 (AC5.3): tirar a medicação é anular, com a senha da Gestão
     var it=dashItem(k), reg=(DASH_DADOS[k]||{})[id];
     if(!it||!reg||!DB) return;
+    if(reg.edicao_pendente){
+      if(typeof zAlertao==='function') zAlertao('ALTERAÇÃO AINDA PENDENTE',['Conclua ou reenvie a alteração de hora antes de tirar este lançamento. Assim a mesma linha não fica com dois comandos concorrentes.'],{botao:'Entendi'});
+      return;
+    }
     // 6.63 (AC4.5): o lançamento que RESOLVEU uma pendência de prevenção (a marca de_pendencia; nos antigos, o mesmo item, o
     // mesmo dia e o mesmo FILHOt, sem ambiguidade) — tirá-lo reabre aquela pendência, e a pergunta diz isso antes.
     var pendLig=null;
@@ -86943,7 +87199,13 @@
     if(cache==null) return null;
     var todos=Object.keys(cache).map(function(id){ return Object.assign({id:id}, cache[id]||{}); })
       .sort(function(a,b){ return (b.criado_em||0)-(a.criado_em||0); });
-    var pend=todos.filter(function(o){ return (o.status||'aguardando')==='aguardando'; });
+    var pend=todos.filter(function(o){
+      if((o.status||'aguardando')!=='aguardando') return false;
+      // A mesma regra do acompanhamento: uma pausa não vira cobrança em outro quadro.
+      if(window.OrcAcompanhamento) return window.OrcAcompanhamento.projetar(o.id,o).estado==='ativo';
+      var a=o.acompanhamento||{};
+      return a.estado!=='pausado' && a.estado!=='fechado' && (a.pausa||{}).codigo!=='protocolo_convivencia';
+    });
     if(typeof orcOrdenar==='function') pend=orcOrdenar(pend,(typeof zHojeISO==='function')?zHojeISO():'');
     return {pendentes:pend};
   }
@@ -87260,14 +87522,14 @@
   }
   // 3 · Orçamentos em aberto — pendentes por data de entrada (a ordem da Adriana).
   function pcQuadroOrcamentos(o){
-    var titulo='Orçamentos em aberto', sub='Enviados ao tutor e ainda sem resposta — os de entrada mais próxima primeiro.';
+    var titulo='Orçamentos em aberto', sub='Ativos para acompanhar — os de entrada mais próxima primeiro. Pausados ficam fora desta lista.';
     if(!o) return pcQuadroTravado(titulo, sub, 'Ainda não consegui ler os orçamentos — abra a tela de novo em instantes.', 'orcamento');
     var pend=o.pendentes||[];
     var h='<article class="pm-card pm-rv pm-c6 pc-quadro" onclick="pcIr(\'orcamento\')">'
       +'<h3 class="pm-tit">'+titulo+'</h3><p class="pm-sub">'+sub+'</p>'
       +'<div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-top:14px">'
       +'<div><div class="pm-kpi" data-pm-alvo="'+pend.length+'">0</div>'
-      +'<p class="pm-rot">esperando resposta do tutor</p></div>'
+      +'<p class="pm-rot">com acompanhamento ativo</p></div>'
       +(pend.length?'':'<span class="pm-badge pm-b-ok">nenhum em aberto</span>')
       +'</div>';
     if(pend.length){
@@ -87567,7 +87829,7 @@
         +'</div>';
       // Acompanhamento usa a mesma leitura inteira/cache de três minutos do Orçamento; não grava ao renderizar.
       try{ if(window.OrcAcompanhamento) window.OrcAcompanhamento.renderPainel('consultoras', raiz,
-        (d.orc&&d.orc.ok)?d.orc.v:null, {db:DB,hoje:PC_DIA,equipe:(typeof MONITORES!=='undefined'?MONITORES.filter(monAtivo):[]),recarregar:function(){pcAbrir(true);}}); }catch(e){ _logLeituraFalhou('Acompanhamento de orçamentos (Consultoras)', e); }
+        (d.orc&&d.orc.ok)?d.orc.v:null, {db:DB,hoje:PC_DIA,equipe:(typeof MONITORES!=='undefined'?MONITORES.filter(monAtivo):[]),recarregar:function(forcar){pcAbrir(forcar!==false);}}); }catch(e){ _logLeituraFalhou('Acompanhamento de orçamentos (Consultoras)', e); }
       // A varredura dos 30 dias pode ter CHEGADO antes de este HTML existir — e aí o aviso
       // de "ainda lendo" ficaria na tela para sempre. Pedir de novo depois de desenhar
       // resolve nos dois casos: já lido devolve na hora, ainda não lido avisa quando chegar.
@@ -88889,8 +89151,8 @@
         var nomes=((x.pets||[]).map(function(p){ return p.nome; }).join(' e '))||'—';
         pend.push({area:'Orçamento', tom:(x.entrada?'ouro':'atencao'),
           titulo:nomes+' — '+pmPlural(x.noites||0,'noite','noites')+' · '+fmtCent(x.total_cent||0),
-          sub:(x.entrada?('aguarda a resposta do tutor — entrada '+orcBR(x.entrada))
-                        :'aguarda a resposta do tutor — sem data de entrada'),
+          sub:(x.entrada?('acompanhar orçamento — entrada '+orcBR(x.entrada))
+                        :'acompanhar orçamento — sem data de entrada'),
           view:'orcamento', ts:0});
       });
       (f.orc.resolvidosHoje||[]).forEach(function(r){
@@ -89159,7 +89421,7 @@
         +'</div>';
       // Acompanhamento usa a mesma leitura inteira/cache de três minutos do Orçamento; não grava ao renderizar.
       try{ if(window.OrcAcompanhamento) window.OrcAcompanhamento.renderPainel('amanda', raiz,
-        (d.orc&&d.orc.ok)?d.orc.v:null, {db:DB,hoje:PA_DIA,equipe:(typeof MONITORES!=='undefined'?MONITORES.filter(monAtivo):[]),recarregar:function(){paAbrir(true);}}); }catch(e){ _logLeituraFalhou('Acompanhamento de orçamentos (Amanda)', e); }
+        (d.orc&&d.orc.ok)?d.orc.v:null, {db:DB,hoje:PA_DIA,equipe:(typeof MONITORES!=='undefined'?MONITORES.filter(monAtivo):[]),recarregar:function(forcar){paAbrir(forcar!==false);}}); }catch(e){ _logLeituraFalhou('Acompanhamento de orçamentos (Amanda)', e); }
       // O mesmo quadro da Márcia, com a mesma leitura: nasce com o que há e se troca sozinho.
       if(typeof pendCarregar==='function') pendCarregar().then(function(){
         var _c=document.getElementById('paCardPendPrev'); if(_c) _c.innerHTML=blocoPendPrevHTML();

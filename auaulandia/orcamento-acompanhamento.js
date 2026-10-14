@@ -283,8 +283,14 @@
     Object.keys(state).forEach(function(tipo){ if(state[tipo]&&state[tipo].cache) state[tipo].cache[id]=orcamento; });
     try{ if(root.ORC_VIVOS&&root.ORC_VIVOS.todos) root.ORC_VIVOS.todos[id]=orcamento; }catch(e){}
     try{ if(root.ORC_LISTA_CACHE) root.ORC_LISTA_CACHE[id]=orcamento; }catch(e){}
-    try{ if(root.PC_CACHE) root.PC_CACHE.quando=0; }catch(e){}
-    try{ if(root.PA_CACHE) root.PA_CACHE.quando=0; }catch(e){}
+    // Atualiza só o orçamento confirmado; não renova a idade dos demais dados.
+    ['PC_CACHE','PA_CACHE'].forEach(function(chave){
+      try{
+        var cache=root[chave], orc=cache&&cache.dados&&cache.dados.orc;
+        if(orc&&orc.ok&&orc.v) orc.v[id]=orcamento;
+        else if(cache) cache.quando=0;
+      }catch(e){}
+    });
   }
   function salvarFormulario(botao){
     var form=botao.closest('.oa-form'), tipo=botao.dataset.oatipo, st=state[tipo], usuario=usuarioAgora();
@@ -297,7 +303,13 @@
     salvar(st.opcoes.db,botao.dataset.oid,botao.dataset.acao,pedido,atorAberto,{agora:Date.now()}).then(function(r){
       botao.disabled=false;
       if(!r.ok){ if(msg) msg.textContent=r.erro; return; } // não apaga o formulário se der falha.
-      sincronizarAposGravacao(botao.dataset.oid,r.orcamento); st.sucesso='Acompanhamento atualizado por '+r.ator.nome+'.'; renderPainel(tipo,st.root,st.cache,st.opcoes);
+      sincronizarAposGravacao(botao.dataset.oid,r.orcamento); st.sucesso='Acompanhamento atualizado por '+r.ator.nome+'.';
+      // Recompõe também os resumos desta tela usando o cache confirmado. O botão
+      // Atualizar continua forçando leitura; salvar não força download de tudo.
+      if(typeof st.opcoes.recarregar==='function'){
+        try{ st.opcoes.recarregar(false); return; }catch(e){}
+      }
+      renderPainel(tipo,st.root,st.cache,st.opcoes);
     });
   }
   function clicar(ev){ var b=ev.target&&ev.target.closest&&ev.target.closest('[data-oa]'); if(!b) return; var a=b.dataset.oa, tipo=b.dataset.oatipo||((b.closest('#oa-amanda'))?'amanda':'consultoras');
