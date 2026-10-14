@@ -2603,7 +2603,7 @@
   .mcr-bt-plantao{display:block;margin-top:8px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:10px;padding:8px 14px;min-height:44px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
   .mcr-bt-entrada{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue);font-weight:800;min-height:44px}
 </style>
-<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-07">
+<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-08">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -2896,7 +2896,7 @@
           <!-- Saiu do menu "Empório", que foi deletado: ninguém procuraria a mensagem
                do tutor ali dentro (Adriana, 13/ago/2026). -->
           <a data-v="emporio" class="so-emporio" title="A mensagem pronta para avisar o tutor."><span data-icon="bowl"></span><span>Quem não comeu hoje</span></a>
-          <a data-v="reposicao" class="so-recepcao" title="Créditos de dias por falta avisada."><span data-icon="refresh"></span><span>Reposições</span></a>
+          <a data-v="reposicao" class="so-recepcao" title="Reposições por falta avisada."><span data-icon="refresh"></span><span>Reposições</span></a>
           <div class="nav-rotulo">Planos e cobranças</div>
           <a data-v="renovacao" class="so-gestao" title="Quem está no fim do plano."><span data-icon="card"></span><span>Renovação de planos</span></a>
           <!-- "LANÇAR PAGAMENTO" SAIU DAQUI em 18/set/2026. Adriana: "Plano e cobranças..
@@ -4886,7 +4886,7 @@
   <div id="repModal" onclick="if(event.target===this)repFechar()">
     <div class="rep-card">
       <div class="rep-tit" id="repTitulo">Lançar falta avisada</div>
-      <div class="rep-sub">O tutor avisou que o peludinho não vem. Isso vira <strong>crédito de reposição</strong> — ele usa em outro dia.</div>
+      <div class="rep-sub">O tutor avisou que o peludinho não vem. Isso registra uma <strong>reposição</strong> para combinar em outro dia.</div>
 
       <label class="rep-lb">Qual peludinho?</label>
       <input class="rep-in" id="repPelBusca" placeholder="Digite o nome do FILHOt ou do tutor…" autocomplete="off" oninput="repBuscarPel()">
@@ -4975,7 +4975,7 @@
   <div id="dxModal" onclick="if(event.target===this)dxFechar()">
     <div class="rep-card">
       <div class="rep-tit" id="dxTitulo">Marcar reposição ou dia extra — escolha o dia em que ele vem</div>
-      <div class="rep-sub">O tutor avisou que o peludinho vem num dia que não é o dele. Eu confiro o <strong>crédito de reposição</strong> e digo se o dia é <strong>reposição</strong> (não se cobra) ou <strong>avulso</strong> (diária a mais). Nada é gravado antes do botão.</div>
+      <div class="rep-sub">O tutor avisou que o peludinho vem num dia que não é o dele. Eu confiro as <strong>reposições disponíveis</strong> e digo se o dia é <strong>reposição</strong> (não se cobra) ou <strong>avulso</strong> (diária a mais). Nada é gravado antes do botão.</div>
 
       <label class="rep-lb">Qual peludinho?</label>
       <input class="rep-in" id="dxBusca" placeholder="Digite o nome do FILHOt ou do tutor…" autocomplete="off" oninput="dxBuscar()">
@@ -5182,13 +5182,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-14-07"></script>
+<script src="resposta-tutor.js?v=2026-10-14-08"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-14-07"></script>
+<script src="painel-logica.js?v=2026-10-14-08"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5200,14 +5200,14 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-14-07"></script>
-<script src="autoria-logica.js?v=2026-10-14-07"></script>
-<script src="navegacao-inicio.js?v=2026-10-14-07"></script>
-<script src="presenca-logica.js?v=2026-10-14-07"></script>
-<script src="historico-checkins.js?v=2026-10-14-07"></script>
-<script src="historico-checkins-pdf.js?v=2026-10-14-07"></script>
-<script src="orcamento-acompanhamento.js?v=2026-10-14-07"></script>
-<script src="dash-lancamentos-performance.js?v=2026-10-14-07"></script>
+<script src="financeiro-logica.js?v=2026-10-14-08"></script>
+<script src="autoria-logica.js?v=2026-10-14-08"></script>
+<script src="navegacao-inicio.js?v=2026-10-14-08"></script>
+<script src="presenca-logica.js?v=2026-10-14-08"></script>
+<script src="historico-checkins.js?v=2026-10-14-08"></script>
+<script src="historico-checkins-pdf.js?v=2026-10-14-08"></script>
+<script src="orcamento-acompanhamento.js?v=2026-10-14-08"></script>
+<script src="dash-lancamentos-performance.js?v=2026-10-14-08"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -5599,7 +5599,7 @@
   // se mudar aqui, muda no menu, no cabeçalho e no aviso de pendência (navPend).
   const titles={inicio:['Início','Escolha a área do seu dia.'],ficha:['Cadastro de Peludinhos','Um cadastro só, para Day Care e AuAulândia — tudo começa aqui.'],inativos:['Inativos','Peludinhos que saíram do Day Care'],
     renovacao:['Renovação de planos','Quem está no fim do plano.'],adaptacao:['Adaptação · 45 dias','Como está se adaptando'],
-    reposicao:['Reposições','Créditos de dias por falta avisada.'],
+    reposicao:['Reposições','Reposições por falta avisada.'],
     daycare:['Day Care','Chamada, almoço, atividades, EA.'],hospedagem:['Plantão da noite','O relatório de cada hóspede, turno a turno.'],
     gestdia:['Conferência do dia','Medicações por horário, problemas e os três tempos do plantão.'],
     aulunos:['Aulunos','A turma do dia.'],dashdc:['Lançamentos do dia','A planilha do Day Care, item por item.'],
@@ -7073,7 +7073,7 @@
     const most=dias.slice(0,10).map(repBRdata).join(' · ');
     el.innerHTML='De '+repBRdata(de)+' a '+repBRdata(ate)+', '+escAttr(pelNome(p))+' viria em <b>'+dias.length+' dia'+(dias.length>1?'s':'')+'</b>:<br>'
       +most+(dias.length>10?(' <b>e mais '+(dias.length-10)+'</b>'):'')
-      +'<br><span style="color:var(--muted);font-weight:500">Vou gerar '+dias.length+' crédito'+(dias.length>1?'s':'')+' de reposição.</span>'
+      +'<br><span style="color:var(--muted);font-weight:500">Vou registrar '+dias.length+' reposiç'+(dias.length>1?'ões':'ão')+'.</span>'
       +fora;
   }
   // ===== FALTA EM ALGUNS DIAS (Story 6.39 — Adriana, 06/out/2026, caso do Fred) ==================
@@ -7362,10 +7362,10 @@
     if(!p || (!a.entram.length && !a.fora.length)){ el.innerHTML='Escolha as datas para eu calcular.'; return; }
     var rep=a.repetidas.length?('<span class="rep-fora">'+escAttr(a.repetidas.map(function(d){ return String(repBRdata(d)).slice(0,5); }).join(', '))
       +(a.repetidas.length>1?' estão repetidas: cada uma':' está repetida:')+' conta uma vez só.</span>'):'';
-    if(!a.entram.length){ el.innerHTML='Nenhuma dessas datas vira crédito.'+rep+repForaHTML(p, a.fora); return; }
+    if(!a.entram.length){ el.innerHTML='Nenhuma dessas datas gera reposição.'+rep+repForaHTML(p, a.fora); return; }
     var n=a.entram.length;
     el.innerHTML=escAttr(pelNome(p))+' viria em <b>'+n+' dia'+(n>1?'s':'')+'</b>: '+escAttr(a.entram.map(repDataComSemana).join(' · '))
-      +'<br><span style="color:var(--muted);font-weight:500">Vou gerar '+n+' crédito'+(n>1?'s':'')+' de reposição.</span>'
+      +'<br><span style="color:var(--muted);font-weight:500">Vou registrar '+n+' reposiç'+(n>1?'ões':'ão')+'.</span>'
       +rep+repForaHTML(p, a.fora);
   }
   // ===== O DIA DE REPOR E AS VAGAS (Adriana, 21/set/2026) ==========================
@@ -7491,7 +7491,7 @@
       // com o porquê na prévia e na confirmação. O dia de repor vai só no primeiro, como no período.
       const an=repAlgunsAnalise(p, repAlgunsDatas);
       if(!an.entram.length && !an.fora.length){ w.textContent='Escolha pelo menos uma data.'; soltar(); return; }
-      if(!an.entram.length){ w.textContent='Nenhuma dessas datas vira crédito: '+repDataComSemana(an.fora[0].iso)+' — '+an.fora[0].porque+'.'; soltar(); return; }
+      if(!an.entram.length){ w.textContent='Nenhuma dessas datas gera reposição: '+repDataComSemana(an.fora[0].iso)+' — '+an.fora[0].porque+'.'; soltar(); return; }
       const loteA='L'+Date.now();
       regs=an.entram.map(function(d,ix){ return {tipo:'credito', data:d, motivo:repMotivoAtual, obs:obs, lote:loteA, alguns:{datas:an.entram.slice()}, volta:(ix===0?(voltaEfetiva||''):'')}; });
       foraAlguns=an.fora;
@@ -7740,9 +7740,9 @@
           +dC3(info.para)+' ('+dS3(info.para)+') foi desmarcada. Como o aviso chegou depois das 24h do dia anterior, a troca não vira reposição.';
       }else{
         var lv3=Math.max(0, Number(info.livres)||0);
-        corpo='Passando para confirmar: a reposição d'+o+' '+nome+' que estava marcada para '+repDiaSemanaComData(info.volta)
-          +', foi desmarcada. Como o aviso chegou depois das 24h do dia anterior, ela conta como usada: '
-          +(lv3===0?'não fica nenhuma reposição sem dia.':((lv3===1?'fica 1 reposição':('ficam '+lv3+' reposições'))+' para marcar quando for melhor para vocês.'));
+        corpo='Entendemos que imprevistos acontecem. A reposição d'+o+' '+nome+' que estava marcada para '+repDiaSemanaComData(info.volta)
+          +' foi cancelada e a vaga foi liberada. A reposição desta data permanece utilizada. Reposições disponíveis: '
+          +lv3+'.';
       }
     }else if(modo==='troca-desfeita'){
       // DESFAZER A TROCA (QA16): a mensagem fala da troca. Reposição só aparece quando ela
@@ -7791,9 +7791,7 @@
   function repMensagemPrazo(tipo){
     var n=5; try{ n=vagasLimite(); }catch(e){ n=5; } /* silencioso de propósito: sem as Configurações lidas, vale o número de fábrica */
     var troca=(tipo==='troca');
-    return 'Caso precise desmarcar '+(troca?'a troca':'a reposição')+', me avise até as 24h do dia anterior. Temos apenas '
-      +n+(n===1?' vaga':' vagas')+(troca?'':' de reposição')
-      +' por dia, além dos nossos Aulunos, e assim consigo remanejar outros Aulunos e famílias que precisam.';
+    return 'Se os planos mudarem, avise com 24 horas de antecedência. Temos apenas cinco vagas de reposição por dia, e seu aviso nos ajuda a acolher outros Aulunos e suas famílias multiespécie. 💛';
   }
   // "segunda-feira, 28/09" — é como a consultora fala com o tutor.
   function repDiaSemanaComData(iso){
@@ -8220,13 +8218,13 @@
   // O motivo de 4 palavras (regra 3): a régua da 6.53, chamada e nunca copiada — '' quando passa.
   function repMotivoErro(t){ var r=motivoQuatroPalavras(t); return r.ok?'':r.erro; }
   var REP_MOTIVOS_TELA=['cio', 'doente', 'viagem', 'atrasado', 'outro'];   // as 5 opções da janela «+ Falta avisada»
-  var REP_ESTORNO_USADO='Este crédito já foi usado. Estornar deixa o saldo de reposição em 0 e o livro-caixa em −1: o dia usado continua usado, e a casa absorve.';
+  var REP_ESTORNO_USADO='Esta reposição já foi usada. Estornar deixa o saldo de reposição em 0 e o livro-caixa em −1: o dia usado continua usado, e a casa absorve.';
   var REP_NAO_ACHEI_EXTRATO='Não achei este lançamento no Extrato agora (a tela pode estar atrasada). Nada foi gravado: atualize a tela e tente de novo.';
   // O livro-caixa abaixo de 0 com o número de verdade (2ª rodada, REQ-001): −1 continua a frase fixa de sempre.
   function repNumNeg(n){ return '−'+Math.abs(Number(n)||0); }
   function repEstornoUsadoTexto(depois){ return (depois===-1)?REP_ESTORNO_USADO:REP_ESTORNO_USADO.replace('−1', repNumNeg(depois)); }
   function repLoteUsadoTexto(depois, usados){
-    return ((usados===1)?'Um destes créditos já foi usado':((usados>1)?(usados+' destes créditos já foram usados'):'Parte do saldo já foi usada'))
+    return ((usados===1)?'Uma destas reposições já foi usada':((usados>1)?(usados+' destas reposições já foram usadas'):'Parte do saldo já foi usada'))
       +'. Estornar o lote deixa o saldo de reposição em 0 e o livro-caixa em '+repNumNeg(depois)+': '
       +((usados===1)?'o dia usado continua usado':'os dias usados continuam usados')+', e a casa absorve.';
   }
@@ -8383,7 +8381,7 @@
   // ===== AC1 — ESTORNAR: A CASCATA À VISTA ===============================================
   function repEstornarCascata(p, cred, L){
     var out=[], quem=repQuemDe(cred), qd=repQuandoDe(cred.ts), hoje=repHojeISO();
-    out.push('O crédito da falta de '+repBRdata(cred.data)+' ('+repMotivoRotulo(cred.motivo)+')'+(quem?(', lançado por '+quem):'')+(qd?(' em '+qd):'')+'.');
+    out.push('A reposição da falta de '+repBRdata(cred.data)+' ('+repMotivoRotulo(cred.motivo)+')'+(quem?(', lançada por '+quem):'')+(qd?(' em '+qd):'')+'.');
     if(repTrocaViva(cred)){
       var de=String((cred.troca||{}).de||cred.data||''), para=String(cred.troca.para||'');
       out.push('É uma troca ('+repDataCurta(de)+' → '+repDataCurta(para)+'): estornar tira a falta avisada de '+repDataCurta(de)+' e o dia novo '+repDataCurta(para)
@@ -8509,13 +8507,13 @@
   // ===== AC3 — DESFAZER O ESTORNO (um crédito novo; o estorno fica) ======================
   function repEstornoDesfazerRecusa(p, cred, est, L){
     if(cred.troca || cred.nasceu_troca) return 'Este estorno desfez uma troca. Para refazer, use «+ Marcar troca».';
-    if(est.corrigidoPara) return 'Este estorno é de uma correção de data. Para voltar a data, use «Corrigir» no crédito novo.';
+    if(est.corrigidoPara) return 'Este estorno é de uma correção de data. Para voltar a data, use «Corrigir» na nova reposição.';
     var ja=repEstornoDesfeitoPor(L, est._id), jr=ja?(ja.corr||{}):null;
     if(ja) return 'Este estorno já foi desfeito'+repPorQuando(jr.por||repQuemDe(ja), jr.quando||repQuandoDe(ja.ts))+'. Nada foi gravado de novo.';
     var fer=repFeriadoNome(cred.data);
     if(fer) return repBRdata(cred.data)+' é feriado ('+fer+'). A Zêluz não abre e o dia não é reposto: nada foi lançado.';
     var outro=repCreditoVivoOutro(L, String(cred.data||''), cred._id);
-    if(outro) return 'A falta de '+repDataCurta(cred.data)+' já foi lançada de novo (por '+(repQuemDe(outro)||'sem nome')+', em '+(repQuandoDe(outro.ts)||'hora sem registro')+'). Desfazer este estorno daria dois créditos para o mesmo dia. Nada foi gravado.';
+    if(outro) return 'A falta de '+repDataCurta(cred.data)+' já foi lançada de novo (por '+(repQuemDe(outro)||'sem nome')+', em '+(repQuandoDe(outro.ts)||'hora sem registro')+'). Desfazer este estorno daria duas reposições para o mesmo dia. Nada foi gravado.';
     return '';
   }
   function repEstornoDesfazerAbrir(i, idEst){
@@ -8523,24 +8521,24 @@
     if(!repPodeLancar()) return Promise.resolve(corrBarrar('desfazer um estorno de reposição', corrQuemPode('lancar-reposicao'), {pet:pelNome(p), id:String(idEst)}));
     var L=repLancamentos(p)||[], est=repLancDe(L, idEst), cred=est?repLancDe(L, est.estornaId):null;
     if(!est || !cred || cred.tipo!=='credito'){ alert('Não achei este estorno no Extrato. Atualize a tela.'); return Promise.resolve(null); }
-    if(repSaidaAntecipada(cred)){ alert('O crédito da saída antecipada da hospedagem se corrige pela própria hospedagem.'); return Promise.resolve(null); }
+    if(repSaidaAntecipada(cred)){ alert('A reposição gerada pela saída antecipada da hospedagem se corrige pela própria hospedagem.'); return Promise.resolve(null); }
     var rec=repEstornoDesfazerRecusa(p, cred, est, L);
     if(rec){ if(typeof zAlertao==='function') zAlertao('NÃO DÁ PARA DESFAZER ESTE ESTORNO', [rec], {botao:'Entendi'}); return Promise.resolve({ok:false, recusa:rec}); }
     var novo={_id:'novo-volta', tipo:'credito', data:cred.data};
     var s=repSaldoReposicao(p), dep=repSaldoRepDepois(p, [novo], null, s);
     var obs=String(cred.obs||'').trim();
-    var volta=['O crédito da falta de '+repBRdata(cred.data)+' ('+repMotivoRotulo(cred.motivo)+')'+(obs?(', com a observação «'+obs+'»'):'')+'.']
+    var volta=['A reposição da falta de '+repBRdata(cred.data)+' ('+repMotivoRotulo(cred.motivo)+')'+(obs?(', com a observação «'+obs+'»'):'')+'.']
       .concat(cred.volta?['Não volta: o dia de repor que estava marcado ('+repDataCurta(cred.volta)+'). Marque de novo em «Marcar reposição».']:[])
       .concat(['Saldo de reposição: '+s+' → '+dep+'.']);
     var fim={};
     return corrAbrir({acao:'reabrir', nivel:'gestao', titulo:'Desfazer o estorno da falta de '+repDataCurta(cred.data), botao:'Desfazer o estorno', tituloOk:'Estorno desfeito',
       oque:'o estorno da falta avisada de '+repBRdata(cred.data)+' de '+pelNome(p), original:{caminho:'daycare/reposicao/'+pelKey(p)+'/lancamentos/'+idEst, id:String(idEst)},
-      estado:'estornada', paraEstado:'valendo de novo (um crédito novo)', volta:volta,
+      estado:'estornada', paraEstado:'valendo de novo (uma reposição disponível)', volta:volta,
       gravar:function(reg){ return repEstornoDesfazerGravar(p, cred, est, reg, fim); }}).then(function(r){
         if(r && r.ok){
           repDepoisDeMudar(i);
           try{ if(CORR_ATUAL && CORR_ATUAL.passo==='pronto') corrFechar(); }catch(e){ /* silencioso de propósito: o cartaz pode já ter sido fechado */ }
-          repMsgModal('Estorno desfeito', [pelNome(p)+' tem de volta o crédito da falta de '+repBRdata(cred.data)+'. Saldo agora: '+dep+'.',
+          repMsgModal('Estorno desfeito', [pelNome(p)+' tem de volta uma reposição da falta de '+repBRdata(cred.data)+'. Saldo agora: '+dep+'.',
             'Assinado por '+((r.reg||{}).por||'-')+'. O estorno continua no Extrato, com quem desfez e o motivo.'],
             repMensagem(p, 'credito', {qtd:1, data:cred.data, saldo:dep}), repTelDe(p));
         }
@@ -8582,9 +8580,9 @@
     var an=repAnulados(L), c=uso.credito?repLancDe(L, uso.credito):null;
     if(c && c.tipo==='credito' && !an[c._id]){
       var outro=(L||[]).filter(function(l){ return l && l.tipo==='uso' && !an[l._id] && l.credito===c._id && l._id!==uso._id; })[0];
-      if(outro) return 'O crédito desta reposição já foi usado de novo em '+repDataCurta(outro.data)+': desfazer contaria duas vezes. Nada foi gravado.';
+      if(outro) return 'Esta reposição já foi usada de novo em '+repDataCurta(outro.data)+': desfazer contaria duas vezes. Nada foi gravado.';
       if(c.volta && String(c.volta)!==String(uso.data||''))
-        return 'O crédito desta reposição já foi marcado de novo para '+repDataCurta(c.volta)+': desmarque esse dia antes de desfazer a devolução. Nada foi gravado.';
+        return 'Esta reposição já foi marcada de novo para '+repDataCurta(c.volta)+': desmarque esse dia antes de desfazer a devolução. Nada foi gravado.';
     }
     return '';
   }
@@ -8660,7 +8658,7 @@
   function repCorrigirDataRecusa(p, cred, iso, L){
     if(cred.troca || cred.nasceu_troca) return 'É uma troca: desfaça a troca e marque de novo em «+ Marcar troca». O motivo e a observação podem mudar.';
     var u=repCreditoUsoDe(L, cred._id);
-    if(u) return 'Este crédito já foi usado em '+repDataCurta(u.data)+': a data não muda. O motivo e a observação podem mudar.';
+    if(u) return 'Esta reposição já foi usada em '+repDataCurta(u.data)+': a data não muda. O motivo e a observação podem mudar.';
     var ped=repPedidoQueUsa(p, cred._id);
     if(ped) return 'O pedido de encaixe de '+repDataCurta(ped.dia)+' usa esta falta: decida ou retire o pedido antes de mudar a data.';
     var fer=repFeriadoNome(iso);
@@ -8678,14 +8676,14 @@
     if(iso===String(cred.data||'')) return {aviso:''};   // sem mudar a data, nenhum aviso (o de uma volta anterior sai)
     var rec=repCorrigirDataRecusa(p, cred, iso, L); if(rec) return rec;
     return {aviso:'A data muda de '+repDataCurta(cred.data)+' para '+repDataCurta(iso)+': o lançamento original fica riscado («corrigido para '+repDataCurta(iso)
-      +'») e entra um crédito na data certa, com o mesmo dia de repor. O saldo não muda.'};
+      +'») e entra uma reposição na data certa, com o mesmo dia de repor. O saldo não muda.'};
   }
   function repCorrigirAbrir(i, id){
     var p=PELUDINHOS[i]; if(!p) return Promise.resolve(null);
     if(!repPodeLancar()) return Promise.resolve(corrBarrar('corrigir uma falta avisada', corrQuemPode('lancar-reposicao'), {pet:pelNome(p), id:String(id)}));
     var L=repLancamentos(p)||[], an=repAnulados(L), cred=repLancDe(L, id);
     if(!cred || cred.tipo!=='credito' || an[id]){ alert('Não achei esta falta avisada valendo no Extrato. Atualize a tela.'); return Promise.resolve(null); }
-    if(repSaidaAntecipada(cred)){ alert('O crédito da saída antecipada da hospedagem se corrige pela própria hospedagem.'); return Promise.resolve(null); }
+    if(repSaidaAntecipada(cred)){ alert('A reposição gerada pela saída antecipada da hospedagem se corrige pela própria hospedagem.'); return Promise.resolve(null); }
     var rot=repMotivoRotulo(cred.motivo), ops=REP_MOTIVOS_TELA.map(function(k){ return REP_MOTIVOS[k]; });
     if(ops.indexOf(rot)<0) ops=[rot].concat(ops);
     var quem=repQuemDe(cred), hoje=(repDiaDoTs(cred.ts)===repHojeISO());
@@ -8694,7 +8692,7 @@
     return corrAbrir({acao:'corrigir', nivel:propria?'propria':'gestao', capacidade:'lancar-reposicao', assinaNome:nome,
       titulo:'Corrigir a falta de '+repDataCurta(cred.data), botao:'Gravar a correção',
       oque:'a falta avisada de '+repBRdata(cred.data)+' de '+pelNome(p), original:{caminho:'daycare/reposicao/'+pelKey(p)+'/lancamentos/'+id, id:String(id)},
-      camposTexto:'Mude o que estiver errado e toque em «Continuar». A data muda num crédito novo, ligado a este; o dia de repor e o saldo ficam como estão.',
+      camposTexto:'Mude o que estiver errado e toque em «Continuar». A data muda numa nova reposição, ligada a esta; o dia de repor e o saldo ficam como estão.',
       campos:[{c:'data', rotulo:'Data da falta (DD/MM/AAAA)', valor:repBRdata(cred.data)}, {c:'motivo', rotulo:'Motivo', valor:rot, opcoes:ops},
         {c:'obs', rotulo:'Observação', valor:String(cred.obs||''), grande:true}],
       validar:function(valores){ return repCorrigirValidar(p, cred, valores, repLancamentos(p)||[]); },
@@ -8832,7 +8830,7 @@
   }
   function repExtratoLinhaHTML(p, i, l, c){
     const rx=repExtratoRotulo(l, c.X, c.hojeServ);
-    const rot=rx?rx.rot:((l.tipo==='credito')?'+1 CRÉDITO':(l.tipo==='uso'?'−1 USO':(l.dia_devolvido?'+1 DEVOLVIDA':(l.estornaId?'ESTORNO':'−1 ESTORNO'))));
+    const rot=rx?rx.rot:((l.tipo==='credito')?'+1 REPOSIÇÃO':(l.tipo==='uso'?'−1 USO':(l.dia_devolvido?'+1 DEVOLVIDA':(l.estornaId?'ESTORNO':'−1 ESTORNO'))));
     // O DIA, sempre à vista (25/set/2026): para quando estava marcada, de quando foi
     // desmarcada ou remarcada, e qual reposição a devolução trouxe de volta.
     const diaTxt=(l.tipo==='credito')
@@ -8928,7 +8926,7 @@
       var abater=function(){
         var s=0; try{ s=repSaldoParaUsarHoje(p, dia); }catch(e){ s=0; }
         if(s<=0){
-          zEscolha(nome+' não tem saldo de reposição', ['O Banco de Reposições dele está em '+s+': não há crédito para abater.',
+          zEscolha(nome+' não tem saldo de reposição', ['O Banco de Reposições dele está em '+s+': não há reposição disponível para abater.',
             'Se ele veio mesmo assim, confira com a Gestão: pode ser falta avisada que ninguém lançou, ou um dia que será cobrado.'],
             [{t:'Não abater', fn:function(){ fim(false); }}]);
           return;
@@ -9444,7 +9442,7 @@
         :(u.desfecho==='fora_prazo'?' · perdida (desmarcada fora do prazo)':(' · cumprida em '+C(u.data))))};
       var vd=l.volta_desmarcada||{};
       if(!repTrocaViva(l) && vd.virou_reposicao)
-        return {rot:'+1 CRÉDITO', cls:'credito', meta:' · era troca '+C(de)+' → '+C(para)+': '+(vd.excecao?('a Gestão não contou: '+vd.excecao.motivo)
+        return {rot:'+1 REPOSIÇÃO', cls:'credito', meta:' · era troca '+C(de)+' → '+C(para)+': '+(vd.excecao?('a Gestão não contou: '+vd.excecao.motivo)
           :(vd.zeluz?('a Zêluz desmarcou: '+vd.zeluz.motivo):(vd.casa_fechada?'a Zêluz não abriu, virou reposição':'desmarcada dentro do prazo, virou reposição')))};
       return null;
     }
@@ -11391,7 +11389,7 @@
       if(!ehAvulso && !ehTroca){
         cid=pay.credito_id||((repCreditoLivre(p)||{})._id)||'';
         if(!cid){
-          alert('Não achei o crédito de reposição de '+(ped.pet||'')+' para marcar o dia '+fmtBR(dia)
+          alert('Não achei uma reposição disponível de '+(ped.pet||'')+' para marcar o dia '+fmtBR(dia)
             +'. Abra o Extrato dele na tela de Reposições — o pedido continua em aberto.');
           return;
         }
@@ -12078,7 +12076,7 @@
   // O encaixe que ESTE aparelho já tirou e cujo pedido ainda não fechou (o cartaz cancelado, o banco
   // recusou): a lista diz «o encaixe já foi desfeito». O «Desautorizar» relê sempre antes de fazer nada.
   var VAGAS_DESFEITOS={};
-  var VAGAS_OQUE_SAIU={avulso:'a diária avulsa saiu dos Lançamentos do dia', reposicao:'o dia de repor saiu do crédito',
+  var VAGAS_OQUE_SAIU={avulso:'a diária avulsa saiu dos Lançamentos do dia', reposicao:'o dia de repor saiu da reposição',
     troca:'a troca foi desfeita', nada:'o encaixe já tinha sido desfeito'};
   var VAGAS_DESAUT_COMO={avulso:'a diária avulsa anulada nos Lançamentos do dia (como na 6.56)', reposicao:'o «desmarcar» de sempre (Reposições)',
     troca:'o «desmarcar» de sempre da troca (Reposições)', nada:'o encaixe já tinha sido desfeito: só o pedido fechou'};
@@ -12325,7 +12323,7 @@
       var vc=avulsaCentDe(est.f)||Math.round(+pay.valor_cent||0);
       return 'A diária avulsa de '+nome+' em '+D+(vc>0?(' ('+fmtCent(vc)+')'):'')+' sai dos Lançamentos do dia e da planilha, e fica riscada, nunca apagada.'+(est.chamada?(' '+naChamada):'');
     }
-    if(est.oque==='reposicao') return 'O dia de repor '+D+' sai do crédito e a vaga fica livre. A seguir, o «desmarcar» de sempre pergunta quem desistiu: a Zêluz (não conta) ou o tutor (dentro do prazo, não conta; fora do prazo, conta como usada).';
+    if(est.oque==='reposicao') return 'O dia de repor '+D+' sai da reposição e a vaga fica livre. A seguir, o «desmarcar» de sempre pergunta quem desistiu: a Zêluz (não conta) ou o tutor (dentro do prazo, não conta; fora do prazo, conta como usada).';
     if(est.oque==='troca') return 'A troca '+repDataCurta(String((pay.troca||{}).de||''))+' → '+D+' é desfeita pelo «desmarcar» de sempre da troca.';
     // 2ª rodada (QA661-07): a diária de hoje só na Chamada — a Chamada não é tocada daqui
     if(est.oque==='chamada') return 'A diária avulsa de '+nome+' de hoje está só na Chamada, não nos Lançamentos do dia: tire-a na Chamada, em «Tirar a diária avulsa», e depois toque em «Desautorizar» de novo para fechar o pedido.';
@@ -12337,7 +12335,7 @@
     var nome=String((ped&&ped.pet)||''), D=repDataCurta(dia), pay=(ped&&ped.payload)||{};
     if(oque==='avulso') return 'A diária avulsa de '+nome+' em '+D+' já saiu dos Lançamentos do dia no toque anterior, neste aparelho: só o pedido fecha.';
     if(oque==='troca') return 'A troca '+repDataCurta(String((pay.troca||{}).de||''))+' → '+D+' já foi desfeita no toque anterior, neste aparelho: só o pedido fecha.';
-    return 'O dia de repor '+D+' já saiu do crédito no toque anterior, neste aparelho: só o pedido fecha.';
+    return 'O dia de repor '+D+' já saiu da reposição no toque anterior, neste aparelho: só o pedido fecha.';
   }
   async function vagasDesautorizarAbrir(dia, chave){
     if(!vagasPodeEncaixar()) return corrBarrar('desautorizar um encaixe', corrQuemPode('decidir-troca'), {dia:String(dia||''), alvo:String(chave||'')});
@@ -12488,7 +12486,7 @@
   function vagasDesautorizarFechar(dia, chave, ped, p, oque){
     var nome=String(ped.pet||'')||pelNome(p), D=repDataCurta(dia), pay=ped.payload||{};
     var ja=(oque==='troca')?('A troca '+repDataCurta(String((pay.troca||{}).de||''))+' → '+D+' já foi desfeita: só o pedido fecha.')
-      :((oque==='reposicao')?('O dia de repor '+D+' já saiu do crédito: só o pedido fecha.')
+      :((oque==='reposicao')?('O dia de repor '+D+' já saiu da reposição: só o pedido fecha.')
         :((oque==='avulso')?('A diária avulsa de '+nome+' em '+D+' já saiu dos Lançamentos do dia: só o pedido fecha.'):'O encaixe já não está lá: só o pedido fecha.'));
     return corrAbrir({acao:'anular', nivel:'gestao', titulo:'Desautorizar o encaixe de '+nome+' em '+D, botao:'Fechar o pedido', tituloOk:'Encaixe desautorizado',
       rotulo:'Desautorizado', rotuloAcao:'Desautorizou', oque:'o pedido de encaixe de '+nome+' em '+repBRdata(dia)+' (autorizado)',
@@ -13207,7 +13205,7 @@
     // `incerto` = não deu para conferir no servidor se o que está lá continua valendo.
     var recusada=function(ex, chave, incerto){
       if(ex && ex.troca && ex.volta===para){ var rj={jaFeita:true, credId:chave, existente:ex}; if(incerto) rj.incerto=true; return rj; }
-      var er=new Error('A falta de '+repBRdata(de)+' acabou de ser lançada em outro aparelho. Espere a tela atualizar e faça a troca de novo: o app aproveita essa falta, sem crédito novo.');
+      var er=new Error('A falta de '+repBRdata(de)+' acabou de ser lançada em outro aparelho. Espere a tela atualizar e faça a troca de novo: o app aproveita essa falta, sem criar outra reposição.');
       er.repAviso=true;          // a frase é para a tela inteira, sem "Não consegui"
       throw er;
     };
@@ -13333,19 +13331,19 @@
     }
     if(v.tipo==='reposicao' && v.mudar){   // 6.61 (AC7)
       return '<div class="rep-previa"><strong>MUDAR O DIA DE REPOR: de '+esc(repDiaSemanaComData(v.de))+' para '+esc(repDiaSemanaComData(dxDia))+'.</strong> '
-        +'O mesmo crédito (a falta de '+esc(repBRdata(v.data))+') muda de dia, sem desmarcar antes: não se cobra nada, e o tutor recebe uma mensagem só, com o prazo do dia novo.</div>';
+        +'A mesma reposição (a falta de '+esc(repBRdata(v.data))+') muda de dia, sem desmarcar antes: não se cobra nada, e o tutor recebe uma mensagem só, com o prazo do dia novo.</div>';
     }
     if(v.tipo==='reposicao'){
       return '<div class="rep-previa"><strong>Ele tem '+v.livre+' dia'+(v.livre===1?'':'s')
         +' de reposição: este dia é <b>REPOSIÇÃO</b></strong> — não se cobra nada. '
-        +'O dia combinado entra no crédito que ele já tem, e a planilha daquele dia recebe a Reposição.</div>'
+        +'O dia combinado usa uma reposição disponível, e a planilha daquele dia recebe a Reposição.</div>'
         +(v.dicaTroca?('<div class="rep-previa" style="margin-top:6px">'+esc(v.dicaTroca)+'</div>'):'');
     }
     // 6.38: o saldo já não conta a troca; o que sobra como "tem reposição e sai avulso" é a reservada em hospedagem.
     var extra=(v.saldo>0 && v.livre<=0)
       ? (' Ele tem '+v.saldo+' dia(s) de reposição, mas estão reservados em orçamento de hospedagem — por isso este dia sai como avulso.')
       : '';
-    return '<div class="rep-previa"><strong>Sem crédito de reposição: este dia é <b>AVULSO</b> — '
+    return '<div class="rep-previa"><strong>Sem reposição disponível: este dia é <b>AVULSO</b> — '
       +esc(fmtCent(v.valor_cent))+' ('+(v.matriculado?'matriculado':'não matriculado')+')</strong>.'
       +esc(extra)+' Ao confirmar, ele entra nos Lançamentos do dia '+esc(repBRdata(dxDia))
       +' como Avulso — vai para a planilha e para a TV.</div>';
@@ -13448,7 +13446,7 @@
     if(v.tipo==='reposicao'){
       // 6.61: o crédito do «mudar o dia» (AC7) ou a falta escolhida (AC8); sem escolha, o de sempre (repCreditoLivre)
       var cred=dxCreditoParaMarcar(p, v);
-      if(!cred){ solta(); diz('Não achei um crédito sem dia marcado para agendar. Abra o Extrato dele e confira.'); return; }
+      if(!cred){ solta(); diz('Não achei uma reposição disponível sem dia marcado. Abra o Extrato dele e confira.'); return; }
       // Contado ANTES de gravar: o cache local só soma a marcação quando o banco responde. No «mudar o dia», o
       // crédito já estava marcado: as livres não mudam.
       var livresDepois=repLivresParaMarcar(p, v.mudar?0:+1);
@@ -27312,7 +27310,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-14-07';
+  const APP_VERSAO='2026-10-14-08';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -57578,7 +57576,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     if(saldoRep<=0){
       var _semRep=repSemSaldoTexto(pRep, diaRep), _iTr=_semRep.indexOf(' A troca marcada');
       zEscolha(pelNome(pRep)+' não tem saldo de reposição',
-        ['O Banco de Reposições dele está em '+saldoRep+' — não há crédito para abater.'].concat(_iTr>=0?[_semRep.slice(_iTr+1)]:[]).concat([
+        ['O Banco de Reposições dele está em '+saldoRep+' — não há reposição disponível para abater.'].concat(_iTr>=0?[_semRep.slice(_iTr+1)]:[]).concat([
          'Se ele veio mesmo assim, confira com a Gestão: pode ser falta avisada que ninguém lançou, ou um dia que será cobrado.',
          'Lançar mesmo assim escreve na planilha sem mexer no saldo.']),
         [{t:'Lançar mesmo assim (sem abater)', cor:'#B3261E', fn:function(){
@@ -67314,7 +67312,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     // está com o tutor no telefone: tirar e desmarcar, ou tirar só o lançamento repetido.
     var desmarcarTambem=false;
     var trocaVivaR=!!(credDia && repTrocaViva(credDia)), dzR=trocaVivaR?repTrocaComoDesfaz(credDia):null;
-    if(dzR) linhasTirar=linhasTirar.concat(['Se desfizer a troca: '+dzR.texto+(dzR.estorna?(' O crédito da troca sai junto: o saldo fica '+rDev.saldo+'.'):'')]);
+    if(dzR) linhasTirar=linhasTirar.concat(['Se desfizer a troca: '+dzR.texto+(dzR.estorna?(' A reposição da troca sai junto: o saldo fica '+rDev.saldo+'.'):'')]);
     if(credDia){
       var dCur=String(repBRdata(diaR)).slice(0,5);
       // A REGRA DAS 24 HORAS (6.38, D5): fora do prazo, tirar e desmarcar conta como usada (a troca é
@@ -71256,7 +71254,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     // ===== 6.60 — Reposições: o livro-caixa sem apagar (AC9) — as ações novas e as que as funções tocadas já gravavam ==
     'reposicao-corrigida':'Corrigiu a falta avisada (reposição)', 'reposicao-lote-estornado':'Estornou o lote de faltas avisadas',
     'reposicao-estorno-desfeito':'Desfez o estorno da reposição', 'reposicao-devolucao-desfeita':'Desfez a devolução da reposição',
-    'reposicao-abatida-depois':'Abateu do saldo a Reposição lançada sem abater', 'reposicao-credito':'Lançou a falta avisada (crédito de reposição)',
+    'reposicao-abatida-depois':'Abateu do saldo a Reposição lançada sem abater', 'reposicao-credito':'Lançou a falta avisada (reposição disponível)',
     'reposicao-uso':'Registrou o uso da reposição', 'reposicao-excecao':'A Gestão não contou a reposição (exceção)',
     'reposicao-zeluz-desmarcou':'A Zêluz desmarcou a reposição (não conta)',
     // ===== 6.61 — o dia de repor e as vagas (AC9) — as ações novas e as que as funções tocadas já gravavam ==========
@@ -88361,7 +88359,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     comAviso.slice(0, Math.max(1, 3-Math.min(2,semAviso.length))).forEach(function(x){
       h+='<div class="pm-li"><span class="pm-badge pm-b-info">avisou</span>'
         +'<div class="pm-li-txt"><b>'+esc(x.o.p.n)+'</b>'
-        +'<span>'+esc(x.m.motivo)+(x.m.obs?(' — '+esc(x.m.obs)):'')+' · crédito lançado</span></div></div>';
+        +'<span>'+esc(x.m.motivo)+(x.m.obs?(' — '+esc(x.m.obs)):'')+' · reposição registrada</span></div></div>';
     });
     h+='</div>';
     if(T.faltas.length>3) h+='<p class="pm-sub" style="margin-top:10px">'
@@ -90938,9 +90936,9 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
   }
   function rep14Erro(r, padrao){
     var t=(r&&r.codigo)==='SEM_SALDO'?'Não há saldo disponível para marcar esta reposição. O Extrato não foi alterado.'
-      :((r&&r.codigo)==='REMARCACAO_FORA_PRAZO'?'O prazo da marcação anterior já terminou. Ela continua debitada; cancele com justificativa antes de usar outro crédito.':(padrao||'Não consegui alterar a reposição.'));
+      :((r&&r.codigo)==='REMARCACAO_FORA_PRAZO'?'O prazo da marcação anterior já terminou. Ela continua debitada; cancele com justificativa antes de usar outra reposição.':(padrao||'Não consegui alterar a reposição.'));
     if(r&&r.codigo==='PRAZO_ENCERROU') t='O prazo terminou enquanto esta confirmação estava aberta. Nada foi mudado; abra “desmarcar” novamente para registrar o cancelamento sem devolução.';
-    if(r&&r.codigo==='CONFLITO_AGENDA') t='Outra pessoa alterou este crédito enquanto a confirmação estava aberta. Nada foi mudado; confira o dia atual antes de tentar novamente.';
+    if(r&&r.codigo==='CONFLITO_AGENDA') t='Outra pessoa alterou esta reposição enquanto a confirmação estava aberta. Nada foi mudado; confira o dia atual antes de tentar novamente.';
     var e=new Error(t); e.repAviso=true; e.rep14=r||null; return e;
   }
   function rep14ReservaAtivaDoCredito(p,cred,L){
@@ -91252,10 +91250,10 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
 
   repPrazoLinha=function(dia, troca){
     var alvo=troca?'a troca':'a reposição';
-    return 'Cancelamento de '+alvo+' até '+rep14Corte(dia)+' (24 horas completas antes da reposição; referência de entrada: 12h): '+(troca?'a troca volta a ficar disponível.':'1 crédito volta para o saldo disponível.')+' Depois desse horário, podemos cancelar e liberar a vaga, mas o crédito não volta.';
+    return 'Cancelamento de '+alvo+' até '+rep14Corte(dia)+' (24 horas completas antes da reposição; referência de entrada: 12h): '+(troca?'a troca volta a ficar disponível.':'1 reposição fica disponível para uma nova data.')+' Depois desse horário, podemos cancelar e liberar a vaga; a reposição desta data permanece utilizada.';
   };
   repMensagemPrazo=function(tipo, dia){
-    return '🗓️ Se precisarem desmarcar, avisem com *pelo menos 24 horas de antecedência*, até *'+(dia?rep14Corte(dia):'o mesmo horário do dia anterior')+'*. Assim, o crédito volta. Depois desse horário, podemos cancelar, mas o crédito não volta. Organizamos as reposições com cinco vagas por dia para cuidar de cada peludinho com atenção.';
+    return '🗓️ Se os planos mudarem, avise com *pelo menos 24 horas de antecedência*, até *'+(dia?rep14Corte(dia):'o mesmo horário do dia anterior')+'*. Temos apenas cinco vagas de reposição por dia, e seu aviso nos ajuda a acolher outros Aulunos e suas famílias multiespécie. 💛';
   };
   repMensagem=function(p, modo, info){
     info=info||{};
@@ -91268,32 +91266,32 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     saldo=Math.max(0,saldo);
     var ola='Oi'+(tutor?', '+tutor:'')+'!';
     var dia=info.volta||info.data||'';
-    var saldoTxt='Saldo disponível: *'+saldo+' '+rep14N(saldo,'crédito','créditos')+'*.';
+    var saldoTxt='Reposições disponíveis: *'+saldo+'*.';
     if(modo==='agendada'){
       var prazoMsg=rep14MarcadaAposCorte(dia,info)
-        ?'🗓️ Esta marcação foi feita com menos de 24 horas de antecedência. Se precisarem cancelar, liberamos a vaga, mas o crédito não volta. Organizamos as reposições com cinco vagas por dia para cuidar de cada peludinho com atenção.'
+        ?'🗓️ Para esta data, o prazo de alteração já encerrou. Se houver um imprevisto, conte conosco para cancelar e liberar a vaga. Temos apenas cinco vagas de reposição por dia; seu aviso nos ajuda a acolher outros Aulunos e suas famílias multiespécie. 💛'
         :repMensagemPrazo('reposicao',dia);
-      return ola+' 💛\n\n🗓️ *Reposição de '+nome+' agendada para '+repDiaSemanaComData(dia)+'.*\n🐾 *1 crédito foi usado para reservar esse dia.*\n'+saldoTxt+'\n\n'+prazoMsg+'\n\nEstamos por aqui. 💛';
+      return ola+' 💛\n\n🗓️ *Reposição de '+nome+' agendada para '+repDiaSemanaComData(dia)+'.*\n'+saldoTxt+'\n\n'+prazoMsg+'\n\nEstamos por aqui. 💛';
     }
-    if(modo==='uso') return ola+' 💛\n\n🐾 A presença de *'+nome+'* foi confirmada. O crédito já tinha sido usado quando o dia foi agendado, então não houve novo desconto.\n'+saldoTxt+'\n\nEstamos por aqui. 💛';
-    if(modo==='desmarcada') return ola+' 💛\n\n🗓️ A reposição de *'+nome+'* em '+repDiaSemanaComData(dia)+' foi cancelada dentro do prazo.\n🐾 *1 crédito voltou para o saldo disponível.*\n'+saldoTxt+'\n\nQuando quiserem, combinamos uma nova data. 💛';
-    return ola+' 💛\n\n🗓️ O agendamento de *'+nome+'* em '+repDiaSemanaComData(dia)+' foi cancelado depois do prazo.\n🐾 A vaga foi liberada, mas *o crédito não voltou* ao saldo.\n'+saldoTxt+'\n\nEstamos por aqui. 💛';
+    if(modo==='uso') return ola+' 💛\n\n🐾 A presença de *'+nome+'* foi confirmada. A reposição já estava reservada para esta data, então nada muda novamente no saldo.\n'+saldoTxt+'\n\nEstamos por aqui. 💛';
+    if(modo==='desmarcada') return ola+' 💛\n\n🗓️ Obrigada por avisarem. A reposição de *'+nome+'*, marcada para '+repDiaSemanaComData(dia)+', foi cancelada dentro do prazo.\n🐾 *1 reposição está disponível para uma nova data.*\n'+saldoTxt+'\n\nQuando quiserem, combinamos uma nova data. 💛';
+    return ola+' 💛\n\n🗓️ Entendemos que imprevistos acontecem. O agendamento de *'+nome+'*, marcado para '+repDiaSemanaComData(dia)+', foi cancelado e a vaga foi liberada.\n🐾 A reposição desta data permanece utilizada.\n'+saldoTxt+'\n\nEstamos por aqui. 💛';
   };
   repExtratoRotulo=function(l, X, hoje){
     if(rep14Agendado(l)){
-      if(X && X.an && X.an[l._id]) return {rot:'−1 AGENDAMENTO CANCELADO', cls:'uso', corpo:'Agendamento cancelado · crédito devolvido', meta:' · devolução registrada separadamente'};
-      if(l.desfecho==='veio') return {rot:'−1 AGENDADO', cls:'uso', corpo:'Presença confirmada · sem novo desconto', meta:' · 0 na confirmação de presença'};
-      if(l.desfecho==='fora_prazo') return {rot:'−1 AGENDADO', cls:'uso', corpo:'Cancelamento fora do prazo · vaga liberada · crédito não devolvido', meta:''};
-      return {rot:'−1 AGENDADO', cls:'uso', corpo:'Presença confirmada para '+repBRdata(l.data), meta:' · 1 crédito reservado'};
+      if(X && X.an && X.an[l._id]) return {rot:'−1 REPOSIÇÃO AGENDADA', cls:'uso', corpo:'Agendamento cancelado · reposição disponível novamente', meta:' · registro de cancelamento'};
+      if(l.desfecho==='veio') return {rot:'−1 REPOSIÇÃO AGENDADA', cls:'uso', corpo:'Presença confirmada · sem novo desconto', meta:' · 0 na confirmação de presença'};
+      if(l.desfecho==='fora_prazo') return {rot:'−1 REPOSIÇÃO AGENDADA', cls:'uso', corpo:'Cancelamento após o prazo · vaga liberada · reposição desta data utilizada', meta:''};
+      return {rot:'−1 REPOSIÇÃO AGENDADA', cls:'uso', corpo:'Reposição agendada para '+repBRdata(l.data), meta:' · reposição reservada'};
     }
     if(l && l.tipo==='estorno' && l.motivo==='cancelamento_no_prazo')
-      return {rot:'+1 DEVOLVIDO', cls:'credito', corpo:'Cancelamento dentro do prazo · 1 crédito devolvido', meta:' · saldo disponível atualizado'};
+      return {rot:'+1 REPOSIÇÃO DISPONÍVEL', cls:'credito', corpo:'Cancelamento dentro do prazo · 1 reposição disponível novamente', meta:' · saldo atualizado'};
     return _repExtratoRotulo(l, X, hoje);
   };
   repExtratoLinhaHTML=function(p, i, l, c){
     if(!rep14Agendado(l) && !(l && l.tipo==='estorno' && l.motivo==='cancelamento_no_prazo')) return _repExtratoLinhaHTML(p,i,l,c);
     var cancelado=!!((c.X&&c.X.an&&c.X.an[l._id])||(c.anulado&&c.anulado[l._id]));
-    var rx=cancelado?{rot:'−1 AGENDAMENTO CANCELADO',cls:'uso',corpo:'Agendamento cancelado · crédito devolvido',meta:' · devolução registrada separadamente'}:repExtratoRotulo(l,c.X,c.hojeServ), confirmado=!cancelado&&l.desfecho==='veio', data=repBRdata(l.data);
+    var rx=cancelado?{rot:'−1 REPOSIÇÃO AGENDADA',cls:'uso',corpo:'Agendamento cancelado · reposição disponível novamente',meta:' · registro de cancelamento'}:repExtratoRotulo(l,c.X,c.hojeServ), confirmado=!cancelado&&l.desfecho==='veio', data=repBRdata(l.data);
     var autor=rep14Assinatura(l,'quem');
     var presenca=confirmado ? '<div class="lc-meta" style="color:var(--z-blue);font-weight:700">0 PRESENÇA CONFIRMADA · '+escAttr(rep14Assinatura(l,'presenca_quem'))+' · sem descontar de novo</div>' : '';
     var limite=!cancelado&&l.desfecho==='reservado'
@@ -91311,8 +91309,8 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     var p=PELUDINHOS[i]; if(!p) return;
     var saldo=rep14SaldoDisponivel(p);
     var ag=rep14ListaAgendada(p), el=document.getElementById('repExtSub');
-    if(el) el.innerHTML='<strong>Saldo disponível: '+saldo+' '+rep14N(saldo,'crédito','créditos')+'.</strong> '
-      +'<strong>Agendado'+(ag.length===1?'':'s')+': '+ag.length+'.</strong> Cada agendamento reserva 1 crédito; a confirmação de presença não desconta de novo. '
+    if(el) el.innerHTML='<strong>Reposições disponíveis: '+saldo+' '+rep14N(saldo,'reposição','reposições')+'.</strong> '
+      +'<strong>Agendado'+(ag.length===1?'':'s')+': '+ag.length+'.</strong> Cada agendamento reserva uma reposição; a confirmação de presença não altera o saldo novamente. '
       +'No extrato, cada operação mostra data, autoria e cancelamento. <button type="button" class="btn" style="margin:8px 0 0;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="repBaixarExtratoPdf('+i+')">Baixar PDF</button> <button type="button" class="btn" style="margin:8px 0 0;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="repCompartilharExtratoPdf('+i+')">Compartilhar PDF</button>';
   };
   function rep14PdfLinhas(p){
@@ -91331,7 +91329,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     add('Peludinho: '+pelNome(p),11,3,true);
     add('Tutor: '+(pelGet(p,'tutor')||p.tutor||'não informado'),10,3,false);
     add('Emitido em: '+dataEmissao,10,3,false);
-    add('Saldo DISPONÍVEL: '+saldo+' '+rep14N(saldo,'crédito','créditos'),11,9,true);
+    add('REPOSIÇÕES DISPONÍVEIS: '+saldo+' '+rep14N(saldo,'reposição','reposições'),11,9,true);
     add('AGENDAMENTOS ATIVOS',11,5,true);
     var ag=rep14ListaAgendada(p);
     if(!ag.length) add('Nenhum agendamento ativo.',10,7,false);
@@ -91343,7 +91341,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     if(!L.length) add('Nenhum lançamento registrado.',10,5,false);
     L.forEach(function(l){
       var r=repExtratoRotulo(l,ctx.X,ctx.hojeServ)||{};
-      var rot=r.rot||((l.tipo==='credito')?'+1 CRÉDITO':(l.tipo==='uso'?'-1 USO':(l.dia_devolvido?'+1 DEVOLVIDA':(l.estornaId?'ESTORNO':'-1 ESTORNO'))));
+      var rot=r.rot||((l.tipo==='credito')?'+1 REPOSIÇÃO':(l.tipo==='uso'?'-1 USO':(l.dia_devolvido?'+1 DEVOLVIDA':(l.estornaId?'ESTORNO':'-1 ESTORNO'))));
       var j=l.justificativa||(l.cancelamento||{}).justificativa||l.motivo_cancelamento||'';
       var pr=l.presenca||{}, cancel=l.cancelamento||l.volta_desmarcada||{};
       var t=(repBRdata(l.data)||'data não informada')+' · '+rot+' · '+(r.corpo||repMotivoRotulo(l.motivo))+' · autoria: '+rep14Assinatura(l,'quem');
@@ -91378,7 +91376,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
   var _dxVeredictoHTML=dxVeredictoHTML;
   dxVeredictoHTML=function(v){
     var html=_dxVeredictoHTML(v);
-    if(v && v.ok && v.tipo==='reposicao') html+='<div class="rep-previa" style="margin-top:6px">🗓️ Ao confirmar, 1 crédito fica reservado e o saldo disponível é atualizado. Organizamos as reposições com cinco vagas por dia; a equipe avalia cada caso com cuidado.</div>';
+    if(v && v.ok && v.tipo==='reposicao') html+='<div class="rep-previa" style="margin-top:6px">🗓️ Ao confirmar, esta reposição fica reservada e as reposições disponíveis são atualizadas. Temos apenas cinco vagas de reposição por dia, e seu aviso nos ajuda a acolher outros Aulunos e suas famílias multiespécie. 💛</div>';
     return html;
   };
 })();
