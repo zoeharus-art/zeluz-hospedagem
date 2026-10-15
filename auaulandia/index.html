@@ -458,7 +458,7 @@
   .troca-vagas{margin-left:auto;font-size:11.5px;font-weight:800;color:#1E8449}
   .troca-vagas.zero{color:#B3261E}
   .troca-nomes{display:flex;gap:6px;flex-wrap:wrap}
-  .troca-nome{display:inline-flex;align-items:center;gap:5px;background:var(--z-cream-warm);border-radius:8px;
+  .troca-nome{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;max-width:100%;background:var(--z-cream-warm);border-radius:8px;
     padding:4px 8px;font-size:12.5px;font-weight:700;color:var(--z-blue)}
   .troca-nome.ped{border:1px dashed #B3261E;color:#B3261E;background:#fff}
   .troca-nome button{background:none;border:0;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;padding:0 1px}
@@ -2603,7 +2603,7 @@
   .mcr-bt-plantao{display:block;margin-top:8px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:10px;padding:8px 14px;min-height:44px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
   .mcr-bt-entrada{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue);font-weight:800;min-height:44px}
 </style>
-<link rel="stylesheet" href="historico-checkins.css?v=2026-10-14-08">
+<link rel="stylesheet" href="historico-checkins.css?v=2026-10-15-01">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -4852,6 +4852,7 @@
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <h2 style="font-size:20px;margin:0">Reposições</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" style="padding:10px 18px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="trocaFocarLista()">Ver lista de trocas</button>
           <button class="btn btn-gold" style="padding:10px 18px" onclick="repAbrirLancar()">+ Lançar falta avisada</button>
           <!-- O DIA EXTRA (Adriana, 21/set/2026): "se o tutor já avisou o dia, precisa ir
                para avulso". Um gesto só — o app decide se é reposição (tem crédito) ou
@@ -4870,7 +4871,7 @@
 
     <!-- LISTA DE TROCA (Adriana, 12/ago/2026): "nao vai amanha e ira na sexta, isso e comum".
          5 vagas/dia a recepcao marca sozinha; acima disso o pedido sobe para a Gestora. -->
-    <div class="card" style="margin-top:16px">
+    <div class="card" id="trocaQuadro" style="margin-top:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <div>
           <h2 style="font-size:20px;margin:0">Lista de troca</h2>
@@ -5182,13 +5183,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-14-08"></script>
+<script src="resposta-tutor.js?v=2026-10-15-01"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-14-08"></script>
+<script src="painel-logica.js?v=2026-10-15-01"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5200,14 +5201,15 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-14-08"></script>
-<script src="autoria-logica.js?v=2026-10-14-08"></script>
-<script src="navegacao-inicio.js?v=2026-10-14-08"></script>
-<script src="presenca-logica.js?v=2026-10-14-08"></script>
-<script src="historico-checkins.js?v=2026-10-14-08"></script>
-<script src="historico-checkins-pdf.js?v=2026-10-14-08"></script>
-<script src="orcamento-acompanhamento.js?v=2026-10-14-08"></script>
-<script src="dash-lancamentos-performance.js?v=2026-10-14-08"></script>
+<script src="financeiro-logica.js?v=2026-10-15-01"></script>
+<script src="autoria-logica.js?v=2026-10-15-01"></script>
+<script src="navegacao-inicio.js?v=2026-10-15-01"></script>
+<script src="presenca-logica.js?v=2026-10-15-01"></script>
+<script src="historico-checkins.js?v=2026-10-15-01"></script>
+<script src="historico-checkins-pdf.js?v=2026-10-15-01"></script>
+<script src="orcamento-acompanhamento.js?v=2026-10-15-01"></script>
+<script src="dash-lancamentos-performance.js?v=2026-10-15-01"></script>
+<script src="reserva-cadastro.js?v=2026-10-15-01"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -10338,12 +10340,15 @@
       // contava por vagasDoDia e listava por trocaDoDia: dizia "3 de 5 vagas" e logo
       // abaixo "ninguém marcado", que é impossível (Adriana, 23/set/2026).
       const nomes=d.ocupantes.map(function(o){
-        // O × só existe onde há o que cancelar: a troca é gesto desta tela. Reposição e
-        // avulso se desfazem onde nasceram — na ficha e nos Lançamentos do dia.
-        const pode=(o.tipo==='troca' && o.id && trocaPodeMexer());
+        // Troca atual é uma reposição agendada: desmarca pelo mesmo fluxo contábil, com
+        // justificativa, autoria e corte de 24h. A troca antiga ainda usa o cancelamento
+        // próprio em daycare/trocas. Nenhuma ocupação sem um alvo verificável ganha botão.
+        const podeAtual=(o.tipo==='troca' && o.acao && o.acao.tipo==='desmarcar-reposicao' && o.acao.chave && trocaPodeMexer());
+        const podeLegado=(o.tipo==='troca' && o.id && trocaPodeMexer());
         return '<span class="troca-nome">'+escAttr(o.nome)
-          +'<small class="troca-tp">'+esc(VAGAS_TIPO_ROTULO[o.tipo]||o.tipo)+'</small>'
-          +(pode?('<button title="cancelar" onclick="trocaCancelar(\''+d.iso+'\',\''+escAttr(o.id).replace(/'/g,"\\'")+'\')">&times;</button>'):'')
+          +'<small class="troca-tp">'+esc(VAGAS_TIPO_ROTULO[o.tipo]||o.tipo)+(o.tutor?(' · '+esc(o.tutor)):'')+'</small>'
+          +(podeAtual?('<button title="desmarcar troca" onclick="trocaDesmarcarAtual('+Number(o.acao.indice)+',\''+vagasJsArg(o.acao.dia)+'\',\''+vagasJsArg(o.acao.chave)+'\')">desmarcar</button>')
+            :(podeLegado?('<button title="cancelar troca antiga" onclick="trocaCancelar(\''+d.iso+'\',\''+escAttr(o.id).replace(/'/g,"\\'")+'\')">&times;</button>'):''))
           +'</span>'; }).join('');
       // Pedido esperando a Gestora NÃO ocupa vaga — aparece à parte, para ninguém somar duas vezes.
       const peds=d.lista.filter(function(t){ return t.status==='pedido'; }).map(function(t){
@@ -10361,12 +10366,33 @@
         +(vazio?'<div class="troca-vazio">ninguém marcado</div>':('<div class="troca-nomes">'+nomes+peds+'</div>'))
         +trocaCanceladasHTML(d)   // 6.61 (AC6.3): a troca cancelada fica riscada no dia, com «Reabrir» quando há vaga
         +'</div>'; }).join('')+'</div>';
-    h+='<div class="hint" style="margin-top:9px">São <strong>'+vagasLimite()+' vagas por dia</strong> que a recepção marca sem precisar falar com a Gestora. '
-      +'Passou disso, o pedido sobe para ela — que avalia a matilha e o comportamento do FILHOt antes de abrir a vaga.</div>';
+    h+='<div class="hint" style="margin-top:9px"><strong>'+vagasLimite()+' vagas por dia</strong> é a referência de organização. '
+      +'Acima dessa referência, a equipe organiza conforme o dia e registra o combinado.</div>';
     box.innerHTML=h;
   }
   function trocaPodeMexer(){ const r=document.body.dataset.role||'';
     return r==='consultora'||r==='gestao'||r==='supervisor'||r==='diretoria'; }
+  function trocaFocarLista(){
+    try{ renderTrocas(); }catch(e){}
+    var alvo=document.getElementById('trocaQuadro');
+    if(alvo&&typeof alvo.scrollIntoView==='function') alvo.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  // Ponte para as trocas atuais: o índice e a chave do FILHOt vieram da mesma agenda que
+  // montou a vaga. Assim, dois peludinhos homônimos não compartilham o comando por nome.
+  function trocaDesmarcarAtual(indice, dia, chave){
+    var p=PELUDINHOS[Number(indice)];
+    if(!p || !chave || (typeof pelKey==='function' && pelKey(p)!==chave)){
+      alert('Esta troca mudou enquanto a tela estava aberta. Atualize a lista antes de desmarcar.');
+      return Promise.resolve(null);
+    }
+    var L=repLancamentos(p)||[], an=repAnulados(L);
+    var atual=L.filter(function(l){ return l&&l.tipo==='credito'&&l.volta===dia&&!an[l._id]&&repTrocaViva(l); })[0]||null;
+    if(!atual){
+      alert('Não achei uma troca ativa para esta vaga. Atualize a lista antes de desmarcar.');
+      return Promise.resolve(null);
+    }
+    return repDesmarcar(Number(indice), dia);
+  }
   // Marcar a troca com o tutor no telefone: quem, para quando e por quê.
   function trocaAbrirLancar(){
     if(!trocaPodeMexer()){ alert('Só a Recepção, a Supervisão ou a Gestão marcam troca.'); return; }
@@ -10483,20 +10509,29 @@
   function ocupantesDoDia(dia){
     var out=[];
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dia||'')) return out;
-    var vistos={};
-    var add=function(nome, tipo, origem, id){
+    var vistos={}, porNome={};
+    var add=function(nome, tipo, origem, id, acao, chave, tutor){
       var t=(typeof pendBase==='function')?pendBase(nome):String(nome||'');
-      var c=vagasNomeChave(t);
+      var nomeChave=vagasNomeChave(t), c=String(chave||nomeChave);
       if(!c || vistos[c]) return;
+      // A agenda sabe qual FILHOt é qual. Mantê-la pela chave evita que dois homônimos
+      // compartilhem vaga ou botão. Entradas antigas sem chave continuam na deduplicação
+      // nominal já usada pela planilha, sem duplicar quem também está na agenda.
+      if(!chave && porNome[nomeChave] && porNome[nomeChave].length) return;
       vistos[c]=1;
-      out.push({nome:t, chave:c, tipo:tipo, origem:origem, id:id||''});
+      if(chave){ if(!porNome[nomeChave]) porNome[nomeChave]=[]; porNome[nomeChave].push(c); }
+      out.push({nome:t, chave:c, tipo:tipo, origem:origem, id:id||'', acao:acao||null, tutor:tutor||''});
     };
     // 1) reposição AGENDADA pelo tutor — já está na memória do app, não custa leitura.
     try{
       repAgendadosPara(dia).forEach(function(o){
         var ehTroca=false;
         try{ var _L=repLancamentos(o.p)||[], _an=repAnulados(_L); ehTroca=_L.some(function(l){ return l&&l.volta===dia&&!_an[l._id]&&repTrocaViva(l); }); }catch(e){ ehTroca=false; } /* silencioso de propósito: sem o extrato, conta como reposição — a vaga é a mesma */
-        add(pelNome(o.p), ehTroca?'troca':'reposicao', 'agenda', (!ehTroca && typeof pelKey==='function')?pelKey(o.p):'');
+        var chavePet=(typeof pelKey==='function')?pelKey(o.p):'';
+        var acao=ehTroca ? {tipo:'desmarcar-reposicao', indice:o.i, dia:dia, chave:chavePet} : null;
+        // Troca atual mora no Extrato, não em daycare/trocas. Guarda índice + chave do
+        // FILHOt para o botão usar a mesma desmarcação contábil, sem confundir homônimos.
+        add(pelNome(o.p), ehTroca?'troca':'reposicao', 'agenda', (!ehTroca?chavePet:''), acao, chavePet, (typeof pelGet==='function'?pelGet(o.p,'tutor'):(o.p||{}).tutor)||'');
       });
     }catch(e){ _logFalhaGrav('ocupantesDoDia (agendados)', e); }
     var c=REP_PLAN_CACHE[dia]||{};
@@ -22552,6 +22587,11 @@
     // Fechou mas a planilha não recebeu: a falha aparece e dá para reenviar. Nunca some.
     var planilha='';
     if(stt==='fechado') planilha=orcPlanilhaHtml(id, o);
+    var cadastro='';
+    if(stt==='fechado' && window.ZeluzReservaCadastro && rc22PrecisaReconciliar(id,o)){
+      if(rc22PodeMaterializar()) cadastro='<div style="font-size:12px;color:var(--crm-atencao-text);font-weight:700;margin-top:6px">Cadastro minimo pendente</div><button id="orc-ficha-'+id+'" class="btn" style="margin-top:5px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue)" onclick="orcPrepararFichaReserva(\''+id+'\')">Preparar ficha</button>';
+      else cadastro='<div style="font-size:12px;color:var(--crm-atencao-text);font-weight:700;margin-top:6px">Cadastro minimo pendente</div>';
+    }
     // 6.68 (AC8): a proposta que voltou a aguardar antes desta story e ainda está na planilha — o aviso e «Tirar da planilha»
     if(stt==='aguardando' && orcFoiAPlanilha(o)) planilha='<div style="font-size:12px;color:var(--crm-critico);font-weight:700;margin-top:4px">'+esc(orcAvisoPlanilhaTexto(o))+'</div>'
       +'<button class="btn" style="margin-top:6px;min-height:44px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue)" onclick="orcTirarDaPlanilhaAbrir(\'' + id + '\')">Tirar da planilha</button>';
@@ -22612,7 +22652,7 @@
       +'<div style="font-size:12.5px;color:var(--z-blue-soft)">'+orcBR(o.entrada||'')+' a '+orcBR(o.saida||'')+' · '+(o.noites||0)+' noites'+(orcTempCurto(o)?(' · '+orcTempCurto(o)):'')+' · feito em '+dt+' por '+escAttr(o.criado_por||'-')+'</div>'
       +semData
       +'<div style="font-size:15px;font-weight:800;color:var(--z-blue);margin-top:3px">'+fmtCent(o.total_cent||0)+'</div>'
-      +fechouLinha+planilha+orcMudancasHTML(o)
+      +fechouLinha+planilha+cadastro+orcMudancasHTML(o)
       +'</div><span class="avr-chip '+L[1]+'">'+L[0]+'</span></div>'+btns+'</div>';
   }
   // "Lançado na planilha" / "NÃO entrou na planilha" + reenviar. Um lugar só, usado pelo
@@ -24151,7 +24191,129 @@
       return orcStatusGravarRelido(id, novo, op, R.o);
     }).then(solta, function(e){ solta(); throw e; });
   }
-  function orcStatusGravarRelido(id, novo, op, o0){
+  // ===== CLOSED RESERVATION -> MINIMUM HOTEL PROFILE (22) =============================
+  // The profile is created before check-in, remains incomplete and hotel-only: it does
+  // not create enrollment, plan, attendance, bath or Day Care charges.
+  var RC22_RECONCILIANDO=null;
+  function rc22PodeMaterializar(){ return (typeof canCriarCadastro==='function') && canCriarCadastro(); }
+  function rc22Erro(msg){ var e=new Error(String(msg||'Nao foi possivel preparar o cadastro minimo.')); e.rc22=true; return e; }
+  function rc22FonteChave(link){ return String((link&&link.fonte&&link.fonte.pet_id)||''); }
+  function rc22PrepararFechado(id, esperado){
+    if(!DB) return Promise.reject(rc22Erro('Sem conexao com o banco: a reserva continua como estava.'));
+    if(!rc22PodeMaterializar()) return Promise.reject(rc22Erro('Sua sessao nao pode criar o cadastro minimo da reserva.'));
+    if(!window.ZeluzReservaCadastro) return Promise.reject(rc22Erro('O modulo do cadastro da reserva nao carregou. Recarregue antes de fechar.'));
+    return Promise.resolve(DB.ref('auaulandia/orcamentos/'+id).once('value')).then(function(snap){
+      var o=(snap&&typeof snap.val==='function'&&snap.val())||{};
+      if(String(o.status||'aguardando')!==String(esperado||'aguardando')) throw rc22Erro('Este orcamento mudou em outro aparelho. Nada foi confirmado.');
+      var pets=Array.isArray(o.pets)?o.pets:[];
+      if(!pets.length) throw rc22Erro('Este orcamento nao tem peludinho salvo. Complete-o antes de fechar.');
+      var links=[];
+      var fila=Promise.resolve();
+      pets.forEach(function(pet, indice){
+        fila=fila.then(function(){
+          var cache=pelCadCache||{};
+          var chaveInicial=ZeluzReservaCadastro.chaveCadastro(pet,o,cache,pelKey);
+          if(!chaveInicial) throw rc22Erro('O orcamento fechado precisa de nome e tutor antes de criar a ficha minima.');
+          var conflito='', finalPlano=null;
+          return Promise.resolve(DB.ref('daycare/cadastro/'+chaveInicial).transaction(function(atual){
+            var mapa={}; mapa[chaveInicial]=atual||null;
+            var plano=ZeluzReservaCadastro.plano(id,o,pet,indice,mapa,pelKey);
+            if(!plano.ok){ conflito=plano.erro; return; }
+            var prox=Object.assign({}, atual||{}, plano.base||{});
+            if(!String(prox.n||'').trim()) prox.n=String(pet.nome||'').trim();
+            if(!String(prox.tutor||'').trim()) prox.tutor=String(pet.tutor||o.tutor||'').trim();
+            if(!String(prox.raca||'').trim()) prox.raca=String(pet.raca||'').trim();
+            prox.hotel_reservas=Object.assign({}, prox.hotel_reservas||{});
+            prox.hotel_reservas[plano.fonte.pet_id]=plano.fonte;
+            if(plano.novo || (prox.hotel_only===true && ((prox.hotel_cadastro||{}).estado!=='confirmado'))){
+              prox.hotel_only=true;
+              prox.hotel_cadastro=Object.assign({}, prox.hotel_cadastro||{}, {estado:'preparado', incompleto:true, versao:1});
+            }
+            finalPlano=plano;
+            return prox;
+          })).then(function(r){
+            if(conflito) throw rc22Erro(conflito);
+            if(!r || r.committed===false || !finalPlano) throw rc22Erro('O cadastro mudou enquanto a reserva era preparada. Tente novamente.');
+            links.push({indice:indice, chave:chaveInicial, fonte:finalPlano.fonte});
+          });
+        });
+      });
+      return fila.then(function(){ return {ok:true, orcamento:o, links:links}; });
+    });
+  }
+  function rc22VincularNoOrcamento(id, links){
+    var conflito='';
+    return Promise.resolve(DB.ref('auaulandia/orcamentos/'+id).transaction(function(atual){
+      if(!atual || String(atual.status||'')!=='fechado'){ conflito='Este orcamento nao esta mais fechado. O cadastro ficou pendente para revisao.'; return; }
+      var pets=Array.isArray(atual.pets)?atual.pets:[];
+      (links||[]).forEach(function(link){
+        var p=pets[link.indice]||{}, f=link.fonte||{};
+        if(conflito) return;
+        if(String(atual.entrada||'')!==String(f.entrada||'') || String(atual.saida||'')!==String(f.saida||'') ||
+          String(p.key||'')!==String(f.pet_key||'') || String(p.nome||'')!==String(f.nome||'') ||
+          String(p.tutor||atual.tutor||'')!==String(f.tutor||'') || (String(p.raca||'') && String(p.raca||'')!==String(f.raca||''))){
+          conflito='Datas ou identidade do peludinho mudaram antes do vinculo. Confira o orcamento e tente de novo.'; return;
+        }
+        if(p.cadastro_ref && String(p.cadastro_ref)!==String(link.chave)){ conflito='Este peludinho ja esta vinculado a outra ficha. Nada foi sobrescrito.'; return; }
+        p.cadastro_ref=link.chave; p.cadastro_origem='reserva-fechada'; pets[link.indice]=p;
+      });
+      if(conflito) return;
+      atual.pets=pets; return atual;
+    })).then(function(r){ if(conflito) throw rc22Erro(conflito); if(!r || r.committed===false) throw rc22Erro('O orcamento mudou enquanto o vinculo era confirmado. Tente novamente.'); return r; });
+  }
+  function rc22ConfirmarReconciliado(id, links){
+    return rc22VincularNoOrcamento(id,links).then(function(){
+      var fila=Promise.resolve();
+      (links||[]).forEach(function(link){ fila=fila.then(function(){
+        return DB.ref('daycare/cadastro/'+link.chave+'/hotel_reservas/'+rc22FonteChave(link)).update({status:'confirmado'}).then(function(){
+          return DB.ref('daycare/cadastro/'+link.chave+'/hotel_cadastro').update({estado:'confirmado'});
+        });
+      }); });
+      return fila;
+    });
+  }
+  function rc22PrecisaReconciliar(id,o){
+    return (o.pets||[]).some(function(p,i){
+      var chave=String(p.cadastro_ref||'');
+      var cad=chave?(pelCadCache||{})[chave]:null;
+      var fonte=(cad&&cad.hotel_reservas)?cad.hotel_reservas[ZeluzReservaCadastro.idDaReserva(id,p,i)]:null;
+      return !(cad&&fonte&&fonte.status==='confirmado');
+    });
+  }
+  function rc22ReconciliarFechadosVigentes(todos){
+    if(RC22_RECONCILIANDO) return RC22_RECONCILIANDO;
+    if(!DB || !rc22PodeMaterializar()) return Promise.resolve({ok:false, semPermissao:true, feitos:0});
+    var mapa=todos||((ORC_VIVOS&&ORC_VIVOS.lido&&ORC_VIVOS.todos)||{});
+    if(!todos && !(ORC_VIVOS&&ORC_VIVOS.lido)) return Promise.resolve({ok:false, leituraPendente:true, feitos:0});
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var pares=Object.keys(mapa||{}).map(function(id){ return {id:id,o:mapa[id]||{}}; })
+      .filter(function(x){ return ZeluzReservaCadastro.elegivelParaReconciliar(x.o,hoje) && rc22PrecisaReconciliar(x.id,x.o); });
+    RC22_RECONCILIANDO=pares.reduce(function(fila,x){ return fila.then(function(resultado){
+      return rc22PrepararFechado(x.id,'fechado').then(function(pre){
+        return rc22ConfirmarReconciliado(x.id,pre.links).then(function(){ resultado.feitos++; return resultado; });
+      }).catch(function(e){ resultado.falhas.push(String((e&&e.message)||e)); return resultado; });
+    }); },Promise.resolve({ok:true,feitos:0,falhas:[]})).then(function(r){ r.ok=!r.falhas.length; return r; })
+      .catch(function(e){ return {ok:false,feitos:0,falhas:[String((e&&e.message)||e)]}; })
+      .finally(function(){ RC22_RECONCILIANDO=null; });
+    return RC22_RECONCILIANDO;
+  }
+  function orcPrepararFichaReserva(id){
+    var o=(ORC_LISTA_CACHE||{})[id]||{};
+    if(String(o.status||'')!=='fechado') return;
+    if(!rc22PodeMaterializar()){ if(typeof zAlertao==='function') zAlertao('SEM PERMISSAO PARA A FICHA', ['Sua sessao nao pode preparar este cadastro. A hospedagem continua fechada.'], {botao:'Entendi'}); return; }
+    var bt=document.getElementById('orc-ficha-'+id); if(bt){ bt.disabled=true; bt.textContent='Preparando ficha...'; }
+    rc22PrepararFechado(id,'fechado').then(function(pre){ return rc22ConfirmarReconciliado(id,pre.links).then(function(){ return pre.links; }); }).then(function(links){
+      var local=(ORC_LISTA_CACHE||{})[id];
+      (links||[]).forEach(function(link){ if(local&&local.pets&&local.pets[link.indice]){ local.pets[link.indice].cadastro_ref=link.chave; local.pets[link.indice].cadastro_origem='reserva-fechada'; } });
+      if(typeof orcRenderLista==='function') orcRenderLista();
+      if(typeof zAlertao==='function') zAlertao('FICHA PREPARADA', ['Cadastro minimo vinculado. Complete os demais dados no check-in quando a hospedagem comecar.', 'Nenhum banho, plano ou check-in foi criado.'], {ok:true, botao:'Certo'});
+    }).catch(function(e){
+      var frase=String((e&&e.message)||e||'Nao foi possivel preparar a ficha minima.');
+      if(bt){ bt.disabled=false; bt.textContent='Preparar ficha'; }
+      if(typeof zAlertao==='function') zAlertao('CADASTRO AINDA PENDENTE', [frase, 'A hospedagem continua fechada. Confira os dados da reserva e toque em Preparar ficha de novo.'], {botao:'Entendi'});
+    });
+  }  function orcStatusGravarRelido(id, novo, op, o0){
+
     var reg=op.reg||null;
     var de=String(o0.status||'aguardando');
     // a situação de antes é a do RELIDO: se não é a que a ação espera (outro aparelho, uma tela velha, o console), nada é gravado
@@ -24174,7 +24336,9 @@
     patch[base+'status']=novo; patch[base+'status_em']=ts; patch[base+'status_por']=quem.nome;
     if(nf) patch[base+'nao_fechou']=nf;
     if(de==='nao_fechou' && novo==='aguardando') patch[base+'nao_fechou']=null;
-    if(novo==='fechado'){ patch[base+'planilha_tirada']=null; delete o.planilha_tirada; }   // o «Fechou» limpa a retirada (ela fica no planilha_hist)
+    if(novo==='fechado'){ patch[base+'planilha_tirada']=null; delete o.planilha_tirada; }
+    // O fechamento e sua contabilidade permanecem no fluxo legado. O cadastro minimo e
+    // vinculado depois, como pendencia recuperavel, sem criar servicos ou check-in.
     var forcado=ORC_DUP_OK_STATUS[id]||null;
     if(forcado) patch[base+'duplicado_confirmado']=forcado;
     var kH=orcNovaChave(base+'status_hist');
@@ -24205,7 +24369,14 @@
         else if(foiPlanilha && novo==='nao_fechou') orcTirarDaPlanilha(id, quem.nome, quando, {porque:'nao-fechou', marca:'CANCELADO', o:o0});
         if(novo==='nao_fechou') delete ORC_NF_RASCUNHO[id];
       }catch(x){ _logFalhaGrav('auaulandia/orcamentos (depois da mudança de situação)', x); }
-      return {ok:true};
+      if(novo!=='fechado') return {ok:true};
+      return rc22PrepararFechado(id,'fechado').then(function(pre){
+        return rc22ConfirmarReconciliado(id,pre.links).then(function(){ return {ok:true, cadastroPendente:false}; });
+      }).catch(function(e){
+        var frase=String((e&&e.message)||e||'Nao foi possivel vincular o cadastro minimo.');
+        if(!reg && typeof zAlertao==='function') zAlertao('RESERVA FECHADA; CADASTRO PENDENTE', [frase, 'A hospedagem continua fechada. No cartao dela, toque em Preparar ficha; nenhum banho ou check-in foi criado.'], {botao:'Entendi'});
+        return {ok:true, cadastroPendente:true, erroCadastro:frase};
+      });
     }).catch(function(e){
       _logFalhaGrav('auaulandia/orcamentos + daycare/reposicao (orcStatus)', e);
       // LOW-1: a rotina («Fechou», «Não fechou») não tem cartaz: a tela diz que NÃO foi gravado, com a frase da 6.48, e o
@@ -27310,7 +27481,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-14-08';
+  const APP_VERSAO='2026-10-15-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -37543,7 +37714,7 @@
     try{
       const baseKeys=new Set(PELUDINHOS.map(p=>pelKey(p)));
       Object.keys(pelCadCache||{}).forEach(k=>{ const c=pelCadCache[k];
-        if(c&&c._novo&&!c.excluido&&!baseKeys.has(k)){ PELUDINHOS.push({n:c.n||'',raca:c.raca||'',freq:c.freq||'',tutor:c.tutor||'',nasc:c.nasc||'',dias:Array.isArray(c.dias)?c.dias:[]}); baseKeys.add(k); }
+        if(c&&c._novo&&!c.excluido&&(!c.hotel_only||((c.hotel_cadastro||{}).estado==='confirmado'))&&!baseKeys.has(k)){ PELUDINHOS.push({n:c.n||'',raca:c.raca||'',freq:c.freq||'',tutor:c.tutor||'',nasc:c.nasc||'',dias:Array.isArray(c.dias)?c.dias:[]}); baseKeys.add(k); }
       });
       PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
     }catch(e){ _logFalhaGrav('mergeNovosAlunos', e); }
@@ -55855,6 +56026,7 @@
     return limpo;
   }
   function dashCarregar(forcar){
+
     var __diaSolicitado=dashDia();
     if(DASH_CARREGANDO[__diaSolicitado]) return DASH_CARREGANDO[__diaSolicitado];
     try{ dashCalCarregarMarcas(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
