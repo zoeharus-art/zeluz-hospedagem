@@ -15,7 +15,7 @@
   }
   function fonte(f){ return (f&&f.estado)||'indisponivel'; }
   function brDia(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||'')); return m?m[3]+'/'+m[2]+'/'+m[1]:String(iso||''); }
-  function itemBase(p){ return {id:String(p.id||''),nome:String(p.nome||'Animal não informado'),tutor:String(p.tutor||'Tutor não informado')}; }
+  function itemBase(p){ return {id:String(p.id||''),nome:String(p.nome||'Animal não informado'),tutor:String(p.tutor||'Tutor não informado'),telefone:String(p.telefone||''),detalhe:String(p.detalhe||'')}; }
   function textoMotivo(v){
     if(!v) return '';
     if(typeof v==='object') return [v.motivo,v.obs].filter(function(x){ return typeof x==='string'&&x.trim(); }).join(' · ');
@@ -23,32 +23,45 @@
   }
   function montar(entrada){
     entrada=entrada||{};
-    var relogio=agoraSP(entrada.agora), dia=String(entrada.dia||relogio.dia), chamada=entrada.chamada||{}, meta=entrada.chamadaMeta||{}, estadoChamada=fonte(chamada), estadoMeta=fonte(meta), estadoTurma=entrada.turmaEstado||'indisponivel';
-    var pronto=estadoChamada==='pronto'&&estadoMeta==='pronto'&&estadoTurma==='pronto';
-    var estado=pronto?'pronto':(estadoChamada==='falha'||estadoMeta==='falha'||estadoTurma==='falha'?'falha':'carregando');
+    var relogio=agoraSP(entrada.agora), dia=String(entrada.dia||relogio.dia), chamada=entrada.chamada||{}, meta=entrada.chamadaMeta||{}, checkinsFonte=entrada.checkins||{}, hospedesFonte=entrada.hospedes||{}, estadoChamada=fonte(chamada), estadoMeta=fonte(meta), estadoCheckins=fonte(checkinsFonte), estadoHospedes=fonte(hospedesFonte), estadoTurma=entrada.turmaEstado||'indisponivel';
+    var pronto=estadoChamada==='pronto'&&estadoMeta==='pronto'&&estadoCheckins==='pronto'&&estadoHospedes==='pronto'&&estadoTurma==='pronto';
+    var estado=pronto?'pronto':(estadoChamada==='falha'||estadoMeta==='falha'||estadoCheckins==='falha'||estadoHospedes==='falha'||estadoTurma==='falha'?'falha':'carregando');
     var base={dia:dia,geradoEm:relogio,estado:estado,itens:[],totais:{presentes:0,faltasConfirmadas:0,faltasRegistradasConferir:0,aguardando:0,aConferir:0,desconhecidos:0}};
     if(!pronto) return base;
-    var mapa=chamada.valores||{}, metas=meta.valores||{}, checkins=(entrada.checkins&&entrada.checkins.estado==='pronto'&&entrada.checkins.valores)||{};
+    var mapa=chamada.valores||{}, metas=meta.valores||{}, checkins=checkinsFonte.valores||{}, hospedes=hospedesFonte.valores||{};
     (entrada.participantes||[]).forEach(function(p){
       var i=itemBase(p), marca=mapa[i.id], ck=checkins[i.id]||null;
-      if(marca==='faltou' && metas[i.id]&&metas[i.id].origem==='manual'&&metas[i.id].estado==='faltou') { i.estado='falta-confirmada'; i.rotulo='Falta confirmada'; i.motivo=textoMotivo(p.motivo); i.quem=String(metas[i.id].quem||''); i.hora=String(metas[i.id].hora||''); base.totais.faltasConfirmadas++; }
+      if(ck&&ck.fim&&(!ck.tipo||ck.tipo==='entrada')) { i.estado='presente'; i.rotulo='Presente pelo check-in do corpo'; i.hora=ck.hora?String(ck.hora):''; base.totais.presentes++; }
+      else if(hospedes[i.id]) { i.estado='presente'; i.rotulo='Presente pela hospedagem ativa'; base.totais.presentes++; }
+      else if(marca==='faltou' && metas[i.id]&&metas[i.id].origem==='manual'&&metas[i.id].estado==='faltou') { i.estado='falta-confirmada'; i.rotulo='Falta confirmada'; i.motivo=textoMotivo(p.motivo); i.quem=String(metas[i.id].quem||''); i.hora=String(metas[i.id].hora||''); base.totais.faltasConfirmadas++; }
       else if(marca==='faltou') { i.estado='falta-registrada-conferir'; i.rotulo='Falta registrada — conferir'; i.motivo=textoMotivo(p.motivo); base.totais.faltasRegistradasConferir++; }
-      else if(marca==='veio'||ck) { i.estado='presente'; i.rotulo='Presente'; i.hora=(ck&&ck.hora)?String(ck.hora):''; base.totais.presentes++; }
       else if(dia!==relogio.dia) { i.estado='a-conferir'; i.rotulo='A conferir'; base.totais.aConferir++; }
-      else if(relogio.minutos<720) { i.estado='aguardando'; i.rotulo='Aguardando chegada'; base.totais.aguardando++; }
-      else { i.estado='a-conferir'; i.rotulo='A conferir'; base.totais.aConferir++; }
+      else if(relogio.minutos<660) { i.estado='aguardando'; i.rotulo='Aguardando check-in do corpo'; base.totais.aguardando++; }
+      else { i.estado='falta-a-contatar'; i.rotulo='Falta para contato'; base.totais.aConferir++; }
       base.itens.push(i);
     });
     return base;
   }
-  function etiqueta(estado){ return ({presente:'pm-b-ok','falta-confirmada':'pm-b-critico','falta-registrada-conferir':'pm-b-atencao',aguardando:'pm-b-atencao','a-conferir':'pm-b-atencao'})[estado]||'pm-b-atencao'; }
+  function etiqueta(estado){ return ({presente:'pm-b-ok','falta-confirmada':'pm-b-critico','falta-registrada-conferir':'pm-b-atencao','falta-a-contatar':'pm-b-critico',aguardando:'pm-b-atencao','a-conferir':'pm-b-atencao'})[estado]||'pm-b-atencao'; }
   function cardHTML(p){
     if(!p||p.estado!=='pronto'){
       var falha=p&&p.estado==='falha', msg=falha?'Os dados ainda não estão completos. Isto não confirma presença nem falta.':'Estou conferindo a presença do dia.';
       return '<article class="pm-card pm-rv pm-c12"><h3 class="pm-tit">Presença do dia</h3><p class="pm-sub">'+esc(msg)+'</p>'+(falha?'<div class="pm-acao"><button type="button" class="pm-bt" onclick="presencaAtualizar()">Atualizar presença</button></div>':'')+'</article>';
     }
-    var t=p.totais, linhas=p.itens.map(function(i){ var confirmar=i.estado==='falta-registrada-conferir'?'<button type="button" class="pm-bt" data-presenca-id="'+esc(i.id)+'" onclick="presencaConfirmarFalta(this.dataset.presencaId)">Confirmar falta</button>':''; return '<div class="pm-li"><span class="pm-badge '+etiqueta(i.estado)+'">'+esc(i.rotulo)+'</span><div class="pm-li-txt"><b>'+esc(i.nome)+'</b><span>Tutor: '+esc(i.tutor)+(i.quem?' · Confirmada por '+esc(i.quem):'')+(i.hora?' · '+esc(i.hora):'')+(i.motivo?' · '+esc(i.motivo):'')+'</span>'+confirmar+'</div></div>'; }).join('');
-    return '<article class="pm-card pm-rv pm-c12"><h3 class="pm-tit">Presença do dia</h3><p class="pm-sub">'+esc(brDia(p.dia))+' · Vamos conferir as faltas às 12h (São Paulo). A ausência de marcação não confirma falta.</p>'
+    var t=p.totais;
+    function linhaHTML(i){
+      var confirmar=i.estado==='falta-registrada-conferir'?'<button type="button" class="pm-bt" data-presenca-id="'+esc(i.id)+'" onclick="presencaConfirmarFalta(this.dataset.presencaId)">Confirmar falta</button>':'';
+      var ligar=i.estado==='falta-a-contatar'&&/^\+\d{12,13}$/.test(i.telefone)?'<a class="pm-bt pm-bt-ouro pm-bt-mini" href="tel:'+esc(i.telefone)+'">Ligar para o tutor</a>':'';
+      return '<div class="pm-li"><span class="pm-badge '+etiqueta(i.estado)+'">'+esc(i.rotulo)+'</span><div class="pm-li-txt"><b>'+esc(i.nome)+'</b><span>Tutor: '+esc(i.tutor)+(i.detalhe?' · '+esc(i.detalhe):'')+(i.quem?' · Confirmada por '+esc(i.quem):'')+(i.hora?' · '+esc(i.hora):'')+(i.motivo?' · '+esc(i.motivo):'')+'</span>'+(ligar?'<p style="margin-top:8px">'+ligar+'</p>':'')+confirmar+'</div></div>';
+    }
+    function grupoHTML(chave,titulo,itens){
+      if(!itens.length) return '';
+      return '<details class="pm-lista po-presenca-grupo" data-presenca-detalhe="'+esc(chave)+'"><summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:800;color:var(--z-blue)">'+esc(titulo)+' ('+itens.length+')</summary><div>'+itens.map(linhaHTML).join('')+'</div></details>';
+    }
+    var faltas=p.itens.filter(function(i){ return i.estado==='falta-confirmada'||i.estado==='falta-registrada-conferir'||i.estado==='falta-a-contatar'; });
+    var demais=p.itens.filter(function(i){ return faltas.indexOf(i)<0; });
+    var linhas=grupoHTML('faltas','Faltas e contatos',faltas)+grupoHTML('demais','Presentes e aguardando',demais);
+    return '<article class="pm-card pm-rv pm-c12"><h3 class="pm-tit">Presença do dia</h3><p class="pm-sub">'+esc(brDia(p.dia))+' · Após 11h (São Paulo), quem não tem check-in do corpo aparece para contato. Isto não registra falta nem contato automaticamente.</p>'
       +'<div class="pm-segleg"><span class="pm-segleg-i"><b>'+t.presentes+'</b> presentes</span><span class="pm-segleg-i"><b>'+t.faltasConfirmadas+'</b> faltas confirmadas</span><span class="pm-segleg-i"><b>'+t.faltasRegistradasConferir+'</b> registradas — conferir</span><span class="pm-segleg-i"><b>'+t.aguardando+'</b> aguardando</span><span class="pm-segleg-i"><b>'+t.aConferir+'</b> a conferir</span></div>'
       +'<div class="pm-lista">'+(linhas||'<div class="pm-li"><div class="pm-li-txt"><b>Nenhum participante carregado.</b></div></div>')+'</div>'
       +'<div class="pm-acao"><button type="button" class="pm-bt" onclick="presencaAtualizar()">Atualizar presença</button><button type="button" class="pm-bt" onclick="presencaImprimir(\'dia\')">Imprimir / salvar PDF</button><button type="button" class="pm-bt" onclick="presencaImprimir(\'faltas\')">PDF das faltas</button><button type="button" class="pm-bt" onclick="presencaAbrirChamada()">Abrir a Chamada</button></div></article>';

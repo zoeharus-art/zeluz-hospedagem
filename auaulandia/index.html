@@ -3188,6 +3188,7 @@
       <div class="pets-grid" id="ptGrid"></div>
       <div id="ptFicha" style="display:none"></div>
     </div>
+    <div id="scr-medicacao" class="dc-scr" style="display:none"></div>
     <div id="scr-generic" class="dc-scr" style="display:none">
       <!-- ENRIQUECIMENTO AMBIENTAL — Adriana, 19/ago/2026 ==========================
            "Preciso de um campo EA do dia: a pessoa digita 'abobrinha + hortelã', ou coco,
@@ -3243,7 +3244,7 @@
         <div class="hint">Só quem dormiu aqui. Cada um come <strong>o que está na ficha dele</strong> — nenhuma alimentação pode ser trocada. Marque conforme for servindo.</div>
         <div id="cafeBarraTempo"></div>
         <div id="cafeResumo"></div>
-        <div class="pets-grid" id="cafeGrid"></div>
+        <div class="pets-grid" id="cafeGrid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))"></div>
       </div>
       <div class="pets-grid" id="hospGrid"></div>
     </div>
@@ -5206,7 +5207,8 @@
 <script src="navegacao-inicio.js?v=2026-10-15-02"></script>
 <script src="hospedes-atividades.js?v=2026-10-16-01"></script>
 <script src="alimentacao-hospede.js?v=2026-10-16-01"></script>
-<script src="presenca-logica.js?v=2026-10-15-02"></script>
+<script src="cafe-operacional.js?v=2026-10-16-02"></script>
+<script src="presenca-logica.js?v=2026-10-16-02"></script>
 <script src="historico-checkins.js?v=2026-10-15-02"></script>
 <script src="historico-checkins-pdf.js?v=2026-10-15-02"></script>
 <script src="orcamento-acompanhamento.js?v=2026-10-15-02"></script>
@@ -5471,11 +5473,11 @@
       // Item 4 — remédio PRESCRITO PELA VET que chegou na data de término. A agenda inteira fica em
       // memória (só muda quando alguém prescreve/altera — não é o log de doses), para o aviso valer
       // mesmo para quem já foi embora, não só para os hóspedes de hoje.
-      DB.ref('auaulandia/medicacao-agenda').on('value', s=>{ MED_AGENDA_GERAL=s.val()||{};
+      DB.ref('auaulandia/medicacao-agenda').on('value', s=>{ MED_AGENDA_GERAL=s.val()||{}; MED_AGENDA_GERAL_CARREGADA=true; MED_AGENDA_GERAL_ERRO='';
         try{ if(typeof checarMedsEncerradas==='function') checarMedsEncerradas(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
         // 6.54 (AC20): remédio mudado em outro aparelho refaz a fila do alarme aqui (só quem recebe o alarme).
         try{ if(typeof mcrRearmarAlarme==='function') mcrRearmarAlarme(); }catch(e){} /* silencioso de propósito: sem isto, a fila se refaz na próxima leitura da lista */
-      });
+      }, e=>{ MED_AGENDA_GERAL_CARREGADA=false; MED_AGENDA_GERAL_ERRO=String((e&&e.message)||'falha de leitura'); });
       // Observações/exames da Veterinária para o tutor (ex.: "ouvido só com sujeira"). Visível a todos,
       // alimenta o retorno da Marcia ao cliente e o futuro módulo do cliente.
       DB.ref('auaulandia/vet-observacoes').on('value', s=>{ VET_OBS_CACHE=s.val()||{};
@@ -14794,119 +14796,187 @@
   // hóspedes e é focada na AuAulândia"). Mesmo protocolo do almoço: cada um come o que
   // está na ficha dele, e NADA se troca.
   var cafeMarcas={}, cafeTempo={};
-  function cafeDataKey(){ return (typeof dcDataKey==='function')?dcDataKey():''; }
+  var cafeLeitura={dia:'',geracao:0,cafe:'nao-lido',turno:'nao-lido',promessa:null};
+  function cafePartesSP(agora){
+    var partes=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',weekday:'short',hourCycle:'h23'}).formatToParts(agora instanceof Date?agora:new Date());
+    var out={}; partes.forEach(function(p){ out[p.type]=p.value; }); return out;
+  }
+  function cafeDataKey(){ var p=cafePartesSP(); return p.year+'-'+p.month+'-'+p.day; }
+  function cafeHoraSP(){ var p=cafePartesSP(); return p.hour+':'+p.minute; }
+  function cafeLeituraPronta(){ return cafeLeitura.cafe==='ok'&&cafeLeitura.turno==='ok'&&cafeLeitura.dia===cafeDataKey(); }
+  function cafeFalhaLeitura(){ return cafeLeitura.cafe==='falha'||cafeLeitura.turno==='falha'; }
   function cafeCarregar(){
-    if(!DB){ renderCafe(); return; }
-    Promise.all([
-      DB.ref('auaulandia/cafe/'+cafeDataKey()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
-      DB.ref('auaulandia/cafe-turno/'+cafeDataKey()).once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
-    ]).then(function(r){ cafeMarcas=r[0]; cafeTempo=r[1]; renderCafe(); });
+    var dia=cafeDataKey();
+    if(cafeLeitura.dia===dia&&cafeLeitura.promessa) return cafeLeitura.promessa;
+    if(cafeLeitura.dia===dia&&cafeLeitura.cafe==='ok'&&cafeLeitura.turno==='ok'&&Date.now()-(cafeLeitura.atualizadoEm||0)<15000) return Promise.resolve(cafeLeitura);
+    var geracao=(cafeLeitura.geracao||0)+1;
+    cafeLeitura={dia:dia,geracao:geracao,cafe:'lendo',turno:'lendo',promessa:null};
+    if(!DB){ cafeLeitura.cafe='falha'; cafeLeitura.turno='falha'; renderCafe(); return Promise.resolve(cafeLeitura); }
+    function ler(caminho){ return DB.ref(caminho).once('value').then(function(s){ return {ok:true,valor:s.val()||{}}; },function(erro){ return {ok:false,erro:erro}; }); }
+    var promessa=Promise.all([ler('auaulandia/cafe/'+dia),ler('auaulandia/cafe-turno/'+dia)]).then(function(r){
+      if(cafeLeitura.geracao!==geracao||cafeLeitura.dia!==dia) return cafeLeitura;
+      cafeLeitura.cafe=r[0].ok?'ok':'falha'; cafeLeitura.turno=r[1].ok?'ok':'falha'; cafeLeitura.erros={cafe:r[0].erro||null,turno:r[1].erro||null};
+      if(r[0].ok) cafeMarcas=r[0].valor;
+      if(r[1].ok) cafeTempo=r[1].valor;
+      cafeLeitura.promessa=null; cafeLeitura.atualizadoEm=Date.now(); renderCafe(); return cafeLeitura;
+    });
+    cafeLeitura.promessa=promessa; renderCafe(); return promessa;
   }
   function cafeKey(h){ return (typeof medAgendaKey==='function')?medAgendaKey(h):((h.nome||'')+'__'+(h.tutor||'')).toLowerCase(); }
   function cafeEstado(k){ var v=cafeMarcas[k]; return (v&&v.estado)||(typeof v==='string'?v:''); }
-  function marcarCafe(k,val){
+  function marcarCafePersistir(k,val){
     var cur=cafeEstado(k), nx=(cur===val)?'':val;
-    // 6.67 (AC4.1): a troca e o desmarcar deixam rastro — o registro do dia guarda `antes` (a marca anterior, quem e hora) e a
-    // auditoria diz quem desmarcou o quê. O toque continua um toque.
-    // 6.67 (2ª rodada, REL-004): por transação, com o `antes` tirado do banco — a marca que outro aparelho fez não some sem rastro.
-    // A tela mostra o toque na hora; quando o banco confirma, a tela fica com o que ele guardou (e o rastro entra só então).
-    var quem=(typeof quemSou==='function'?quemSou():'-'), hora=(typeof horaAgora==='function'?horaAgora():'');
-    var antesTela=cafeAntesDe(k), regTela=nx?{estado:nx, quem:quem, hora:hora}:null;
-    if(antesTela){ regTela=regTela||{estado:'', quem:quem, hora:hora, limpo:true}; regTela.antes=antesTela; }
-    if(regTela) cafeMarcas[k]=regTela; else delete cafeMarcas[k];
-    renderCafe();
-    if(!DB) return;
-    var antes=null, estado='';
+    var quem=(typeof quemSou==='function'?quemSou():'-'), hora=cafeHoraSP();
+    if(!DB){ if(typeof alert==='function') alert('Sem conexão com o registro do café. Nenhuma marcação foi confirmada.'); return false; }
+    var antes=null, estado='', pendente={estado:nx,quem:quem,hora:hora};
+    cafeMarcasPendentes[k]=pendente; renderCafe();
     DB.ref('auaulandia/cafe/'+cafeDataKey()+'/'+k).transaction(function(atual){
       antes=cafeAntesDoValor(atual); estado='ok';
-      if((antes?antes.estado:'')===nx){ estado='igual'; return (atual===null || atual===undefined)?null:undefined; }   // já estava assim no banco
+      if((antes?antes.estado:'')===nx){ estado='igual'; return (atual===null || atual===undefined)?null:undefined; }
       var reg=nx?{estado:nx, quem:quem, hora:hora}:null;
       if(antes){ reg=reg||{estado:'', quem:quem, hora:hora, limpo:true}; reg.antes=antes; }
       return reg;
     }).then(function(res){
+      if(cafeMarcasPendentes[k]!==pendente) return;
+      delete cafeMarcasPendentes[k];
       var v=(res && res.snapshot && res.snapshot.val)?res.snapshot.val():null;
       if(v!==null && v!==undefined) cafeMarcas[k]=v; else delete cafeMarcas[k];
       renderCafe();
       if(!res || !res.committed || estado!=='ok') return;
       if(typeof audit==='function'&&nx) audit('cafe', nx==='tudo'?'tomou o café todo':(nx==='metade'?'tomou metade':(nx==='naochegou'?'ainda não tinha chegado':'não tomou')), {alvo:k});
       if(antes) ac667Audit('cafe-desmarcado', 'desmarcou "'+cafeRotulo(antes.estado)+'" de '+cafePetDe(k)+ac667Era(antes.quem, antes.hora)+(nx?(' e marcou "'+cafeRotulo(nx)+'"'):''), {alvo:k, antes:antes, depois:nx});
-    }).catch(function(e){ _logFalhaGrav('auaulandia/cafe/ (marcarCafe)', e); });
+    }).catch(function(e){
+      if(cafeMarcasPendentes[k]===pendente) delete cafeMarcasPendentes[k];
+      renderCafe(); _logFalhaGrav('auaulandia/cafe/ (marcarCafe)', e);
+      if(typeof alert==='function') alert('Não consegui confirmar esta marcação do café. O estado anterior foi preservado.');
+    });
+    return true;
   }
   async function iniciarCafe(){
-    var r=await turnoTrocar('auaulandia/cafe-turno/'+cafeDataKey(),'inicio','quemInicio',cafeTempo,'O início do café da manhã'); if(!r) return;
-    cafeTempo=Object.assign({},cafeTempo,r.patch,{caes:hospedes.length});
-    if(DB) DB.ref('auaulandia/cafe-turno/'+cafeDataKey()).update({caes:hospedes.length}).catch(function(e){ _logFalhaGrav('auaulandia/cafe-turno/ (iniciarCafe)', e); });
+    var leitura=cafeParticipantesAtivos(), guarda=cafePodeOperar();
+    if(!guarda.ok||!leitura.pronto){ if(typeof alert==='function') alert(guarda.mensagem||'Ainda estou lendo os dados confirmados do café. O café não foi iniciado.'); return; }
+    var cafeN=leitura.participantes.length, r=await cafeTrocarTurno('inicio','quemInicio',cafeTempo,'O início do café da manhã',{caes:cafeN}); if(!r) return;
+    cafeTempo=Object.assign({},cafeTempo,r.patch,{caes:cafeN});
     if(typeof audit==='function') audit('cafe_ini','iniciou o café da manhã às '+r.h); renderCafe();
   }
   async function encerrarCafe(){
-    var r=await turnoTrocar('auaulandia/cafe-turno/'+cafeDataKey(),'fim','quemFim',cafeTempo,'O fim do café da manhã'); if(!r) return;
+    var guarda=cafePodeOperar();
+    if(!guarda.ok){ if(typeof alert==='function') alert(guarda.mensagem); return; }
+    var r=await cafeTrocarTurno('fim','quemFim',cafeTempo,'O fim do café da manhã'); if(!r) return;
     cafeTempo=Object.assign({},cafeTempo,r.patch);
     if(typeof audit==='function') audit('cafe_fim','encerrou o café da manhã às '+r.h); renderCafe();
   }
+  var cafeMarcasPendentes={};
+  function cafeAutor(){
+    var q=typeof quemSou==='function'?String(quemSou()||'').trim():'';
+    return q&&q!=='-'&&q!=='—'?q:'';
+  }
+  function cafePodeOperar(){
+    if(!cafeLeituraPronta()) return {ok:false,mensagem:cafeFalhaLeitura()?'Não foi possível confirmar as marcas e o turno do café. Verifique a conexão e tente novamente.':'Ainda estou lendo as marcas e o turno confirmados do café.'};
+    if(!DB) return {ok:false,mensagem:'Sem conexão com o registro do café. Nenhuma marcação foi gravada.'};
+    if(!cafeAutor()) return {ok:false,mensagem:'Não identifiquei quem está operando o café. Entre novamente antes de registrar.'};
+    return {ok:true,mensagem:''};
+  }
+  function cafeChaveAcao(v){ return JSON.stringify(String(v==null?'':v)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+  function cafeRegistroVisivel(k){
+    if(cafeMarcasPendentes[k]) return '<div class="hint" style="margin-top:7px;font-size:11px">Registrando o café… aguarde a confirmação.</div>';
+    var r=(cafeMarcas||{})[k]; if(!r||typeof r==='string') return '';
+    var quem=String(r.quem||'').trim(), hora=String(r.hora||'').trim();
+    return (quem||hora)?'<div class="hint" style="margin-top:7px;font-size:11px">Registrado'+(quem?' por '+escAttr(quem):'')+(hora?' às '+escAttr(hora):'')+'.</div>':'';
+  }
+  function cafeMotivoConferencia(c){
+    var motivos={'conferir-dia':'instruções de entrada e saída do dia precisam ser conferidas','conferir-refeicao':'o plano de café está sem confirmação','conferir-quantidade':'a quantidade do café precisa ser confirmada','conferir-unidade-racao':'a unidade da ração precisa ser confirmada','identidade-a-confirmar':'a identidade do hóspede precisa ser confirmada','estadias-ativas-duplicadas':'há mais de uma estadia ativa para este hóspede','alimentacao-carregando':'o plano alimentar ainda está carregando','modulo-cafe-ausente':'o módulo de café não está disponível'};
+    return motivos[c&&c.estado]||'dados do café precisam ser conferidos';
+  }
+  function cafeAvisos(conferencias){
+    if(!(conferencias||[]).length) return '';
+    var itens=conferencias.map(function(c){ var nome=String(c.nome||c.refKey||c.estadiaId||'Hóspede sem identificação'), tutor=String(c.tutor||'').trim(); return '<li><strong>'+escAttr(nome)+'</strong>'+(tutor?' · '+escAttr(tutor):'')+' — '+escAttr(cafeMotivoConferencia(c))+'.</li>'; }).join('');
+    return '<details class="hint" style="grid-column:1/-1"><summary><strong>Café a conferir:</strong> '+conferencias.length+' hospedagem(ns) precisa(m) de conferência antes de servir.</summary><ul style="margin:8px 0 0 18px">'+itens+'</ul></details>';
+  }
+  function marcarCafe(k,val){
+    var guarda=cafePodeOperar();
+    if(!guarda.ok){ if(typeof alert==='function') alert(guarda.mensagem); return false; }
+    if(cafeMarcasPendentes[k]){ if(typeof alert==='function') alert('Esta marcação ainda está sendo confirmada. Aguarde antes de registrar outra.'); return false; }
+    var leitura=cafeParticipantesAtivos(), seguro=(leitura.participantes||[]).some(function(o){ return cafeKey(o.hospede||{})===k; });
+    if(!leitura.pronto||!seguro){ if(typeof alert==='function') alert('Este hóspede precisa de conferência antes de registrar o café.'); return false; }
+    return marcarCafePersistir(k,val);
+  }
+  async function cafeTrocarTurno(campo,campoQuem,turno,rotulo,adicionais){
+    var dia=cafeDataKey(), h=cafeHoraSP(), q=cafeAutor(), atual=(turno||{})[campo], quemAtual=(turno||{})[campoQuem], caminho='auaulandia/cafe-turno/'+dia;
+    if(atual){
+      if(!await zPergunta(rotulo+' de hoje JÁ foi registrado às '+atual+(quemAtual?' por '+quemAtual:''),['Se continuar, o horário passa a ser o seu ('+h+') e o de '+(quemAtual||'quem registrou')+' sai do relatório.','Quer mesmo trocar?'],{sim:'Trocar o horário', nao:'Manter como está'})) return null;
+    }
+    if(!cafePodeOperar().ok||cafeDataKey()!==dia||cafeAutor()!==q){ if(typeof alert==='function') alert('O contexto do café mudou durante a confirmação. Atualize e tente novamente.'); return null; }
+    try{
+      var remoto=(await DB.ref(caminho).once('value')).val()||{};
+      if(String(remoto[campo]||'')!==String(atual||'')){ if(typeof alert==='function') alert('O turno foi atualizado em outro aparelho. A tela foi preservada para conferência.'); cafeCarregar(); return null; }
+      if(atual) await DB.ref(caminho+'/historico').push({campo:campo,era:atual,eraQuem:(quemAtual||'-'),virou:h,virouQuem:q,ts:Date.now()});
+      var patch={}; patch[campo]=h; patch[campoQuem]=q; Object.keys(adicionais||{}).forEach(function(k){ patch[k]=adicionais[k]; });
+      await DB.ref(caminho).update(patch);
+      if(atual){ try{ if(typeof audit==='function') audit('turno-sobrescrito',rotulo+': '+atual+' ('+(quemAtual||'-')+') passou para '+h+' ('+q+')'); }catch(e){} }
+      return {h:h,patch:patch};
+    }catch(e){ _logFalhaGrav('cafeTrocarTurno',e); if(typeof alert==='function') alert('Não consegui confirmar o turno do café. Nada foi concluído nesta tela.'); return null; }
+  }
+  function cafeParticipantesAtivos(){
+    if(typeof ZeluzCafeOperacional==='undefined') return {pronto:false,participantes:[],conferencias:[{estado:'modulo-cafe-ausente'}]};
+    return ZeluzCafeOperacional.criar({
+      pronto:(typeof CF_ESTADIAS_LIDO!=='undefined'&&CF_ESTADIAS_LIDO===true),
+      estadias:(typeof EST_TODAS!=='undefined'&&EST_TODAS)||{},
+      hospedes:function(){return (typeof hospedes!=='undefined'&&hospedes)||[];},
+      hoje:function(){return cafeDataKey();}
+    }).ler();
+  }
   function renderCafe(){
     var grid=document.getElementById('cafeGrid'); if(!grid) return;
-    var barra=document.getElementById('cafeBarraTempo');
-    var dur=diffMin(cafeTempo.inicio,cafeTempo.fim);
-    var n=hospedes.length;
+    var barra=document.getElementById('cafeBarraTempo'), leitura=cafeParticipantesAtivos(), guarda=cafePodeOperar();
+    var itens=leitura.participantes||[], dur=diffMin(cafeTempo.inicio,cafeTempo.fim), n=itens.length;
     if(barra) barra.innerHTML='<div class="alm-turno" style="margin-bottom:10px">'
       +'<div><div class="tb-lab">Café da manhã</div>'
       +'<div style="font-size:13px;margin-top:3px">Início: <strong>'+(cafeTempo.inicio||'-')+'</strong>'+(cafeTempo.quemInicio?(' ('+escAttr(cafeTempo.quemInicio)+')'):'')
       +' · Fim: <strong>'+(cafeTempo.fim||'-')+'</strong>'+(dur!=null?(' · '+fmtDur(dur)):'')
       +(dur!=null&&n?(' · <strong>'+(dur/n).toFixed(1).replace('.',',')+' min por FILHOt</strong>'):'')+'</div></div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
-      +'<button class="btn btn-gold" onclick="iniciarCafe()">&#9654; Iniciar</button>'
-      +'<button class="btn" style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="encerrarCafe()">&#9632; Encerrar</button>'
+      +'<button class="btn btn-gold" '+(guarda.ok?'':'disabled aria-disabled="true"')+' onclick="iniciarCafe()">&#9654; Iniciar</button>'
+      +'<button class="btn" '+(guarda.ok?'':'disabled aria-disabled="true"')+' style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="encerrarCafe()">&#9632; Encerrar</button>'
       +'</div></div>';
     var rz=document.getElementById('cafeResumo');
-    if(!hospedes.length){ grid.innerHTML='<div class="hint" style="grid-column:1/-1">Ninguém dormiu aqui esta noite — sem café da manhã hoje.</div>'; if(rz) rz.innerHTML=''; return; }
-    // Adriana, 13/ago/2026: "tem que dar a opção — não chegou ainda". A Ella e o Toddy entram
-    // hoje mas só chegam à tarde: apareciam na lista do café como pendência, e quem serve fica
-    // sem saber se esqueceu alguém. "Não chegou" não é falta de café — sai da conta de quem
-    // falta, mas continua contado à parte, para ninguém achar que o FILHOt foi esquecido.
-    var _est=hospedes.map(function(h){ return cafeEstado(cafeKey(h)); });
+    if(cafeFalhaLeitura()){ grid.innerHTML='<div class="hint" style="grid-column:1/-1"><strong>Não foi possível confirmar os registros do café.</strong> As marcas e o turno anteriores foram preservados, mas nada pode ser servido ou registrado até uma nova leitura bem-sucedida.</div>'; if(rz) rz.innerHTML=''; return; }
+    if(!cafeLeituraPronta()||!leitura.pronto){ grid.innerHTML='<div class="hint" style="grid-column:1/-1">Ainda lendo os check-ins e os registros confirmados do café. Não vou montar a lista no escuro.</div>'; if(rz) rz.innerHTML=''; return; }
+    var avisos=cafeAvisos(leitura.conferencias||[]);
+    if(!itens.length){ grid.innerHTML=avisos+'<div class="hint" style="grid-column:1/-1">Nenhum hóspede com café confirmado no check-in para hoje.</div>'; if(rz) rz.innerHTML=''; return; }
+    var _est=itens.map(function(o){ return cafeEstado(cafeKey(o.hospede)); });
     var naochegou=_est.filter(function(e){ return e==='naochegou'; }).length;
-    var servidos=_est.filter(function(e){ return e && e!=='naochegou'; }).length;
-    var faltam=hospedes.length-servidos-naochegou;
+    var servidos=_est.filter(function(e){ return e&&e!=='naochegou'; }).length;
+    var faltam=itens.length-servidos-naochegou;
     if(rz) rz.innerHTML='<div class="dc-resumo"><div class="dc-stat ok"><b>'+servidos+'</b>servidos</div>'
       +'<div class="dc-stat pend"><b>'+faltam+'</b>faltam</div>'
       +(naochegou?'<div class="dc-stat"><b>'+naochegou+'</b>não chegou ainda</div>':'')+'</div>';
-    grid.innerHTML=hospedes.map(function(h){
-      var k=cafeKey(h), m=cafeEstado(k);
-      var cad=(typeof getCad==='function')?(getCad(h)||{}):{};
+    grid.innerHTML=avisos+itens.map(function(o){
+      var h=o.hospede||{}, plano=o.plano||{}, por=o.porcao||{}, k=cafeKey(h), m=cafeEstado(k), pendente=!!cafeMarcasPendentes[k];
       var foto=(typeof fotoDe==='function')?fotoDe(h):'';
       var ph=foto?'<div class="ph" style="background-image:url(\''+foto+'\');background-size:cover;background-position:center"></div>'
-                 :'<div class="ph" style="background:'+(h.cor||'#234D67')+'">'+(h.ini||'?')+'</div>';
-      var alim=cad.alim||cad.alimentacao||'';
-      var restr=cad.restricao||cad.alergia||'';
-      // O CAFÉ DO HÓSPEDE (Adriana, 23/set/2026): a quantidade que foi CONFIRMADA no check-in,
-      // e o aviso de que hoje não há ração. Antes este cartão só dizia "Come: ração" — quem
-      // serve não sabia quanto pôr no pote e acabava perguntando a quem passou o plantão.
-      var aC=null; try{ aC=(typeof alimDoHospede==='function')?alimDoHospede(h):null; }catch(e){ aC=null; } /* silencioso de propósito: sem a estadia o cartão fica como era */
+                 :'<div class="ph" style="background:'+(h.cor||'#234D67')+'">'+(h.ini||((h.nome||'?')[0]||'?').toUpperCase())+'</div>';
       var linhaCafe='';
-      if(aC&&aC.semRacao){
-        linhaCafe='<div class="alm-restr">SEM RAÇÃO &mdash; comida úmida da casa</div>';
-      } else if(aC&&aC.cafe&&(aC.cafe.on||aC.cafe.racao||aC.cafe.natural||aC.cafe.extra)){
-        var pc=[];
-        if(aC.cafe.racao) pc.push(aC.cafe.racao+(aC.unidade==='gramas'?' g':(aC.unidade?(' '+aC.unidade):''))+' de ração');
-        if(aC.cafe.natural) pc.push(aC.cafe.natural+' g de natural');
-        if(aC.cafe.extra) pc.push(aC.cafe.extra);
-        if(pc.length) linhaCafe='<div class="alm-info"><div class="alm-line"><span>Café</span><b>'+escAttr(pc.join(' + '))+'</b></div></div>';
+      if(por.semRacao) linhaCafe='<div class="alm-restr">'+escAttr(por.texto)+'</div>';
+      else {
+        if(por.texto) linhaCafe+='<div class="alm-info"><div class="alm-line"><span>Café</span><b>'+escAttr(por.texto)+'</b></div></div>';
+        if(por.extra) linhaCafe+='<div class="alm-info"><div class="alm-line"><span>Complemento</span><b>'+escAttr(por.extra)+'</b></div></div>';
+        if(por.pendente) linhaCafe+='<div class="alm-restr">⚠ '+escAttr(por.pendente)+'</div>';
       }
       return '<div class="pet alm-card '+(m||'')+'">'+ph
         +'<div class="nm">'+escAttr(h.nome||'')+'</div>'
-        +'<div class="br">'+escAttr((typeof racaDe==='function'?(racaDe(h)||''):''))+'</div>'
-        +(restr?'<div class="alm-restr">&#9888; '+escAttr(restr)+'</div>':'')
+        +'<div class="br">'+escAttr(h.raca||(typeof racaDe==='function'?(racaDe(h)||'') :''))+'</div>'
+        +(plano.restricao?'<div class="alm-restr">&#9888; '+escAttr(plano.restricao)+'</div>':'')
         +linhaCafe
-        +(alim?'<div class="alm-info"><div class="alm-line"><span>Come</span><b>'+escAttr(alim)+'</b></div></div>':'')
+        +(plano.marca?'<div class="alm-info"><div class="alm-line"><span>Ração</span><b>'+escAttr(plano.marca)+'</b></div></div>':'')
+        +cafeRegistroVisivel(k)
         +'<div class="alm-actions"><div class="alm-seg">'
-        +'<button class="alm-btn tudo '+(m==='tudo'?'on':'')+'" onclick="marcarCafe(\''+k+'\',\'tudo\')">Comeu</button>'
-        +'<button class="alm-btn metade '+(m==='metade'?'on':'')+'" onclick="marcarCafe(\''+k+'\',\'metade\')">Metade</button>'
-        +'<button class="alm-btn nao '+(m==='nao'?'on':'')+'" onclick="marcarCafe(\''+k+'\',\'nao\')">Não comeu</button>'
-        +'</div>'
-        +'<button class="alm-btn'+(m==='naochegou'?' on':'')+'" style="width:100%;margin-top:6px;'
+        +'<button class="alm-btn tudo '+(m==='tudo'?'on':'')+'" '+(pendente?'disabled aria-disabled="true"':'')+' onclick="marcarCafe('+cafeChaveAcao(k)+','+cafeChaveAcao('tudo')+')">Comeu</button>'
+        +'<button class="alm-btn metade '+(m==='metade'?'on':'')+'" '+(pendente?'disabled aria-disabled="true"':'')+' onclick="marcarCafe('+cafeChaveAcao(k)+','+cafeChaveAcao('metade')+')">Metade</button>'
+        +'<button class="alm-btn nao '+(m==='nao'?'on':'')+'" '+(pendente?'disabled aria-disabled="true"':'')+' onclick="marcarCafe('+cafeChaveAcao(k)+','+cafeChaveAcao('nao')+')">Não comeu</button>'
+        +'</div><button class="alm-btn'+(m==='naochegou'?' on':'')+'" style="width:100%;margin-top:6px;'
         +(m==='naochegou'?'background:var(--z-blue);color:var(--z-cream);border-color:var(--z-blue)':'')
-        +'" onclick="marcarCafe(\''+k+'\',\'naochegou\')">Não chegou ainda</button>'
-        +'</div></div>';
+        +'" '+(pendente?'disabled aria-disabled="true"':'')+' onclick="marcarCafe('+cafeChaveAcao(k)+','+cafeChaveAcao('naochegou')+')">Não chegou ainda</button></div></div>';
     }).join('');
   }
   function renderHosp(){
@@ -27483,7 +27553,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-16-01';
+  const APP_VERSAO='2026-10-16-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -35317,7 +35387,7 @@
   // ==================================================================================
   VET_RECOM_CACHE={};      // {key:{texto,cuidados[],por,ts,consultaId,ativo}} — instruções ativas
   var VET_REAVAL_CACHE={};     // {key:{data:'YYYY-MM-DD',motivo,por,ts}} — reavaliação marcada
-  var MED_AGENDA_GERAL={};     // {key:{nome,tutor,itens:{id:item}}} — TODA a agenda de medicação (item 4)
+  var MED_AGENDA_GERAL={}, MED_AGENDA_GERAL_CARREGADA=false, MED_AGENDA_GERAL_ERRO='';     // agenda clínica e estado da leitura
   var VET_MED_CACHE={};        // {itemId:item} — medicação do hóspede aberto no Cuidado Vet
   var VET_CONSULTAS_CACHE={};  // {consultaId:consulta} — histórico do hóspede aberto
   var vetHosp=null;            // hóspede aberto no Cuidado Vet
@@ -45153,15 +45223,34 @@
   // ===== DAY CARE — chamada visual a prova de burros (Aulunos do dia) =====
   const HOJE_DIA=(()=>{ const d=new Date().getDay(); return (d>=1&&d<=5)?ORDEM_DIAS[d-1]:'seg'; })();
   let dcDia=HOJE_DIA, dcChamada={}, dcAvulsos=[], dcAtiv='chamada';
-  const ATIVS_DC=[{s:'checkin-corpo',t:'Check-in do corpo'},{s:'checkin-pert',t:'Check-in dos pertences'},{s:'chamada',t:'Chamada',esp:1},{s:'livre',t:'Atividade livre'},{s:'ea',t:'Enriquecimento Ambiental (EA)'},{s:'aucademia',t:'Aucademia'},{s:'almoco',t:'Almoço',esp:1},{s:'almoco2',t:'2º Horário de Almoço'},{s:'massagem',t:'Massagem Dessensibilizadora'},{s:'escova',t:'Escova de Dentes'},{s:'jogos',t:'Jogos Cognitivos'},{s:'aulinha',t:'Aulinha de Disciplina'},{s:'agility',t:'Agility Funcional'},{s:'musicoterapia',t:'Musicoterapia'},{s:'checkout-pert',t:'Check-out dos pertences'},{s:'checkout-corpo',t:'Check-out do corpinho'},
+  const ATIVS_DC=[{s:'cafe',t:'Café da manhã'},{s:'checkin-corpo',t:'Check-in do corpo'},{s:'checkin-pert',t:'Check-in dos pertences'},{s:'chamada',t:'Chamada',esp:1},{s:'livre',t:'Atividade livre'},{s:'ea',t:'Enriquecimento Ambiental (EA)'},{s:'aucademia',t:'Aucademia'},{s:'almoco',t:'Almoço',esp:1},{s:'almoco2',t:'2º Horário de Almoço'},{s:'massagem',t:'Massagem Dessensibilizadora'},{s:'escova',t:'Escova de Dentes'},{s:'jogos',t:'Jogos Cognitivos'},{s:'aulinha',t:'Aulinha de Disciplina'},{s:'agility',t:'Agility Funcional'},{s:'musicoterapia',t:'Musicoterapia'},{s:'checkout-pert',t:'Check-out dos pertences'},{s:'checkout-corpo',t:'Check-out do corpinho'},
     // Adriana, 27/ago/2026: duas atividades de UM campo so, para o monitor. Sao os unicos
     // dados da ficha que ele altera — peso e foto — e caem na MESMA ficha que a Gestao le.
-    {s:'peso',t:'Peso do peludinho',esp:1},{s:'foto',t:'Foto do peludinho',esp:1}];
+    {s:'peso',t:'Peso do peludinho',esp:1},{s:'foto',t:'Foto do peludinho',esp:1},{s:'medicacao',t:'Medicamentos',esp:1}];
   function dcDataKey(){ const p=x=>String(x).padStart(2,'0'); const d=new Date(); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function dcKey(name,tutor){ return jsNorm((name||'')+'__'+(tutor||'')).replace(/[.#$\[\]\/ ]/g,'-'); }
+  function cafeAcessoOperacional(agora){
+    var papel=String((document.body&&document.body.dataset&&document.body.dataset.role)||'');
+    if(['monitor','supervisor','gestao','diretoria','plantonista'].indexOf(papel)<0) return false;
+    if(papel!=='monitor') return true;
+    var d=agora instanceof Date?agora:new Date(), p=cafePartesSP(d), semana={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+    if(semana[p.weekday]!==6) return true;
+    var min=Number(p.hour)*60+Number(p.minute);
+    return min>=7*60&&min<19*60;
+  }
+  function cafeAbrirOperacional(){
+    if(!cafeAcessoOperacional()){ if(typeof alert==='function') alert('O Café da manhã abre para o monitor no sábado entre 07h e 19h.'); return false; }
+    dcAtiv='cafe';
+    if(typeof irParaView==='function') irParaView('hospedagem');
+    try{ cafeCarregar(); }catch(e){}
+    setTimeout(function(){ try{ var card=document.getElementById('card-cafe'); if(card) card.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} },60);
+    if(typeof closeNav==='function') closeNav();
+    return true;
+  }
   function montarSubnav(){ const sm=document.getElementById('dcSubnav'); if(!sm) return;
     const escopo=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null;
     let ativs=escopo?ATIVS_DC.filter(a=>escopo.indexOf(a.s)>=0):ATIVS_DC;
+    if(cafeAcessoOperacional()&&!ativs.some(function(a){return a.s==='cafe';})) ativs=ativs.concat(ATIVS_DC.filter(function(a){return a.s==='cafe';}));
     // Atividades em ordem ALFABETICA (Adriana 21/jul). EXCECAO: "2º Horário de Almoço" logo abaixo de "Almoço".
     ativs=ativs.slice().sort((a,b)=>(a.t||'').localeCompare((b.t||''),'pt',{sensitivity:'base'}));
     var _i2=ativs.findIndex(a=>a.s==='almoco2');
@@ -45337,7 +45426,7 @@
   }
   function abrirDayCare(){ abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); }
   function setDcDia(d){ dcDia=d; if(typeof irParaView==='function') irParaView('daycare'); abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
-  function abrirAtividade(slug){ const escopo=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null; if(escopo&&escopo.indexOf(slug)<0) slug=escopo[0]; dcAtiv=slug;
+  function abrirAtividade(slug){ if(slug==='cafe') return cafeAbrirOperacional(); const escopo=(typeof atividadesPermitidas==='function')?atividadesPermitidas():null; if(escopo&&escopo.indexOf(slug)<0) slug=escopo[0]; dcAtiv=slug;
     // Relê o cronômetro ao entrar na atividade: o app pode ter ficado horas fechado.
     try{ if(typeof ativCarregarTempo==='function') ativCarregarTempo(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */ if(typeof irParaView==='function') irParaView('daycare'); abrirAccDaycare(); marcarSubnavAtivo(); renderAtual(); if(typeof closeNav==='function') closeNav(); }
   function mostrarScr(){ const ehCk=(dcAtiv==='checkin-corpo'||dcAtiv==='checkout-corpo'); const ehPt=(dcAtiv==='checkin-pert'||dcAtiv==='checkout-pert'); const esp=(dcAtiv==='chamada'||dcAtiv==='almoco'||ehCk||ehPt); const a=document.getElementById('scr-chamada'),b=document.getElementById('scr-almoco'),c=document.getElementById('scr-generic'); if(a)a.style.display=dcAtiv==='chamada'?'block':'none'; if(b)b.style.display=dcAtiv==='almoco'?'block':'none'; if(c)c.style.display=esp?'none':'block'; const k=document.getElementById('scr-checkin'); if(k)k.style.display=ehCk?'block':'none'; const pt=document.getElementById('scr-pert'); if(pt)pt.style.display=ehPt?'block':'none'; const lbl=document.getElementById('dcAtivLabel'); if(lbl){ const f=ATIVS_DC.find(x=>x.s===dcAtiv); lbl.textContent=f?f.t:'Chamada'; } const dl=document.getElementById('dcDiaLabel'); if(dl) dl.textContent=DIA_FULL[dcDia]; }
@@ -53156,7 +53245,7 @@
     // Peso e Foto tem tela propria: nao se "marca feito", se digita um valor.
     if(dcAtiv==='peso'){ try{ renderPesoAtiv(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ return; }
     if(dcAtiv==='foto'){ try{ renderFotoAtiv(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ return; }
-    let list=ehAlmoco2()?listaSegundoHorario():turmaDoDia(); list=filtrarAtividadeSeletiva(list,dcAtiv); let feito=0;
+    let base=ehAlmoco2()?listaSegundoHorario():turmaDoDia(); const presenca=presencaExecucaoSeparar(base,genMarcas); let list=presenca.execucao; list=filtrarAtividadeSeletiva(list,dcAtiv); let feito=0;
     list.forEach(o=>{ const m=genMarcas[dcKey(o.p.n,o.p.tutor)]; if(m==='feito'||m==='comeu')feito++; });
     const f=ATIVS_DC.find(a=>a.s===dcAtiv);
     if(ehAlmoco2()){
@@ -53187,9 +53276,9 @@
     }
     const _a2=ehAlmoco2();
     const _nota=document.getElementById('genNotaTxt');
-    if(_nota) _nota.innerHTML=_a2
+    if(_nota) _nota.innerHTML=(typeof ZeluzPresencaExecucao!=='undefined'?ZeluzPresencaExecucao.faltasHTML(presenca)+ZeluzPresencaExecucao.historicoHTML(presenca,{titulo:'Atividade já registrada'}):'')+(_a2
       ? 'Ofereça a comida de novo e marque <strong>Comeu</strong> ou <strong>Nao comeu</strong>. Quem não comeu nem aqui entra na lista de avisar o tutor.'
-      : 'Marque <strong>Feito</strong> em cada peludinho que passou por esta atividade. Cada atividade terá seu protocolo próprio em breve.';
+      : 'Marque <strong>Feito</strong> em cada peludinho que passou por esta atividade. Cada atividade terá seu protocolo próprio em breve.');
     document.getElementById('genGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{}; const foto=(typeof o.i==='number')?fotoDoPel(p):''; const k=dcKey(p.n,p.tutor);
       const m=genMarcas[k]||'';
       const ok=_a2?(m==='comeu'):(m==='feito');
@@ -54491,7 +54580,7 @@
   // renderDash: planilha_ok false, ou não confirmado há mais de 2 minutos).
   function dashTvLinhaDaMao(o, id, agora){
     o=o||{};
-    return {texto:String(o.valor||''), hora:String(o.hora||''), id:id, mao:true,
+    return {texto:String(o.valor||''), hora:String(o.hora||''), id:id, chave:String(o.chave||''), mao:true,
             antes:(o.planilha_ok===false) || (o.planilha_ok!==true && (agora-(o.ts||0))>120000),
             desde:Math.max(Number(o.ts)||0, TV_BANHO_MEXEU[id]||0, TV_BANHO_PUS[jsNorm(String(o.valor||''))]||0)};
   }
@@ -54499,7 +54588,8 @@
   // só a que diz "na planilha ✓" ganha a conferência da TV, desde quando o automático a escreveu.
   function dashTvLinhaDoAuto(v, dia){
     var e=repPlanEstadoNome(dia, v, 'banho');
-    return {texto:String(v||''), hora:repPlanHoraNome(dia, v, 'banho'), mao:false, antes:(e.estado!=='ok'),
+    var __id=dashAutoIdentador()(v);
+    return {texto:String(v||''), hora:repPlanHoraNome(dia, v, 'banho'), chave:(String(__id).indexOf('f:')===0?String(__id).slice(2):''), mao:false, antes:(e.estado!=='ok'),
             desde:Math.max(Number(e.escrito)||0, TV_BANHO_PUS[jsNorm(String(v||''))]||0)};
   }
   function dashTvComEstado(l, agora, L){ l.tv=l.antes?null:tvBanhoEstado(l.texto, l.desde, agora, L||tvBanhoLeitura()); return l; }
@@ -54527,6 +54617,7 @@
       if(f && banhoSaidaTiraOFixo(f.p, f.br, hoje, bs, idDe)) return;
       out.push(dashTvLinhaDoAuto(v, hoje));
     });
+    out=presencaExecucaoBanhoLinhas(out,hoje);
     if(soContar) return out;
     var L=tvBanhoLeitura();
     out.forEach(function(l){ dashTvComEstado(l, agora, L); });
@@ -54567,10 +54658,11 @@
   }
   // O aviso no alto: quantos e quais banhos de hoje NÃO estão na planilha que a TV lê.
   function dashTvAvisoHTML(){
-    var fora=dashTvBanhoLinhas().filter(function(l){ return l.tv && (l.tv.e==='nao' || l.tv.e==='data'); });
-    if(!fora.length) return '';
+    var __linhas=dashTvBanhoLinhas(), __amb=presencaExecucaoBanhoAvisosHTML(__linhas);
+    var fora=__linhas.filter(function(l){ return l.tv && (l.tv.e==='nao' || l.tv.e==='data'); });
+    if(!fora.length) return __amb;
     var n=fora.length, temNao=fora.some(function(l){ return l.tv.e==='nao'; });
-    return '<div class="card dash-tv-aviso" style="border-left:4px solid var(--crm-critico)"><strong>'
+    return __amb+'<div class="card dash-tv-aviso" style="border-left:4px solid var(--crm-critico)"><strong>'
       +(n===1?'1 banho de hoje NÃO está':(n+' banhos de hoje NÃO estão'))+' na planilha que a TV lê:</strong>'
       +fora.map(function(l){
         return '<div class="hint" style="margin-top:4px"><strong style="color:var(--z-blue)">'+esc(l.texto)+'</strong>'
@@ -70123,10 +70215,124 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
   // avisou e veio mesmo assim (a mesma regra do banho, QA30). Adriana, 02/out/2026: "coloque
   // a opção está aqui (para que se não foi feito o checkin do corpo apareça que tem que
   // fazer!!! e o almoço!!!)".
+  /* PRESENCA29-SOL-INICIO */
+  var _presencaExecucaoCorteDia='',_presencaExecucaoCorteTimer=0,_presencaExecucaoLigadoDia='',_presencaExecucaoHospLigado=false,_presencaExecucaoRedesenhoPendente=false;
+  function presencaExecucaoViewAtiva(id){
+    try{ if(typeof document==='undefined'||document.visibilityState==='hidden') return false; var v=document.getElementById(id); return !!(v&&v.classList&&v.classList.contains('active')); }
+    catch(e){ return false; }
+  }
+  function presencaExecucaoRedesenharAgora(){
+    if(presencaExecucaoViewAtiva('v-daycare')){ try{ if(typeof dcRedesenharAtividade==='function') dcRedesenharAtividade(); }catch(e){} return; }
+    if(presencaExecucaoViewAtiva('v-dashdc')){ try{ if(typeof renderDash==='function') renderDash(); }catch(e){} return; }
+    if(presencaExecucaoViewAtiva('v-paineloperacao')){
+      try{
+        var d=(typeof PO_CACHE!=='undefined'&&PO_CACHE&&PO_CACHE.dados&&PO_CACHE.dia===PO_DIA)?PO_CACHE.dados:null;
+        if(d&&typeof poTurma==='function'&&typeof poCardPresenca==='function'&&typeof poTrocarQuadro==='function'){
+          var atual=document.getElementById('poCardPresenca'), abertos=presencaExecucaoDetalhesAbertos(atual);
+          var h=poCardPresenca(d,poTurma(d.chamada)), caixa=document.createElement('div'); caixa.innerHTML=h;
+          poTrocarQuadro('poCardPresenca',caixa.firstElementChild?caixa.firstElementChild.innerHTML:h);
+          presencaExecucaoRestaurarDetalhes(document.getElementById('poCardPresenca'),abertos);
+        }
+      }catch(e){}
+    }
+  }
+  function presencaExecucaoDetalhesChave(el,i){
+    var k=''; try{k=String(el.getAttribute('data-presenca-detalhe')||'');}catch(e){}
+    if(k) return 'd:'+k;
+    try{var s=el.querySelector('summary');if(s)k=String(s.textContent||'').replace(/s+/g,' ').trim();}catch(e){}
+    return 's:'+k+'#'+i;
+  }
+  function presencaExecucaoDetalhesAbertos(raiz){
+    var r={}; if(!raiz||!raiz.querySelectorAll) return r;
+    try{Array.prototype.forEach.call(raiz.querySelectorAll('details'),function(el,i){if(el.open)r[presencaExecucaoDetalhesChave(el,i)]=true;});}catch(e){}
+    return r;
+  }
+  function presencaExecucaoRestaurarDetalhes(raiz,abertos){
+    if(!raiz||!raiz.querySelectorAll||!abertos) return;
+    try{Array.prototype.forEach.call(raiz.querySelectorAll('details'),function(el,i){if(abertos[presencaExecucaoDetalhesChave(el,i)])el.open=true;});}catch(e){}
+  }
+  function presencaExecucaoRedesenhar(){
+    if(_presencaExecucaoRedesenhoPendente) return;
+    _presencaExecucaoRedesenhoPendente=true;
+    setTimeout(function(){ _presencaExecucaoRedesenhoPendente=false; presencaExecucaoRedesenharAgora(); },0);
+  }
+  function presencaExecucaoDesligar(){
+    if(_presencaExecucaoLigadoDia&&typeof zMapaDesligar==='function'){
+      try{ zMapaDesligar('daycare/checkin-corpo/'+_presencaExecucaoLigadoDia,'_presencaExecucao'); }catch(e){}
+    }
+    if(_presencaExecucaoHospLigado&&typeof zMapaDesligar==='function'){
+      try{ zMapaDesligar('auaulandia/estadias','_presencaExecucaoHosp'); }catch(e){}
+    }
+    _presencaExecucaoLigadoDia=''; _presencaExecucaoHospLigado=false; _presencaExecucaoCorteDia='';
+    if(_presencaExecucaoCorteTimer){ try{ clearTimeout(_presencaExecucaoCorteTimer); }catch(e){} _presencaExecucaoCorteTimer=0; }
+  }
+  function presencaExecucaoLigar(dia){
+    if(!dia) return;
+    if(_presencaExecucaoLigadoDia!==dia){
+      var anterior=_presencaExecucaoLigadoDia;
+      _presencaExecucaoLigadoDia=dia;
+      if(anterior&&typeof zMapaDesligar==='function'){ try{ zMapaDesligar('daycare/checkin-corpo/'+anterior,'_presencaExecucao'); }catch(e){} }
+      try{ if(typeof zMapaVivo==='function') zMapaVivo('daycare/checkin-corpo/'+dia,'_presencaExecucao',presencaExecucaoRedesenhar); }
+      catch(e){ if(_presencaExecucaoLigadoDia===dia) _presencaExecucaoLigadoDia=''; }
+    }
+    if(!_presencaExecucaoHospLigado){
+      _presencaExecucaoHospLigado=true;
+      try{ if(typeof zMapaVivo==='function') zMapaVivo('auaulandia/estadias','_presencaExecucaoHosp',presencaExecucaoRedesenhar); }
+      catch(e){ _presencaExecucaoHospLigado=false; }
+    }
+    if(_presencaExecucaoCorteDia===dia) return;
+    _presencaExecucaoCorteDia=dia;
+    if(_presencaExecucaoCorteTimer) clearTimeout(_presencaExecucaoCorteTimer);
+    var espera=(typeof ZeluzPresencaExecucao!=='undefined'&&ZeluzPresencaExecucao.msAteCorteSP)?ZeluzPresencaExecucao.msAteCorteSP(Date.now(),660):0;
+    if(espera>0) _presencaExecucaoCorteTimer=setTimeout(presencaExecucaoRedesenhar,espera+25);
+  }
+  function presencaExecucaoDiaSelecionado(dia){
+    if(/^\d{4}-\d{2}-\d{2}$/.test(String(dia||''))) return String(dia);
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():(typeof dcDataKey==='function'?dcDataKey():'');
+    var naHoje=true; try{ if(typeof ehHoje==='function') naHoje=!!ehHoje(); }catch(e){}
+    if(naHoje) return hoje;
+    try{ if(typeof turmaIsoSeguro==='function') return turmaIsoSeguro(dcDia,hoje)||''; }catch(e){}
+    return '';
+  }
+  function presencaExecucaoFontes(dia){
+    var alvo=presencaExecucaoDiaSelecionado(dia), hoje=(typeof zHojeISO==='function')?zHojeISO():(typeof dcDataKey==='function'?dcDataKey():alvo), eh=!!alvo&&alvo===hoje;
+    if(eh) presencaExecucaoLigar(alvo);
+    var ck=eh&&typeof Z_MAPAS!=='undefined'&&Z_MAPAS?Z_MAPAS['daycare/checkin-corpo/'+alvo]:null;
+    var hosp=(typeof ZeluzHospedesAtividades!=='undefined'&&ZeluzHospedesAtividades.listarHospedesAtivos)
+      ? ZeluzHospedesAtividades.listarHospedesAtivos({pronto:typeof CF_ESTADIAS_LIDO!=='undefined'&&CF_ESTADIAS_LIDO===true,dia:alvo,estadias:typeof EST_TODAS==='undefined'?{}:EST_TODAS,peludinhos:typeof PELUDINHOS==='undefined'?[]:PELUDINHOS,dcKey:dcKey,pelKey:pelKey,pelInativo:pelInativo})
+      : {pronto:false,itens:[]};
+    return {dia:alvo,checkins:{pronto:!eh||!!(ck&&ck.pronto),valores:(ck&&ck.mapa)||{}},hospedes:hosp,agora:Date.now(),hoje:eh,diaOperacional:ZeluzPresencaExecucao.diaOperacionalISO(alvo),dcKey:dcKey};
+  }
+  function presencaExecucaoSeparar(lista,registros,dia){
+    if(typeof ZeluzPresencaExecucao==='undefined') return {execucao:lista||[],faltas:[],incertos:[],historico:[],itens:[]};
+    var op=presencaExecucaoFontes(dia); op.registros=registros||{};
+    return ZeluzPresencaExecucao.separar(lista||[],op);
+  }
+  function urg29MedPodeExibir(item,dia){
+    if(typeof ZeluzPresencaExecucao==='undefined'||!ZeluzPresencaExecucao.qualificar) return false;
+    var op=presencaExecucaoFontes(dia);
+    if(!op.hoje||!op.checkins.pronto||!op.hospedes.pronto) return false;
+    var estado=ZeluzPresencaExecucao.qualificar(item||{},op).estado;
+    return estado==='presente-checkin'||estado==='presente-hospede';
+  }
+  function presencaExecucaoBanhoLinhas(linhas,dia){
+    if(typeof ZeluzPresencaExecucao==='undefined'||!ZeluzPresencaExecucao.filtrarBanhos) return linhas||[];
+    var op=presencaExecucaoFontes(dia), idDe=(typeof dashAutoIdentador==='function')?dashAutoIdentador():function(){return '';};
+    op.pessoas=(typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS))?PELUDINHOS.map(function(p){return {p:p};}):[];
+    op.identidadeTexto=idDe;
+    return ZeluzPresencaExecucao.filtrarBanhos(linhas||[],op);
+  }
+  function presencaExecucaoBanhoAvisosHTML(linhas){
+    return (typeof ZeluzPresencaExecucao!=='undefined'&&ZeluzPresencaExecucao.banhosAmbiguosHTML)?ZeluzPresencaExecucao.banhosAmbiguosHTML(linhas||[]):'';
+  }
+  /* PRESENCA29-SOL-FIM */
   function almFaltouAvisada(o){
     if(!faltouHoje(o)) return false;
-    try{ return !(dcChamada && dcChamada[dcKey(o.p.n, o.p.tutor)]==='veio'); }
-    catch(e){ return true; } /* silencioso de propósito: sem a chamada, vale a planilha */
+    var k=dcKey(o.p.n,o.p.tutor), ck=null;
+    try{ var m=(typeof Z_MAPAS!=='undefined'&&Z_MAPAS)?Z_MAPAS['daycare/checkin-corpo/'+dcDataKey()]:null; ck=m&&m.mapa?m.mapa[k]:null; }catch(e){}
+    if(ck&&ck.fim&&(!ck.tipo||ck.tipo==='entrada')) return false;
+    try{ return !(dcChamada && dcChamada[k]==='veio'); }
+    catch(e){ return true; } /* sem fonte de chamada, a falta avisada continua como alerta operacional */
   }
   // A mesma interpretação da ficha ativa usada pelos cuidados do hóspede.
   function almDadosHospede29(o,p){
@@ -70150,7 +70356,9 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     // pode ser que acabem almoçando um dia. A Lisa toma café e janta — um dia ela não tomou
     // café e a tutora pediu para dar comida. Precisa aparecer, e o monitor clicar em
     // Não se aplica." Some da grade só quem FALTOU hoje (não veio).
-    const turma=turmaDoDia();
+    const turmaBase=turmaDoDia();
+    const presenca=presencaExecucaoSeparar(turmaBase,almMarcas);
+    const turma=presenca.execucao;
     const foraList=turma.filter(o=>typeof o.i==='number'&&naoAlmoca(o.p));
     const faltouList=turma.filter(o=>almFaltouAvisada(o)); // falta avisada na planilha (e não veio)
     const list=ordemAlmoco(turma.filter(o=>!almFaltouAvisada(o)));
@@ -70176,7 +70384,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
       ${naList.length?`<div class="alm-fora"><strong>NÃO SE APLICA (${naList.length}):</strong> ${naList.join(', ')} &mdash; hoje não almoçam (comem outra coisa, jejum ou já comeram). Não vão para o 2º horário e não precisa avisar o tutor.</div>`:''}
       ${naoList.length?`<div class="dc-faltas"><strong>NAO COMERAM - vao para o 2&ordm; horario (${naoList.length}):</strong> ${naoList.join(', ')}</div>`:''}
       ${metList.length?`<div class="dc-meia"><strong>COMERAM METADE (${metList.length}):</strong> ${metList.join(', ')}</div>`:''}
-      ${faltouList.length?`<div class="alm-fora"><strong>FALTARAM HOJE (${faltouList.length}):</strong> ${faltouList.map(o=>nomeDesamb(o,faltouList)).join(', ')} &mdash; a planilha avisou a falta, entao sairam do almoco.</div>`:''}
+      ${faltouList.length?`<div class="alm-fora"><strong>FALTARAM HOJE (${faltouList.length}):</strong> ${faltouList.map(o=>nomeDesamb(o,faltouList)).join(', ')} &mdash; a planilha avisou a falta, entao sairam do almoco.</div>`:''}${typeof ZeluzPresencaExecucao!=='undefined'?ZeluzPresencaExecucao.faltasHTML(presenca)+ZeluzPresencaExecucao.historicoHTML(presenca,{titulo:'Almoço já registrado'}):''}
       ${foraList.length?`<div class="alm-fora"><strong>NAO ALMOCAM NORMALMENTE (${foraList.length}):</strong> ${foraList.map(o=>nomeDesamb(o,foraList)).join(', ')} &mdash; continuam na lista abaixo. Se hoje nao comerem, toque em <strong>Nao se aplica</strong>; se a tutora pedir para dar comida, marque normalmente.</div>`:''}
       ${!ehHoje()?`<div class="dc-meia"><strong>Você está vendo a turma de ${DIA_FULL[dcDia]}, que não é hoje.</strong> Isto é só planejamento: o almoço se marca no dia em que acontece. Para registrar, volte para ${DIA_FULL[HOJE_DIA]} (hoje).</div>`:''}
       ${almSemRede?`<div class="dc-faltas" style="border-color:#B3261E;color:#B3261E"><strong>SEM CONEXÃO COM O BANCO AGORA.</strong> A lista pode estar desatualizada. <strong>Não remarque nada:</strong> o que você já marcou está guardado e sobe sozinho assim que a internet voltar. Se algum peludinho aparecer em branco, é a internet — não é o seu trabalho.</div>`:''}
@@ -88529,13 +88737,16 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
 
 
   var PO_PRESENCA_ATUAL=null;
+  function poPresencaExecucao(d,T){ return presencaExecucaoSeparar(T.aulunos.concat(T.avulsos),{},d.dia); }
   function poPresencaDados(d,T){
     if(typeof ZeluzPresencaLogica==='undefined'||!ZeluzPresencaLogica.montar) return null;
     var pronta=(typeof CARTEIRA_CARREGADA!=='undefined'&&CARTEIRA_CARREGADA===true&&typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS)&&PELUDINHOS.length&&d.avulsosEstado==='pronto')?'pronto':'carregando';
-    var pessoas=T.aulunos.concat(T.avulsos).map(function(o){ var p=o.p||{},motivo=''; try{var m=poMotivoDaFalta(p,d.dia)||'';motivo=(m&&typeof m==='object')?[m.motivo,m.obs].filter(function(v){return typeof v==='string'&&v.trim();}).join(' · '):m;}catch(e){} return {id:dcKey(p.n,p.tutor),nome:(typeof pelNome==='function'?pelNome(p):p.n)||p.n||'',tutor:(typeof pelGet==='function'?pelGet(p,'tutor'):p.tutor)||p.tutor||'',motivo:motivo}; });
-    return ZeluzPresencaLogica.montar({dia:d.dia,agora:Date.now(),participantes:pessoas,turmaEstado:pronta,chamada:{estado:d.chamadaEstado||'falha',valores:d.chamada||{}},chamadaMeta:{estado:d.chamadaMetaEstado||'falha',valores:d.chamadaMeta||{}}});
+    var pessoas=T.aulunos.concat(T.avulsos).map(function(o){ var p=o.p||{},motivo='',tel='',det=''; try{var m=poMotivoDaFalta(p,d.dia)||'';motivo=(m&&typeof m==='object')?[m.motivo,m.obs].filter(function(v){return typeof v==='string'&&v.trim();}).join(' · '):m;}catch(e){} try{tel=poTelDoTutor(p)||'';}catch(e){} try{det=((typeof pelGet==='function'?pelGet(p,'raca'):p.raca)||p.raca||'');}catch(e){} return {id:dcKey(p.n,p.tutor),nome:(typeof pelNome==='function'?pelNome(p):p.n)||p.n||'',tutor:(typeof pelGet==='function'?pelGet(p,'tutor'):p.tutor)||p.tutor||'',telefone:tel,detalhe:det,motivo:motivo}; });
+    var op=presencaExecucaoFontes(d.dia), hospedes={};
+    ((op.hospedes&&op.hospedes.itens)||[]).forEach(function(o){var p=o.p||o,k=String(o.chave||'');try{if(!k)k=dcKey(p.n,p.tutor);}catch(e){}if(k)hospedes[k]=true;});
+    return ZeluzPresencaLogica.montar({dia:d.dia,agora:Date.now(),participantes:pessoas,turmaEstado:pronta,chamada:{estado:d.chamadaEstado||'falha',valores:d.chamada||{}},chamadaMeta:{estado:d.chamadaMetaEstado||'falha',valores:d.chamadaMeta||{}},checkins:{estado:(op.checkins&&op.checkins.pronto)?'pronto':'carregando',valores:(op.checkins&&op.checkins.valores)||{}},hospedes:{estado:(op.hospedes&&op.hospedes.pronto)?'pronto':'carregando',valores:hospedes}});
   }
-  function poCardPresenca(d,T){ PO_PRESENCA_ATUAL=poPresencaDados(d,T); return PO_PRESENCA_ATUAL?ZeluzPresencaLogica.cardHTML(PO_PRESENCA_ATUAL):poSemLeituraHTML('o módulo de presença'); }
+  function poCardPresenca(d,T){ PO_PRESENCA_ATUAL=poPresencaDados(d,T); var card=PO_PRESENCA_ATUAL?ZeluzPresencaLogica.cardHTML(PO_PRESENCA_ATUAL):poSemLeituraHTML('o módulo de presença'); return '<div id="poCardPresenca" style="display:contents">'+card+'</div>'; }
   function presencaAtualizar(){ try{poAbrir(true);}catch(e){_logLeituraFalhou('atualizar presença',e);} }
   function presencaConfirmarFalta(k){
     var api=(typeof ZeluzPresencaLogica!=='undefined')?ZeluzPresencaLogica:null,hoje=api&&api.agoraSP?api.agoraSP(Date.now()).dia:'';
@@ -91639,4 +91850,512 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
   __scriptReady=true; if(typeof wireFirebaseListeners==='function') wireFirebaseListeners();
 </script>
 </body>
+<script>
+(function(raiz, fabrica){
+  var api=fabrica();
+  if(typeof module==='object'&&module.exports) module.exports=api;
+  raiz.ZeluzPresencaExecucao=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+
+  var FUSO='America/Sao_Paulo';
+  var CORTE_PADRAO=11*60;
+
+  function texto(v){ return v==null?'':String(v); }
+  function chaveDe(o, dcKey){
+    if(o&&o.chave) return texto(o.chave);
+    var p=(o&&o.p)||o||{};
+    return typeof dcKey==='function'?texto(dcKey(p.n||p.nome,p.tutor)):texto(p.chave||'');
+  }
+  function minutosSP(agora){
+    if(agora&&typeof agora.minutosSP==='number') return agora.minutosSP;
+    var data=agora instanceof Date?agora:new Date(agora==null?Date.now():agora);
+    try{
+      var partes=new Intl.DateTimeFormat('en-US',{timeZone:FUSO,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(data);
+      var vals={}; partes.forEach(function(p){ vals[p.type]=p.value; });
+      return Number(vals.hour)*60+Number(vals.minute);
+    }catch(e){ return data.getHours()*60+data.getMinutes(); }
+  }
+  function msAteCorteSP(agora,corteMinutos){
+    var data=agora instanceof Date?agora:new Date(agora==null?Date.now():agora);
+    if(isNaN(data.getTime())) return 0;
+    var corte=Number.isFinite(corteMinutos)?corteMinutos:CORTE_PADRAO;
+    try{
+      var partes=new Intl.DateTimeFormat('en-US',{timeZone:FUSO,hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(data);
+      var vals={}; partes.forEach(function(p){ vals[p.type]=p.value; });
+      var agoraMs=(Number(vals.hour)*60+Number(vals.minute))*60000+Number(vals.second||0)*1000+data.getMilliseconds();
+      return Math.max(0,corte*60000-agoraMs);
+    }catch(e){
+      var localMs=(data.getHours()*60+data.getMinutes())*60000+data.getSeconds()*1000+data.getMilliseconds();
+      return Math.max(0,corte*60000-localMs);
+    }
+  }
+  function diaOperacionalSP(agora){
+    var data=agora instanceof Date?agora:new Date(agora==null?Date.now():agora);
+    try{
+      var semana=new Intl.DateTimeFormat('en-US',{timeZone:FUSO,weekday:'short'}).format(data);
+      return semana!=='Sat'&&semana!=='Sun';
+    }catch(e){ var d=data.getDay(); return d!==0&&d!==6; }
+  }
+  function diaOperacionalISO(iso){
+    var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(texto(iso));
+    if(!m) return null;
+    var d=new Date(Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]),12,0,0));
+    var semana=d.getUTCDay();
+    return semana!==0&&semana!==6;
+  }
+  function pronto(fonte){ return !!(fonte&&fonte.pronto===true); }
+  function mapa(fonte){ return (fonte&&fonte.valores&&typeof fonte.valores==='object')?fonte.valores:{}; }
+  function checkinEntrada(reg){ return !!(reg && reg.fim && (!reg.tipo || reg.tipo==='entrada')); }
+  function hospedeAtivo(chave, fonte, dcKey){
+    if(!pronto(fonte)) return null;
+    return (fonte.itens||[]).some(function(o){ return chaveDe(o,dcKey)===chave; });
+  }
+  function jaRegistrado(chave, op){
+    if(typeof op.jaRegistrado==='function') return !!op.jaRegistrado(chave);
+    return !!((op.registros||{})[chave]);
+  }
+  function fonteIncompleta(op){
+    return !pronto(op.checkins)||!pronto(op.hospedes);
+  }
+  function qualificar(item, op){
+    op=op||{};
+    var chave=chaveDe(item,op.dcKey);
+    var historico=jaRegistrado(chave,op);
+    if(op.hoje===false) return {item:item,chave:chave,estado:'planejamento',execucao:true,historico:historico,registro:(op.registros||{})[chave]};
+    var corte=Number.isFinite(op.corteMinutos)?op.corteMinutos:CORTE_PADRAO;
+    var depois=minutosSP(op.agora)>=corte;
+    var ck=mapa(op.checkins)[chave];
+    if(checkinEntrada(ck)) return {item:item,chave:chave,estado:'presente-checkin',execucao:true,historico:historico,registro:(op.registros||{})[chave]};
+    var hospede=hospedeAtivo(chave,op.hospedes,op.dcKey);
+    if(hospede===true) return {item:item,chave:chave,estado:'presente-hospede',execucao:true,historico:historico,registro:(op.registros||{})[chave]};
+    if(historico) return {item:item,chave:chave,estado:'registro-preservado',execucao:false,historico:true,registro:(op.registros||{})[chave]};
+    if(op.diaOperacional===false) return {item:item,chave:chave,estado:'fora-de-operacao',execucao:false,historico:false};
+    if(!depois) return {item:item,chave:chave,estado:'aguardando-checkin',execucao:true,historico:false};
+    if(fonteIncompleta(op)) return {item:item,chave:chave,estado:'presenca-incerta',execucao:true,historico:false};
+    return {item:item,chave:chave,estado:'falta-a-contatar',execucao:false,historico:false};
+  }
+  function separar(lista, op){
+    var r={execucao:[],faltas:[],incertos:[],historico:[],itens:[]};
+    (lista||[]).forEach(function(item){
+      var linha=qualificar(item,op); r.itens.push(linha);
+      if(linha.execucao) r.execucao.push(item);
+      if(linha.estado==='falta-a-contatar') r.faltas.push(linha);
+      if(linha.estado==='presenca-incerta') r.incertos.push(linha);
+      if(linha.historico) r.historico.push(linha);
+    });
+    return r;
+  }
+  function esc(v){ return texto(v).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function nome(linha){ var p=(linha.item&&linha.item.p)||linha.item||{}; return texto(p.n||p.nome||linha.chave)+(p.tutor?(' — tutor: '+texto(p.tutor)):''); }
+  function registroTexto(v){
+    if(v==null||v==='') return 'registro existente';
+    if(typeof v==='string'||typeof v==='number') return texto(v);
+    if(typeof v==='object') return texto(v.rotulo||v.estado||v.valor||v.marca||'registro existente');
+    return 'registro existente';
+  }
+  function historicoHTML(resultado,op){
+    op=op||{};
+    var linhas=((resultado&&resultado.historico)||[]).filter(function(l){ return l&&!l.execucao; });
+    if(!linhas.length) return '';
+    return '<details class="dc-meia presenca-historico"><summary><strong>'+esc(op.titulo||'Registros preservados')+' ('+linhas.length+')</strong></summary>'
+      +'<div class="hint" style="margin-top:6px">Somente leitura: o registro continua no histórico, embora a ausência de presença o tenha retirado da execução atual.</div>'
+      +'<ul>'+linhas.map(function(l){ return '<li><strong>'+esc(nome(l))+'</strong> — '+esc(registroTexto(l.registro))+'</li>'; }).join('')+'</ul></details>';
+  }
+  function chavePet(p,dcKey){
+    p=(p&&p.p)||p||{};
+    if(p.chave) return texto(p.chave);
+    return typeof dcKey==='function'?texto(dcKey(p.n||p.nome,p.tutor)):'';
+  }
+  function filtrarBanhos(linhas,op){
+    op=op||{};
+    if(op.hoje===false) return (linhas||[]).slice();
+    var porChave={};
+    (op.pessoas||[]).forEach(function(o){ var k=chavePet(o,op.dcKey); if(!k) return; if(!porChave[k]) porChave[k]=[]; porChave[k].push(o); });
+    return (linhas||[]).filter(function(l){
+      if(!l) return false;
+      delete l.presencaAmbigua; delete l.presencaMotivo;
+      var k=texto(l.chave);
+      if(!k && typeof op.identidadeTexto==='function'){
+        var id=texto(op.identidadeTexto(l.texto));
+        if(id.indexOf('f:')===0) k=id.slice(2);
+      }
+      var candidatos=k?(porChave[k]||[]):[];
+      if(candidatos.length!==1){ l.presencaAmbigua=true; l.presencaMotivo=k?'ficha-não-encontrada':'sem-identidade-segura'; return true; }
+      var q=qualificar(candidatos[0],op);
+      l.presencaChave=q.chave;
+      return !!q.execucao;
+    });
+  }
+  function banhosAmbiguosHTML(linhas){
+    var a=(linhas||[]).filter(function(l){ return l&&l.presencaAmbigua; });
+    if(!a.length) return '';
+    return '<div class="card dash-tv-aviso presenca-banho-ambiguo" style="border-left:4px solid var(--crm-atencao)"><strong>Presença não identificada em '+a.length+' '+(a.length===1?'banho':'banhos')+':</strong>'
+      +a.map(function(l){ return '<div class="hint" style="margin-top:4px"><strong>'+esc(l.texto||'linha sem nome')+'</strong> — confira a ficha ou o tutor; a linha foi mantida para decisão humana.</div>'; }).join('')+'</div>';
+  }
+  function faltasHTML(resultado){
+    var faltas=(resultado&&resultado.faltas)||[];
+    var incertos=(resultado&&resultado.incertos)||[];
+    var aviso=incertos.length?'<div class="dc-faltas"><strong>Presença ainda incerta ('+incertos.length+')</strong><div class="hint" style="margin-top:6px">A fonte de check-in ou de hóspedes ainda não chegou. A lista não conclui ausência nem autoriza cuidado clínico por esta tela.</div></div>':'';
+    if(!faltas.length) return aviso;
+    return aviso+'<details class="dc-faltas"><summary><strong>Faltas para contato ('+faltas.length+')</strong></summary>'
+      +'<div class="hint" style="margin-top:6px">Após 11h, sem check-in do corpo e sem hospedagem ativa. Confirme a situação e use o contato já existente; esta lista não registra contato automaticamente.</div>'
+      +'<ul>'+faltas.map(function(l){ return '<li>'+esc(nome(l))+'</li>'; }).join('')+'</ul></details>';
+  }
+  return {FUSO:FUSO,CORTE_PADRAO:CORTE_PADRAO,minutosSP:minutosSP,msAteCorteSP:msAteCorteSP,diaOperacionalSP:diaOperacionalSP,diaOperacionalISO:diaOperacionalISO,qualificar:qualificar,separar:separar,faltasHTML:faltasHTML,historicoHTML:historicoHTML,filtrarBanhos:filtrarBanhos,banhosAmbiguosHTML:banhosAmbiguosHTML};
+});
+
+</script>
+<script>
+/* URG29 — atividade Medicamentos. Adapta agenda/log existentes; não cria prescrição ou banco. */
+(function(root){
+  'use strict';
+  function criar(api){
+    api=api||{};
+    var emAndamento={},cargaTela=0;
+    function texto(v){ return String(v==null?'':v).trim(); }
+    function esc(v){ return texto(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    function funcao(n){ return typeof api[n]==='function'?api[n]:null; }
+    function chamar(n,args){ var f=funcao(n); if(!f) throw new Error(n+' indisponível'); return f.apply(null,args||[]); }
+    function hoje(){ return texto(chamar('dia')); }
+    function horaValida(h){ return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(texto(h)); }
+    function idValido(v){ v=texto(v); return !!v&&v!=='undefined'&&v!=='null'; }
+    function dose(it){ var d=''; try{d=texto(chamar('doseTexto',[it]));}catch(e){} if(d)return d; if(texto(it&&it.doseOriginal))return texto(it.doseOriginal); return texto(it&&it.q)&&texto(it&&it.u)?texto(it.q)+' '+texto(it.u):''; }
+    function doseId(it){ try{return texto(chamar('doseId',[it.itemId,it.horario]));}catch(e){return '';} }
+    function linhaValida(it){ return !!it&&idValido(it.key)&&idValido(it.itemId)&&horaValida(it.horario)&&!!texto(it.hospNome)&&!!texto(it.nome)&&!!dose(it)&&!!doseId(it); }
+    function identidade(it){ return linhaValida(it)?texto(it.key)+'__'+texto(it.itemId)+'__'+texto(it.horario):''; }
+    function origem(it){ return texto(it&&it.key).indexOf('dc__')===0?'Day Care':(texto(it&&it.origem)||'Hospedagem'); }
+    function presenca(it,dia){
+      var f=funcao('podeExibir'); if(!f)return {pronto:false,ativo:false,motivo:'fonte de presença indisponível'};
+      try{
+        var r=f(it,dia);
+        if(r===true)return {pronto:true,ativo:true};
+        if(r===false)return {pronto:true,ativo:false};
+        if(r&&typeof r==='object')return {pronto:r.pronto===true,ativo:r.ativo===true,motivo:texto(r.motivo)};
+      }catch(e){ return {pronto:false,ativo:false,motivo:'não foi possível conferir a presença'}; }
+      return {pronto:false,ativo:false,motivo:'presença ainda não confirmada'};
+    }
+    function itensContinuos(dia){
+      var pessoas=chamar('peludinhos')||[],chave=funcao('chaveDoPel'),listar=funcao('continuosDaChave'),vigente=funcao('vigenteEm'),out=[],pendentes=[];
+      if(!Array.isArray(pessoas)||!chave||!listar)return {linhas:out,pendentes:[{motivo:'agenda clínica indisponível'}]};
+      pessoas.forEach(function(p){
+        var key=''; try{key=texto(chave(p));}catch(e){} if(!idValido(key))return;
+        var base={key:key,refKey:funcao('pelKey')?texto(api.pelKey(p)):'',dcKey:funcao('dcKey')?texto(api.dcKey(p)):'',hospNome:texto(p&&p.n),tutor:texto(p&&p.tutor),origem:'Uso contínuo'};
+        var pr=presenca(base,dia); if(!pr.pronto){ pendentes.push({nome:base.hospNome,motivo:pr.motivo}); return; } if(!pr.ativo)return;
+        var itens=[]; try{itens=listar(key)||[];}catch(e){pendentes.push({nome:base.hospNome,motivo:'agenda clínica ilegível'});return;}
+        itens.forEach(function(item){
+          if(vigente){try{if(!vigente(item,dia))return;}catch(e){return;}}
+          (Array.isArray(item&&item.horarios)?item.horarios:[]).forEach(function(h){
+            out.push(Object.assign({},base,{itemId:texto(item._id),nome:texto(item.nome),q:item.q,u:item.u,local:item.local,obs:item.obs,horario:texto(h),continuo:true}));
+          });
+        });
+      });
+      return {linhas:out,pendentes:pendentes};
+    }
+    function listar(agenda,incluirContinuos,dia,log){
+      dia=dia||hoje(); log=log||{};
+      var prontos=[],conferir=[],presencaPendente=[],todas=(Array.isArray(agenda)?agenda:[]).slice(),candidatas=[];
+      var cont=incluirContinuos?itensContinuos(dia):{linhas:[],pendentes:[]}; todas=todas.concat(cont.linhas||[]); presencaPendente=presencaPendente.concat(cont.pendentes||[]);
+      todas.forEach(function(it){
+        var id=identidade(it),base={it:it,id:id,nome:texto(it&&it.hospNome),tutor:texto(it&&it.tutor),medicamento:texto(it&&it.nome),horario:texto(it&&it.horario),dose:dose(it),origem:origem(it)};
+        if(!id){base.motivo='identidade, medicamento, dose ou horário inválido';conferir.push(base);return;} candidatas.push(base);
+      });
+      var removida={},conflito={},relacionar=funcao('relacaoDose'),preferir=funcao('preferirDose');
+      candidatas.forEach(function(a,i){
+        if(removida[i])return;
+        candidatas.forEach(function(b,j){
+          if(j<=i||removida[j])return;
+          var rel=relacionar?relacionar(a.it,b.it):(a.id===b.id?'igual':'distinta');
+          if(rel==='conflito'){conflito[i]=true;conflito[j]=true;return;}
+          if(rel!=='igual')return;
+          var escolhida=preferir?preferir(a.it,b.it,log):a.it;
+          if(escolhida===b.it){removida[i]=true;}else removida[j]=true;
+        });
+      });
+      candidatas.forEach(function(base,i){
+        if(removida[i])return;
+        if(conflito[i]){base.motivo='fontes divergem para o mesmo medicamento e horário';conferir.push(base);return;}
+        var it=base.it;
+        var pr=presenca(it,dia); if(!pr.pronto){presencaPendente.push({nome:base.nome,motivo:pr.motivo});return;} if(!pr.ativo)return;
+        var reg=((log[it.key]||{})[doseId(it)])||null; if(reg)Object.assign(it,{status:'cumprida',quem:reg.quem||'',ts:reg.ts||0});
+        prontos.push(base);
+      });
+      return {prontos:prontos,conferir:conferir,presencaPendente:presencaPendente};
+    }
+    function estadoPronto(dia){
+      var e=chamar('agendaEstado')||{};
+      return e.dia===dia&&!e.carregando&&!e.erro&&Array.isArray(e.agenda);
+    }
+    function mensagemEstado(dia){
+      var e=chamar('agendaEstado')||{};
+      return '<div class="hint" style="margin-top:8px">Data da agenda (São Paulo): '+esc(dia)+'</div>'
+        +(e.inteira===false?'<div class="hint" style="margin-top:8px">Fonte parcial: confira a ficha; esta tela não afirma ausência de doses.</div>':'');
+    }
+    function linha(x){
+      var it=x.it,feito=it.status==='cumprida',autor=feito?('Dado por '+texto(it.quem||'equipe')+(it.ts?' às '+new Date(it.ts).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'})+' (São Paulo)':'')):'';
+      return '<details class="card" style="margin:8px 0;padding:12px" '+(feito?'':'open')+'><summary style="cursor:pointer;font-weight:800;color:var(--z-blue)">'+esc(x.nome)+' · '+esc(x.horario)+' · '+esc(x.medicamento)+'</summary><div style="margin-top:9px;display:grid;gap:5px"><div><strong>Dose:</strong> '+esc(x.dose)+'</div><div><strong>Horário:</strong> '+esc(x.horario)+'</div><div><strong>Origem:</strong> '+esc(x.origem)+'</div>'+(texto(it.local)?'<div><strong>Onde aplicar:</strong> '+esc(it.local)+'</div>':'')+(texto(it.obs)?'<div class="hint">'+esc(it.obs)+'</div>':'')+(feito?'<div class="mag-dose-ok">✅ '+esc(autor)+'</div>':'<button type="button" class="btn btn-gold" data-urg29-dose="'+esc(x.id)+'" onclick="urg29MedicacaoConfirmar(this.dataset.urg29Dose,this)">Registrar que dei esta dose</button>')+'</div></details>';
+    }
+    function linhaConferir(x){
+      return '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--z-border)"><div><strong>Peludo:</strong> '+esc(x.nome||'não identificado')+(x.tutor?' · tutor '+esc(x.tutor):'')+'</div><div><strong>Medicamento:</strong> '+esc(x.medicamento||'não informado')+'</div><div><strong>Horário:</strong> '+esc(x.horario||'não informado')+'</div><div><strong>Motivo:</strong> '+esc(x.motivo||'dados incompletos ou conflitantes')+'</div></div>';
+    }
+    function render(retrato,dia){
+      var el=chamar('elemento'); if(!el)return;
+      var dados=listar(retrato.doses||[],true,dia,retrato.log||{}),h='<div class="role-note"><span data-icon="info"></span><span>Use esta tela somente para registrar uma dose já prescrita. Confira medicamento, dose e horário antes de confirmar.</span></div>'+mensagemEstado(dia);
+      h+=dados.prontos.length?'<div style="margin-top:10px">'+dados.prontos.map(linha).join('')+'</div>':'<div class="hint" style="margin-top:10px">Nenhuma dose confirmável foi encontrada nas fontes carregadas.</div>';
+      if(dados.presencaPendente.length)h+='<div class="hint" style="margin-top:10px">⚠️ '+dados.presencaPendente.length+' '+(dados.presencaPendente.length===1?'dose ficou':'doses ficaram')+' bloqueada(s): a presença ou a identidade ainda não foi confirmada.</div>';
+      if(dados.conferir.length)h+='<details class="card" style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">Conferir na ficha ('+dados.conferir.length+')</summary><div class="hint" style="margin-top:8px">Confira estes registros antes de administrar. Esta área não oferece botão de dose.</div>'+dados.conferir.map(linhaConferir).join('')+'</details>';
+      el.innerHTML=h; api.linhas=dados.prontos;
+    }
+    function recarregar(){
+      var el=chamar('elemento'),dia=hoje(),minhaCarga=++cargaTela; if(!el||!dia)return Promise.resolve(false);
+      el.innerHTML='<div class="hint">Carregando a agenda de medicação…</div>';
+      return Promise.resolve(chamar('carregarAgenda',[dia])).then(function(){
+        if(hoje()!==dia||!estadoPronto(dia))throw new Error('a agenda de hoje não confirmou a carga');
+        return chamar('retratoDoDia',[dia]);
+      }).then(function(retrato){
+        if(hoje()!==dia||!estadoPronto(dia))throw new Error('o dia mudou durante a leitura');
+        if(!retrato||!Array.isArray(retrato.doses)||!retrato.log)throw new Error('o log não confirmou a leitura');
+        if(minhaCarga!==cargaTela)return false; render(retrato,dia); return true;
+      }).catch(function(e){
+        if(minhaCarga===cargaTela)el.innerHTML='<div class="hint">Não consegui confirmar a agenda e o registro de doses de hoje. Nenhuma dose foi exibida ou registrada. Tente abrir Medicamentos novamente.</div>';
+        return false;
+      });
+    }
+    function acharAtual(id,dia){
+      if(hoje()!==dia||!estadoPronto(dia))return Promise.resolve(null);
+      return Promise.resolve(chamar('retratoDoDia',[dia])).then(function(r){
+        if(hoje()!==dia||!estadoPronto(dia))return null;
+        var l=listar(r.doses||[],true,dia,r.log||{}).prontos.filter(function(x){return x.id===id;})[0];
+        return l&&l.it&&l.it.status!=='cumprida'&&linhaValida(l.it)?l:null;
+      },function(){return null;});
+    }
+    function soltar(botao,mensagem){ if(botao){botao.disabled=false;botao.textContent=mensagem||'Tentar registrar novamente';} }
+    function confirmar(id,botao){
+      if(emAndamento[id])return;
+      var inicial=(api.linhas||[]).filter(function(x){return x.id===id;})[0],dia=hoje();
+      if(!inicial||!dia||!linhaValida(inicial.it))return;
+      emAndamento[id]=true; if(botao)botao.disabled=true;
+      var perguntar=funcao('perguntar');
+      if(!perguntar){delete emAndamento[id];soltar(botao);return;}
+      Promise.resolve(perguntar('Confirmar dose administrada',[inicial.nome+' · '+inicial.medicamento,'Dose: '+inicial.dose+' · horário: '+inicial.horario],{sim:'Confirmar que dei',nao:'Voltar',cor:'#234D67'}))
+        .then(function(ok){return ok?acharAtual(id,dia):null;})
+        .then(function(atual){
+          if(!atual){delete emAndamento[id];soltar(botao,'Conferir novamente');return null;}
+          if(botao)botao.textContent='Registrando no sistema…';
+          return Promise.resolve(chamar('registrarConfirmado',[atual.it,doseId(atual.it),dia])).then(function(reg){
+            if(!reg||!texto(reg.quem))throw new Error('o log não confirmou autoria');
+            return recarregar();
+          });
+        }).catch(function(){soltar(botao,'Tentar registrar novamente');})
+        .then(function(){delete emAndamento[id];},function(){delete emAndamento[id];soltar(botao,'Tentar registrar novamente');});
+    }
+    return {listar:listar,linhaValida:linhaValida,identidade:identidade,carregar:recarregar,render:render,confirmar:confirmar,itensContinuos:itensContinuos,estadoPronto:estadoPronto};
+  }
+  root.urg29MedicacaoCriar=criar;
+})(typeof window!=='undefined'?window:globalThis);
+
+/* URG29-MED-SOL-BRIDGE-INICIO */
+var URG29_MED_ESTADO={dia:'',agenda:[],carregando:false,erro:'',inteira:false,geracao:0};
+var URG29_MED_REGISTRANDO={};
+
+function urg29HojeSaoPaulo(agora){
+  var d=agora instanceof Date?agora:new Date(agora==null?Date.now():agora);
+  try{
+    var p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d),v={};
+    p.forEach(function(x){v[x.type]=x.value;}); return v.year+'-'+v.month+'-'+v.day;
+  }catch(e){var z=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());}
+}
+function urg29MedLer(caminho){
+  if(!DB||!DB.ref) return Promise.reject(new Error('banco indisponível'));
+  return DB.ref(caminho).once('value').then(function(s){return (s&&typeof s.val==='function')?(s.val()||{}):{};});
+}
+function urg29MedHospedes(dia){
+  if(typeof CF_ESTADIAS_LIDO==='undefined'||CF_ESTADIAS_LIDO!==true) return {pronto:false,itens:[]};
+  if(typeof ZeluzHospedesAtividades==='undefined'||!ZeluzHospedesAtividades.listarHospedesAtivos) return {pronto:false,itens:[]};
+  return ZeluzHospedesAtividades.listarHospedesAtivos({pronto:true,dia:dia,estadias:(typeof EST_TODAS==='undefined'?{}:EST_TODAS),peludinhos:(typeof PELUDINHOS==='undefined'?[]:PELUDINHOS),dcKey:dcKey,pelKey:pelKey,pelInativo:pelInativo});
+}
+function urg29MedIdentidades(it){
+  it=it||{}; var dc={},refs={},achados=[];
+  function por(o,v){v=String(v||'').trim();if(v)o[v]=1;}
+  por(dc,it.dcKey); por(refs,it.refKey); por(refs,it.pelKey);
+  var key=String(it.key||''); if(key.indexOf('dc__')===0)por(dc,key.slice(4));else por(refs,key);
+  (typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS)?PELUDINHOS:[]).forEach(function(p){
+    var pk='',mk=''; try{pk=String(pelKey(p)||'');}catch(e){} try{mk=String(medChaveDoPel(p)||'');}catch(e){}
+    if((pk&&refs[pk])||(mk&&refs[mk]))achados.push(p);
+  });
+  if(achados.length===1){try{por(dc,dcKey(achados[0].n,achados[0].tutor));por(refs,pelKey(achados[0]));}catch(e){}}
+  return {dc:Object.keys(dc),refs:Object.keys(refs),ambigua:achados.length>1};
+}
+function urg29MedPodeExibirEstrito(it,dia){
+  if(!dia||dia!==urg29HojeSaoPaulo())return {pronto:true,ativo:false,motivo:'fora do dia operacional atual'};
+  try{
+    if(typeof urg29MedPodeExibir==='function'&&urg29MedPodeExibir!==urg29MedPodeExibirEstrito&&urg29MedPodeExibir(it,dia)!==true)
+      return {pronto:false,ativo:false,motivo:'contrato de presença não confirmou execução clínica'};
+  }catch(e){return {pronto:false,ativo:false,motivo:'contrato de presença indisponível'};}
+  var ids=urg29MedIdentidades(it); if(ids.ambigua||(!ids.dc.length&&!ids.refs.length))return {pronto:false,ativo:false,motivo:'identidade não confirmada'};
+  var mapa=(typeof Z_MAPAS!=='undefined'&&Z_MAPAS)?Z_MAPAS['daycare/checkin-corpo/'+dia]:null;
+  if(mapa&&mapa.pronto){
+    var presente=ids.dc.some(function(k){var r=(mapa.mapa||{})[k];return !!(r&&r.fim&&(!r.tipo||r.tipo==='entrada'));});
+    if(presente)return {pronto:true,ativo:true,motivo:'check-in do corpo concluído'};
+  }
+  var hosp=urg29MedHospedes(dia);
+  if(hosp.pronto){
+    var ativo=(hosp.itens||[]).some(function(o){
+      var r=String(o.refKey||''),dk='';try{dk=dcKey(o.p&&o.p.n,o.p&&o.p.tutor);}catch(e){}
+      return (r&&ids.refs.indexOf(r)>=0)||(dk&&ids.dc.indexOf(dk)>=0);
+    });
+    if(ativo)return {pronto:true,ativo:true,motivo:'hospedagem ativa'};
+  }
+  if(!(mapa&&mapa.pronto)||!hosp.pronto)return {pronto:false,ativo:false,motivo:'fontes de presença ainda não confirmadas'};
+  return {pronto:true,ativo:false,motivo:'sem presença confirmada'};
+}
+function urg29MedDoseTextoExato(it){var d='';try{d=String(medDoseTxt(it)||'').trim();}catch(e){}return d||String((it&&it.doseOriginal)||'').trim();}
+function urg29MedNomeExato(v){try{return String(v==null?'':v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').replace(/\s+/g,' ').trim();}catch(e){return String(v==null?'':v).toLowerCase().replace(/\s+/g,' ').trim();}}
+function urg29MedRelacaoDose(a,b){
+  a=a||{};b=b||{};var A=urg29MedIdentidades(a),B=urg29MedIdentidades(b);
+  var mesmaPessoa=A.dc.some(function(k){return B.dc.indexOf(k)>=0;})||A.refs.some(function(k){return B.refs.indexOf(k)>=0;});
+  if(!mesmaPessoa||String(a.horario)!==String(b.horario))return 'distinta';
+  var na=urg29MedNomeExato(a.nome),nb=urg29MedNomeExato(b.nome),parecido=false;
+  if(na!==nb){try{parecido=medMesmoRemedio(a.nome,b.nome);}catch(e){}return parecido?'conflito':'distinta';}
+  var da=urg29MedDoseTextoExato(a),db=urg29MedDoseTextoExato(b);return da&&db&&da===db?'igual':'conflito';
+}
+function urg29MedPreferirDose(a,b,log){
+  function dada(x){return !!((((log||{})[x.key]||{})[magDoseId(x.itemId,x.horario)]));}
+  if(dada(a)!==dada(b))return dada(a)?a:b;
+  var adc=String(a.key||'').indexOf('dc__')===0,bdc=String(b.key||'').indexOf('dc__')===0;
+  if(adc!==bdc)return adc?a:b;return a;
+}
+function urg29MedLinhasHospedes(dia,hosp){
+  var out=[];
+  (hosp.itens||[]).forEach(function(o){
+    var ref=String(o.refKey||''),p=o.p||{},key='';
+    try{key=medAgendaKey({refKey:ref,nome:p.n||'',tutor:p.tutor||''});}catch(e){} if(!key)return;
+    var ficha=(MED_AGENDA_GERAL||{})[key]||{},itens=ficha.itens||{};
+    Object.keys(itens).forEach(function(id){
+      var it=itens[id]||{}; if(it.suspenso||medItemAnulado(it))return;
+      try{if(!medVigenteEm(it,dia))return;}catch(e){return;}
+      (Array.isArray(it.horarios)?it.horarios:[]).forEach(function(hr){
+        var dk='';try{dk=dcKey(p.n,p.tutor);}catch(e){}
+        out.push({hospNome:p.n||ficha.nome||'',tutor:p.tutor||'',key:key,refKey:ref,dcKey:dk,itemId:id,nome:it.nome||'',q:it.q,u:it.u,local:it.local||'',obs:it.obs||'',horario:hr,origem:'Hospedagem'});
+      });
+    });
+  }); return out;
+}
+function urg29MedAguardarFontes(dia){
+  var caminho='daycare/checkin-corpo/'+dia,tent=0;
+  try{
+    if(typeof presencaExecucaoFontes==='function')presencaExecucaoFontes(dia);
+    else if(typeof zMapaVivo==='function')zMapaVivo(caminho,'_urg29MedPresenca');
+  }catch(e){}
+  function conferir(){
+    var mapa=(typeof Z_MAPAS!=='undefined'&&Z_MAPAS)?Z_MAPAS[caminho]:null,hosp=urg29MedHospedes(dia);
+    var clinica=typeof MED_AGENDA_GERAL_CARREGADA!=='undefined'&&MED_AGENDA_GERAL_CARREGADA===true;
+    if(mapa&&mapa.pronto&&hosp.pronto&&clinica)return Promise.resolve(hosp);
+    if(++tent>=24)return Promise.reject(new Error('fontes de presença ou agenda clínica ainda não confirmadas'));
+    return new Promise(function(resolve){setTimeout(resolve,250);}).then(conferir);
+  }
+  return conferir();
+}
+function urg29MedCarregarAgenda(dia){
+  var ger=++URG29_MED_ESTADO.geracao;
+  URG29_MED_ESTADO.carregando=true;URG29_MED_ESTADO.erro='';URG29_MED_ESTADO.inteira=false;
+  if(dia!==urg29HojeSaoPaulo()){URG29_MED_ESTADO.carregando=false;URG29_MED_ESTADO.erro='dia desatualizado';return Promise.reject(new Error('dia desatualizado'));}
+  return urg29MedAguardarFontes(dia).then(function(hosp){return Promise.all([
+    urg29MedLer('daycare/med-dia/'+dia),urg29MedLer('daycare/dashboard/'+dia+'/medicacao'),urg29MedLer('daycare/chamada/'+dia),urg29MedLer('auaulandia/medicacao-log/'+dia)
+  ]).then(function(r){
+    if(ger!==URG29_MED_ESTADO.geracao)throw new Error('carga substituída por uma mais nova');
+    var log=medLogSemAnuladas(r[3]||{}),dc=medDosesDoCheckinDia(r[0]||{}).map(function(x){x.doseOriginal=x.q;try{x.dcKey=String(x.key||'').slice(4);}catch(e){}return x;});
+    // A chamada é só filtro desta projeção. Check-in corporal concluído vence o "faltou"
+    // antigo para uma chegada tardia, sem alterar chamada ou presença no banco.
+    var chamadaLocal=Object.assign({},r[2]||{}),ck=(typeof Z_MAPAS!=='undefined'&&Z_MAPAS)?Z_MAPAS['daycare/checkin-corpo/'+dia]:null;
+    if(ck&&ck.pronto)Object.keys(ck.mapa||{}).forEach(function(k){var c=ck.mapa[k];if(c&&c.fim&&(!c.tipo||c.tipo==='entrada'))chamadaLocal[k]='veio';});
+    var lanc=medDosesDosLancamentos(r[1]||{},chamadaLocal),lista=urg29MedLinhasHospedes(dia,hosp).concat(medJuntarDoDia(dc,lanc,log));
+    URG29_MED_ESTADO.dia=dia;URG29_MED_ESTADO.agenda=lista;URG29_MED_ESTADO.inteira=true;URG29_MED_ESTADO.carregando=false;URG29_MED_ESTADO.erro='';return lista;
+  });}).catch(function(e){
+    if(ger===URG29_MED_ESTADO.geracao){URG29_MED_ESTADO.carregando=false;URG29_MED_ESTADO.erro=String((e&&e.message)||e||'falha de leitura');URG29_MED_ESTADO.inteira=false;}
+    throw e;
+  });
+}
+function urg29MedRetrato(dia){
+  if(dia!==urg29HojeSaoPaulo()||URG29_MED_ESTADO.dia!==dia||URG29_MED_ESTADO.carregando||URG29_MED_ESTADO.erro)return Promise.reject(new Error('agenda desatualizada'));
+  return urg29MedLer('auaulandia/medicacao-log/'+dia).then(function(v){
+    var log=medLogSemAnuladas(v||{}),doses=URG29_MED_ESTADO.agenda.map(function(it){var id=magDoseId(it.itemId,it.horario),reg=(log[it.key]||{})[id];return Object.assign({},it,{doseId:id,status:reg?'cumprida':'pendente',quem:reg&&reg.quem,ts:reg&&reg.ts});});
+    return {doses:doses,log:log};
+  });
+}
+function urg29MedAssinatura(it){
+  it=it||{};return [it.key,it.itemId,it.horario,it.nome,it.q,it.u,it.local,it.doseOriginal].map(function(v){return String(v==null?'':v).trim();}).join('|');
+}
+function urg29MedRevalidarPrescricao(it,dia){
+  if(dia!==urg29HojeSaoPaulo())return Promise.resolve(false);
+  var pres=urg29MedPodeExibirEstrito(it,dia);if(!pres.pronto||!pres.ativo)return Promise.resolve(false);
+  if(String(it.key||'').indexOf('dc__')===0){
+    return urg29MedCarregarAgenda(dia).then(function(){
+      var atual=URG29_MED_ESTADO.agenda.filter(function(x){return x.key===it.key&&x.itemId===it.itemId&&x.horario===it.horario;})[0];
+      return !!atual&&urg29MedAssinatura(atual)===urg29MedAssinatura(it);
+    },function(){return false;});
+  }
+  var atual=((((MED_AGENDA_GERAL||{})[it.key]||{}).itens||{})[it.itemId])||null;
+  if(!atual||atual.suspenso||medItemAnulado(atual))return Promise.resolve(false);
+  try{if(!medVigenteEm(atual,dia))return Promise.resolve(false);}catch(e){return Promise.resolve(false);}
+  if((atual.horarios||[]).indexOf(it.horario)<0)return Promise.resolve(false);
+  var linha={key:it.key,itemId:it.itemId,horario:it.horario,nome:atual.nome,q:atual.q,u:atual.u,local:atual.local,doseOriginal:''};
+  return Promise.resolve(urg29MedAssinatura(linha)===urg29MedAssinatura(it));
+}
+function urg29MedEsperarLog(key,doseId,dia,ms){
+  return new Promise(function(resolve,reject){
+    if(!DB||!DB.ref){reject(new Error('banco indisponível'));return;}
+    var ref=DB.ref('auaulandia/medicacao-log/'+dia+'/'+key),acabou=false,timer;
+    function limpar(){if(acabou)return;acabou=true;if(timer)clearTimeout(timer);try{ref.off('value',ouvir);}catch(e){}}
+    function ouvir(s){
+      if(dia!==urg29HojeSaoPaulo()){falhar(new Error('dia mudou durante o registro'));return;}
+      var mapa=(s&&typeof s.val==='function')?(s.val()||{}):{},reg=medDosesSemAnuladas(mapa)[doseId]||null;
+      if(reg&&reg.quem){limpar();resolve(reg);}
+    }
+    function falhar(e){limpar();reject(e instanceof Error?e:new Error(String(e||'falha ao ler o log')));}
+    timer=setTimeout(function(){falhar(new Error('o log não confirmou o registro'));},ms||7000);
+    try{ref.on('value',ouvir,falhar);}catch(e){falhar(e);}
+  });
+}
+function urg29MedRegistrarConfirmado(it,doseId,dia){
+  var guarda=String(it.key)+'__'+String(doseId)+'__'+String(dia); if(URG29_MED_REGISTRANDO[guarda])return URG29_MED_REGISTRANDO[guarda];
+  if(dia!==urg29HojeSaoPaulo())return Promise.reject(new Error('dia mudou antes do registro'));
+  function achar(){return urg29MedLer('auaulandia/medicacao-log/'+dia+'/'+it.key).then(function(v){return medDosesSemAnuladas(v||{})[doseId]||null;});}
+  var p=achar().then(function(ja){
+    if(ja&&ja.quem)return ja;
+    return urg29MedRevalidarPrescricao(it,dia).then(function(ok){
+      if(!ok)throw new Error('a prescrição, o horário, a identidade ou a presença mudou; confira novamente');
+      try{registrarDoseAgendadaGlobal(it,doseId,dia);}catch(e){throw e;}
+      return urg29MedEsperarLog(it.key,doseId,dia,7000);
+    });
+  }).then(function(r){delete URG29_MED_REGISTRANDO[guarda];return r;},function(e){delete URG29_MED_REGISTRANDO[guarda];throw e;});
+  URG29_MED_REGISTRANDO[guarda]=p;return p;
+}
+
+var __urg29Med=window.urg29MedicacaoCriar({
+  dia:urg29HojeSaoPaulo,
+  agendaEstado:function(){return URG29_MED_ESTADO;},
+  carregarAgenda:urg29MedCarregarAgenda,
+  retratoDoDia:urg29MedRetrato,
+  doseTexto:medDoseTxt,doseId:magDoseId,registrarConfirmado:urg29MedRegistrarConfirmado,perguntar:zPergunta,
+  elemento:function(){return document.getElementById('scr-medicacao');},
+  peludinhos:function(){return (typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS))?PELUDINHOS:[];},
+  pelKey:pelKey,dcKey:function(p){return dcKey(p.n,p.tutor);},chaveDoPel:medChaveDoPel,continuosDaChave:medContinuosDaChave,vigenteEm:medVigenteEm,
+  podeExibir:urg29MedPodeExibirEstrito
+  ,relacaoDose:urg29MedRelacaoDose,preferirDose:urg29MedPreferirDose
+});
+window.urg29MedicacaoCarregar=function(){return __urg29Med.carregar();};
+window.urg29MedicacaoConfirmar=function(id,b){return __urg29Med.confirmar(id,b);};
+window.urg29MedicacaoListar=function(a){return __urg29Med.listar(a,true,urg29HojeSaoPaulo(),{});};
+var __urg29RenderAtualBase=renderAtual;
+renderAtual=function(){
+  if(dcAtiv==='medicacao'){
+    mostrarScr();var g=document.getElementById('scr-generic'),m=document.getElementById('scr-medicacao');if(g)g.style.display='none';if(m)m.style.display='block';
+    __urg29Med.carregar();if(typeof renderAdaptBanner==='function')renderAdaptBanner();return;
+  }
+  return __urg29RenderAtualBase.apply(this,arguments);
+};
+/* URG29-MED-SOL-BRIDGE-FIM */
+
+</script>
 </html>
