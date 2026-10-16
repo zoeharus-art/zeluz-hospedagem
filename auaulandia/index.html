@@ -5211,6 +5211,7 @@
 <script src="hospedes-atividades.js?v=2026-10-16-01"></script>
 <script src="alimentacao-hospede.js?v=2026-10-16-01"></script>
 <script src="cafe-operacional.js?v=2026-10-16-02"></script>
+<script src="cafe-aluno-logica.js?v=2026-10-16-06"></script>
 <script src="presenca-logica.js?v=2026-10-16-02"></script>
 <script src="historico-checkins.js?v=2026-10-15-02"></script>
 <script src="historico-checkins-pdf.js?v=2026-10-15-02"></script>
@@ -14809,7 +14810,7 @@
   function cafeLeituraPronta(){ return cafeLeitura.cafe==='ok'&&cafeLeitura.turno==='ok'&&cafeLeitura.dia===cafeDataKey(); }
   function cafeFalhaLeitura(){ return cafeLeitura.cafe==='falha'||cafeLeitura.turno==='falha'; }
   function cafeCarregar(){
-    var dia=cafeDataKey();
+    var dia=cafeDataKey(); try{cafeAlunoCarregar();}catch(e){}
     if(cafeLeitura.dia===dia&&cafeLeitura.promessa) return cafeLeitura.promessa;
     if(cafeLeitura.dia===dia&&cafeLeitura.cafe==='ok'&&cafeLeitura.turno==='ok'&&Date.now()-(cafeLeitura.atualizadoEm||0)<15000) return Promise.resolve(cafeLeitura);
     var geracao=(cafeLeitura.geracao||0)+1;
@@ -14825,7 +14826,7 @@
     });
     cafeLeitura.promessa=promessa; renderCafe(); return promessa;
   }
-  function cafeKey(h){ return (typeof medAgendaKey==='function')?medAgendaKey(h):((h.nome||'')+'__'+(h.tutor||'')).toLowerCase(); }
+  function cafeKey(h){ return (h&&h.cafeAlunoKey)||((typeof medAgendaKey==='function')?medAgendaKey(h):((h.nome||'')+'__'+(h.tutor||'')).toLowerCase()); }
   function cafeEstado(k){ var v=cafeMarcas[k]; return (v&&v.estado)||(typeof v==='string'?v:''); }
   function marcarCafePersistir(k,val){
     var cur=cafeEstado(k), nx=(cur===val)?'':val;
@@ -14897,6 +14898,7 @@
     return '<details class="hint" style="grid-column:1/-1"><summary><strong>Café a conferir:</strong> '+conferencias.length+' hospedagem(ns) precisa(m) de conferência antes de servir.</summary><ul style="margin:8px 0 0 18px">'+itens+'</ul></details>';
   }
   function marcarCafe(k,val){
+    var leituraAluno=cafeParticipantesAtivos(),itemAluno=(leituraAluno.participantes||[]).filter(function(o){return o.cafeAluno&&cafeKey(o.hospede)===k;})[0]; if(itemAluno)return cafeAlunoMarcar(itemAluno,val);
     var guarda=cafePodeOperar();
     if(!guarda.ok){ if(typeof alert==='function') alert(guarda.mensagem); return false; }
     if(cafeMarcasPendentes[k]){ if(typeof alert==='function') alert('Esta marcação ainda está sendo confirmada. Aguarde antes de registrar outra.'); return false; }
@@ -14920,14 +14922,57 @@
       return {h:h,patch:patch};
     }catch(e){ _logFalhaGrav('cafeTrocarTurno',e); if(typeof alert==='function') alert('Não consegui confirmar o turno do café. Nada foi concluído nesta tela.'); return null; }
   }
+  var cafeAlunoLeitura={dia:'',estado:'inicial',excecoes:{},chamada:{},checkins:{},erro:null,promessa:null};
+  function cafeAlunoCarregar(){
+    var dia=cafeDataKey(); if(cafeAlunoLeitura.dia===dia&&cafeAlunoLeitura.promessa)return cafeAlunoLeitura.promessa;
+    cafeAlunoLeitura={dia:dia,estado:'lendo',excecoes:{},chamada:{},checkins:{},erro:null,promessa:null};
+    if(!DB){ cafeAlunoLeitura.estado='falha'; return Promise.resolve(cafeAlunoLeitura); }
+    function ler(no){return DB.ref(no).once('value').then(function(sn){return {ok:true,v:sn.val()||{}};},function(e){return {ok:false,e:e};});}
+    var p=Promise.all([ler('daycare/cafe-excecao/'+dia),ler('daycare/chamada/'+dia),ler('daycare/checkin-corpo/'+dia)]).then(function(r){
+      if(cafeAlunoLeitura.dia!==dia)return cafeAlunoLeitura; cafeAlunoLeitura.estado=r.every(function(x){return x.ok;})?'ok':'falha'; cafeAlunoLeitura.excecoes=r[0].v||{}; cafeAlunoLeitura.chamada=r[1].v||{}; cafeAlunoLeitura.checkins=r[2].v||{}; cafeAlunoLeitura.erro=r.filter(function(x){return !x.ok;})[0]; cafeAlunoLeitura.promessa=null; try{renderCafe();}catch(e){} return cafeAlunoLeitura;
+    }); cafeAlunoLeitura.promessa=p; return p;
+  }
+  function cafeAlunoDados(){
+    var a=cafeAlunoLeitura,dia=cafeDataKey(); if(!a||a.dia!==dia||a.estado!=='ok'||typeof ZeluzCafeAluno==='undefined')return {pronto:false,participantes:[]};
+    var turma=((typeof turmaDoDia==='function')?turmaDoDia(dia):[]).filter(function(o){var p=(o&&o.p)||{};return !!o&&!o.hospede&&!p.hospede&&!p.mascote;}); var ps=[];
+    Object.keys(a.excecoes||{}).forEach(function(k){var e=a.excecoes[k],r=ZeluzCafeAluno.elegivel({dia:dia,excecao:e,pessoas:turma,dcKey:dcKey,chamada:a.chamada,checkins:a.checkins}); if(!r.ok)return; var p=r.aluno.p||{}; ps.push({hospede:{nome:p.n,tutor:p.tutor,raca:p.raca||'',cafeAlunoKey:r.chaveCafe,cafeAluno:true},plano:{origem:'cafe-aluno-excecao'},porcao:{texto:String(e.quantidade)+' · '+String(e.alimento),extra:String(e.instrucao),pendente:'',semRacao:false},cafeAluno:true,dcKey:k,excecao:e});});
+    return {pronto:true,participantes:ps};
+  }
+  function cafeAlunoAviso(){var a=cafeAlunoLeitura;if(!a||a.dia!==cafeDataKey()||a.estado==='lendo')return '<div class="hint" style="grid-column:1/-1">Lendo as instruções explícitas de café dos alunos…</div>';if(a.estado==='falha')return '<div class="hint" style="grid-column:1/-1">Não foi possível confirmar as instruções de café dos alunos. O café dos hóspedes continua preservado; aluno não entra sem essa confirmação.</div>';return '';}
+  function cafeAlunoMaterial(e){e=e||{};return {tipo:String(e.tipo||''),dia:String(e.dia||''),dcKey:String(e.dcKey||''),pet:String(e.pet||''),tutor:String(e.tutor||''),instrucao:String(e.instrucao||''),alimento:String(e.alimento||''),quantidade:String(e.quantidade||''),quem:String(e.quem||''),papel:String(e.papel||''),ts:Number(e.ts||0),origem:String(e.origem||'')};}
+  function cafeAlunoAssinatura(e){return JSON.stringify(cafeAlunoMaterial(e));}
+  function cafeAlunoChamadoId(k){return 'cafe-'+String(k||'');}
+  function cafeAlunoPedirBotao(p,k){
+    if(!p||p.hospede||p.mascote||!k||!cafeAlunoLeitura||cafeAlunoLeitura.dia!==cafeDataKey()||cafeAlunoLeitura.estado!=='ok'||!ZeluzCafeAluno.presente(k,cafeAlunoLeitura.chamada,cafeAlunoLeitura.checkins))return '';
+    var c=(typeof PT_CHAMADOS!=='undefined'&&PT_CHAMADOS||{})[cafeAlunoChamadoId(k)]; if(c&&c.tipo==='cafe-aluno')return '<div class="hint" style="margin-top:7px">'+(c.resposta?'A Recepção respondeu a instrução de café.':'Instrução de café já pedida à Recepção.')+'</div>';
+    return '<button type="button" class="btn" style="width:100%;margin-top:7px" onclick="cafeAlunoAvisarRecepcao('+cafeChaveAcao(k)+')">Pedir instrução de café à Recepção</button>';
+  }
+  function cafeAlunoPedidosHTML(){
+    if(!cafeAlunoLeitura||cafeAlunoLeitura.dia!==cafeDataKey()||cafeAlunoLeitura.estado!=='ok')return '';
+    var lista=(typeof turmaDoDia==='function'?turmaDoDia(cafeDataKey()):[]).filter(function(o){var p=o.p||{},k=dcKey(p.n,p.tutor);return !o.hospede&&!p.hospede&&!p.mascote&&ZeluzCafeAluno.presente(k,cafeAlunoLeitura.chamada,cafeAlunoLeitura.checkins);});
+    if(!lista.length)return ''; return '<div class="hint" style="grid-column:1/-1"><strong>Aluno presente no Day Care</strong><div style="margin-top:5px">Peça à Recepção uma instrução explícita antes de oferecer café. O pedido não registra que ele comeu.</div>'+lista.map(function(o){var p=o.p,k=dcKey(p.n,p.tutor);return '<div style="margin-top:7px"><strong>'+escAttr(p.n||'')+'</strong>'+(p.tutor?' · '+escAttr(p.tutor):'')+cafeAlunoPedirBotao(p,k)+'</div>';}).join('')+'</div>';
+  }
+  function cafeAlunoAvisarRecepcao(k){
+    var dia=dcDataKey(),turma=turmaDoDia(dia),ach=turma.filter(function(o){return !o.hospede&&!o.p.hospede&&!o.p.mascote&&dcKey(o.p.n,o.p.tutor)===k;}),id=cafeAlunoChamadoId(k);
+    if(ach.length!==1||!ZeluzCafeAluno.presente(k,cafeAlunoLeitura.chamada,cafeAlunoLeitura.checkins)){alert('Só peça instrução para aluno presente, com identidade confirmada.');return false;}
+    var p=ach[0].p,estado=''; return DB.ref('daycare/chamados-recepcao/'+dia+'/'+id).transaction(function(atual){if(atual){estado='existe';return; }estado='ok';return {tipo:'cafe-aluno',pet:p.n||'',tutor:p.tutor||'',raca:p.raca||'',dia:dia,dcKey:k,motivo:'precisa de instrução explícita para o café da manhã de hoje',quem:(typeof quemSou==='function'?quemSou():'-'),ts:Date.now(),status:'aberto'};}).then(function(r){if(estado==='ok'&&r&&r.committed){try{audit('chamado-recepcao','pediu instrução de café para '+(p.n||''),{pet:p.n||'',alvo:k});}catch(e){} }try{renderGenerico();}catch(e){};return estado==='ok';}).catch(function(e){alert('Não consegui pedir a instrução: '+((e&&e.message)||e));return false;});
+  }
+  function cafeAlunoMarcar(item,val){
+    var dia=cafeDataKey(),k=cafeKey(item.hospede),q=cafeAutor(),tela=item&&item.excecao||null,assinaturaTela=cafeAlunoAssinatura(tela),fonteTela=cafeAlunoMaterial(tela),pend={estado:val,quem:q,hora:cafeHoraSP(),assinatura:assinaturaTela};
+    var guarda=cafePodeOperar(); if(!guarda.ok){alert(guarda.mensagem);return false;} if(!q||!DB){alert('Não identifiquei quem está operando o café. Entre novamente antes de registrar.');return false;} if(!tela||!fonteTela.instrucao||!fonteTela.alimento||!fonteTela.quantidade||!fonteTela.ts){alert('Não encontrei a instrução exibida para este aluno. Confira antes de registrar.');return false;} if(cafeMarcasPendentes[k])return false;
+    cafeMarcasPendentes[k]=pend;renderCafe();
+    function ler(no){return DB.ref(no).once('value').then(function(sn){return sn.val()||{};});}
+    Promise.all([ler('daycare/cafe-excecao/'+dia+'/'+item.dcKey),ler('daycare/chamada/'+dia),ler('daycare/checkin-corpo/'+dia)]).then(function(r){
+      var turma=turmaDoDia(dia),v=ZeluzCafeAluno.elegivel({dia:dia,excecao:r[0],pessoas:turma,dcKey:dcKey,chamada:r[1],checkins:r[2]});
+      if(!v.ok||cafeDataKey()!==dia||cafeAutor()!==q)throw Error(v.motivo||'contexto mudou');
+      if(cafeAlunoAssinatura(r[0])!==assinaturaTela)throw Error('A instrução mudou desde que foi exibida. Confira antes de registrar o café.');
+      return DB.ref('daycare/cafe-excecao/'+dia+'/'+item.dcKey).once('value').then(function(sn){var atual=sn.val()||null;if(cafeAlunoAssinatura(atual)!==assinaturaTela)throw Error('A instrução mudou enquanto o café era confirmado. Confira antes de registrar.');return DB.ref('auaulandia/cafe/'+dia+'/'+k).transaction(function(anterior){if(cafeDataKey()!==dia||cafeAutor()!==q)return anterior;var antes=cafeAntesDoValor(anterior),nx=(cafeEstado(k)===val)?'':val;if((antes?antes.estado:'')===nx)return;var reg=nx?{estado:nx,quem:q,hora:cafeHoraSP(),origem:'cafe-aluno-excecao',dcKey:item.dcKey,excecaoTs:fonteTela.ts,instrucao:fonteTela.instrucao,alimento:fonteTela.alimento,quantidade:fonteTela.quantidade,instrucaoAssinatura:assinaturaTela}:null;if(antes){reg=reg||{estado:'',quem:q,hora:cafeHoraSP(),limpo:true};reg.antes=antes;}return reg;});});
+    }).then(function(res){if(cafeMarcasPendentes[k]!==pend)return;delete cafeMarcasPendentes[k];var v=res&&res.snapshot&&res.snapshot.val?res.snapshot.val():null;if(v)cafeMarcas[k]=v;else delete cafeMarcas[k];renderCafe();}).catch(function(e){if(cafeMarcasPendentes[k]===pend)delete cafeMarcasPendentes[k];renderCafe();alert('Não confirmei o café deste aluno: '+((e&&e.message)||e)+'.');}); return true;
+  }
   function cafeParticipantesAtivos(){
     if(typeof ZeluzCafeOperacional==='undefined') return {pronto:false,participantes:[],conferencias:[{estado:'modulo-cafe-ausente'}]};
-    return ZeluzCafeOperacional.criar({
-      pronto:(typeof CF_ESTADIAS_LIDO!=='undefined'&&CF_ESTADIAS_LIDO===true),
-      estadias:(typeof EST_TODAS!=='undefined'&&EST_TODAS)||{},
-      hospedes:function(){return (typeof hospedes!=='undefined'&&hospedes)||[];},
-      hoje:function(){return cafeDataKey();}
-    }).ler();
+    var hotel=ZeluzCafeOperacional.criar({pronto:(typeof CF_ESTADIAS_LIDO!=='undefined'&&CF_ESTADIAS_LIDO===true),estadias:(typeof EST_TODAS!=='undefined'&&EST_TODAS)||{},hospedes:function(){return (typeof hospedes!=='undefined'&&hospedes)||[];},hoje:function(){return cafeDataKey();}}).ler();
+    var aluno=cafeAlunoDados(); if(aluno.pronto)hotel.participantes=hotel.participantes.concat(aluno.participantes); return hotel;
   }
   function renderCafe(){
     var grid=document.getElementById('cafeGrid'); if(!grid) return;
@@ -14945,7 +14990,7 @@
     var rz=document.getElementById('cafeResumo');
     if(cafeFalhaLeitura()){ grid.innerHTML='<div class="hint" style="grid-column:1/-1"><strong>Não foi possível confirmar os registros do café.</strong> As marcas e o turno anteriores foram preservados, mas nada pode ser servido ou registrado até uma nova leitura bem-sucedida.</div>'; if(rz) rz.innerHTML=''; return; }
     if(!cafeLeituraPronta()||!leitura.pronto){ grid.innerHTML='<div class="hint" style="grid-column:1/-1">Ainda lendo os check-ins e os registros confirmados do café. Não vou montar a lista no escuro.</div>'; if(rz) rz.innerHTML=''; return; }
-    var avisos=cafeAvisos(leitura.conferencias||[]);
+    var avisos=cafeAlunoAviso()+cafeAvisos(leitura.conferencias||[])+cafeAlunoPedidosHTML();
     if(!itens.length){ grid.innerHTML=avisos+'<div class="hint" style="grid-column:1/-1">Nenhum hóspede com café confirmado no check-in para hoje.</div>'; if(rz) rz.innerHTML=''; return; }
     var _est=itens.map(function(o){ return cafeEstado(cafeKey(o.hospede)); });
     var naochegou=_est.filter(function(e){ return e==='naochegou'; }).length;
@@ -16742,7 +16787,7 @@
       // 6.56: o cancelado (foi engano) fica riscado, com quem, quando e o motivo.
       if(c.cancelado) return chamadoCanceladoHTML(k, c);
       var respondido=!!c.resposta;
-      var ed=(CHAMADO_EDIT && CHAMADO_EDIT.k===k)?String(CHAMADO_EDIT.modo||''):'';
+      var ed=(CHAMADO_EDIT && CHAMADO_EDIT.k===k)?String(CHAMADO_EDIT.modo||''):'', cafeAluno=String(c.tipo||'')==='cafe-aluno';
       var hora=''; try{ var d=new Date(c.ts), p=function(x){return String(x).padStart(2,'0');}; hora=p(d.getHours())+':'+p(d.getMinutes()); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
       return '<div class="avr-card '+(respondido?'resolvido':'pendente')+'"><div class="avr-head"><div class="avr-info">'
         +'<strong>'+escAttr(c.pet||'')+'</strong> <span style="color:var(--muted);font-size:12px">'+escAttr(c.tutor||'')+'</span>'
@@ -16753,6 +16798,7 @@
           ? '<div class="avr-resolvido-banner" style="text-align:left">'+escAttr(c.resposta)+'<div style="font-weight:600;font-size:12.5px;margin-top:4px">por '+escAttr(c.respondido_por||'-')+'</div></div>'
             // 6.56: o antes de cada correção à vista, e «Corrigir a resposta» / «Cancelar o chamado»
             +chamadoCorrecoesHTML(c)
+            +(cafeAluno&&c.cafe_excecao_pendente===true?'<div class="hint" style="margin-top:7px"><strong>A instrução ainda não foi confirmada.</strong> Mantenha a mesma resposta e tente de novo.</div><label for="chsenha_'+escAttr(k)+'" style="display:block;margin-top:8px;font-size:14px;font-weight:800;color:var(--z-blue)">Sua senha</label><input id="chsenha_'+escAttr(k)+'" type="password" autocomplete="off" style="margin-top:4px" placeholder="assina a retomada"><div class="avr-form-btns"><button class="btn btn-primary" onclick="chamadoResponder(\''+jsAspas(k)+'\')">Tentar confirmar instrução</button></div>':'')
             +(ed==='corrigir'?chamadoFormCorrigirHTML(k, c):(ed==='cancelar'?chamadoFormCancelarHTML(k, c):chamadoBotoesHTML(k, true)))
           : (ed==='cancelar') ? chamadoFormCancelarHTML(k, c) : '<div class="avr-form"><div class="ff-tit">O que a monitora deve fazer?</div>'
             +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:7px">'
@@ -16765,12 +16811,12 @@
             +'</div>'
             +'<textarea id="chresp_'+k+'" placeholder="Escreva a solução para quem está com ele"></textarea>'
             // O que muda no almoço DE HOJE — a ficha dele continua como está.
-            +'<div class="ff-tit" style="margin-top:9px">O que ele vai comer hoje</div>'
-            +'<div class="hint">Preencha quando a comida de hoje for diferente da ficha. Aparece em destaque na hora de servir e vale só hoje.</div>'
+            +(cafeAluno?'<div class="ff-tit" style="margin-top:9px">Café da manhã de hoje</div>':'<div class="ff-tit" style="margin-top:9px">O que ele vai comer hoje</div>')
+            +'<div class="hint">'+(cafeAluno?'Registre a orientação recebida, o alimento e a quantidade reais. Isto não confirma que ele comeu.':'Preencha quando a comida de hoje for diferente da ficha. Aparece em destaque na hora de servir e vale só hoje.')+'</div>'
             +'<div class="cad-grid2" style="margin-top:6px">'
             +'<div><label class="cad-lb">O quê</label><input class="cad-in" id="chalim_'+k+'" placeholder="Ex: Livelong lata"></div>'
             +'<div><label class="cad-lb">Quanto</label><input class="cad-in" id="chqtd_'+k+'" placeholder="Ex: meia lata"></div>'
-            +'</div>'
+            +'</div>'+(cafeAluno?'<div style="margin-top:7px"><label class="cad-lb">Instrução recebida</label><input class="cad-in" id="chinstr_'+k+'" placeholder="Ex: tutor autorizou a porção trazida"></div>':'')
             // 6.56 (EN3): a resposta é assinada com a SENHA da própria pessoa — o app grava o nome
             +'<label for="chsenha_'+escAttr(k)+'" style="display:block;margin-top:10px;font-size:14px;font-weight:800;color:var(--z-blue)">Sua senha</label>'
             +'<input id="chsenha_'+escAttr(k)+'" type="password" autocomplete="off" style="margin-top:4px" placeholder="assina a resposta">'
@@ -16787,35 +16833,52 @@
   // `respondido_assinado`, que é o que «quem respondeu corrige» confere. Ler e gravar na mesma
   // transação: não responde por cima de quem já respondeu nem de um chamado cancelado.
   async function chamadoResponder(k){
-    var r=((document.getElementById('chresp_'+k)||{}).value||'').trim();
+    var ch=PT_CHAMADOS[k]||{}, cafeAluno=String(ch.tipo||'')==='cafe-aluno', retomar=!!(cafeAluno&&ch.resposta&&ch.cafe_excecao_pendente===true);
     var senha=((document.getElementById('chsenha_'+k)||{}).value||'').trim();
+    var r=retomar?String(ch.resposta||'').trim():((document.getElementById('chresp_'+k)||{}).value||'').trim();
+    var alim=retomar?String(ch.alimento_hoje||'').trim():((document.getElementById('chalim_'+k)||{}).value||'').trim();
+    var qtd=retomar?String(ch.quantidade_hoje||'').trim():((document.getElementById('chqtd_'+k)||{}).value||'').trim();
+    var instr=retomar?String(ch.instrucao_cafe||'').trim():((document.getElementById('chinstr_'+k)||{}).value||'').trim();
     if(!r){ alert('Escreva a solução — é isso que a monitora vai ler.'); return false; }
+    if(cafeAluno&&(!alim||!qtd||!instr)){ alert(retomar?'A resposta salva não tem instrução, alimento e quantidade suficientes para confirmar.':'Para o café, informe instrução recebida, alimento e quantidade reais.'); return false; }
     if(!podePapel('corrigir-engano-dc')){ alert(ENGANO_SO_RECEPCAO); return false; }
-    var ass=enganoAssinar(senha, 'recepcao');
-    if(!ass.ok){ alert(ass.erro); return false; }
+    var ass=enganoAssinar(senha, 'recepcao'); if(!ass.ok){ alert(ass.erro); return false; }
     if(!DB) return false;
-    var alim=((document.getElementById('chalim_'+k)||{}).value||'').trim();
-    var qtd=((document.getElementById('chqtd_'+k)||{}).value||'').trim();
-    var dia=dcDataKey(), ts=Date.now(), estado='';
+    var dia=dcDataKey(), ts=Date.now(), estado='', respostaSalva=null, caminho='daycare/chamados-recepcao/'+dia+'/'+k;
     try{
-      await DB.ref('daycare/chamados-recepcao/'+dia+'/'+k).transaction(function(c){
-        if(c===null||c===undefined){ estado='sumiu'; return null; }   // cache frio: o SDK decide com o servidor
+      var tx=await DB.ref(caminho).transaction(function(c){
+        if(c===null||c===undefined){ estado='sumiu'; return null; }
         if(c.cancelado){ estado='cancelado'; return c; }
-        if(c.resposta){ estado='respondido'; return c; }
-        estado='ok';
-        return Object.assign({}, c, {resposta:r, respondido_por:ass.nome, respondido_em:ts, status:'respondido',
-          alimento_hoje:alim, quantidade_hoje:qtd, respondido_login:ass.nome, respondido_papel:ass.papel, respondido_assinado:true});
+        if(c.resposta){
+          if(cafeAluno&&c.cafe_excecao_pendente===true&&String(c.dia||dia)===dia&&String(c.dcKey||'')===String(ch.dcKey||'')){estado='retomar';return c;}
+          estado='respondido'; return c;
+        }
+        estado='ok'; return Object.assign({},c,{resposta:r,respondido_por:ass.nome,respondido_em:ts,status:'respondido',alimento_hoje:alim,quantidade_hoje:qtd,instrucao_cafe:(cafeAluno?instr:''),respondido_login:ass.nome,respondido_papel:ass.papel,respondido_assinado:true});
       });
+      respostaSalva=tx&&tx.snapshot&&tx.snapshot.val?tx.snapshot.val():null;
     }catch(e){ alert('Não consegui responder: '+((e&&e.message)||e)); return false; }
     if(estado==='sumiu'){ alert('Não achei este chamado no banco. Atualize a tela. Nada foi gravado.'); return false; }
     if(estado==='cancelado'){ alert('Este chamado foi cancelado (foi engano). Nada foi gravado.'); return false; }
     if(estado==='respondido'){ alert('Outra pessoa já respondeu a este chamado. Para mudar a resposta, use «Corrigir a resposta». Nada foi gravado.'); return false; }
-    // A comida diferente vira EXCEÇÃO DO DIA — a ficha permanente não é tocada.
-    if(alim){
-      try{ await DB.ref('daycare/almoco-excecao/'+dia+'/'+k).set({oque:alim, quanto:qtd, quem:ass.nome, ts:ts}); }
-      catch(e){ alert('A resposta foi gravada, mas a comida de hoje não chegou ao Almoço ('+((e&&e.message)||e)+'). Use «Corrigir a resposta» para gravar de novo.'); }
-    }
-    if(typeof audit==='function') audit('chamado-respondido','respondeu ao Day Care: '+r+(alim?(' · hoje come '+alim+' '+qtd):''),{quem:ass.nome});
+    if(cafeAluno){
+      var fonte=respostaSalva||ch, dc=String(fonte.dcKey||''), excNo='daycare/cafe-excecao/'+dia+'/'+dc;
+      if(!dc||String(fonte.dia||dia)!==dia||!fonte.resposta||!fonte.alimento_hoje||!fonte.quantidade_hoje||!fonte.instrucao_cafe){alert('A resposta salva não corresponde mais a este café. Nada foi alterado.');return false;}
+      r=String(fonte.resposta); alim=String(fonte.alimento_hoje); qtd=String(fonte.quantidade_hoje); instr=String(fonte.instrucao_cafe);
+      var autor={nome:String(fonte.respondido_por||''),papel:String(fonte.respondido_papel||''),ts:Number(fonte.respondido_em||0)};
+      if(!autor.nome||!autor.papel||!Number.isFinite(autor.ts)||autor.ts<=0){alert('A autoria original desta resposta não está completa. A instrução ficou pendente para conferência.');return false;}
+      try{
+        var fato=(await DB.ref('auaulandia/cafe/'+dia+'/'+ZeluzCafeAluno.chaveCafe(dc)).once('value')).val()||null, estadoExc='';
+        await DB.ref(excNo).transaction(function(atual){
+          if(atual&&!ZeluzCafeAluno.podeCorrigir(fato)){estadoExc='conferir';return Object.assign({},atual,{conferir:{motivo:'resposta recebida após fato de café',por:ass.nome,ts:ts}});}
+          var n={tipo:'cafe-aluno',dia:dia,dcKey:dc,pet:fonte.pet||'',tutor:fonte.tutor||'',instrucao:instr,alimento:alim,quantidade:qtd,quem:autor.nome,papel:autor.papel,ts:autor.ts,origem:'chamado-recepcao'};
+          if(atual&&retomar){var igual=String(atual.tipo||'')===n.tipo&&String(atual.dia||'')===n.dia&&String(atual.dcKey||'')===n.dcKey&&String(atual.pet||'')===String(n.pet||'')&&String(atual.tutor||'')===String(n.tutor||'')&&String(atual.instrucao||'')===n.instrucao&&String(atual.alimento||'')===n.alimento&&String(atual.quantidade||'')===n.quantidade&&String(atual.quem||'')===n.quem&&String(atual.papel||'')===n.papel&&Number(atual.ts)===n.ts;if(igual){estadoExc='ok';return atual;}estadoExc='conferir';return Object.assign({},atual,{conferir:{motivo:'instrução pendente diverge do registro atual',por:ass.nome,ts:ts}});}
+          estadoExc='ok'; if(atual)n.antes=atual; return n;
+        });
+        if(estadoExc==='ok'){await DB.ref(caminho).update({cafe_excecao_pendente:null});try{if(PT_CHAMADOS[k])PT_CHAMADOS[k].cafe_excecao_pendente=null;}catch(e){}}
+        else {await DB.ref(caminho).update({cafe_excecao_pendente:'conferir'});alert('A instrução anterior foi preservada e ficou a conferir.');return true;}
+      }catch(e){try{await DB.ref(caminho).update({cafe_excecao_pendente:true});}catch(e2){}alert('A resposta foi gravada, mas a instrução de café não foi confirmada ('+((e&&e.message)||e)+'). Tente de novo com a mesma resposta.');return false;}
+    } else if(alim){try{await DB.ref('daycare/almoco-excecao/'+dia+'/'+k).set({oque:alim,quanto:qtd,quem:ass.nome,ts:ts});}catch(e){alert('A resposta foi gravada, mas a comida de hoje não chegou ao Almoço ('+((e&&e.message)||e)+'). Use «Corrigir a resposta» para gravar de novo.');}}
+    if(typeof audit==='function')audit('chamado-respondido','respondeu ao Day Care: '+r+(alim?(' · hoje come '+alim+' '+qtd):''),{quem:ass.nome});
     return true;
   }
   var _recepcaoPrevN=null;
@@ -18180,6 +18243,12 @@
   async function chamadoCorrigir(dia, k, novo, motivo, senha){
     var falha=function(erro){ return {ok:false, erro:erro}; };
     if(!podePapel('corrigir-engano-dc')) return falha(ENGANO_SO_RECEPCAO);
+    var chamadoCafe=(PT_CHAMADOS||{})[k]||null;
+    if(chamadoCafe&&chamadoCafe.tipo==='cafe-aluno'){
+      var dc=String(chamadoCafe.dcKey||''), fato=null; try{fato=(await DB.ref('auaulandia/cafe/'+dia+'/'+ZeluzCafeAluno.chaveCafe(dc)).once('value')).val()||null;}catch(e){}
+      if(!ZeluzCafeAluno.podeCorrigir(fato)){ try{await DB.ref('daycare/cafe-excecao/'+dia+'/'+dc+'/conferir').set({motivo:'instrução alterada após fato de café',por:(typeof quemSou==='function'?quemSou():'-'),ts:Date.now()});}catch(e){} return falha('O café já foi registrado. A instrução anterior foi preservada e ficou a conferir.'); }
+      return falha('A correção desta instrução de café precisa ser conferida antes de substituir a orientação do dia.');
+    }
     novo=novo||{};
     var resp=String(novo.resposta||'').trim(), alim=String(novo.alimento||'').trim(), qtd=String(novo.quantidade||'').trim();
     if(!resp) return falha('Escreva a resposta nova: é ela que o Day Care vai ler. Nada foi gravado.');
@@ -27561,7 +27630,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-16-05';
+  const APP_VERSAO='2026-10-16-06';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
