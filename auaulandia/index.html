@@ -21134,6 +21134,11 @@
     ev.preventDefault(); return false;
   }
   function orcAbrirCalendario(el){
+    // A saída começa na entrada; abrir o calendário não escolhe nem troca uma data.
+    if(el&&el.id==='orcSaida'){
+      var entrada=document.getElementById('orcEntrada');
+      el.min=(entrada&&entrada.value)||(entrada&&entrada.min)||'2015-01-01';
+    }
     try{ if(el.showPicker) el.showPicker(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
   }
   function orcRenderTipo(){
@@ -27556,7 +27561,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-16-04';
+  const APP_VERSAO='2026-10-16-05';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
