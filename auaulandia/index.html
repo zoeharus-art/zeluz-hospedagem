@@ -27556,7 +27556,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-16-03';
+  const APP_VERSAO='2026-10-16-04';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -40151,7 +40151,12 @@
     var campo=k.replace(/_p$/,'')+'_ondefoi';
     var ex=pelExtra(p)||{};
     var patch={}; patch[campo]=(String(ex[campo]||'')===op)?'':op;
-    var alvo=chave+'|'+k, dig=prevLanceDigitado(chave, k);
+    var alvo=chave+'|'+k, dig=prevLanceDigitado(chave, k), pend=PREV_LANCE_ESTADO[alvo];
+    // A origem faz parte do recibo: não troca o local enquanto a confirmação está em curso ou pendente.
+    if(pend && (pend.passo==='gravando' || pend.passo==='rastreando' || pend.passo==='pendente-rastro')){
+      try{ prevRedesenhar(); }catch(e){}
+      return Promise.resolve({ok:false, erro:'aguarde a confirmação do cuidado antes de trocar o local'});
+    }
     PREV_LANCE_ESTADO[alvo]={passo:'gravando', onde:true, ts:Date.now()};
     return prevGravar(p, patch, {tela:'Prevenção (Lance aqui mesmo)', semCache:true}).then(function(r){
       PREV_LANCE_ESTADO[alvo]=(r && r.ok===true)?{passo:'salvo', onde:true, ts:Date.now()}:{passo:'falhou', onde:true, erro:(r&&r.erro)||'', ts:Date.now()};
@@ -40319,41 +40324,169 @@
   // O botão diz «Gravando…»; com o ok, a linha mostra «Salvo às HH:MM», o rastro prevencao sai com a data de antes e a de
   // depois e a gravação entra no «Atualizados hoje»; com a recusa, «NÃO FOI SALVO» com o motivo, e os campos continuam
   // como foram digitados (o redesenho devolve o que estava escrito).
-  var PREV_LANCE_ESTADO={};   // {chave|k: {passo:'gravando'|'salvo'|'falhou', ts, erro, onde}}
+  var PREV_LANCE_ESTADO={};   // gravando|rastreando|pendente-rastro|salvo|falhou|sem-alteracao
+  var PREV_LANCE_PROMESSAS={}, PREV_LANCE_PEND_MEM={};
+  var PREV_LANCE_PEND_PREFIX='zeluz_prev_lance_pendente_v1_';
+  // RTDB omite propriedades nulas e pode devolver chaves em outra ordem. campos mantém a semântica do null.
+  function prevLanceCanon(v){
+    if(v===undefined || v===null) return null;
+    if(Array.isArray(v)) return v.map(prevLanceCanon);
+    if(typeof v==='object'){ var o={}; Object.keys(v).sort().forEach(function(k){ var x=prevLanceCanon(v[k]); if(x!==null) o[k]=x; }); return o; }
+    return v;
+  }
+  function prevLanceMesmo(a,b){ return JSON.stringify(prevLanceCanon(a))===JSON.stringify(prevLanceCanon(b)); }
+  function prevLanceCopia(v){ return pendCopia({v:v}).v; }
+  function prevLanceChaveStore(alvo){ return PREV_LANCE_PEND_PREFIX+String(alvo||''); }
+  function prevLanceEnvelopeValido(e){
+    return !!(e && typeof e==='object' && String(e.alvo||'') && String(e.opId||'') && String(e.corrId||'')
+      && /^\d{4}-\d{2}-\d{2}$/.test(String(e.dia||'')) && String(e.chave||'') && String(e.pelKey||'') && String(e.dcKey||'')
+      && String(e.k||'') && e.ator && typeof e.ator==='object' && e.depois && typeof e.depois==='object'
+      && e.antes && typeof e.antes==='object' && Array.isArray(e.campos));
+  }
+  function prevLancePendenteLer(alvo){
+    var m=PREV_LANCE_PEND_MEM[String(alvo||'')]; if(prevLanceEnvelopeValido(m)) return m;
+    try{ var s=localStorage.getItem(prevLanceChaveStore(alvo)), v=s?JSON.parse(s):null; if(prevLanceEnvelopeValido(v)){ PREV_LANCE_PEND_MEM[String(alvo||'')]=v; return v; } return null; }
+    catch(e){ return null; }
+  }
+  function prevLancePendenteGuardar(env){
+    PREV_LANCE_PEND_MEM[env.alvo]=env;
+    try{ localStorage.setItem(prevLanceChaveStore(env.alvo),JSON.stringify(env)); env.memoriaSomente=false; }
+    catch(e){ env.memoriaSomente=true; PREV_LANCE_PEND_MEM[env.alvo]=env; }
+  }
+  function prevLancePendenteLimpar(alvo){ delete PREV_LANCE_PEND_MEM[String(alvo||'')]; try{ localStorage.removeItem(prevLanceChaveStore(alvo)); }catch(e){} }
+  function prevLanceHoraSP(ts){
+    try{ return new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(Number(ts))); }
+    catch(e){ return ''; }
+  }
+  function prevLanceNovoId(dia){
+    try{ var r=DB && DB.ref && DB.ref('daycare/prevencao-correcoes/'+dia).push(); return String((r&&r.key)||''); }catch(e){ return ''; }
+  }
+  function prevLanceMontarEnv(p,chave,k,antes,patch,q,o){
+    var dia=dcDataKey(), corrId=prevLanceNovoId(dia), depois={};
+    Object.keys(patch||{}).forEach(function(c){ depois[c]=(patch[c]===undefined||patch[c]===null)?null:prevLanceCopia(patch[c]); });
+    if(!corrId) return null;
+    return {v:1,alvo:String(chave)+'|'+String(k),opId:'prev-lance-'+corrId,corrId:corrId,dia:dia,
+      chave:String(chave||''),pelKey:String(pelKey(p)||''),dcKey:String(dcKey(p.n,p.tutor)||''),pet:String(pelNome(p)||p.n||''),k:String((o&&o.kReg)||k||''),campo:String((o&&o.campo)||k||''),
+      antes:prevLanceCopia(antes||{}),depois:depois,campos:Object.keys(depois),ator:{login:String((q&&q.login)||'-'),papel:String((q&&q.papel)||''),ts:Number((q&&q.ts)||0),hora:prevLanceHoraSP(Number((q&&q.ts)||0))},
+      nome:String((o&&o.nome)||''),dt:String((o&&o.dt)||''),quemDeu:String((o&&o.quem)||''),frase:String((o&&o.frase)||''),atraso:!!(o&&o.atraso)};
+  }
+  function prevLanceRec(env){
+    return {chave:env.pelKey,dcKey:env.dcKey,pet:env.pet,k:env.k,como:'lance-aqui',tela:'Prevenção',
+      antes:prevLanceCopia(env.antes),depois:prevLanceCopia(env.depois),campos:env.campos.slice(),quem:env.ator.login,papel:env.ator.papel,ts:env.ator.ts,
+      operacaoId:env.opId,correlacaoId:env.corrId,hora:env.ator.hora};
+  }
+  function prevLanceValidarAgora(env){
+    var p=prevPetDe(env.chave), q=corrQuemAgora();
+    if(!p || String(pelKey(p)||'')!==env.pelKey || String(dcKey(p.n,p.tutor)||'')!==env.dcKey) return {ok:false,erro:'a ficha deste cuidado mudou; abra o registro de novo'};
+    if(String(dcDataKey())!==env.dia) return {ok:false,erro:'o dia operacional mudou; não repeti o cuidado'};
+    if(typeof podePapel==='function' && !podePapel('prevencao-lancar-na-tela')) return {ok:false,erro:'sua permissão para lançar prevenção mudou'};
+    if(!Number.isFinite(Number(env.ator.ts)) || Number(env.ator.ts)<=0 || env.ator.login==='-' || !env.ator.papel) return {ok:false,erro:'a autoria do cuidado não é válida'};
+    if(String(q.login||'-')!==env.ator.login || String(q.papel||'')!==env.ator.papel) return {ok:false,erro:'a pessoa logada mudou; não repeti o cuidado'};
+    return {ok:true,p:p};
+  }
+  function prevLanceFichaConfere(env){
+    if(!DB || !DB.ref) return Promise.resolve({ok:false,erro:'banco reconectando'});
+    var r; try{ r=DB.ref('daycare/cadastro/'+env.pelKey).once('value'); }catch(e){ return Promise.resolve({ok:false,erro:e}); }
+    return Promise.resolve(r).then(function(s){
+      var ficha=(s&&typeof s.val==='function'&&s.val())||{};
+      return env.campos.every(function(c){ return prevLanceMesmo(ficha[c],env.depois[c]); })?{ok:true}:{ok:false,erro:'a ficha foi alterada por outra pessoa; o rastro não foi repetido'};
+    },function(e){ return {ok:false,erro:e}; });
+  }
+  function prevLanceRastroTransacionar(env){
+    var valid=prevLanceValidarAgora(env); if(!valid.ok) return Promise.resolve(valid);
+    var rec=prevLanceRec(env),caminho='daycare/prevencao-correcoes/'+env.dia+'/'+env.corrId,bloqueio='',conflito=false,ref;
+    try{ ref=DB.ref(caminho); }catch(e){ return Promise.resolve({ok:false,erro:e}); }
+    var trans; try{ trans=ref.transaction(function(atual){
+      // O callback pode repetir depois de conflito: revalida a identidade, a permissão e o dia a cada tentativa.
+      var deNovo=prevLanceValidarAgora(env); if(!deNovo.ok){ bloqueio=deNovo.erro; return; }
+      if(atual===null || atual===undefined) return rec;
+      if(prevLanceMesmo(atual,rec)) return atual;
+      conflito=true; return;
+    }); }catch(e){ trans=Promise.reject(e); }
+    return Promise.resolve(trans).then(function(){
+      // O recibo pode se perder após aceitar: reler o mesmo caminho impede duplicar e jamais restaura um rastro alterado/desfeito.
+      return Promise.resolve(ref.once('value')).then(function(s){
+        var atual=(s&&typeof s.val==='function')?s.val():null;
+        return prevLanceMesmo(atual,rec)?{ok:true,id:env.corrId,rec:rec}:{ok:false,erro:bloqueio||((conflito||atual)?'o rastro existente foi alterado ou desfeito; não restaurei':'o banco não confirmou o rastro')};
+      });
+    },function(e){ return Promise.resolve(ref.once('value')).then(function(s){
+      var atual=(s&&typeof s.val==='function')?s.val():null;
+      return prevLanceMesmo(atual,rec)?{ok:true,id:env.corrId,rec:rec}:{ok:false,erro:e};
+    },function(){ return {ok:false,erro:e}; }); });
+  }
+  function prevLanceAuditar(env){
+    var meta={pet:env.pet,item:env.k,de:(env.antes||{})[env.campo]||'',para:(env.depois||{})[env.campo]||'',operacaoId:env.opId};
+    try{ if(typeof audit==='function') audit('prevencao',env.pet+': '+env.nome+' feito em '+fmtBR(env.dt)+(env.quemDeu?(' por '+env.quemDeu):'')+' — vence em: '+prevCorrValorTexto(meta.de)+' → '+prevCorrValorTexto(meta.para)+(env.frase?(' — '+env.frase):''),Object.assign(meta,corrQuemMeta(env.ator))); }catch(e){}
+    if(env.atraso){ try{ if(typeof audit==='function') audit('prevencao-atraso-confirmado',env.pet+' continua em atraso, confirmado'+(env.quemDeu?(' por '+env.quemDeu):''),Object.assign({pet:env.pet,operacaoId:env.opId},corrQuemMeta(env.ator))); }catch(e){} }
+  }
+  function prevLanceAplicarRastro(env,rec){
+    if(PREV_CORR_DIA!==env.dia){ PREV_CORR={}; PREV_CORR_DIA=env.dia; }
+    PREV_CORR[env.corrId]=rec; prevCorrQuadroRefazer();
+  }
+  function prevLanceFinalizarRastro(env,volta){
+    var alvo=env.alvo;
+    return prevLanceFichaConfere(env).then(function(f){ return f.ok?prevLanceRastroTransacionar(env):f; }).then(function(r){
+      if(r && r.ok){ prevLancePendenteLimpar(alvo); prevLanceAplicarRastro(env,r.rec); PREV_LANCE_ESTADO[alvo]={passo:'salvo',ts:Date.now(),frase:env.frase,opId:env.opId,corrId:env.corrId}; prevLanceAuditar(env); }
+      else { prevLancePendenteGuardar(env); PREV_LANCE_ESTADO[alvo]={passo:'pendente-rastro',ts:Date.now(),erro:(r&&r.erro)||'rastro pendente',opId:env.opId,corrId:env.corrId,memoriaSomente:!!env.memoriaSomente}; }
+      if(typeof volta==='function') volta(); return r;
+    },function(e){ prevLancePendenteGuardar(env); PREV_LANCE_ESTADO[alvo]={passo:'pendente-rastro',ts:Date.now(),erro:e,opId:env.opId,corrId:env.corrId,memoriaSomente:!!env.memoriaSomente}; if(typeof volta==='function') volta(); return {ok:false,erro:e}; });
+  }
+  function prevLanceRepetir(chave,k){
+    var alvo=String(chave)+'|'+String(k),env=prevLancePendenteLer(alvo);
+    if(!env) return Promise.resolve({ok:false,erro:'não encontrei a pendência deste cuidado'});
+    if(PREV_LANCE_PROMESSAS[alvo]) return PREV_LANCE_PROMESSAS[alvo];
+    PREV_LANCE_ESTADO[alvo]={passo:'rastreando',ts:Date.now(),opId:env.opId,corrId:env.corrId};
+    var volta=function(){ try{ prevRedesenhar(); }catch(e){} },bruta=prevLanceFinalizarRastro(env,volta);
+    var pr=bruta.then(function(r){ delete PREV_LANCE_PROMESSAS[alvo]; return r; },function(e){ delete PREV_LANCE_PROMESSAS[alvo]; return {ok:false,erro:e}; });
+    PREV_LANCE_PROMESSAS[alvo]=pr; return pr;
+  }
   function prevLanceDigitado(chave, k){
     var dig={};
     ['prevT_','prevP_','prevQ_','prevN_'].map(function(pre){ return pre+chave+'_'+k; })
       .concat(['prevCorrP_','prevCorrD_'].map(function(pre){ return pre+'ed_'+chave+'_'+k; })).forEach(function(id){
         try{ var el=document.getElementById(id); if(el && typeof el.value==='string') dig[id]={value:el.value}; }
-        catch(e){} /* silencioso de propósito: campo fora da tela não volta */
+        catch(e){}
       });
     return dig;
   }
-  function prevLanceGravar(p, chave, k, it, patch, o){
+  function prevLanceGravar(p,chave,k,it,patch,o){
     o=o||{};
-    var alvo=chave+'|'+k, antes=prevCorrAntes(p, patch), q=corrQuemAgora(), dig=prevLanceDigitado(chave, k), c=o.campo||k;
-    var volta=function(){ try{ prevRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */ prevCorrDigitadoVolta(dig); };
-    PREV_LANCE_ESTADO[alvo]={passo:'gravando', ts:Date.now()};
-    volta();
-    return prevGravar(p, patch, {tela:'Prevenção (Lance aqui mesmo)'}, volta).then(function(r){
-      if(!(r && r.ok===true)){ PREV_LANCE_ESTADO[alvo]={passo:'falhou', erro:(r&&r.erro)||'', ts:Date.now()}; volta(); return r; }
-      PREV_LANCE_ESTADO[alvo]={passo:'salvo', ts:Date.now(), frase:String(o.frase||'')};   // 6.80 (AC1.7): a frase da série nova, na linha
-      try{ if(typeof audit==='function') audit('prevencao', (pelNome(p)||'')+': '+(o.nome||it.nome||k)+' feito em '+fmtBR(o.dt)+(o.quem?(' por '+o.quem):'')
-        +' — vence em: '+prevCorrValorTexto(antes[c])+' → '+prevCorrValorTexto(patch[c])+(o.frase?(' — '+o.frase):''), {pet:pelNome(p)||'', item:(o.kReg||k), de:antes[c]||'', para:patch[c]||''}); }
-      catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
-      if(o.atraso){ try{ if(typeof audit==='function') audit('prevencao-atraso-confirmado', (pelNome(p)||'')+': '+(o.nome||it.nome||k)+' continua em atraso, confirmado'+(o.quem?(' por '+o.quem):''), {pet:pelNome(p)||''}); }
-        catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */ }
-      prevCorrRegistrarDia(p, o.kReg||k, 'lance-aqui', 'prev', antes, patch, q);
-      try{ prevRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
-      return r;
+    var alvo=chave+'|'+k,pend=prevLancePendenteLer(alvo),estadoAnterior=PREV_LANCE_ESTADO[alvo];
+    if(PREV_LANCE_PROMESSAS[alvo]) return PREV_LANCE_PROMESSAS[alvo]; if(pend) return prevLanceRepetir(chave,k);
+    // prevOndeFoi também usa este estado: o lançamento espera a origem terminar para o callback antigo não apagá-lo.
+    if(estadoAnterior && estadoAnterior.onde && estadoAnterior.passo==='gravando') return Promise.resolve({ok:false,erro:'aguarde a confirmação do local antes de salvar o cuidado'});
+    var antes=prevCorrAntes(p,patch),q=corrQuemAgora(),dig=prevLanceDigitado(chave,k);
+    var volta=function(){ try{ prevRedesenhar(); }catch(e){} prevCorrDigitadoVolta(dig); };
+    if(Object.keys(patch||{}).every(function(c){ return prevLanceMesmo(antes[c],patch[c]); })){
+      PREV_LANCE_ESTADO[alvo]={passo:'sem-alteracao',ts:Date.now()}; volta(); return Promise.resolve({ok:true,semAlteracao:true});
+    }
+    var env=prevLanceMontarEnv(p,chave,k,antes,patch,q,o);
+    if(!env){ PREV_LANCE_ESTADO[alvo]={passo:'falhou',erro:'não consegui preparar o recibo do cuidado',ts:Date.now()}; volta(); return Promise.resolve({ok:false,erro:'não consegui preparar o recibo do cuidado'}); }
+    var validacaoInicial=prevLanceValidarAgora(env);
+    if(!validacaoInicial.ok){ PREV_LANCE_ESTADO[alvo]={passo:'falhou',erro:validacaoInicial.erro,ts:Date.now()}; volta(); return Promise.resolve(validacaoInicial); }
+    PREV_LANCE_ESTADO[alvo]={passo:'gravando',ts:Date.now()}; volta();
+    var pr=prevGravar(p,patch,{tela:'Prevenção (Lance aqui mesmo)'},volta).then(function(r){
+      if(!(r&&r.ok===true)){ PREV_LANCE_ESTADO[alvo]={passo:'falhou',erro:(r&&r.erro)||'',ts:Date.now()}; volta(); return r; }
+      // Só a confirmação explícita da ficha habilita persistir esta pendência para uma recarga.
+      // Antes disso, a página não infere autoria nem execução a partir de um patch que talvez nem tenha chegado.
+      prevLancePendenteGuardar(env);
+      PREV_LANCE_ESTADO[alvo]={passo:'rastreando',ts:Date.now(),opId:env.opId,corrId:env.corrId}; volta();
+      return prevLanceFinalizarRastro(env,volta).then(function(rr){ return rr&&rr.ok?r:{ok:false,erro:(rr&&rr.erro)||'rastro pendente',fichaSalva:true,pendenteRastro:true}; });
     });
+    var retorno=pr.then(function(r){ delete PREV_LANCE_PROMESSAS[alvo]; return r; },function(e){ delete PREV_LANCE_PROMESSAS[alvo]; return {ok:false,erro:e}; });
+    PREV_LANCE_PROMESSAS[alvo]=retorno; return retorno;
   }
   // O que a linha do «Lance aqui mesmo» diz depois do «Salvar» (e do «Quem deu»).
   function prevLanceEstadoHTML(chave, k){
-    var E=PREV_LANCE_ESTADO[chave+'|'+k]; if(!E) return '';
+    var alvo=chave+'|'+k, E=PREV_LANCE_ESTADO[alvo];
+    if(!E){ var P=prevLancePendenteLer(alvo); if(P) E=PREV_LANCE_ESTADO[alvo]={passo:'pendente-rastro',ts:Date.now(),opId:P.opId,corrId:P.corrId,memoriaSomente:!!P.memoriaSomente}; }
+    if(!E) return '';
     if(E.passo==='gravando') return '<span role="status" style="margin-left:8px;font-size:12.5px;font-weight:800;color:var(--z-gold-deep)">Gravando…</span>';
-    if(E.passo==='salvo') return '<span role="status" style="margin-left:8px;font-size:12.5px;font-weight:800;color:var(--crm-ok)">'+(E.onde?'«Quem deu» salvo':'Salvo')+' às '+esc(corrHora(E.ts))+'</span>'
+    if(E.passo==='rastreando') return '<span role="status" style="margin-left:8px;font-size:12.5px;font-weight:800;color:var(--z-gold-deep)">Confirmando o recibo…</span>';
+    if(E.passo==='sem-alteracao') return '<span role="status" style="margin-left:8px;font-size:12.5px;font-weight:800;color:var(--z-blue)">Sem alteração: esta informação já estava salva.</span>';
+    if(E.passo==='salvo') return '<span role="status" style="margin-left:8px;font-size:12.5px;font-weight:800;color:var(--crm-ok)">'+(E.onde?'«Quem deu» salvo':'Salvo')+' às '+esc(prevLanceHoraSP(E.ts))+'</span>'
       +(E.frase?('<div role="status" style="margin-top:6px;font-size:12.5px;font-weight:800;color:var(--z-blue);overflow-wrap:anywhere">'+esc(E.frase)+'</div>'):'');
+    if(E.passo==='pendente-rastro') return '<div role="alert" style="margin-top:6px;font-size:12.5px;font-weight:800;color:var(--crm-critico)">A ficha foi salva, mas o recibo do cuidado ainda não confirmou: '+esc(String(E.erro||'resultado a conferir'))+'.'+(E.memoriaSomente?' Mantenha esta página aberta até confirmar; este aparelho não guardou a tentativa para reabrir.':'')+' <button type="button" class="btn" style="font:inherit;margin-left:6px" data-prev-chave="'+escAttr(chave)+'" data-prev-k="'+escAttr(k)+'" onclick="prevLanceRepetir(this.getAttribute(\'data-prev-chave\'),this.getAttribute(\'data-prev-k\'))">Tentar confirmar de novo</button></div>';
     return '<div role="alert" style="margin-top:6px;font-size:12.5px;font-weight:800;color:var(--crm-critico)">NÃO FOI SALVO: '+esc(zErroFrase(zErroMotivo(E.erro, 'banco', '', {agora:true})))
       +(E.onde?' «Quem deu» continua como era.':' Os campos continuam como você digitou: toque em Salvar de novo.')+'</div>';
   }
