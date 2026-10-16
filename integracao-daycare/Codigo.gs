@@ -327,6 +327,21 @@ function editar(d) {
   var depois = String(d.valorDepois == null ? '' : d.valorDepois).trim();
   var horaAntes = String(d.horaAntes == null ? '' : d.horaAntes).trim();
   var horaDepois = String(d.horaDepois == null ? '' : d.horaDepois).trim();
+  // A API da planilha devolve horas como Date/serial, enquanto o app envia HH:mm.
+  // Comparar String(Date) com HH:mm cria falso conflito mesmo na mesma hora.
+  function horaHHMM(valor, fuso) {
+    if (valor instanceof Date && !isNaN(valor.getTime()))
+      return Utilities.formatDate(valor, fuso, 'HH:mm');
+    if (typeof valor === 'number' && isFinite(valor) && valor >= 0 && valor < 1) {
+      var minutos = Math.round(valor * 24 * 60) % (24 * 60);
+      return ('0' + Math.floor(minutos / 60)).slice(-2) + ':' + ('0' + (minutos % 60)).slice(-2);
+    }
+    var texto = String(valor == null ? '' : valor).trim();
+    var partes = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(texto);
+    if (partes && Number(partes[1]) < 24 && Number(partes[2]) < 60)
+      return ('0' + Number(partes[1])).slice(-2) + ':' + partes[2];
+    return texto;
+  }
   var linhaPedida = Number(d.linha || 0), opId = String(d.opId || '');
   var chaveOp = _editarOpChave(opId);
   if (!dia || !nomeCol || !id || !antes || !depois || !chaveOp)
@@ -359,9 +374,12 @@ function editar(d) {
   var linhas = _linhasDoDia(sh, cData, dia);
   if (!linhas.length) return { ok: false, erro: 'não achei linhas para este dia' };
 
+  var fusoPlanilha = sh.getParent().getSpreadsheetTimeZone();
+  horaAntes = horaHHMM(horaAntes, fusoPlanilha);
+  horaDepois = horaHHMM(horaDepois, fusoPlanilha);
   function estado(l) {
     return { linha: l, valor: String(sh.getRange(l, cAlvo).getValue() || '').trim(),
-      hora: cHora ? String(sh.getRange(l, cHora).getValue() || '').trim() : '' };
+      hora: cHora ? horaHHMM(sh.getRange(l, cHora).getValue(), fusoPlanilha) : '' };
   }
   function ehAntes(x) { return x.valor === antes && (!cHora || x.hora === horaAntes); }
   function ehDepois(x) { return x.valor === depois && (!cHora || x.hora === horaDepois); }
