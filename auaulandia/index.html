@@ -2603,7 +2603,7 @@
   .mcr-bt-plantao{display:block;margin-top:8px;background:var(--z-blue);color:var(--z-cream);border:none;border-radius:10px;padding:8px 14px;min-height:44px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
   .mcr-bt-entrada{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--z-blue);font-weight:800;min-height:44px}
 </style>
-<link rel="stylesheet" href="historico-checkins.css?v=2026-10-15-01">
+<link rel="stylesheet" href="historico-checkins.css?v=2026-10-15-02">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -5183,13 +5183,13 @@
      rodar sozinho no harness contra o texto REAL que os tutores mandam — sem tela, sem
      banco. Entra antes do script grande porque é dele que sai a proposta da tela
      "Alergias a confirmar" quando alguém toca em "Colar resposta do tutor". -->
-<script src="resposta-tutor.js?v=2026-10-15-01"></script>
+<script src="resposta-tutor.js?v=2026-10-15-02"></script>
 <!-- A CONTA do Painel unificado (Fase 2.1). Mesma ideia do resposta-tutor.js: função pura,
      fora deste arquivo, provada no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que a fatia do Monitor tira o que
      desenhar: plRotaDoDia (o meu dia), plProtocoloDe (o que ficou aberto) e plAvisosDe
      (o aviso que não saiu). A tela só desenha o resultado; a conta mora aqui fora. -->
-<script src="painel-logica.js?v=2026-10-15-01"></script>
+<script src="painel-logica.js?v=2026-10-15-02"></script>
 <!-- A CONTA do Financeiro (v-09). Mesmo molde do painel-logica.js: funções puras, fora
      deste arquivo, provadas no harness contra dado REAL antes de existir uma linha de
      tela. Entra antes do script grande porque é dela que o Painel da Diretoria tira o
@@ -5201,15 +5201,15 @@
      (o GitHub Pages manda guardar por 10 minutos). Sem o ?v=, um aparelho podia rodar o
      index.html novo com a conta velha — o Financeiro mostraria R$ 1.077,00 para a Hopi, sem
      aviso (QA da 6.36, N1). Com o ?v=, cada versão busca os arquivos dela. -->
-<script src="financeiro-logica.js?v=2026-10-15-01"></script>
-<script src="autoria-logica.js?v=2026-10-15-01"></script>
-<script src="navegacao-inicio.js?v=2026-10-15-01"></script>
-<script src="presenca-logica.js?v=2026-10-15-01"></script>
-<script src="historico-checkins.js?v=2026-10-15-01"></script>
-<script src="historico-checkins-pdf.js?v=2026-10-15-01"></script>
-<script src="orcamento-acompanhamento.js?v=2026-10-15-01"></script>
-<script src="dash-lancamentos-performance.js?v=2026-10-15-01"></script>
-<script src="reserva-cadastro.js?v=2026-10-15-01"></script>
+<script src="financeiro-logica.js?v=2026-10-15-02"></script>
+<script src="autoria-logica.js?v=2026-10-15-02"></script>
+<script src="navegacao-inicio.js?v=2026-10-15-02"></script>
+<script src="presenca-logica.js?v=2026-10-15-02"></script>
+<script src="historico-checkins.js?v=2026-10-15-02"></script>
+<script src="historico-checkins-pdf.js?v=2026-10-15-02"></script>
+<script src="orcamento-acompanhamento.js?v=2026-10-15-02"></script>
+<script src="dash-lancamentos-performance.js?v=2026-10-15-02"></script>
+<script src="reserva-cadastro.js?v=2026-10-15-02"></script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -5608,7 +5608,7 @@
     banhos:['Banhos recorrentes','Quem tem banho fixo, em que dia e a que horas — o app lança sozinho na planilha.'],
     turma:['Turma do dia','Quem vem, quem avisou que não vem e o que cobrar de cada um — com Excel e PDF.'],
     hoje:['Hoje na Zêluz','Quem está na Zêluz agora e quem está com pendência.'],
-    contatos:['Quem chamar hoje','Um toque abre o WhatsApp do tutor com a mensagem pronta — e já marca que saiu.'],
+    contatos:['Quem chamar hoje','Um toque abre o WhatsApp do tutor com a mensagem pronta; confirme o envio no cartão do FILHOt.'],
     pendencias:['Pendências de prevenção','O que ficou para a próxima vinda de quem não veio.'],
     vencimentos:['Está vencendo','Quem vem no dia, o que está vencendo e o que está em aberto na ficha.'],vacinas:['Prevenção','Vacina, vermífugo, coleira e exame de fezes: quem está atrasado e quem está para vencer.'],
     cuidadovet:['Cuidado Vet','Alterações no corpo que a veterinária precisa ver.'],
@@ -27481,7 +27481,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-15-01';
+  const APP_VERSAO='2026-10-15-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -39152,6 +39152,15 @@
             desatualizado:venc.filter(function(x){ return x.antigo; }),
             sem:sem};
   }
+  // O resumo de Saúde não pode concluir que está em dia apenas porque itens opcionais não geram cobrança.
+  function prevResumoSaudeSemEvidencia(ex){
+    ex=ex||{};
+    return PREV_ITENS.filter(function(it){
+      if(it.grupo!=='saude' || prevForaDaCobranca(ex,it)) return false;
+      var v=prevValor(ex,it);
+      return !v || fichaPrevValorInvalido(v);
+    });
+  }
   // rotulo = como a família se chama na frase pronta ("Vacinas em dia.").
   function alertaPrevencao(ex, grupo, rotulo){
     const r=prevPendencias(ex, grupo);
@@ -39160,6 +39169,10 @@
     if(r.venc.length) h+='<div class="dc-faltas"><strong>URGENTE &mdash; '+r.venc.length+' vencido'+(r.venc.length>1?'s':'')+':</strong> '
       +r.venc.map(function(v){ return v.nome+' (há '+v.dias+' dia'+(v.dias>1?'s':'')+')'; }).join(' · ')+'</div>';
     if(r.sem.length) h+='<div class="dc-meia"><strong>Falta preencher:</strong> '+r.sem.join(' · ')+'</div>';
+    if(!h && grupo==='saude'){
+      var semEvidencia=prevResumoSaudeSemEvidencia(ex);
+      if(semEvidencia.length) return '<div class="dc-meia"><strong>Sem informação:</strong> '+semEvidencia.map(function(it){ return it.nome; }).join(' · ')+' a confirmar.</div>';
+    }
     if(!h) h='<div class="alm-fora">'+nome+' em dia.</div>';
     return h;
   }
@@ -59776,7 +59789,6 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     if(!txt){ alert('Não achei a mensagem. Abra a tela de novo.'); return; }
     var o=vencAchar(chave);
     if(!zWhatsAbrir((o&&o.tel)||'', txt)) return;
-    vencMandei(chave, tipo, {texto:txt, canal:'whatsapp', tela:'vencimentos'});
   }
   function vencWhatsCobranca(chave, tipo, dia){
     var ta=document.getElementById('vencMsg_'+chave+'__cob-'+tipo);
@@ -59784,7 +59796,6 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     if(!txt){ alert('Não achei a cobrança. Abra a tela de novo.'); return; }
     var o=null; try{ o=vencObjDe(chave, dia); }catch(e){ o=null; } /* silencioso de propósito: sem o cartão, o WhatsApp abre para escolher o contato */
     if(!zWhatsAbrir((o&&o.tel)||'', txt)) return;
-    vencCobrei(chave, tipo, dia, {texto:txt, canal:'whatsapp', tela:'vencimentos'});
   }
   function vencCopiar(chave, tipo, btn){
     var ta=document.getElementById('vencMsg_'+chave+'__'+tipo);
@@ -62793,7 +62804,6 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     var txt=ta?String(ta.value||''):'';
     if(!txt){ alert('Não achei a mensagem. Abra a tela de novo.'); return; }
     if(!zWhatsAbrir(tel||'', txt)) return;
-    hojeMandei(chave, tipo, {texto:txt, canal:'whatsapp', tela:'hoje'});
   }
   // UM TOQUE, sem abrir a dobra (Adriana, 25/set/2026: "só deu um clique, copia a mensagem,
   // já manda"). A mensagem é a de Configurações, montada na hora; quem quiser mexer no
@@ -62811,7 +62821,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     var txt=hojeMsgAntecipar(o, tipo, hoje);
     if(!txt){ alert('Não consegui montar a mensagem. Abra a pergunta e use o Copiar.'); return; }
     if(!zWhatsAbrir(o.tel||'', txt)) return Promise.resolve(false);
-    return hojeMandei(chave, tipo, {texto:txt, canal:'whatsapp', tela:tela||'hoje'});
+    return Promise.resolve(true);
   }
   function hojeCopiarMsg(chave, tipo, btn){
     var ta=document.getElementById('hojeMsg_'+chave+'__'+tipo);
@@ -63727,7 +63737,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     var txt=vencMensagem(o, dia, hoje, tipo);
     if(!txt){ alert('Não consegui montar a mensagem. Abra em Vencimentos e use o Copiar.'); return Promise.resolve(false); }
     if(!zWhatsAbrir(o.tel||'', txt)) return Promise.resolve(false);
-    return vencMandeiNoDia(chave, tipo, dia, o, {texto:txt, canal:'whatsapp', tela:tela||'contatos'});
+    return Promise.resolve(true);
   }
   function vencCobrarNoWhats(chave, tipo, dia, tela){
     var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
@@ -63738,7 +63748,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     var txt=vencMsgCobranca(o, tipo, dia, hoje);
     if(!txt){ alert('Não consegui montar a cobrança. Abra em Vencimentos e use o Copiar.'); return Promise.resolve(false); }
     if(!zWhatsAbrir(o.tel||'', txt)) return Promise.resolve(false);
-    return vencCobrei(chave, tipo, dia, {texto:txt, canal:'whatsapp', tela:tela||'contatos'});
+    return Promise.resolve(true);
   }
   // O toque da lista. `i` é a posição na gaveta do ÚLTIMO desenho — os dados da linha vêm
   // de lá, nunca de texto do HTML.
@@ -63750,10 +63760,34 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
          :(grupo==='amanha')?vencWhatsNoDia(x.chave, x.tipo, x.dia, 'contatos')
          :vencCobrarNoWhats(x.chave, x.tipo, x.dia, 'contatos');
     Promise.resolve(p).then(function(ok){
-      if(ok) CONTATOS_ULTIMO={texto:((grupo==='cobrar')?'cobrança aberta no WhatsApp e marcada, para ':'mensagem aberta no WhatsApp e marcada como mandada, para ')
-        +(x.tutor?(x.tutor+' ('+x.nome+')'):x.nome)+': '+String(x.rotulo||'').toLowerCase()+'.', ts:Date.now()};
+      if(ok) CONTATOS_ULTIMO={texto:((grupo==='cobrar')?'cobrança aberta no WhatsApp, para ':'mensagem aberta no WhatsApp, para ')
+        +(x.tutor?(x.tutor+' ('+x.nome+')'):x.nome)+': '+String(x.rotulo||'').toLowerCase()+'. Confira o envio e confirme nesta linha.', ts:Date.now()};
       contatosRender();
       try{ hojeAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
+    });
+  }
+  function contatosConfirmar(grupo, i){
+    var x=(CONTATOS_DESENHO[grupo]||[])[i]; if(!x||x.lendo) return;
+    var hoje=(typeof zHojeISO==='function')?zHojeISO():'';
+    var p=Promise.resolve(false), texto='', o=null;
+    if(grupo==='aqui'){
+      try{ o=hojeObjAnt(x.chave, x.tipo); texto=o?hojeMsgAntecipar(o, x.tipo, hoje):''; }catch(e){ o=null; }
+      if(!o||!texto){ alert('Não consegui preparar o registro. Abra a pergunta de novo.'); return; }
+      p=hojeMandei(x.chave, x.tipo, {texto:texto, tela:'contatos'});
+    }else if(grupo==='amanha'){
+      try{ o=vencAchar(x.chave, x.dia); texto=o?vencMensagem(o, x.dia, hoje, x.tipo):''; }catch(e){ o=null; }
+      if(!o||!texto){ alert('Não consegui preparar o registro. Abra a mensagem de novo.'); return; }
+      p=vencMandeiNoDia(x.chave, x.tipo, x.dia, o, {texto:texto, tela:'contatos'});
+    }else if(grupo==='cobrar'){
+      try{ o=vencObjDe(x.chave, x.dia); texto=o?vencMsgCobranca(o, x.tipo, x.dia, hoje):''; }catch(e){ o=null; }
+      if(!o||!texto){ alert('Não consegui preparar a cobrança. Abra a mensagem de novo.'); return; }
+      p=vencCobrei(x.chave, x.tipo, x.dia, {texto:texto, tela:'contatos'});
+    }
+    Promise.resolve(p).then(function(ok){
+      if(ok) CONTATOS_ULTIMO={texto:(grupo==='cobrar'?'Retorno confirmado para ':'Envio confirmado para ')
+        +(x.tutor?(x.tutor+' ('+x.nome+')'):x.nome)+': '+String(x.rotulo||'').toLowerCase()+'.', ts:Date.now()};
+      contatosRender();
+      try{ hojeAtualizarBadge(); }catch(e){} /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */
     });
   }
   // ---- a tela ------------------------------------------------------------------------
@@ -63804,9 +63838,12 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     if(x.semCategoria) detalhe+=' · ficha sem categoria';
     var botoes='';
     if(!x.lendo){
-      if(!cob || x.podeCobrar!==false)
+      if(!cob || x.podeCobrar!==false){
         botoes+='<button type="button" class="btn btn-gold" style="padding:8px 14px;font-size:13px;font-weight:800;white-space:nowrap"'
           +' onclick="contatosTocar(\''+x.grupo+'\','+i+')">'+botao+'</button>';
+        botoes+='<button type="button" class="btn" style="padding:8px 14px;font-size:13px;font-weight:800;white-space:nowrap;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)"'
+          +' onclick="contatosConfirmar(\''+x.grupo+'\','+i+')">'+'Confirmar envio'+'</button>';
+      }
       // 6.55: «Finalizar» em toda conversa que espera resposta; com N contatos (ou o hóspede que já foi
       // embora), só ele (H3, H5).
       if(cob) botoes+='<button type="button" class="btn" style="padding:8px 14px;font-size:13px;font-weight:800;white-space:nowrap;background:transparent;border:1.5px solid #6b5f4b;color:#6b5f4b"'
@@ -63842,8 +63879,8 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     var frDia=d.dia?vencFraseDia(d.dia, d.hoje):'';
     var h='<div class="card" style="border-left:4px solid '+(total?'#E08856':'var(--crm-ok)')+'">'
       +'<h2 style="font-size:19px;margin-bottom:2px">'+(d.lido.aqui?(total?(total+(total===1?' contato para fazer':' contatos para fazer')):'Ninguém para chamar agora'):'Montando a lista&hellip;')+'</h2>'
-      +'<div class="hint">Um toque em <strong>Mandar no WhatsApp</strong> abre a conversa do tutor com a mensagem pronta e já marca que ela saiu. '
-      +'A resposta do tutor se registra em <a href="#" style="color:var(--z-blue);font-weight:700" onclick="irParaView(\'hoje\');return false">Hoje na Zêluz</a> ou em <a href="#" style="color:var(--z-blue);font-weight:700" onclick="irParaView(\'vencimentos\');return false">Vencimentos</a>, no cartão do FILHOt.</div>';
+      +'<div class="hint">Um toque em <strong>Mandar no WhatsApp</strong> abre a conversa do tutor com a mensagem pronta. Depois de enviar, toque em <strong>Confirmar envio</strong> nesta mesma linha. '
+      +'A resposta do tutor também se registra em <a href="#" style="color:var(--z-blue);font-weight:700" onclick="irParaView(\'hoje\');return false">Hoje na Zêluz</a> ou em <a href="#" style="color:var(--z-blue);font-weight:700" onclick="irParaView(\'vencimentos\');return false">Vencimentos</a>, no cartão do FILHOt.</div>';
     if(CONTATOS_ULTIMO && (Date.now()-CONTATOS_ULTIMO.ts)<10*60*1000)
       h+='<div style="margin-top:8px;font-size:13px;font-weight:800;color:var(--crm-ok)">✓ '
         +escAttr(vencHora(CONTATOS_ULTIMO.ts))+' — '+escAttr(CONTATOS_ULTIMO.texto)+'</div>';
@@ -76451,8 +76488,11 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
       if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='📎 PDF baixado. No WhatsApp que abriu, anexe o arquivo "'+nome+'" (este aparelho não compartilha PDF direto).'; }
       return;
     }
-    window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
-    if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Não foi possível gerar o PDF neste aparelho — enviei o resumo em texto.'; }
+    if(!zWhatsAbrir('', txt)){
+      if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Não foi possível gerar o PDF neste aparelho. O resumo em texto está pronto: abra o WhatsApp, confira e envie.'; }
+      return;
+    }
+    if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Não foi possível gerar o PDF neste aparelho — WhatsApp aberto com o resumo em texto. Confira e envie.'; }
   }
   // ---- E-mail: baixa o PDF e abre o compositor do Gmail (a Zêluz usa Gmail) ----
   function ciEnviarEmail(){
