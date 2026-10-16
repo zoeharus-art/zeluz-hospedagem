@@ -27492,7 +27492,7 @@
         var pub=s.val();
         // Versão igual (ou nó vazio) = nada a avisar. E a faixa APAGA: se ela ficasse
         // acesa depois de atualizar, seria um botão que não resolve nada.
-        if(!pub||pub===APP_VERSAO){ __versaoPublicada=null; zFaixaVersao(false); return; }
+        if(!pub||pub===APP_VERSAO||(/^\d{4}-\d{2}-\d{2}-\d{2}$/.test(String(pub))&&String(pub)<APP_VERSAO)){ __versaoPublicada=null; zFaixaVersao(false); return; }
         __versaoPublicada=pub;
         var el=document.getElementById('avisoVersao'); if(el) el.style.display='block';
         zFaixaVersao(true);
