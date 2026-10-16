@@ -5176,6 +5176,9 @@
   <button type="button" onclick="inatMarcarAtividade()">Continuar conectado</button>
 </div>
 
+<script src="prevencao/prevencao-fontes.js"></script>
+<script src="prevencao/prevencao-runtime.js"></script>
+<script src="prevencao/painel-prevencao.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -27553,7 +27556,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-16-02';
+  const APP_VERSAO='2026-10-16-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -43470,6 +43473,7 @@
   // em foco. O hojeRedesenhar só desenha a Hoje na Zêluz e os Contatos.
   var HOJE_OUVINTE_ESPERA=0;
   function hojeOuvinteCadastro(){
+    try{ zPrev27Atualizar(); }catch(e){ /* projeção não interrompe fluxo existente */ }
     var sec=document.getElementById('v-hoje');
     if(!sec || !sec.classList || !sec.classList.contains('active') || HOJE_OUVINTE_ESPERA) return;
     HOJE_OUVINTE_ESPERA=setTimeout(function(){
@@ -56631,6 +56635,495 @@
     return dashEditarEnviarPendente(k,id,btn,(p&&p.dia)||dashDia(),p);
   }
 
+
+  /* SNOOPY33-START: candidata local, sem Firebase inteiro, sem CSS novo. */
+/* Confirmação humana de lançamento no Snoopy. Não envia, não cobra e não executa cuidado. */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.ZeluzSnoopyConfirmacao = api;
+}(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  function proprio(o, k) { return Object.prototype.hasOwnProperty.call(o || {}, k); }
+  function texto(v) { return typeof v === 'string' ? v.trim() : ''; }
+  function copia(v) { return v == null ? v : JSON.parse(JSON.stringify(v)); }
+  function canon(v) {
+    if (v === null || typeof v !== 'object') return JSON.stringify(v);
+    if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+    return '{' + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ':' + canon(v[k]); }).join(',') + '}';
+  }
+  function refValida(ref) {
+    ref = ref || {};
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(ref.dia || ''))) return false;
+    return ['item', 'id'].every(function (k) { return /^[^/#.$\[\]]+$/.test(String(ref[k] || '')); });
+  }
+  function caminho(ref) { return 'daycare/snoopy/' + ref.dia + '/' + ref.item + '/' + ref.id; }
+  function material(cobranca) {
+    if (!cobranca || typeof cobranca !== 'object') return null;
+    return {
+      chave: proprio(cobranca, 'chave') ? (cobranca.chave == null ? null : String(cobranca.chave)) : null,
+      valor: proprio(cobranca, 'valor') ? (cobranca.valor == null ? null : String(cobranca.valor)) : null,
+      det: proprio(cobranca, 'det') ? copia(cobranca.det == null ? null : cobranca.det) : null
+    };
+  }
+  function assinatura(cobranca) { var m = material(cobranca); return m ? canon(m) : ''; }
+  function igual(a, b) { return !!a && !!b && assinatura(a) === assinatura(b); }
+  function identidade(v) {
+    if (!v || typeof v !== 'object') return null;
+    var nome = texto(v.nome || v.quem), id = texto(v.id), papel = texto(v.papel), assinatura = texto(v.assinatura);
+    if (v.valido !== true || !id || !nome || nome === '-' || !assinatura) return null;
+    if (['consultora', 'supervisor', 'gestao', 'diretoria'].indexOf(papel) < 0) return null;
+    return { id: id, nome: nome, papel: papel, assinatura: assinatura };
+  }
+  function timeout(e) { return /timeout|timed out|ETIMEDOUT/i.test(String((e && (e.code || e.message)) || '')); }
+  function eventos(registro) { return registro && registro.eventos && typeof registro.eventos === 'object' ? registro.eventos : {}; }
+  function eventoDaAssinatura(registro, ass) {
+    var achado = null;
+    var todos = eventos(registro);
+    Object.keys(todos).some(function (id) {
+      var e = todos[id], desfeito = Object.keys(todos).some(function (outro) { var d = todos[outro]; return d && d.tipo === 'desfazer-confirmacao' && d.alvoOperacaoId === id; });
+      if (e && (e.tipo === 'confirmacao' || !e.tipo) && e.assinatura === ass && !desfeito) { achado = e; return true; }
+      return false;
+    });
+    return achado;
+  }
+  function confirmacaoDaOperacao(registro, operacaoId, ass) {
+    var e = eventos(registro)[operacaoId];
+    return e && (e.tipo === 'confirmacao' || !e.tipo) && e.operacaoId === operacaoId && e.assinatura === ass ? e : null;
+  }
+  function desfazerDaOperacao(registro, operacaoId, alvoOperacaoId) {
+    var e = eventos(registro)[operacaoId];
+    return e && e.tipo === 'desfazer-confirmacao' && e.operacaoId === operacaoId && e.alvoOperacaoId === alvoOperacaoId ? e : null;
+  }
+  function cobravelNaFonte(ref, lancamento) {
+    var det = (lancamento && lancamento.det) || {}, item = String((ref && ref.item) || '');
+    if (['vermifugo', 'carrapaticida', 'escova'].indexOf(item) >= 0) return texto(det.onde).toUpperCase() === 'LOJA';
+    if (item === 'coleira') return texto(det.veio).toUpperCase() === 'LOJA';
+    return false;
+  }
+  function projetar(lancamento, registro, cobranca) {
+    var ass = assinatura(cobranca), evento = eventoDaAssinatura(registro, ass);
+    if (!lancamento) return { estado: 'revisar', motivo: 'lancamento-cancelado-ou-ausente', confirmado: false, evento: evento || null };
+    if (!igual(lancamento, cobranca)) return { estado: 'revisar', motivo: 'lancamento-alterado', confirmado: false, evento: evento || null };
+    if (evento) return { estado: 'confirmacao-vigente', confirmado: true, evento: copia(evento) };
+    return { estado: 'pendente', confirmado: false, evento: null };
+  }
+  function criar(portas) {
+    portas = portas || {};
+    var sequencia = 0;
+    function novaOperacao() {
+      sequencia += 1;
+      var agora = typeof portas.agora === 'function' ? portas.agora() : Date.now();
+      return 'snoopy-' + String(agora) + '-' + String(sequencia) + '-' + Math.random().toString(36).slice(2, 10);
+    }
+    function confirmar(comando, cobranca) {
+      comando = comando || {};
+      var ref = comando.ref, operacaoId = texto(comando.operacaoId), ass = assinatura(cobranca), inicio = identidade(typeof portas.ator === 'function' ? portas.ator() : null);
+      if (!refValida(ref) || !operacaoId || !ass) return Promise.resolve({ estado: 'invalido', confirmado: false, operacaoId: operacaoId || null });
+      if (!inicio) return Promise.resolve({ estado: 'identidade-invalida', confirmado: false, operacaoId: operacaoId });
+      if (typeof portas.relerLancamento !== 'function' || typeof portas.transacionar !== 'function') return Promise.resolve({ estado: 'indisponivel', confirmado: false, operacaoId: operacaoId });
+      var antes;
+      return Promise.resolve(portas.relerLancamento(ref)).then(function (lancamento) {
+        antes = lancamento || null;
+        if (!antes) return { parar: true, resultado: { estado: 'revisar', motivo: 'lancamento-cancelado-ou-ausente', confirmado: false, operacaoId: operacaoId } };
+        if (!igual(antes, cobranca)) return { parar: true, resultado: { estado: 'revisar', motivo: 'lancamento-alterado', confirmado: false, operacaoId: operacaoId } };
+        if (!cobravelNaFonte(ref, antes)) return { parar: true, resultado: { estado: 'revisar', motivo: 'cobranca-sem-fato-explicito', confirmado: false, operacaoId: operacaoId } };
+        var revalidado = identidade(typeof portas.ator === 'function' ? portas.ator() : null);
+        if (!revalidado || revalidado.assinatura !== inicio.assinatura || revalidado.id !== inicio.id) return { parar: true, resultado: { estado: 'identidade-alterada', confirmado: false, operacaoId: operacaoId } };
+        var em = typeof portas.agora === 'function' ? portas.agora() : Date.now();
+        return Promise.resolve(portas.transacionar(ref, function (atual) {
+          atual = atual && typeof atual === 'object' ? copia(atual) : {};
+          var ja = eventos(atual)[operacaoId];
+          if (ja && ja.assinatura !== ass) return atual;
+          if (ja || eventoDaAssinatura(atual, ass)) return atual;
+          atual.ref = { dia: ref.dia, item: ref.item, id: ref.id };
+          atual.eventos = eventos(atual);
+          atual.eventos[operacaoId] = { tipo: 'confirmacao', operacaoId: operacaoId, assinatura: ass, cobranca: material(cobranca), declaracao: 'lancei-no-snoopy', quem: revalidado.nome, ator: revalidado, em: em };
+          return atual;
+        })).then(function (registro) { return { registro: registro || null }; });
+      }).then(function (etapa) {
+        if (etapa && etapa.parar) return etapa.resultado;
+        return Promise.resolve(portas.relerLancamento(ref)).then(function (depois) {
+          var proprio = eventos(etapa.registro)[operacaoId];
+          if (proprio && !confirmacaoDaOperacao(etapa.registro, operacaoId, ass)) {
+            return { estado: 'revisar', motivo: 'operacao-id-em-conflito', confirmado: false, operacaoId: operacaoId };
+          }
+          var p = projetar(depois || null, etapa.registro, cobranca);
+          p.operacaoId = operacaoId;
+          return p;
+        });
+      }).catch(function (e) {
+        if (timeout(e)) return { estado: 'desconhecido', confirmado: false, operacaoId: operacaoId, motivo: 'resultado-da-gravacao-desconhecido' };
+        return { estado: 'falhou', confirmado: false, operacaoId: operacaoId, motivo: 'confirmacao-nao-confirmada' };
+      });
+    }
+    function desfazer(comando, motivo) {
+      comando = comando || {};
+      var ref = comando.ref, operacaoId = texto(comando.operacaoId), alvo = texto(comando.alvoOperacaoId), por = identidade(typeof portas.ator === 'function' ? portas.ator() : null), razao = texto(motivo);
+      if (!refValida(ref) || !operacaoId || !alvo || !razao) return Promise.resolve({ estado: 'invalido', desfeito: false, operacaoId: operacaoId || null });
+      if (!por) return Promise.resolve({ estado: 'identidade-invalida', desfeito: false, operacaoId: operacaoId });
+      if (typeof portas.transacionar !== 'function') return Promise.resolve({ estado: 'indisponivel', desfeito: false, operacaoId: operacaoId });
+      var em = typeof portas.agora === 'function' ? portas.agora() : Date.now();
+      return Promise.resolve(portas.transacionar(ref, function (atual) {
+        atual = atual && typeof atual === 'object' ? copia(atual) : {};
+        var todos = eventos(atual), alvoEvento = todos[alvo];
+        if (!alvoEvento || (alvoEvento.tipo && alvoEvento.tipo !== 'confirmacao')) return atual;
+        if (todos[operacaoId]) return atual;
+        atual.ref = atual.ref || { dia: ref.dia, item: ref.item, id: ref.id };
+        atual.eventos = todos;
+        atual.eventos[operacaoId] = { tipo: 'desfazer-confirmacao', operacaoId: operacaoId, alvoOperacaoId: alvo, motivo: razao, quem: por.nome, ator: por, em: em };
+        return atual;
+      })).then(function (registro) {
+        if (desfazerDaOperacao(registro, operacaoId, alvo)) return { estado: 'desfeito', desfeito: true, operacaoId: operacaoId };
+        if (eventos(registro)[operacaoId]) return { estado: 'revisar', motivo: 'operacao-id-em-conflito', desfeito: false, operacaoId: operacaoId };
+        var alvoAtual = eventos(registro)[alvo];
+        if (!alvoAtual || (alvoAtual.tipo && alvoAtual.tipo !== 'confirmacao')) return { estado: 'revisar', motivo: 'confirmacao-nao-localizada', desfeito: false, operacaoId: operacaoId };
+        return { estado: 'revisar', motivo: 'desfazer-nao-persistido', desfeito: false, operacaoId: operacaoId };
+      }).catch(function (e) {
+        return timeout(e) ? { estado: 'desconhecido', desfeito: false, operacaoId: operacaoId, motivo: 'resultado-da-gravacao-desconhecido' } : { estado: 'falhou', desfeito: false, operacaoId: operacaoId, motivo: 'desfazer-nao-confirmado' };
+      });
+    }
+    return { novaOperacao: novaOperacao, confirmar: confirmar, desfazer: desfazer, projetar: projetar, assinatura: assinatura, caminho: caminho, cobravelNaFonte: cobravelNaFonte };
+  }
+  return { criar: criar, projetar: projetar, assinatura: assinatura, caminho: caminho, cobravelNaFonte: cobravelNaFonte };
+}));
+
+/* Adaptador local para Snoopy28. Não envia ao Snoopy, não cobra e não executa cuidado. */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.ZeluzSnoopy31AdaptadorDB = api;
+}(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  function texto(v) { return typeof v === 'string' ? v.trim() : ''; }
+  function refValida(ref) {
+    ref = ref || {};
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(ref.dia || '')) && ['item', 'id'].every(function (k) {
+      return /^[^/#.$\[\]]+$/.test(String(ref[k] || ''));
+    });
+  }
+  function caminhoLancamento(ref) { return 'daycare/dashboard/' + ref.dia + '/' + ref.item + '/' + ref.id; }
+  function snapshotValor(snapshot) {
+    if (!snapshot || typeof snapshot.val !== 'function') throw new Error('snapshot da transação indisponível');
+    return snapshot.val();
+  }
+  function resultadoConhecido(resultado) {
+    if (!resultado || typeof resultado !== 'object' || typeof resultado.committed !== 'boolean') {
+      throw new Error('resultado da transação desconhecido');
+    }
+    return snapshotValor(resultado.snapshot);
+  }
+  function atorAtual(lerAtor) {
+    var a = lerAtor();
+    return {
+      id: texto(a && a.id), nome: texto(a && a.nome), papel: texto(a && a.papel),
+      // O contrato só aceita a declaração explícita do editor atual.
+      // Coerção aqui transformaria, por exemplo, a string "false" em autorização.
+      valido: !!a && a.valido === true, assinatura: texto(a && a.assinatura)
+    };
+  }
+
+  /*
+   * Dependências injetadas:
+   * - db.ref(caminho).once('value') e .transaction(atualizador), do Firebase legado;
+   * - dashEditarAtor(), a fonte de identidade vigente; e
+   * - snoopy28, o módulo puro já aprovado.
+   */
+  function criar(opcoes) {
+    opcoes = opcoes || {};
+    var db = opcoes.db, snoopy28 = opcoes.snoopy28, lerAtor = opcoes.dashEditarAtor;
+    if (!db || typeof db.ref !== 'function') throw new Error('db.ref é obrigatório');
+    if (!snoopy28 || typeof snoopy28.criar !== 'function' || typeof snoopy28.caminho !== 'function') throw new Error('Snoopy28 inválido');
+    if (typeof lerAtor !== 'function') throw new Error('dashEditarAtor é obrigatório');
+
+    function refDb(caminho) {
+      var ref = db.ref(caminho);
+      if (!ref) throw new Error('referência do banco indisponível');
+      return ref;
+    }
+    function relerLancamento(ref) {
+      if (!refValida(ref)) return Promise.reject(new Error('referência de lançamento inválida'));
+      var origem = refDb(caminhoLancamento(ref));
+      if (typeof origem.once !== 'function') return Promise.reject(new Error('leitura do lançamento indisponível'));
+      return Promise.resolve(origem.once('value')).then(snapshotValor);
+    }
+    function transacionar(ref, atualizador) {
+      if (!refValida(ref) || typeof atualizador !== 'function') return Promise.reject(new Error('transação inválida'));
+      var destino = refDb(snoopy28.caminho(ref));
+      if (typeof destino.transaction !== 'function') return Promise.reject(new Error('transação Snoopy indisponível'));
+      return Promise.resolve().then(function () {
+        return destino.transaction(function (atual) { return atualizador(atual); });
+      }).then(resultadoConhecido);
+    }
+    var portas = {
+      relerLancamento: relerLancamento,
+      transacionar: transacionar,
+      agora: typeof opcoes.agora === 'function' ? opcoes.agora : Date.now,
+      // Snoopy28 chama esta porta antes da leitura e de novo antes da transação.
+      ator: function () { return atorAtual(lerAtor); }
+    };
+    var snoopy = snoopy28.criar(portas);
+    return {
+      novaOperacao: snoopy.novaOperacao,
+      confirmar: snoopy.confirmar,
+      desfazer: snoopy.desfazer,
+      projetar: snoopy.projetar,
+      assinatura: snoopy.assinatura,
+      portas: portas,
+      caminhoLancamento: caminhoLancamento,
+      caminhoHistorico: snoopy28.caminho
+    };
+  }
+  return { criar: criar, caminhoLancamento: caminhoLancamento };
+}));
+
+/* Interface compacta para a declaração humana no Snoopy.
+ * Depende do contrato Snoopy28/31; não envia ao Snoopy, não cobra e não altera o lançamento.
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.ZeluzSnoopy33Interface = api;
+}(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  function texto(v) { return typeof v === 'string' ? v.trim() : ''; }
+  function copiar(v) { return v == null ? v : JSON.parse(JSON.stringify(v)); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function snapValor(s) { if (!s || typeof s.val !== 'function') throw new Error('leitura Snoopy indisponível'); return s.val() || {}; }
+  function diaValido(d) { return /^\d{4}-\d{2}-\d{2}$/.test(String(d || '')); }
+  function refValida(r) { return !!(r && diaValido(r.dia) && /^[^/#.$\[\]]+$/.test(String(r.item || '')) && /^[^/#.$\[\]]+$/.test(String(r.id || ''))); }
+  function chave(ref) { return ref.dia + '/' + ref.item + '/' + ref.id; }
+  function momento(ts) {
+    if (!ts) return '';
+    var d = new Date(ts); if (isNaN(d.getTime())) return '';
+    try {
+      var partes = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d);
+      var p = {}; partes.forEach(function (x) { p[x.type] = x.value; });
+      return p.day + '/' + p.month + ' às ' + p.hour + ':' + p.minute;
+    } catch (e) { return d.toISOString().slice(8, 10) + '/' + d.toISOString().slice(5, 7) + ' às ' + d.toISOString().slice(11, 16) + ' UTC'; }
+  }
+  function atorValido(a) {
+    a = a || {};
+    return !!(a.valido === true && texto(a.id) && texto(a.nome) && texto(a.nome) !== '-' && texto(a.assinatura));
+  }
+  function contexto(op) {
+    var dia = texto(op.dashDia());
+    var ator = op.dashEditarAtor() || {};
+    var fontePronta = op.dadosProntos(dia) === true;
+    return { dia: dia, ator: ator, fontePronta: fontePronta, valido: diaValido(dia) && atorValido(ator) && fontePronta, chave: dia + '|' + texto(ator.assinatura) + '|' + (fontePronta ? 'fonte-pronta' : 'fonte-insegura') };
+  }
+  function resultadoEstado(r) { return r && r.estado ? r.estado : ''; }
+
+  function criar(op) {
+    op = op || {};
+    if (!op.db || typeof op.db.ref !== 'function') throw new Error('db.ref é obrigatório');
+    if (!op.snoopy || typeof op.snoopy.projetar !== 'function' || typeof op.snoopy.confirmar !== 'function' || typeof op.snoopy.desfazer !== 'function' || typeof op.snoopy.cobravelNaFonte !== 'function') throw new Error('Snoopy28/31 inválido');
+    if (typeof op.dashDia !== 'function' || typeof op.dashDados !== 'function' || typeof op.dashEditarAtor !== 'function' || typeof op.dadosProntos !== 'function') throw new Error('portas da tela são obrigatórias');
+    var ESTADO_TTL=15000;
+    var estado = { chave: '', contexto: null, situacao: 'vazio', registros: {}, erro: '', emVoo: null, em: 0 };
+    var modais = {}, desfazeres = {}, acoesEmVoo = {};
+    var escapar = typeof op.escapar === 'function' ? op.escapar : esc;
+    var redesenhar = typeof op.redesenhar === 'function' ? op.redesenhar : function () {};
+    var avisar = typeof op.avisar === 'function' ? op.avisar : function () {};
+    var perguntar = typeof op.perguntar === 'function' ? op.perguntar : function () { return Promise.resolve(false); };
+    var pedirMotivo = typeof op.pedirMotivo === 'function' ? op.pedirMotivo : function () { return Promise.resolve(null); };
+
+    function atualizarContexto() {
+      var c = contexto(op);
+      if (estado.chave !== c.chave) {
+        estado = { chave: c.chave, contexto: c, situacao: c.valido ? 'novo' : 'identidade-invalida', registros: {}, erro: '', emVoo: null, em: 0 };
+        modais = {}; desfazeres = {}; acoesEmVoo = {};
+      }
+      return c;
+    }
+    function contextoAtual(c) { var atual = atualizarContexto(); return atual.chave === c.chave && atual.valido; }
+    function caminhoDia(dia) { return 'daycare/snoopy/' + dia; }
+    function caminhoRef(ref) { return caminhoDia(ref.dia) + '/' + ref.item + '/' + ref.id; }
+    function dadosDoDia() { return op.dashDados() || {}; }
+    function lancamento(ref) { return ((dadosDoDia()[ref.item] || {})[ref.id]) || null; }
+    function cobranca(reg) { return reg ? { chave: reg.chave, valor: reg.valor, det: copiar(reg.det) } : null; }
+    function elegivel(ref, reg) { return !!(refValida(ref) && reg && op.snoopy.cobravelNaFonte(ref, reg)); }
+    function registro(ref) { return (((estado.registros || {})[ref.item] || {})[ref.id]) || null; }
+    function confirmacaoHistorica(ref) {
+      var todos = (registro(ref) || {}).eventos || {}, anulados = {};
+      Object.keys(todos).forEach(function (k) { var e=todos[k]; if (e && e.tipo === 'desfazer-confirmacao' && e.alvoOperacaoId) anulados[e.alvoOperacaoId]=true; });
+      var achado = null;
+      Object.keys(todos).forEach(function (k) { var e=todos[k]; if (e && (e.tipo === 'confirmacao' || !e.tipo) && !anulados[k]) achado=e; });
+      return achado;
+    }
+    function guardarRegistro(ref, valor, c) {
+      if (!contextoAtual(c)) return false;
+      estado.registros[ref.item] = estado.registros[ref.item] || {};
+      estado.registros[ref.item][ref.id] = copiar(valor || {});
+      return true;
+    }
+    function carregar() {
+      var c = atualizarContexto();
+      if (!c.valido) return Promise.resolve({ estado: estado.situacao });
+      if (estado.situacao === 'pronto' && Date.now() - estado.em < ESTADO_TTL) return Promise.resolve({ estado: 'pronto' });
+      if (estado.emVoo) return estado.emVoo;
+      estado.situacao = 'carregando'; estado.erro = '';
+      estado.emVoo = Promise.resolve().then(function () { return op.db.ref(caminhoDia(c.dia)).once('value'); }).then(snapValor).then(function (valor) {
+        if (contextoAtual(c)) { estado.registros = copiar(valor); estado.situacao = 'pronto'; estado.erro = ''; estado.em = Date.now(); redesenhar(); }
+        return { estado: 'pronto' };
+      }).catch(function (e) {
+        if (contextoAtual(c)) { estado.situacao = 'falhou'; estado.erro = texto((e && e.message) || e) || 'leitura indisponível'; redesenhar(); }
+        return { estado: 'falhou' };
+      }).then(function (r) { if (contextoAtual(c)) estado.emVoo = null; return r; });
+      return estado.emVoo;
+    }
+    function atualizarUm(ref, c) {
+      return Promise.resolve().then(function () { return op.db.ref(caminhoRef(ref)).once('value'); }).then(snapValor).then(function (valor) {
+        guardarRegistro(ref, valor, c); redesenhar(); return valor;
+      });
+    }
+    function projecao(ref, reg) {
+      if (!elegivel(ref, reg) || estado.situacao !== 'pronto') return null;
+      var antigo = confirmacaoHistorica(ref), atual = op.snoopy.assinatura ? op.snoopy.assinatura(cobranca(reg)) : '';
+      if (antigo && antigo.assinatura && atual && antigo.assinatura !== atual) return { estado: 'revisar', motivo: 'lancamento-alterado', confirmado: false, eventoHistorico: antigo };
+      var p = op.snoopy.projetar(reg, registro(ref), cobranca(reg));
+      if (p && p.estado === 'revisar' && !p.evento) p.eventoHistorico = confirmacaoHistorica(ref);
+      return p;
+    }
+    function informarResultado(acao, r) {
+      var e = resultadoEstado(r); if (!r || ['confirmacao-vigente','desfeito','cancelado'].indexOf(e) >= 0) return r;
+      var textoTela = e === 'desconhecido' ? 'O banco ainda não confirmou este resultado. Use o reenvio desta mesma ação.'
+        : e === 'revisar' ? 'O lançamento ou a identidade mudou. Atualize a tela e confira o histórico antes de continuar.'
+        : e === 'identidade-alterada' || e === 'identidade-invalida' ? 'A identidade mudou ou não está válida. Nada foi declarado.'
+        : 'O banco não confirmou a ação. Nada foi declarado como concluído.';
+      avisar(acao, [textoTela]); return r;
+    }
+    function botao(acao, ref, textoBotao) {
+      return ' <button type="button" class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" data-snoopy-item="' + escapar(ref.item) + '" data-snoopy-id="' + escapar(ref.id) + '" onclick="' + acao + '(this)">' + escapar(textoBotao) + '</button>';
+    }
+    function linhaHTML(item, id, reg) {
+      var c = atualizarContexto(), ref = { dia: c.dia, item: item, id: id };
+      if (!elegivel(ref, reg) || !c.valido) return '';
+      if (estado.situacao === 'novo') { carregar(); return ' <span style="color:var(--muted);font-weight:700;font-size:11px">conferindo o Snoopy…</span>'; }
+      if (estado.situacao === 'carregando') return ' <span style="color:var(--muted);font-weight:700;font-size:11px">conferindo o Snoopy…</span>';
+      if (estado.situacao === 'falhou') return ' <span style="color:var(--crm-critico);font-weight:800;font-size:11.5px">não consegui conferir o Snoopy</span>' + botao('dashSnoopy33Atualizar', ref, 'tentar atualizar');
+      var p = projecao(ref, reg), ultimo = modais[chave(ref)] && modais[chave(ref)].ultimo;
+      if (!p) return '';
+      if (ultimo && resultadoEstado(ultimo) === 'desconhecido') return ' <span style="color:var(--crm-atencao-text);font-weight:800;font-size:11.5px">resultado da confirmação ainda não é conhecido</span>' + botao('dashSnoopy33Reenviar', ref, 'reenviar a mesma confirmação');
+      if (desfazeres[chave(ref)] && resultadoEstado(desfazeres[chave(ref)].ultimo) === 'desconhecido') return ' <span style="color:var(--crm-atencao-text);font-weight:800;font-size:11.5px">resultado de desfazer ainda não é conhecido</span>' + botao('dashSnoopy33ReenviarDesfazer', ref, 'reenviar o mesmo desfazer');
+      if (p.estado === 'confirmacao-vigente') {
+        var e = p.evento || {}, quem = texto(e.quem) || 'pessoa não informada', em = momento(e.em);
+        return ' <span style="color:var(--z-blue);font-weight:800;font-size:11.5px">Snoopy: lançado por ' + escapar(quem) + (em ? (' em ' + escapar(em)) : '') + '</span>' + botao('dashSnoopy33Desfazer', ref, 'desfazer');
+      }
+      if (p.estado === 'revisar') { var antigo=p.evento||p.eventoHistorico; return ' <span style="color:var(--crm-atencao-text);font-weight:800;font-size:11.5px">Snoopy: confirmar revisão do lançamento</span>' + (antigo && antigo.operacaoId ? botao('dashSnoopy33Desfazer', ref, 'revisar e desfazer') : ''); }
+      return ' <span style="color:var(--crm-atencao-text);font-weight:800;font-size:11.5px">Snoopy: pendente de confirmação humana</span>' + botao('dashSnoopy33Confirmar', ref, 'Já lancei no Snoopy');
+    }
+    function abrirModal(ref, reg) {
+      var k = chave(ref), modal = modais[k];
+      if (modal && modal.operacaoId && modal.cobranca) return modal;
+      modal = { ref: copiar(ref), cobranca: cobranca(reg), operacaoId: op.snoopy.novaOperacao(), ultimo: null, aberto: true };
+      modais[k] = modal;
+      return modal;
+    }
+    function executarConfirmacao(ref, modal, c) {
+      var k = chave(ref);
+      if (acoesEmVoo[k]) return acoesEmVoo[k];
+      acoesEmVoo[k] = Promise.resolve().then(function () {
+        return op.snoopy.confirmar({ ref: ref, operacaoId: modal.operacaoId }, modal.cobranca);
+      }).then(function (r) {
+        modal.ultimo = r || null;
+        if (resultadoEstado(r) === 'confirmacao-vigente') {
+          if (!contextoAtual(c)) return { estado: 'revisar', motivo: 'dia-ou-identidade-alterados-antes-do-recibo' };
+          return atualizarUm(ref, c).then(function () { delete modais[k]; return r; }, function () { return { estado: 'falhou', motivo: 'recibo-nao-recarregado' }; });
+        }
+        redesenhar(); return r;
+      }).catch(function () { modal.ultimo = { estado: 'falhou', motivo: 'confirmacao-nao-confirmada' }; redesenhar(); return modal.ultimo; }).then(function (r) { delete acoesEmVoo[k]; return informarResultado('Confirmação Snoopy não concluída', r); });
+      return acoesEmVoo[k];
+    }
+    function confirmar(item, id) {
+      var c = atualizarContexto(), ref = { dia: c.dia, item: item, id: id }, reg = lancamento(ref), p = projecao(ref, reg);
+      if (!c.valido || !elegivel(ref, reg) || !p || p.estado !== 'pendente') return Promise.resolve({ estado: 'revisar', motivo: 'lancamento-ou-identidade-alterados' });
+      var modal = abrirModal(ref, reg), k = chave(ref);
+      if (acoesEmVoo[k]) return acoesEmVoo[k];
+      if (modal.perguntaEmCurso) return modal.perguntaEmCurso;
+      modal.perguntaEmCurso = Promise.resolve(perguntar('Você já lançou este item no Snoopy?', ['Confirme somente depois de registrar o item no Snoopy.'], { sim: 'Já lancei no Snoopy', nao: 'Voltar' })).then(function (ok) {
+        if (!ok) { if (!acoesEmVoo[k]) delete modais[k]; return { estado: 'cancelado' }; }
+        if (!contextoAtual(c) || !elegivel(ref, lancamento(ref))) return { estado: 'revisar', motivo: 'lancamento-ou-identidade-alterados' };
+        return executarConfirmacao(ref, modal, c);
+      });
+      return modal.perguntaEmCurso.then(function (r) { modal.perguntaEmCurso = null; return r; }, function (e) { modal.perguntaEmCurso = null; throw e; });
+    }
+    function reenviar(item, id) {
+      var c = atualizarContexto(), ref = { dia: c.dia, item: item, id: id }, modal = modais[chave(ref)];
+      if (!modal || !modal.ultimo || resultadoEstado(modal.ultimo) !== 'desconhecido') return Promise.resolve({ estado: 'invalido' });
+      if (!contextoAtual(c) || !elegivel(ref, lancamento(ref))) return Promise.resolve({ estado: 'revisar', motivo: 'lancamento-ou-identidade-alterados' });
+      return executarConfirmacao(ref, modal, c);
+    }
+    function executarDesfazer(ref, pendente, c) {
+      var k = chave(ref);
+      if (acoesEmVoo[k]) return acoesEmVoo[k];
+      if (!contextoAtual(c)) return Promise.resolve({ estado: 'revisar', motivo: 'dia-ou-identidade-alterados' });
+      acoesEmVoo[k] = Promise.resolve(op.snoopy.desfazer({ ref: ref, operacaoId: pendente.operacaoId, alvoOperacaoId: pendente.alvoOperacaoId }, pendente.motivo)).then(function (r) {
+        pendente.ultimo = r || null;
+        if (resultadoEstado(r) === 'desfeito') {
+          if (!contextoAtual(c)) return { estado: 'revisar', motivo: 'dia-ou-identidade-alterados-antes-do-recibo' };
+          return atualizarUm(ref, c).then(function () { delete desfazeres[k]; return r; }, function () { return { estado: 'falhou', motivo: 'recibo-nao-recarregado' }; });
+        }
+        return r;
+      }).catch(function () { pendente.ultimo = { estado: 'falhou', motivo: 'desfazer-nao-confirmado' }; return pendente.ultimo; }).then(function (r) { delete acoesEmVoo[k]; redesenhar(); return informarResultado('Desfazer Snoopy não concluído', r); });
+      return acoesEmVoo[k];
+    }
+    function desfazer(item, id) {
+      var c = atualizarContexto(), ref = { dia: c.dia, item: item, id: id }, reg = lancamento(ref), p = projecao(ref, reg);
+      var alvoEvento = p && (p.evento || p.eventoHistorico);
+      if (!c.valido || !p || ['confirmacao-vigente','revisar'].indexOf(p.estado) < 0 || !alvoEvento || !alvoEvento.operacaoId) return Promise.resolve({ estado: 'revisar' });
+      var k = chave(ref), controle = modais[k] || (modais[k] = {}); if (acoesEmVoo[k]) return acoesEmVoo[k];
+      if (controle.desfazerPergunta) return controle.desfazerPergunta;
+      controle.desfazerPergunta = Promise.resolve(op.snoopy.portas && op.snoopy.portas.relerLancamento ? op.snoopy.portas.relerLancamento(ref) : reg).then(function (fonte) {
+        var mudou = !fonte || (projecao(ref, fonte) || {}).estado === 'revisar';
+        var aviso = mudou ? ['O lançamento foi alterado ou cancelado desde a confirmação.', 'A confirmação antiga ficará no histórico; confirme a revisão antes de desfazer.'] : ['Escreva o motivo. O histórico da confirmação será preservado.', 'Isso não altera o Snoopy externo.'];
+        return pedirMotivo('Desfazer a confirmação do Snoopy?', aviso, { botao: 'Desfazer confirmação' });
+      }).then(function (motivo) {
+        motivo = texto(motivo); if (!motivo) return { estado: 'cancelado' };
+        if (!contextoAtual(c) || !elegivel(ref, lancamento(ref))) return { estado: 'revisar', motivo: 'dia-ou-identidade-alterados' };
+        var pendente = { operacaoId: op.snoopy.novaOperacao(), alvoOperacaoId: alvoEvento.operacaoId, motivo: motivo, ultimo: null };
+        desfazeres[k] = pendente;
+        return executarDesfazer(ref, pendente, c);
+      }).catch(function () { return informarResultado('Desfazer Snoopy não concluído', { estado: 'falhou', motivo: 'leitura-da-fonte-nao-confirmada' }); });
+      return controle.desfazerPergunta.then(function (r) { controle.desfazerPergunta = null; return r; }, function () { controle.desfazerPergunta = null; return informarResultado('Não consegui conferir o Snoopy', { estado: 'falhou', motivo: 'fonte-nao-recarregada' }); });
+    }
+    function reenviarDesfazer(item, id) {
+      var c = atualizarContexto(), ref = { dia: c.dia, item: item, id: id }, pendente = desfazeres[chave(ref)];
+      if (!pendente || resultadoEstado(pendente.ultimo) !== 'desconhecido') return Promise.resolve({ estado: 'invalido' });
+      if (!contextoAtual(c) || !elegivel(ref, lancamento(ref))) return Promise.resolve({ estado: 'revisar', motivo: 'dia-ou-identidade-alterados' });
+      return executarDesfazer(ref, pendente, c);
+    }
+    function atualizar() { estado.situacao = 'novo'; estado.erro = ''; return carregar(); }
+    return { carregar: carregar, linhaHTML: linhaHTML, confirmar: confirmar, reenviar: reenviar, desfazer: desfazer, reenviarDesfazer: reenviarDesfazer, atualizar: atualizar, estado: function () { return copiar(estado); }, modais: function () { return copiar(modais); } };
+  }
+  return { criar: criar };
+}));
+
+  var DASH_SNOOPY33=null;
+  function dashSnoopy33DadosProntos(dia){ var d=(typeof DASH_DADOS_DE!=="undefined")?DASH_DADOS_DE:null; return !!(d&&d.ok===true&&d.dia===dia&&d.obj===DASH_DADOS); }
+  function dashSnoopy33Instancia(){
+    if(DASH_SNOOPY33) return DASH_SNOOPY33;
+    if(!DB || !window.ZeluzSnoopyConfirmacao || !window.ZeluzSnoopy31AdaptadorDB || !window.ZeluzSnoopy33Interface) return null;
+    var base=window.ZeluzSnoopy31AdaptadorDB.criar({db:DB,snoopy28:window.ZeluzSnoopyConfirmacao,dashEditarAtor:dashEditarAtor,agora:Date.now});
+    base.cobravelNaFonte=window.ZeluzSnoopyConfirmacao.cobravelNaFonte;
+    DASH_SNOOPY33=window.ZeluzSnoopy33Interface.criar({db:DB,snoopy:base,dashDia:dashDia,dashDados:function(){return DASH_DADOS;},dashEditarAtor:dashEditarAtor,dadosProntos:dashSnoopy33DadosProntos,escapar:escAttr,redesenhar:renderDash,
+      perguntar:function(t,l,o){return zPergunta(t,l,o);},pedirMotivo:function(t,l,o){return zTexto(t,l,{rotulo:"Motivo",ph:"Explique o motivo",botao:o.botao||"Desfazer"});},
+      avisar:function(t,l){if(typeof zAlertao==="function") zAlertao(t,l,{botao:"Entendi"});}});
+    return DASH_SNOOPY33;
+  }
+  function dashSnoopy33LinhaHTML(k,id,o){ var x=dashSnoopy33Instancia(); return x?x.linhaHTML(k,id,o):""; }
+  function dashSnoopy33Carregar(){ var x=dashSnoopy33Instancia(); return x?x.carregar():Promise.resolve(); }
+  function dashSnoopy33DadosDoBotao(el){ return {item:String(el&&el.getAttribute("data-snoopy-item")||""),id:String(el&&el.getAttribute("data-snoopy-id")||"")}; }
+  function dashSnoopy33Confirmar(el){ var x=dashSnoopy33Instancia(),p=dashSnoopy33DadosDoBotao(el); return x?x.confirmar(p.item,p.id):Promise.resolve(); }
+  function dashSnoopy33Reenviar(el){ var x=dashSnoopy33Instancia(),p=dashSnoopy33DadosDoBotao(el); return x?x.reenviar(p.item,p.id):Promise.resolve(); }
+  function dashSnoopy33Desfazer(el){ var x=dashSnoopy33Instancia(),p=dashSnoopy33DadosDoBotao(el); return x?x.desfazer(p.item,p.id):Promise.resolve(); }
+  function dashSnoopy33ReenviarDesfazer(el){ var x=dashSnoopy33Instancia(),p=dashSnoopy33DadosDoBotao(el); return x?x.reenviarDesfazer(p.item,p.id):Promise.resolve(); }
+  function dashSnoopy33Atualizar(){ var x=dashSnoopy33Instancia(); return x?x.atualizar():Promise.resolve(); }
+  /* SNOOPY33-END */
+
   function dashCartaoHTML(it, __diaDash){
 var lista=DASH_DADOS[it.k]||{};
 var ks=Object.keys(lista).sort(function(a,b){ return (lista[a].ts||0)-(lista[b].ts||0); });
@@ -56649,6 +57142,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
          return '<div class="pair" style="padding:6px 0;border-bottom:1px solid var(--line);flex-wrap:wrap">'
            +'<span class="k"><strong>'+escAttr(o.valor||'')+'</strong>'
            +(o.hora?(' <span style="color:var(--z-blue-soft);font-weight:800">'+escAttr(o.hora)+'</span>'):'')
+           +dashSnoopy33LinhaHTML(it.k,id,o)
            +dashEditarEstadoHTML(o)
            // Nome escrito à mão na avaliação, avulso de pré-cadastro, inativo que
            // voltou por um dia: nada disso é erro de digitação nem FILHOt perdido. A
@@ -56727,6 +57221,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     try{ dashSincronizarSeletor(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     var av=document.getElementById('dashPonteAviso');
     if(av) av.innerHTML=dashAvisosHTML();
+    try{ dashSnoopy33Carregar(); }catch(e){}
     var el=document.getElementById('dashBlocos'); if(!el) return;
     // Guardar o que está digitado: escolher uma quantidade redesenha a tela inteira, e sem
     // isto a busca que a colega estava fazendo em outro bloco sumia no meio da digitação.
@@ -60574,6 +61069,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
   // captura que pegou. Quem redesenha um quadro destes, ACENDE. Uma porta só para os dois
   // quadros, para o próximo nunca mais esquecer.
   function vencPcQuadro(id, html){
+    try{ zPrev27Atualizar(); }catch(e){ /* projeção não interrompe fluxo existente */ }
     var el=null;
     try{ el=document.getElementById(id); }catch(e){ el=null; } /* silencioso de propósito: sem DOM não há quadro para redesenhar */
     if(!el) return false;
@@ -63502,6 +63998,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
   // ---- a tela --------------------------------------------------------------------------
   function hojeFiltrar(v){ HOJE_FILTRO=v||'todos'; hojeRender(); }
   function hojeRedesenhar(){
+    try{ zPrev27Atualizar(); }catch(e){ /* projeção não interrompe fluxo existente */ }
     try{ var sec=document.getElementById('v-hoje'); if(sec&&sec.classList.contains('active')) hojeRender(); }
     catch(e){ /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
     try{ if(typeof contatosRedesenhar==='function') contatosRedesenhar(); }
@@ -88266,15 +88763,9 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
         + pcQuadroAlmoco(pcDadosAlmoco(d.emp))
         + pcQuadroRecepcao(pcDadosRecepcao())
         + pcQuadroColeira()
-        // "Vence amanhã" (21/set/2026): o MESMO quadro que a mesa mostra, aqui na tela de
-        // quem faz o trabalho. Só leitura — o toque leva à tela, onde as decisões moram.
-        +'<div id="pcCardVence" style="display:contents">'+blocoVenceHTML()+'</div>'
-        // RESPOSTAS PENDENTES (21/set/2026): "isso precisa ir para o dashboard da consultora,
-        // onde ela precisa cobrar". É o único quadro desta tela que TEM botão — porque o
-        // pedido dela foi esse: "ela tem que voltar nessa resposta", e voltar não pode custar
-        // três telas. Os botões são os MESMOS do cartão, e gravam pelo mesmo caminho.
-        +'<div id="pcCardPend" style="display:contents">'+vencPendCardHTML()+'</div>'
+        +zPrev27TemaHTML('pc')
         +'</div>';
+      zPrev27Atualizar();
       // Acompanhamento usa a mesma leitura inteira/cache de três minutos do Orçamento; não grava ao renderizar.
       try{ if(window.OrcAcompanhamento) window.OrcAcompanhamento.renderPainel('consultoras', raiz,
         (d.orc&&d.orc.ok)?d.orc.v:null, {db:DB,hoje:PC_DIA,equipe:(typeof MONITORES!=='undefined'?MONITORES.filter(monAtivo):[]),recarregar:function(forcar){pcAbrir(forcar!==false);}}); }catch(e){ _logLeituraFalhou('Acompanhamento de orçamentos (Consultoras)', e); }
@@ -89866,10 +90357,10 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
         + poAreaHTML('A FICHA DE CADA UM','O que impede e o que atrasa',
             'Quem está impedido de frequentar por prevenção vencida, e quem a casa deixou de pesar.', PO_IC_ALERTA)
         +'<div class="pm-grid">'
-        + blocoPrevencaoVencidaHTML()
+        +zPrev27TemaHTML('pa')
         + blocoFaltaPesarHTML()
-        +'<div id="paCardPendPrev" style="display:contents">'+blocoPendPrevHTML()+'</div>'
         +'</div>';
+      zPrev27Atualizar();
       // Acompanhamento usa a mesma leitura inteira/cache de três minutos do Orçamento; não grava ao renderizar.
       try{ if(window.OrcAcompanhamento) window.OrcAcompanhamento.renderPainel('amanda', raiz,
         (d.orc&&d.orc.ok)?d.orc.v:null, {db:DB,hoje:PA_DIA,equipe:(typeof MONITORES!=='undefined'?MONITORES.filter(monAtivo):[]),recarregar:function(forcar){paAbrir(forcar!==false);}}); }catch(e){ _logLeituraFalhou('Acompanhamento de orçamentos (Amanda)', e); }
@@ -91838,6 +92329,89 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
   };
 })();
 /* REPOSICAO14_INTERFACE_FIM */
+/* INTEGRACAO_PREVENCAO27: somente projeção e navegação; sem nova gravação. */
+function zPrev27Ler(){
+  var r=window.ZeluzPrevencaoRuntime.ler();
+  r.canal='desconectado';
+  return r;
+}
+function zPrev27Permite(){
+  return typeof podePapel==='function' && (podePapel('painel-consultoras') || podePapel('painel-amanda'));
+}
+function zPrev27Linha(ref){
+  if(!zPrev27Permite() || !ref) return null;
+  var r=zPrev27Ler(); if(r.estado!=='pronto') return null;
+  return (r.pendencias||[]).find(function(p){
+    return p.id===ref.id && p.referencia.dcKey===ref.dcKey && p.referencia.pelKey===ref.pelKey;
+  })||null;
+}
+function zPrev27Avisar(){
+  if(typeof zAlertao==='function') zAlertao('Confira a informação atual',[
+    'A ficha ou o cuidado mudou desde a abertura. Atualize o painel e confira o peludinho e a família antes de continuar.'
+  ],{botao:'Entendi'});
+  zPrev27Atualizar();
+}
+function zPrev27Ficha(ref){
+  var p=zPrev27Linha(ref); if(!p){ zPrev27Avisar(); return false; }
+  // Além da referência antiga, exigir a mesma ficha atualmente carregada e sem colisão.
+  var fichas=(PELUDINHOS||[]).filter(function(f){ return dcKey(f.n,f.tutor)===ref.dcKey && pelKey(f)===ref.pelKey; });
+  if(fichas.length!==1){ zPrev27Avisar(); return false; }
+  vencAbrirFicha(ref.dcKey); return true;
+}
+function zPrev27Focar(id){
+  var el=document.getElementById(id);
+  if(el && typeof el.scrollIntoView==='function') el.scrollIntoView({block:'center'});
+}
+function zPrev27Atendimento(ref){
+  var p=zPrev27Linha(ref); if(!p){ zPrev27Avisar(); return false; }
+  if(typeof podeTela==='function' && !podeTela('hoje-na-casa','hoje')) return false;
+  var assunto=p.assunto; if(!assunto){ zPrev27Avisar(); return false; }
+  var atual=hojeObjAnt(ref.dcKey,assunto);
+  if(atual){
+    HOJE_FILTRO='todos'; HOJE_ANT_ABERTO[ref.dcKey+'|'+assunto]=true;
+    irParaView('hoje'); hojeRender(); zPrev27Focar('hojeMsg_'+ref.dcKey+'__'+assunto);
+    return true;
+  }
+  // A mensagem de véspera já tratada usa o próprio atendimento de vencimentos.
+  var dia=dcDataKey(); VENC_DIA_SEL=dia;
+  irParaView('vencimentos'); vencRender();
+  return vencCarregar(dia).then(function(){
+    var sec=document.getElementById('v-vencimentos');
+    if(sec && sec.classList.contains('active')){ vencRender(); zPrev27Focar('vencCard_'+ref.dcKey); }
+    return true;
+  });
+}
+function zPrev27TemaHTML(perfil){
+  var id=perfil==='pa'?'paPrevencao27':'pcPrevencao27';
+  var legado=perfil==='pa'
+    ? blocoPrevencaoVencidaHTML()+'<div id="paCardPendPrev" style="display:contents">'+blocoPendPrevHTML()+'</div>'
+    : '<div id="pcCardVence" style="display:contents">'+blocoVenceHTML()+'</div><div id="pcCardPend" style="display:contents">'+vencPendCardHTML()+'</div>';
+  return '<details class="pm-card"><summary class="pm-tit">💛 Prevenção</summary>'
+    +'<div id="'+id+'"><p class="pm-sub">Lendo os cuidados de quem chegou…</p></div>'
+    +'<details><summary>Outros prazos e respostas pendentes</summary>'+legado+'</details></details>';
+}
+function zPrev27Atualizar(){
+  if(!zPrev27Permite() || !window.ZeluzPainelPrevencao) return;
+  ['pcPrevencao27','paPrevencao27'].forEach(function(id){
+    var el=document.getElementById(id); if(el) window.ZeluzPainelPrevencao.atualizar(el);
+  });
+}
+function zPrev27Instalar(){
+  if(!window.ZeluzPrevencaoRuntime || !window.ZeluzPainelPrevencao) return;
+  window.ZeluzPrevencaoRuntime.instalar({
+    hoje:function(){return dcDataKey();}, lerHoje:function(){return hojeLista();},
+    getMapas:function(){return Z_MAPAS;}, peludinhos:function(){return PELUDINHOS;},
+    cadastroPronto:function(){return CARTEIRA_CARREGADA===true;},
+    vencimentosProntos:function(){return (VENC_REG!==null && VENC_REG_DIA===dcDataKey()) || VENC_PEND!==null;},
+    pelKey:pelKey, pelExtra:pelExtra, dcKey:dcKey, vencItensDe:vencItensDe,
+    vencRegDeDia:vencRegDeDia, vencRespostaDe:vencRespostaDe, vencRespDef:vencRespDef,
+    vencTipoDoItemObj:vencTipoDoItemObj, vencEhDiaVet:vencEhDiaVet
+  });
+  window.ZeluzPainelPrevencao.instalar({ler:zPrev27Ler,ficha:zPrev27Ficha,atendimento:zPrev27Atendimento});
+}
+zPrev27Instalar();
+/* FIM_INTEGRACAO_PREVENCAO27 */
+
 // INIT do Day Care (no fim: garante todas as variaveis e funcoes definidas)
   montarSubnav();
   renderAtual();
