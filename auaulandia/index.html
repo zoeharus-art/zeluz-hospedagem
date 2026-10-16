@@ -5204,6 +5204,8 @@
 <script src="financeiro-logica.js?v=2026-10-15-02"></script>
 <script src="autoria-logica.js?v=2026-10-15-02"></script>
 <script src="navegacao-inicio.js?v=2026-10-15-02"></script>
+<script src="hospedes-atividades.js?v=2026-10-16-01"></script>
+<script src="alimentacao-hospede.js?v=2026-10-16-01"></script>
 <script src="presenca-logica.js?v=2026-10-15-02"></script>
 <script src="historico-checkins.js?v=2026-10-15-02"></script>
 <script src="historico-checkins-pdf.js?v=2026-10-15-02"></script>
@@ -27481,7 +27483,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-15-02';
+  const APP_VERSAO='2026-10-16-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -45548,21 +45550,16 @@
         });
       });
     }
-    // Hóspedes da AuAulândia participam do Day Care DURANTE a estadia (de dia): entram na chamada,
-    // no almoço e nas atividades, mesmo não sendo alunos fixos do dia. Só HOJE e enquanto a estadia
-    // está ativa (hoje entre entrada→saída). Assim o monitor que cuida da medicação de dia os vê.
-    if(ehHoje() && typeof CF_ESTADIAS!=='undefined' && CF_ESTADIAS){
-      const hojeK=(typeof dataKeyAtual==='function')?dataKeyAtual():'';
-      Object.keys(CF_ESTADIAS).forEach(function(rk){
-        const e=(CF_ESTADIAS[rk]&&CF_ESTADIAS[rk].e)||{};
-        if((e.status||'ativa')!=='ativa') return;
-        if(e.entrada && hojeK < e.entrada) return;
-        if(e.saida && hojeK > e.saida) return;
-        const pReal=PELUDINHOS.find(function(p){ return pelKey(p)===rk || dcKey(p.n,p.tutor)===dcKey(e.nome,e.tutor); });
-        const p = pReal || {n:e.nome, raca:e.raca||'', tutor:e.tutor||'', freq:'hospede', dias:[dcDia], nasc:''};
-        const k=dcKey(p.n,p.tutor);
-        if(jaTem.has(k)) return; jaTem.add(k);
-        base.push({ p:p, i:(pReal?PELUDINHOS.indexOf(pReal):('hosp'+rk)), hospede:true });
+    // Hóspedes ativos entram na mesma turma que alimenta chamada, almoço e atividades.
+    // EST_TODAS é necessário: CF_ESTADIAS guarda apenas a estadia mais recente e pode apontar
+    // para uma reserva futura, ocultando a hospedagem atual.
+    if(ehHoje() && typeof ZeluzHospedesAtividades!=='undefined'){
+      ZeluzHospedesAtividades.aplicarNaTurma(base, {
+        pronto:(typeof CF_ESTADIAS_LIDO!=='undefined' && CF_ESTADIAS_LIDO===true
+          && typeof EST_TODAS!=='undefined' && !!EST_TODAS),
+        dia:(typeof zHojeISO==='function')?zHojeISO():'',
+        estadias:(typeof EST_TODAS!=='undefined'&&EST_TODAS)?EST_TODAS:{},
+        peludinhos:PELUDINHOS, dcKey:dcKey, pelKey:pelKey
       });
     }
     // defesa final: nunca deixar duas entradas do mesmo FILHOt escaparem juntas na lista
@@ -47976,18 +47973,18 @@
     DB.ref(no+'/'+k+'/pontos/'+ptk+'/fotoTg').set({ok:true, ts:Date.now()})
       .catch(function(e){ _logFalhaGrav('carimbo de foto enviada '+k+'/'+ptk, e); });
   }
-  function ckAvisarVet(p, alterados, R, hora){
-    var _no=ckNo(), _k=dcKey(p.n,p.tutor);
+  function ckAvisarVet(p, alterados, R, hora, contexto){
+    var _no=(contexto&&contexto.no)||ckNo(), _k=(contexto&&contexto.k)||dcKey(p.n,p.tutor);
     return Promise.all(alterados.map(function(pt){
       var at=R.pontos[pt.k]||{};
       return tgAvisarAlteracao(p, pt, at, hora).then(function(r){
         var ok=!!(r&&r.ok);
         if(typeof audit==='function') audit('telegram-aviso',(ok?'avisou o grupo sobre ':'NÃO avisou o grupo sobre ')+(pt.t||'')+' de '+(p.n||''),{pet:p.n||''});
         if(ok) ckFotoMarcarEnviada(_no, _k, pt.k);
-        else vetFilaGuardar(p, pt, at, hora, (r&&r.erro)||'a ponte não respondeu');
+        else vetFilaGuardar(p, pt, at, hora, (r&&r.erro)||'a ponte não respondeu', contexto);
         return {ponto:pt.t||'', ok:ok, erro:(r&&r.erro)||''};
       }).catch(function(e){
-        vetFilaGuardar(p, pt, at, hora, String((e&&e.message)||e));
+        vetFilaGuardar(p, pt, at, hora, String((e&&e.message)||e), contexto);
         return {ponto:pt.t||'', ok:false, erro:String((e&&e.message)||e)};
       });
     })).then(function(res){
@@ -48195,7 +48192,7 @@
     }
     ckFotoBaixar();
   }
-  function vetFilaGuardar(p, pt, at, hora, motivo){
+  function vetFilaGuardar(p, pt, at, hora, motivo, contexto){
     if(!DB) return;
     try{
       DB.ref('auaulandia/avisos-vet-fila').push({
@@ -48204,8 +48201,8 @@
         local:at.local||'', obs:at.obs||'', foto:at.foto||'', foto2:at.foto2||'',
         extras:(at.extras||[]).filter(Boolean),
         quem:(typeof quemSou==='function'?quemSou():'-'), hora:hora||'',
-        dia:(typeof dcDataKey==='function'?dcDataKey():''), motivo:motivo||'', ts:Date.now(), tentativas:0,
-        refNo:(typeof ckNo==='function'?ckNo():''), refK:dcKey(p.n,p.tutor), refPt:pt.k||''
+        dia:(contexto&&contexto.dia)||((typeof dcDataKey==='function')?dcDataKey():''), motivo:motivo||'', ts:Date.now(), tentativas:0,
+        refNo:(contexto&&contexto.no)||((typeof ckNo==='function')?ckNo():''), refK:(contexto&&contexto.k)||dcKey(p.n,p.tutor), refPt:pt.k||''
       }).catch(function(e){ _logFalhaGrav('fila de aviso vet', e); });
     }catch(e){ _logFalhaGrav('guardar o aviso da veterinária na fila', e); }
   }
@@ -48240,11 +48237,32 @@
       }).catch(function(){ _vetFilaRodando=false; return 0; });
     }).catch(function(){ _vetFilaRodando=false; return 0; });
   }
-  var ckEntradaCache={};
-  function ckSalvar(){
-    if(!ckAtual||!ckRascunho) return;
+  var ckEntradaCache={}, CK_SALVANDO=false;
+  function ckSalvarBotaoEstado(salvando, b){
+    if(b){
+      if(salvando){ b.dataset.ckSalvarTexto=b.textContent; b.dataset.ckSalvarDesabilitado=String(b.disabled); b.disabled=true; b.textContent='Salvando…'; }
+      else { b.disabled=b.dataset.ckSalvarDesabilitado==='true'; delete b.dataset.ckSalvarDesabilitado; if(b.dataset.ckSalvarTexto){ b.textContent=b.dataset.ckSalvarTexto; delete b.dataset.ckSalvarTexto; } }
+    }
+  }
+  function ckEfeitoDerivado(nome, efeito, aoFalhar){
+    function falhou(e){
+      try{ _logFalhaGrav(nome, e); }catch(logErro){}
+      try{ if(typeof aoFalhar==='function') aoFalhar(e); }catch(x){}
+    }
+    try{
+      var retorno=efeito();
+      if(retorno&&typeof retorno.catch==='function') retorno.catch(falhou);
+    }catch(e){ falhou(e); }
+  }
+  async function ckSalvar(){
+    if(CK_SALVANDO||!ckAtual||!ckRascunho) return;
     const o=ckAtual, p=o.p, k=dcKey(p.n,p.tutor), entrada=ckEhEntrada();
-    const pontos=ckPontosDe(p), R=ckRascunho;
+    const dia=dcDataKey(), tipo=entrada?'entrada':'saida', no='daycare/'+(entrada?'checkin':'checkout')+'-corpo/'+dia;
+    const dadosNoInicio=ckDados, rascunhoAberto=ckRascunho;
+    let rascunhoSerializado='', R=null;
+    try{ rascunhoSerializado=JSON.stringify(rascunhoAberto); R=JSON.parse(rascunhoSerializado); }
+    catch(e){ alert('Não consegui preparar este check-in para salvar. O rascunho continua aqui: revise e tente de novo.'); return; }
+    const pontos=ckPontosDe(p);
     // ===== TUDO QUE FALTA, DE UMA VEZ, EM VERMELHO, NO PRÓPRIO CAMPO ================
     // Adriana, 14/ago/2026: "deu erro de confirmação e etc, mas não deixa fácil, intuitivo.
     // Eu tive que ficar procurando, foi uma merda."
@@ -48344,114 +48362,110 @@
       }
       _regPontos[ptk]=at;
     });
-    const reg=Object.assign({}, R, {pontos:_regPontos, nome:pelNome(p), tutor:p.tutor||'', quem:quem, hora:horaAgora(), fim:Date.now(), tipo:entrada?'entrada':'saida'});
+    const reg=JSON.parse(JSON.stringify(Object.assign({}, R, {pontos:_regPontos, nome:pelNome(p), tutor:p.tutor||'', quem:quem, hora:horaAgora(), fim:Date.now(), tipo:tipo})));
     // A marca da foto a caminho é de rascunho, não de registro: gravou, acabou.
     delete reg.fotoPendente;
-    CK_FOTO_ESPERANDO=null; CK_FOTO_STATUS={}; CK_FOTO_PERDIDA='';
-    ckDados[k]=reg;
     const alterados=pontos.filter(function(pt){ return (R.pontos[pt.k]||{}).alterado; });
-    // Cada alteração vira um aviso no grupo da veterinária, com a foto. Se a ponte não
-    // estiver ligada ou a internet falhar, o check-in é salvo do mesmo jeito — o aviso é
-    // reforço, nunca condição.
+    const fotosNo='daycare/fotos-corpo/'+dia, contexto={dia:dia, tipo:tipo, no:no, k:k};
+    const banco=DB;
+    if(!banco){
+      _logFalhaGrav('check-in do corpo '+k+' (banco reconectando)', new Error('banco reconectando'));
+      if(typeof zAlertao==='function') zAlertao('⚠ SEM CONEXÃO — NADA FOI SALVO',
+        ['O check-in de '+pelNome(p)+' NÃO foi gravado.', 'Espere alguns segundos e toque em Salvar de novo. Não feche esta tela.'],
+        {botao:'Vou tentar de novo'});
+      else alert('Sem conexão — o check-in de '+pelNome(p)+' NÃO foi salvo. Toque em Salvar de novo em instantes.');
+      return;
+    }
+    const botaoSalvar=document.getElementById('ckBtnSalvar');
+    CK_SALVANDO=true;
+    ckSalvarBotaoEstado(true, botaoSalvar);
     try{
-      if(alterados.length){
-        // Se a ponte não estiver pronta, isso NÃO é motivo para ficar calado: guarda o aviso
-        // na fila e diz à monitora para mandar pelo celular. Silêncio aqui é FILHOt machucado
-        // que a veterinária nunca vê.
-        if(!(TG_CFG&&TG_CFG.url)){
-          tgCfgPronta().then(function(c){
-            if(c&&c.url){ ckAvisarVet(p, alterados, R, reg.hora); return; }
-            alterados.forEach(function(pt){ vetFilaGuardar(p, pt, R.pontos[pt.k]||{}, reg.hora, 'a ponte do Telegram não estava carregada'); });
-            if(typeof audit==='function') audit('telegram-aviso','NÃO avisou o grupo sobre '+(p.n||'')+' — ponte não carregada (guardei na fila)',{pet:p.n||''});
-            if(typeof zAlertao==='function') zAlertao('⚠ O GRUPO NÃO FOI AVISADO',
-              ['O check-in de '+(p.n||'')+' está salvo — isso não se perdeu.',
-               'Mas o aviso do Telegram não saiu: o aparelho não conseguiu falar com a ponte.',
-               'Guardei na fila e vou tentar sozinho quando a conexão voltar.',
-               'MESMO ASSIM, MANDE A FOTO NO GRUPO PELO SEU CELULAR AGORA — a veterinária precisa ver hoje.'],
-              {botao:'Vou mandar agora'});
-          });
-        } else ckAvisarVet(p, alterados, R, reg.hora);
-      }
+      // Esta é a confirmação que torna o check-in salvo. Fotos, histórico e ocorrências
+      // continuam efeitos separados e não prometem uma transação única.
+      await Promise.resolve(banco.ref(no+'/'+k).set(reg));
     }catch(e){
-      // O catch era VAZIO: qualquer erro aqui sumia e ninguém ficava sabendo.
+      CK_SALVANDO=false;
+      ckSalvarBotaoEstado(false, botaoSalvar);
+      _logFalhaGrav('check-in do corpo '+k+' (gravação principal)', e);
+      if(typeof zAlertao==='function') zAlertao('⚠ NÃO SALVOU AINDA',
+        ['O check-in de '+pelNome(p)+' não foi confirmado pelo sistema.', 'O que você preencheu continua nesta tela. Verifique a conexão e toque em Salvar de novo.'],
+        {botao:'Tentar de novo'});
+      else alert('Não consegui salvar ainda: '+((e&&e.message)||e)+'. O rascunho continua aqui. Tente de novo.');
+      return;
+    }
+    CK_SALVANDO=false;
+    var mesmaFicha=(ckAtual===o && ckRascunho===rascunhoAberto);
+    var rascunhoSemMudanca=false;
+    try{ rascunhoSemMudanca=mesmaFicha && JSON.stringify(ckRascunho)===rascunhoSerializado; }catch(e){}
+    // O mapa pode ter sido trocado pelo ouvinte enquanto a promessa esperava. Só atualiza a
+    // mesma instância e o mesmo nó; em qualquer outro caso, o ouvinte do banco traz o dado.
+    if(ckDados===dadosNoInicio && ckNo()===no) ckDados[k]=reg;
+    ckEfeitoDerivado('auditoria do check-in '+k, function(){
+      if(typeof audit==='function') audit(entrada?'checkin-corpo':'checkout-corpo',
+        pelNome(p)+(alterados.length?(' — '+alterados.length+' alteração(ões)'):' — tudo normal'), {alvo:k, assinou:quem});
+    });
+    // Efeitos derivados só começam DEPOIS da gravação principal confirmada. Cada um é isolado:
+    // uma falha deles não desfaz o check-in nem pede novo salvamento.
+    if(Object.keys(_fotosUp).length) ckEfeitoDerivado('fotos do corpo de '+pelNome(p)+' ('+fotosNo+'/'+k+')', function(){ return banco.ref(fotosNo+'/'+k).update(_fotosUp); });
+    if(entrada){
+      ckEfeitoDerivado('presença pelo check-in '+k, function(){ return banco.ref('daycare/chamada/'+dia+'/'+k).set('veio'); });
+      ckEfeitoDerivado('avisar a pendência de prevenção de '+k+' no check-in', function(){ if(typeof pendAvisarChegada==='function') return pendAvisarChegada(k); });
+    }
+    if(alterados.length) ckEfeitoDerivado('avisos da veterinária de '+k, function(){
+      if(!(TG_CFG&&TG_CFG.url)) return tgCfgPronta().then(function(c){
+        if(c&&c.url) return ckAvisarVet(p, alterados, R, reg.hora, contexto);
+        alterados.forEach(function(pt){ vetFilaGuardar(p, pt, R.pontos[pt.k]||{}, reg.hora, 'a ponte do Telegram não estava carregada', contexto); });
+        if(typeof audit==='function') audit('telegram-aviso','NÃO avisou o grupo sobre '+(p.n||'')+' — ponte não carregada (guardei na fila)',{pet:p.n||''});
+        if(typeof zAlertao==='function') zAlertao('⚠ O GRUPO NÃO FOI AVISADO',
+          ['O check-in de '+(p.n||'')+' está salvo — isso não se perdeu.',
+           'Mas o aviso do Telegram não saiu: o aparelho não conseguiu falar com a ponte.',
+           'Guardei na fila e vou tentar sozinho quando a conexão voltar.',
+           'MESMO ASSIM, MANDE A FOTO NO GRUPO PELO SEU CELULAR AGORA — a veterinária precisa ver hoje.'],
+          {botao:'Vou mandar agora'});
+      });
+      return ckAvisarVet(p, alterados, R, reg.hora, contexto);
+    }, function(e){
       try{
-        if(typeof audit==='function') audit('telegram-aviso','NÃO avisou o grupo sobre '+(p.n||'')+' — erro: '+((e&&e.message)||e),{pet:p.n||''});
+        try{ if(typeof audit==='function') audit('telegram-aviso','NÃO avisou o grupo sobre '+(p.n||'')+' — erro: '+((e&&e.message)||e),{pet:p.n||''}); }catch(auditErro){}
         if(typeof zAlertao==='function') zAlertao('⚠ O GRUPO NÃO FOI AVISADO',
           ['O check-in de '+(p.n||'')+' está salvo.',
            'Deu erro ao tentar avisar o grupo: '+((e&&e.message)||e),
            'MANDE A FOTO NO GRUPO PELO SEU CELULAR AGORA.'],{botao:'Vou mandar agora'});
-      }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho — falhar aqui não pode travar a ação */
+      }catch(x){}
+    });
+    ckEfeitoDerivado('histórico do check-in '+k, function(){ return banco.ref('daycare/checkin-hist/'+k).push({data:dia, tipo:tipo, hora:reg.hora,
+      quem:quem, alteracoes:alterados.map(function(pt){ return {ponto:pt.t, alertas:(R.pontos[pt.k].alertas||[]), obs:(R.pontos[pt.k].obs||'')}; }),
+      coco:R.coco||'', ts:Date.now()}); });
+    var _cocoRuim=(R.coco==='diarreia'||R.coco==='pastoso');
+    if(alterados.length||_cocoRuim){
+      ckEfeitoDerivado('ocorrência do check-in '+k, function(){ return banco.ref('daycare/ocorrencias/'+dia).push({
+        pet:pelNome(p), tutor:p.tutor||'', refKey:k, hora:reg.hora, quem:quem,
+        origem:entrada?'check-in de entrada':'check-out',
+        itens:alterados.map(function(pt){ return pt.t+((R.pontos[pt.k].alertas||[]).length?(': '+R.pontos[pt.k].alertas.join(', ')):''); }),
+        coco:R.coco==='diarreia'?'DIARREIA':(R.coco==='pastoso'?'PASTOSO':''), status:'aberta', ts:Date.now()
+      }); });
+      ckEfeitoDerivado('aviso urgente do corpo '+k, function(){
+        var _linU=[];
+        alterados.forEach(function(pt){ var a=(R.pontos[pt.k].alertas||[]); _linU.push('• '+pt.t+(a.length?(': '+a.join(', ')):'')); });
+        if(_cocoRuim) _linU.push('• Cocô: '+(R.coco==='diarreia'?'DIARREIA':'pastoso'));
+        var _txtU='⚠ <b>CORPO — '+medTgEsc(pelNome(p))+'</b>'
+          +((p.tutor)?(' · tutor: '+medTgEsc(p.tutor)):'')
+          +'\n('+(entrada?'check-in':'check-out')+' · '+medTgEsc(reg.hora||'')+' · por '+medTgEsc(quem||'-')+')'
+          +'\n\n'+_linU.join('\n');
+        urgAvisar('corpo-'+k+'-'+(entrada?'ent':'sai'), _txtU);
+        return urgAvisar('corpo-'+k+'-'+(entrada?'ent':'sai'), _txtU, 'vet');
+      });
     }
-    if(DB){
-      DB.ref(ckNo()+'/'+k).set(reg).catch(function(e){ alert('Erro ao salvar: '+e.message); });
-      // As imagens, no nó irmão. Falhar aqui não pode ser silêncio: o registro do dia diria
-      // fotoRef:true sem foto nenhuma atrás — e a galeria mostraria um buraco sem explicação.
-      if(Object.keys(_fotosUp).length){
-        DB.ref(ckFotosNo()+'/'+k).update(_fotosUp)
-          .catch(function(e){ _logFalhaGrav('fotos do corpo de '+pelNome(p)+' ('+ckFotosNo()+'/'+k+')', e); });
-      }
-      // presença: quem passou pelo check-in de entrada está aqui (acaba a chamada em separado)
-      // O `if(entrada)` é LEI, não detalhe: o check-OUT não pode encostar na chamada. Ele
-      // acontece no fim do dia, e apagar (ou reescrever) o 'veio' ali faria o FILHOt que
-      // passou o dia inteiro na casa virar "PENDENTE — marque" na hora de ir embora, e
-      // sumir de "Hoje na Zêluz". Quem sai continua tendo vindo. (24/set/2026)
-      if(entrada) DB.ref('daycare/chamada/'+dcDataKey()+'/'+k).set('veio').catch(function(e){ _logFalhaGrav('presença pelo check-in '+k, e); });
-      // Ele chegou: o que ficou da última vez aparece AGORA, para quem está no check-in —
-      // "aviso que depende de abrir a tela não é aviso" (28/ago/2026).
-      if(entrada){ try{ if(typeof pendAvisarChegada==='function') pendAvisarChegada(k); }
-        catch(e){ _logFalhaGrav('avisar a pendência de prevenção de '+k+' no check-in', e); } }
-      // histórico do FILHOt: a segunda dor da Adriana — a folha não deixa ver o passado dele
-      DB.ref('daycare/checkin-hist/'+k).push({data:dcDataKey(), tipo:entrada?'entrada':'saida', hora:reg.hora,
-        quem:quem, alteracoes:alterados.map(function(pt){ return {ponto:pt.t, alertas:(R.pontos[pt.k].alertas||[]), obs:(R.pontos[pt.k].obs||'')}; }),
-        coco:R.coco||'', ts:Date.now()}).catch(function(e){ _logFalhaGrav('histórico do check-in '+k, e); });
-      // alerta para a Coordenação — fica PENDENTE até alguém dizer o que foi feito
-      var _cocoRuim=(R.coco==='diarreia'||R.coco==='pastoso');
-      if(alterados.length||_cocoRuim){
-        DB.ref('daycare/ocorrencias/'+dcDataKey()).push({
-          pet:pelNome(p), tutor:p.tutor||'', refKey:k, hora:reg.hora, quem:quem,
-          origem:entrada?'check-in de entrada':'check-out',
-          itens:alterados.map(function(pt){ return pt.t+((R.pontos[pt.k].alertas||[]).length?(': '+R.pontos[pt.k].alertas.join(', ')):''); }),
-          coco:R.coco==='diarreia'?'DIARREIA':(R.coco==='pastoso'?'PASTOSO':''), status:'aberta', ts:Date.now()
-        }).catch(function(e){ _logFalhaGrav('ocorrência do check-in '+k, e); });
-        // Urgências: o resumo em texto (a foto, quando há, já foi para o grupo da Vet).
-        // Cocô alterado hoje não avisava ninguém no Telegram — agora a Márcia fica sabendo.
-        try{
-          var _linU=[];
-          alterados.forEach(function(pt){ var a=(R.pontos[pt.k].alertas||[]); _linU.push('• '+pt.t+(a.length?(': '+a.join(', ')):'')); });
-          if(_cocoRuim) _linU.push('• Cocô: '+(R.coco==='diarreia'?'DIARREIA':'pastoso'));
-          var _txtU='\u26A0 <b>CORPO \u2014 '+medTgEsc(pelNome(p))+'</b>'
-            +((p.tutor)?(' \u00B7 tutor: '+medTgEsc(p.tutor)):'')
-            +'\n('+(entrada?'check-in':'check-out')+' \u00B7 '+medTgEsc(reg.hora||'')+' \u00B7 por '+medTgEsc(quem||'-')+')'
-            +'\n\n'+_linU.join('\n');
-          urgAvisar('corpo-'+k+'-'+(entrada?'ent':'sai'), _txtU);
-          // Adriana, 04/set/2026: "check-in de entrada gera ocorrência que vai para o grupo
-          // de veterinários e o URGENTE." O resumo vai TAMBÉM ao grupo da Vet pela mesma
-          // porta (dedup por dia, falha na fila — nunca silêncio). Cobre o caso que hoje
-          // passava batido: cocô alterado SEM ponto do corpo alterado não chamava a vet
-          // (ckAvisarVet só dispara quando há ponto alterado, porque leva as fotos).
-          urgAvisar('corpo-'+k+'-'+(entrada?'ent':'sai'), _txtU, 'vet');
-        }catch(_e){} /* silencioso de propósito: o aviso de urgência é extra — falhar não pode travar o salvamento do check-in */
-      }
-    } else {
-      // BANCO RECONECTANDO: nenhuma das 4 gravações acima foi sequer tentada. Antes o bloco
-      // inteiro era pulado em silêncio e a função seguia adiante — auditava "checkin-corpo",
-      // zerava ckAtual/ckRascunho e fechava a tela. Ou seja: exame do corpo, fotos, presença,
-      // histórico e ocorrência sumiam, e a monitora saía da tela achando que estava tudo salvo.
-      // Agora o cartaz PARA a pessoa e o rascunho fica exatamente onde está, para ela tocar
-      // em Salvar de novo assim que o banco voltar.
-      _logFalhaGrav('check-in do corpo '+k+' (banco reconectando)', new Error('banco reconectando'));
-      if(typeof zAlertao==='function') zAlertao('⚠ SEM CONEXÃO — NADA FOI SALVO',
-        ['O banco está reconectando. O check-in de '+pelNome(p)+' NÃO foi gravado.',
-         'Espere alguns segundos e toque em Salvar de novo. Não feche esta tela.'],
-        {botao:'Vou tentar de novo'});
-      else alert('Sem conexão — o check-in de '+pelNome(p)+' NÃO foi salvo. Toque em Salvar de novo em instantes.');
-      return;   // NUNCA limpar ckAtual/ckRascunho nem fechar a tela sem banco
+    if(mesmaFicha && rascunhoSemMudanca){
+      CK_FOTO_ESPERANDO=null; CK_FOTO_STATUS={}; CK_FOTO_PERDIDA='';
+      try{ localStorage.removeItem(ckRascChave(k, tipo, dia)); }catch(e){}
+      ckAtual=null; ckRascunho=null; CK_RECUPERADO='';
+      renderCheckin();
+    }else if(mesmaFicha){
+      ckSalvarBotaoEstado(false, botaoSalvar);
+      if(typeof zAlertao==='function') zAlertao('Check-in salvo',
+        ['O primeiro registro já foi confirmado.', 'Há alterações novas nesta ficha; revise e salve quando terminar.'], {botao:'Continuar'});
     }
-    if(typeof audit==='function') audit(entrada?'checkin-corpo':'checkout-corpo',
-      pelNome(p)+(alterados.length?(' — '+alterados.length+' alteração(ões)'):' — tudo normal'), {alvo:k, assinou:quem});
-    ckRascApagar(k);            // gravado no banco: o espelho do aparelho já cumpriu o papel
-    ckAtual=null; ckRascunho=null; CK_RECUPERADO='';
-    renderCheckin();
   }
   // O check-out precisa do que a entrada viu para poder comparar.
   function ckCarregarEntradaDoDia(){
@@ -70114,6 +70128,22 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     try{ return !(dcChamada && dcChamada[dcKey(o.p.n, o.p.tutor)]==='veio'); }
     catch(e){ return true; } /* silencioso de propósito: sem a chamada, vale a planilha */
   }
+  // A mesma interpretação da ficha ativa usada pelos cuidados do hóspede.
+  function almDadosHospede29(o,p){
+    var base=(typeof o.i==='number')?almCad(p):null;
+    if(!o.hospede||!ehHoje()) return base;
+    var restr=[]; if(base&&base.restr)restr.push(base.restr);
+    if(typeof o.i==='number'){var ex=pelExtra(p)||{};if(ex.restricao)restr.push(ex.restricao);if(ex.alergia)restr.push(ex.alergia);}
+    base=Object.assign({},base||{}, {restr:restr.filter(function(v,i,a){return a.indexOf(v)===i;}).join(' · ')});
+    var pendente=function(){return {alim:'Alimentação da hospedagem',quant:'',extra:'Confirme a refeição e a quantidade no check-in.',conferir:true,fonte:'sem-registro',lento:!!base.lento,restr:base.restr};};
+    if(typeof CF_ESTADIAS_LIDO==='undefined'||CF_ESTADIAS_LIDO!==true||typeof ZeluzAlimentacaoHospede==='undefined') return pendente();
+    var op={EST_TODAS:EST_TODAS,mcrEstadiaDoHosp:mcrEstadiaDoHosp,medAgendaKey:medAgendaKey,zHojeISO:zHojeISO};
+    var a=ZeluzAlimentacaoHospede.almocoDaLinha(op,o,base)||pendente();
+    if(a.conferirCheckin)a=Object.assign({},a,{conferir:true});
+    // As restrições clínicas do cadastro continuam visíveis mesmo se a identidade da estadia exigir revisão.
+    if(!a.restr&&base.restr)a=Object.assign({},a,{restr:base.restr,lento:!!base.lento});
+    return a;
+  }
   function renderAlmoco(){
     if(!document.getElementById('almGrid')) return;
     // Quem "não almoça" FICA na grade (Adriana, 04/ago/2026): "por mais que não almocem,
@@ -70161,20 +70191,23 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
       ? `Faltam ${faltam} de ${list.length} — os já servidos vão para o fim da lista`
       : `Todos os ${list.length} aulunos foram servidos`;
     document.getElementById('almGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{};
-      const a=(typeof o.i==='number')?almCad(p):null; const foto=(typeof o.i==='number')?fotoDoPel(p):''; const k=dcKey(p.n,p.tutor); const m=marcaDe(o);
+      const a=almDadosHospede29(o,p); const foto=(typeof o.i==='number')?fotoDoPel(p):''; const k=dcKey(p.n,p.tutor); const m=marcaDe(o);
       const restrRaw=(a&&a.restr)||ex.restricao||ex.alergia||'';
       const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
       let info;
       if(a){ info=`<div class="alm-info">
-          <div class="alm-line"><span>Alimentacao</span><b>${a.alim||'-'}</b></div>
-          <div class="alm-line"><span>Quantidade</span><b>${a.quant||'-'}</b></div>
+          <div class="alm-line"><span>Alimentacao</span><b>${escAttr(a.alim||'-')}</b></div>
+          <div class="alm-line"><span>Quantidade</span><b>${escAttr(a.quant||'-')}</b></div>
+${o.hospede?'<div class="hint">'+escAttr(a.fonte==='checkin-hotel'?'Informado no check-in desta hospedagem':'Informação a conferir na hospedagem')+'</div>':''}
+${a.conferir?'<div class="alm-restr">Confirme a refeição e a quantidade antes de servir.</div>':''}
+${a.semRacao?alimSemRacaoHTML(a):''}
           ${a.lento?'<div class="alm-badge">Comedouro LENTO</div>':''}${a.nao?'<div class="alm-badge" style="background:rgba(35,77,103,.12);color:var(--z-blue)">NAO ALMOCA</div>':''}
-          ${(function(){ const _o=almObsLimpa(a.extra,restrRaw); return _o?`<div class="alm-extra">${_o}</div>`:''; })()}
+          ${(function(){ const _o=almObsLimpa(a.extra,restrRaw); return _o?`<div class="alm-extra">${escAttr(_o)}</div>`:''; })()}
         </div>`; }
       else info=`<div class="alm-info"><div class="alm-extra" style="color:var(--muted)">Almoco nao cadastrado</div></div>`;
-      const neon=restrRaw?`<div class="alm-restr">&#9888; ${/restri/i.test(restrRaw)?restrRaw:('RESTRICAO: '+restrRaw)}</div>`:'';
+      const neon=restrRaw?`<div class="alm-restr">&#9888; ${escAttr(/restri/i.test(restrRaw)?restrRaw:('RESTRICAO: '+restrRaw))}</div>`:'';
       // Quem normalmente não almoça fica na grade com aviso — o monitor decide no dia.
-      const _naoAlm=(typeof o.i==='number'&&typeof naoAlmoca==='function'&&naoAlmoca(p));
+      const _naoAlm=(o.hospede&&a)?!!a.nao:(typeof o.i==='number'&&typeof naoAlmoca==='function'&&naoAlmoca(p));
       const avisoNaoAlm=(_naoAlm&&!m)?`<div style="background:rgba(124,139,153,.16);border-radius:8px;padding:6px 9px;margin-top:6px;font-size:11.5px;font-weight:800;color:var(--z-blue)">Normalmente NÃO almoça — toque em "Não se aplica" ou sirva se a tutora pedir</div>`:'';
       return `<div class="pet alm-card ${m}${o.foraDia?' fora-dia':''}">
         <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>
@@ -78126,6 +78159,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     CF_ESTADIAS_LIDO=true;
     CF_ESTADIAS={};
     EST_TODAS=v||{};   // guarda TODAS (a aba Peludinhos Hóspedes precisa do histórico, não só da última)
+    Promise.resolve().then(function(){ var tela=document.getElementById("v-daycare"); if(tela&&tela.classList.contains("active")&&typeof dcRedesenharAtividade==="function") dcRedesenharAtividade(); }).catch(function(e){ if(typeof _logLeituraFalhou==="function") _logLeituraFalhou("hóspedes nas atividades",e); });
     if(typeof histCiReceberEstadias==='function') histCiReceberEstadias(EST_TODAS);
     try{ var vh=document.getElementById('v-hospedes'); if(vh&&vh.classList.contains('active')&&typeof renderHospedesAba==='function') renderHospedesAba(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     Object.keys(v||{}).forEach(function(id){
