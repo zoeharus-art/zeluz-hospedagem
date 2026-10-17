@@ -7015,6 +7015,263 @@ return { criar };
 
 
 </script>
+<script id="bootstrap45-modulos">
+'use strict';
+/*
+ * Bootstrap45: composição local de Fontes43 + Recibos43 + Runtime43.
+ * Não conhece credenciais, números, canal, raiz de produção ou tela.
+ */
+(function (root, factory) {
+  var node = typeof module === 'object' && module.exports;
+  var api = factory(
+    node ? require('../fontes43/fontes43') : root.ZelozinhaFontes43,
+    node ? require('../recibos43/index') : root.Recibos43,
+    node ? require('../recibos43/repositorio-rtdb43') : root.Recibos43RTDB,
+    node ? require('../integracao43/runtime43') : root.Zelozinha43Runtime,
+    root
+  );
+  if (node) module.exports = api;
+  else root.ZelozinhaBootstrap45 = api;
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (Fontes43, Recibos43, Repositorio43, Runtime43, globalRoot) {
+  var porBanco = typeof WeakMap === 'function' ? new WeakMap() : null;
+  var entradasSemWeakMap = [];
+  /* Há uma única montagem de painel por contexto global. Uma troca de DB cancela a anterior. */
+  var instalacaoAtiva = null;
+
+  function texto(v) { return typeof v === 'string' ? v.trim() : ''; }
+  function propria(o, k) { return Object.prototype.hasOwnProperty.call(o || {}, k); }
+  function copia(v) { return JSON.parse(JSON.stringify(v)); }
+  function raizValida(v) { return /^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/.test(texto(v)); }
+  function iso(v) { return typeof v === 'string' && /(Z|[+-]\d{2}:\d{2})$/i.test(v) && Number.isFinite(Date.parse(v)); }
+  function diaValido(v) { return /^\d{4}-\d{2}-\d{2}$/.test(texto(v)); }
+  function diaDeIso(v) {
+    if (!iso(v)) return '';
+    var partes = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(v));
+    function parte(nome) { var p = partes.filter(function (x) { return x.type === nome; })[0]; return p && p.value; }
+    return parte('year') + '-' + parte('month') + '-' + parte('day');
+  }
+  function idDoAtor(ator) {
+    if (typeof ator === 'string') return texto(ator);
+    if (!ator || typeof ator !== 'object') return '';
+    return texto(ator.monId) || texto(ator.id) || texto(ator.uid);
+  }
+  function snapshotAtor(ator) {
+    var id = idDoAtor(ator), autenticado = null, papel = '';
+    if (ator && typeof ator === 'object') {
+      if (ator.autenticado === true || ator.authenticated === true) autenticado = true;
+      if (ator.autenticado === false || ator.authenticated === false) autenticado = false;
+      papel = texto(ator.papel) || texto(ator.role) || texto(ator.perfil);
+    }
+    return { id: id, autenticado: autenticado, papel: papel };
+  }
+  function assinaturaAtor(snapshot) { return JSON.stringify(snapshotAtor(snapshot)); }
+  function cancelado(motivo) { return { ok: false, status: 'contexto-substituido', canal: 'desconectado', enviado: false, motivo: motivo || 'O contexto mudou durante a leitura; nenhum resultado foi aplicado.' }; }
+  function indisponivel(motivo) { return { ok: false, status: 'desconectado', canal: 'desconectado', enviado: false, motivo: motivo }; }
+
+  function dependencias(op) {
+    var d = op.modulos || { Fontes43: Fontes43, Recibos43: Recibos43, Repositorio43: Repositorio43, Runtime43: Runtime43 };
+    if (!d || !d.Fontes43 || typeof d.Fontes43.criar !== 'function' || !d.Recibos43 || typeof d.Recibos43.criar !== 'function' || !d.Repositorio43 || typeof d.Repositorio43.criar !== 'function' || !d.Runtime43 || typeof d.Runtime43.criar !== 'function') throw Error('Dependências Fontes43, Recibos43, Repositorio43 e Runtime43 são obrigatórias.');
+    return d;
+  }
+  function portasValidas(p) {
+    var nomes = ['dcKey', 'pelKey', 'pelNome', 'vencItensDe', 'vencRespostaDe', 'vencRespDef', 'vencTipoDoItemObj'];
+    if (!p || typeof p !== 'object' || typeof (p.catalogo || p.peludinhos) !== 'function') return false;
+    return nomes.every(function (n) { return typeof p[n] === 'function'; });
+  }
+  function relogioSeguro(f) {
+    var ler = typeof f === 'function' ? f : function () { return new Date().toISOString(); };
+    return function () { var v = ler(); if (!iso(v)) throw Error('relógio ISO com fuso explícito é obrigatório'); return v; };
+  }
+  function lerDia(f, relogio) {
+    var v = typeof f === 'function' ? f() : diaDeIso(relogio());
+    if (!diaValido(v)) throw Error('dia técnico inválido');
+    return texto(v);
+  }
+  function chaveConfig(op) {
+    return { portas: op.portas, atorAtual: op.atorAtual, diaAtual: op.diaAtual, agora: op.agora, gerarId: op.gerarId, vet: op.veterinariaConfirmada, recibos: op.configRecibos, seguro: op.gerarIdSeguro === true || op.seguro === true };
+  }
+  function mesmaConfig(a, b) {
+    return a && b && a.portas === b.portas && a.atorAtual === b.atorAtual && a.diaAtual === b.diaAtual && a.agora === b.agora && a.gerarId === b.gerarId && a.vet === b.vet && a.recibos === b.recibos && a.seguro === b.seguro;
+  }
+  function lerEntrada(db, raiz) {
+    if (porBanco) { var mapa = porBanco.get(db); if (!mapa) { mapa = {}; porBanco.set(db, mapa); } return { mapa: mapa, chave: raiz }; }
+    var existente = entradasSemWeakMap.filter(function (x) { return x.db === db && x.raiz === raiz; })[0];
+    if (!existente) { existente = { db: db, raiz: raiz, mapa: {} }; entradasSemWeakMap.push(existente); }
+    return { mapa: existente.mapa, chave: raiz };
+  }
+
+  function instalar(op) {
+    op = op || {};
+    if (!op.db || typeof op.db.ref !== 'function') throw Error('DB injetado com ref é obrigatório.');
+    if (!raizValida(op.raizTecnica)) throw Error('raizTecnica explícita e válida é obrigatória; nenhuma raiz de produção é assumida.');
+    if (!portasValidas(op.portas)) throw Error('portas reais de catálogo e prevenção são obrigatórias.');
+    if (typeof op.atorAtual !== 'function') throw Error('atorAtual explícito é obrigatório para invalidar contexto.');
+    var deps = dependencias(op), relogio = relogioSeguro(op.agora), config = chaveConfig(op);
+    var id = op.gerarId || (globalRoot && globalRoot.crypto && typeof globalRoot.crypto.randomUUID === 'function' ? function () { return globalRoot.crypto.randomUUID(); } : null);
+    if (typeof id !== 'function' || (op.gerarId && op.gerarIdSeguro !== true && op.seguro !== true)) throw Error('gerarId seguro explícito é obrigatório quando não houver crypto.randomUUID nativo.');
+    var registro = lerEntrada(op.db, texto(op.raizTecnica));
+    var anterior = registro.mapa[registro.chave];
+    if (anterior && anterior.ativo && mesmaConfig(anterior.config, config)) return anterior.api;
+    if (instalacaoAtiva && instalacaoAtiva.ativo) instalacaoAtiva.ativo = false;
+    if (anterior && anterior.ativo) anterior.ativo = false;
+
+    var entrada = { ativo: true, config: config, db: op.db, raiz: texto(op.raizTecnica), ponte: null, api: null };
+    registro.mapa[registro.chave] = entrada;
+    instalacaoAtiva = entrada;
+    function atual() { return entrada.ativo === true && instalacaoAtiva === entrada && registro.mapa[registro.chave] === entrada; }
+    function atorAgora() { try { return snapshotAtor(op.atorAtual()); } catch (_) { return snapshotAtor(null); } }
+    function diaAgora() { try { return lerDia(op.diaAtual, relogio); } catch (_) { return ''; } }
+    function guarda(dia, ator) { return atual() && diaAgora() === dia && (!ator || assinaturaAtor(atorAgora()) === assinaturaAtor(ator)); }
+    function vetConservador(args) {
+      var f = typeof op.veterinariaConfirmada === 'function' ? op.veterinariaConfirmada : op.portas.veterinariaConfirmada;
+      try { return typeof f === 'function' && f(args) === true; } catch (_) { return false; }
+    }
+    /* Nunca encaminha pelExtra/localdraft: a fonte clínica é a leitura remota do Fontes43. */
+    var portasFonte = {
+      catalogo: function () { return (op.portas.catalogo || op.portas.peludinhos)(); },
+      peludinhos: function () { return (op.portas.catalogo || op.portas.peludinhos)(); },
+      dcKey: op.portas.dcKey, pelKey: op.portas.pelKey, pelNome: op.portas.pelNome,
+      pelExtra: function () { return null; },
+      vencItensDe: op.portas.vencItensDe, vencRespostaDe: op.portas.vencRespostaDe,
+      vencRespDef: op.portas.vencRespDef, vencTipoDoItemObj: op.portas.vencTipoDoItemObj,
+      veterinariaConfirmada: vetConservador
+    };
+    portasFonte.lerContatosRecentes = deps.Fontes43.criarPortaContatos({ db: op.db, ate: function () { return diaAgora(); } });
+    var fontes = deps.Fontes43.criar({ db: op.db, raiz: entrada.raiz, portas: portasFonte, agora: relogio });
+    var repo = deps.Repositorio43.criar({ db: op.db, caminho: entrada.raiz + '/recibos' });
+    var recibos = deps.Recibos43.criar({ repositorio: repo, gerarId: function () { var v = texto(id()); if (!v) throw Error('gerarId seguro retornou vazio'); return v; }, config: op.configRecibos || {} });
+    var runtime = deps.Runtime43.criar({ db: op.db, raiz: entrada.raiz, gerarId: id, agora: relogio, fontes: fontes, recibos: recibos });
+
+    async function preparar() {
+      var dia = diaAgora(), ator = atorAgora();
+      if (!atual()) return cancelado('A configuração já foi invalidada.');
+      if (!dia || !ator.id || ator.autenticado === false) return indisponivel('Dia, autenticação ou ator técnico não está confirmado.');
+      try {
+        var r = await runtime.preparar();
+        if (!guarda(dia, ator)) return cancelado();
+        return Object.assign({}, r, { canal: 'desconectado', enviado: false });
+      } catch (_) { return indisponivel('Não foi possível ler a fila com fontes atuais.'); }
+    }
+    async function lerFila() {
+      var dia = diaAgora(), ator = atorAgora();
+      if (!atual()) return cancelado('A configuração já foi invalidada.');
+      if (!dia || !ator.id || ator.autenticado === false) return indisponivel('Dia, autenticação ou ator técnico não está confirmado.');
+      try {
+        var fila = await runtime.lerFila();
+        if (!guarda(dia, ator)) return cancelado();
+        return { ok: true, status: 'desconectado', canal: 'desconectado', enviado: false, fila: fila };
+      } catch (_) { return indisponivel('Não foi possível confirmar a fila.'); }
+    }
+    async function receber(recibo, _portasIgnoradas, atorCapturado, guardaExterna) {
+      var dia = diaAgora(), ator = idDoAtor(atorCapturado), snapshotInicial = atorAgora();
+      if (!atual()) return cancelado('A configuração já foi invalidada.');
+      if (!dia || !ator || snapshotInicial.id !== ator || snapshotInicial.autenticado === false) return cancelado('O ator técnico não está mais confirmado.');
+      /* A captura atrasada só é aceita se ainda for a mesma identidade; o snapshot também vigia auth/papel durante o I/O. */
+      var contextoAtor = snapshotInicial;
+      function seguir() { try { return guarda(dia, contextoAtor) && (typeof guardaExterna !== 'function' || guardaExterna() === true); } catch (_) { return false; } }
+      if (!seguir()) return cancelado();
+      try {
+        var r = await runtime.receber(copia(recibo || {}), {}, copia(atorCapturado || {}), seguir);
+        return seguir() ? r : cancelado();
+      } catch (_) { return { ok: false, status: 'pendente-fila', checkinSaved: true, motivo: 'A fila não confirmou a entrada; o check-in corporal foi preservado.' }; }
+    }
+    function instalarPonte(pedido) {
+      pedido = pedido || {};
+      if (entrada.ponte) return { ok: true, status: 'ponte-ja-instalada', ponte: entrada.ponte };
+      if (pedido.autorizarPonte !== true || typeof pedido.zelozinha42Instalar !== 'function') return indisponivel('Ponte não instalada: requer chamada autorizada e zelozinha42Instalar explícito.');
+      if (!atual()) return cancelado('A configuração foi substituída antes da instalação da ponte.');
+      try { entrada.ponte = pedido.zelozinha42Instalar({ receber: receber }); return { ok: true, status: 'ponte-instalada', ponte: entrada.ponte }; }
+      catch (_) { return indisponivel('A ponte42 não pôde ser instalada.'); }
+    }
+    function invalidar() { if (atual()) { entrada.ativo = false; if (instalacaoAtiva === entrada) instalacaoAtiva = null; delete registro.mapa[registro.chave]; } }
+    entrada.api = { preparar: preparar, lerFila: lerFila, receber: receber, instalarPonte: instalarPonte, invalidar: invalidar, canal: 'desconectado' };
+    return entrada.api;
+  }
+  return { instalar: instalar };
+}));
+
+'use strict';
+/* Ponte de instalação local. Sem listener, polling, transporte, reserva ou tentativa de envio. */
+(function(root){
+  var estado={db:null,api:null,ponte:false,ator:null,portas:null,configRecibos:{modo:'simulacao'},funcoes:null};
+  var RAIZ='daycare/zelozinha-operacao/v1';
+  function texto(v){return typeof v==='string'?v.trim():'';}
+  function atorId(u){return texto(u&&u.monId)||texto(u&&u.id)||texto(u&&u.uid);}
+  function usuario(){
+    if(typeof usuarioAtual==='function'){
+      try{var atual=usuarioAtual();return atual&&typeof atual==='object'?atual:null;}catch(_){return null;}
+    }
+    return estado.ator;
+  }
+  function dbAtual(){try{return typeof DB!=='undefined'?DB:null;}catch(_){return null;}}
+  function dia(){try{return typeof dcDataKey==='function'?dcDataKey():'';}catch(_){return '';}}
+  function catalogo(){
+    if(typeof CARTEIRA_CARREGADA==='undefined'||CARTEIRA_CARREGADA!==true||typeof PELUDINHOS==='undefined'||!Array.isArray(PELUDINHOS))throw Error('catálogo ainda não confirmado');
+    return PELUDINHOS.slice();
+  }
+  function podeInstalar(){
+    var banco=dbAtual();
+    return !!(banco&&typeof banco.ref==='function'&&typeof CARTEIRA_CARREGADA!=='undefined'&&CARTEIRA_CARREGADA===true&&typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS)
+      &&root.ZelozinhaBootstrap45&&typeof root.ZelozinhaBootstrap45.instalar==='function'&&atorId(usuario())
+      &&root.crypto&&typeof root.crypto.randomUUID==='function');
+  }
+  function portas(){
+    return estado.portas||(estado.portas={
+      catalogo:catalogo,peludinhos:catalogo,
+      dcKey:dcKey,pelKey:pelKey,pelNome:pelNome,
+      vencItensDe:vencItensDe,vencRespostaDe:vencRespostaDe,
+      vencRespDef:vencRespDef,vencTipoDoItemObj:vencTipoDoItemObj,
+      /* Não existe fonte confirmada de presença veterinária neste app. */
+      veterinariaConfirmada:function(){return false;}
+    });
+  }
+  function funcoes(){return estado.funcoes||(estado.funcoes={atorAtual:usuario,diaAtual:dia,agora:function(){return new Date().toISOString();},gerarId:function(){return root.crypto.randomUUID();},veterinariaConfirmada:function(){return false;}});}
+  function fabricaPonte(){
+    return {receber:function(recibo, portasIgnoradas, atorCapturado, guarda){
+      if(!sessaoValida()||!estado.api)return Promise.resolve({ok:false,status:'pendente-fila',checkinSaved:true,motivo:'A integração de prevenção não está pronta; o check-in corporal foi preservado.'});
+      return estado.api.receber(recibo,portasIgnoradas,atorCapturado,guarda);
+    }};
+  }
+  function sessaoValida(){
+    if(atorId(usuario()))return true;
+    if(estado.api){estado.api.invalidar();estado.api=null;}
+    return false;
+  }
+  function tentar(){
+    var banco=dbAtual();
+    if(estado.db&&estado.db!==banco&&estado.api){estado.api.invalidar();estado.api=null;estado.portas=null;}
+    estado.db=banco;
+    if(!podeInstalar()){if(!atorId(usuario())&&estado.api){estado.api.invalidar();estado.api=null;}return null;}
+    try{
+      var f=funcoes();estado.api=root.ZelozinhaBootstrap45.instalar({
+        db:estado.db,raizTecnica:RAIZ,portas:portas(),atorAtual:f.atorAtual,diaAtual:f.diaAtual,
+        agora:f.agora,gerarId:f.gerarId,seguro:true,
+        configRecibos:estado.configRecibos,veterinariaConfirmada:f.veterinariaConfirmada
+      });
+      if(!estado.ponte&&typeof root.zelozinha42Instalar==='function'){
+        root.zelozinha42Instalar(fabricaPonte());estado.ponte=true;
+      }
+      return estado.api;
+    }catch(_){return null;}
+  }
+  function bancoPronto(){return tentar();}
+  function catalogoPronto(){return tentar();}
+  function atorMudou(u){estado.ator=u&&typeof u==='object'?u:null;return tentar();}
+  function logout(){
+    estado.ator=null;
+    if(estado.api){estado.api.invalidar();estado.api=null;}
+  }
+  function preparar(){return sessaoValida()&&estado.api?estado.api.preparar():Promise.resolve({ok:false,status:'desconectado',canal:'desconectado',enviado:false,motivo:'Fila ainda não está inicializada.'});}
+  function lerFila(){return sessaoValida()&&estado.api?estado.api.lerFila():Promise.resolve({ok:false,status:'desconectado',canal:'desconectado',enviado:false,motivo:'Fila ainda não está inicializada.'});}
+  root.zelozinha45BancoPronto=bancoPronto;
+  root.zelozinha45CatalogoPronto=catalogoPronto;
+  root.zelozinha45AtorMudou=atorMudou;
+  root.zelozinha45Logout=logout;
+  root.zelozinha45Preparar=preparar;
+  root.zelozinha45LerFila=lerFila;
+})(typeof globalThis!=='undefined'?globalThis:this);
+
+</script>
 <script>
   // ---- Firebase (banco gratuito que já temos) ----
   // Declarados AQUI (antes dos ouvintes do Firebase abaixo) para não caírem na zona morta temporal:
@@ -7145,7 +7402,7 @@ return { criar };
   // Ouvintes do Firebase só são ligados quando o banco E o script inteiro estão prontos —
   // evita 'Cannot access X before initialization' (zona morta temporal) na carga.
   var __fbReady=false, __scriptReady=false, __fbWired=false;
-  function wireFirebaseListeners(){ if(__fbWired||!__fbReady||!__scriptReady||!DB) return; __fbWired=true;
+  function wireFirebaseListeners(){ if(__fbWired||!__fbReady||!__scriptReady||!DB) return; __fbWired=true; try{if(typeof zelozinha45BancoPronto==='function')zelozinha45BancoPronto();}catch(e){}
       // Carimbo de versão (04/set/2026): ANTES de qualquer ouvinte/gravação, o DB.ref é
       // embrulhado — toda gravação em daycare/cadastro e auaulandia/estadias passa a
       // incrementar o carimbo da coleção sozinha. Ver o bloco CARIMBO DE VERSÃO.
@@ -7197,7 +7454,7 @@ return { criar };
         try{ if(typeof renderAlmSeFor==='function') renderAlmSeFor(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         try{ if(typeof protoRender==='function'&&document.getElementById('protoWrap')) protoRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       });
-      zMapaVivo('daycare/cadastro','_pelcad', v=>{ pelCadCache=Object.assign({},v); CARTEIRA_CARREGADA=true; try{ if(typeof renderRenovacao==='function') renderRenovacao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof aplicarExclusoes==='function') aplicarExclusoes(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs();
+      zMapaVivo('daycare/cadastro','_pelcad', v=>{ pelCadCache=Object.assign({},v); CARTEIRA_CARREGADA=true; try{if(typeof zelozinha45CatalogoPronto==='function')zelozinha45CatalogoPronto();}catch(e){} try{ if(typeof renderRenovacao==='function') renderRenovacao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ if(typeof mergeNovosAlunos==='function') mergeNovosAlunos(); if(typeof aplicarExclusoes==='function') aplicarExclusoes(); if(typeof renderPel==='function') renderPel(); if(typeof renderDaycare==='function') renderDaycare(); if(typeof renderKPIs==='function') renderKPIs();
         // Prevenção (Adriana, 04/set/2026: "110 sem cadastro, não tem nada" — verificado:
         // o dado EXISTE). Causa raiz: prevDados()/pelInativo() leem pelExtra(p), que só existe
         // depois que pelCadCache chega deste MESMO ouvinte — mas nenhuma tela chamava
@@ -29427,7 +29684,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-17-08';
+  const APP_VERSAO='2026-10-17-09';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -31264,7 +31521,7 @@ return { criar };
     try{ permCarregarConcedidas(); }catch(e){} /* silencioso de propósito: o contador é informação — a tela lê de novo ao abrir */
   }
   function aplicarLogin(u){
-    try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */ // fonte única do escopo (montarSubnav/abrirAtividade leem daqui)
+    try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */ try{if(typeof zelozinha45AtorMudou==='function')zelozinha45AtorMudou(u);}catch(e){} // fonte única do escopo (montarSubnav/abrirAtividade leem daqui)
     document.body.dataset.role=u.role;
     if(u.abertura) document.body.dataset.abertura='1'; else document.body.removeAttribute('data-abertura');
     // Quando a senha é de posto, quem aparece é a PESSOA que escreveu o nome na entrada.
@@ -31386,6 +31643,7 @@ return { criar };
     return 'hospedagem'; // plantonista, monitor, aprendiz
   }
   function logout(){
+    try{if(typeof zelozinha45Logout==='function')zelozinha45Logout();}catch(e){}
     sessionStorage.removeItem('zeluz_login');
     // O NOME DO TURNO SAI JUNTO (achado da auditoria do manual, 15/ago/2026).
     // `zeluz_pessoa_turno` é quem assina medicação, almoço e atividades. Era gravado ao assumir
