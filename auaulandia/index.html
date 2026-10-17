@@ -27630,7 +27630,7 @@
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-16-06';
+  const APP_VERSAO='2026-10-16-07';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -40139,22 +40139,40 @@
     });
     return achou;
   }
-  function prevAbrir(chave){
+  function prevAbrir(chave, abrir){
     var ant=PREV_ABERTO, k=ant?prevLanceNaoSalvo(ant):'';
+    // O atalho do dashboard reabre a mesma ficha sem alterná-la para fechada. Porém um
+    // rascunho ainda passa pelo diálogo existente: redesenhar antes apagaria os valores.
+    if(abrir&&abrir.forcarAberto===true&&String(ant||'')===String(chave||'')&&!k) return prevAbrirJa(chave, abrir);
     if(k){
       var pA=prevPetDe(ant), nomeA=pA?(pelNome(pA)||pA.n):'', it=PREV_ITENS.find(function(x){ return x.k===k; })||{};
       zEscolha('Há uma data não salva em '+(it.nome||k)+' de '+nomeA+'.', ['Se seguir sem salvar, o que foi digitado se perde.'], [
-        {t:'Salvar', cor:'#1E8449', fn:function(){ Promise.resolve(prevLancar(ant, k)).then(function(r){ if(r && r.ok===true) prevAbrir(chave); }); }},
-        {t:'Descartar', cor:'#B3261E', fn:function(){ delete PREV_ED_VISTO[ant]; prevAbrirJa(chave); }},
+        {t:'Salvar', cor:'#1E8449', fn:function(){ if(abrir&&typeof abrir.validarContexto==='function'&&abrir.validarContexto()!==true)return; Promise.resolve(prevLancar(ant, k)).then(function(r){ if(r && r.ok===true) prevAbrir(chave, abrir); }); }},
+        {t:'Descartar', cor:'#B3261E', fn:function(){ if(abrir&&typeof abrir.validarContexto==='function'&&abrir.validarContexto()!==true)return; delete PREV_ED_VISTO[ant]; prevAbrirJa(chave, abrir); }},
         {t:'Voltar', cor:'#6b5f4b', fn:function(){}}], {corTitulo:'#234D67'});
       return;
     }
-    prevAbrirJa(chave);
+    return prevAbrirJa(chave, abrir);
   }
-  function prevAbrirJa(chave){
-    PREV_ABERTO=(PREV_ABERTO===chave)?'':chave;
+  function prevAbrirJa(chave, abrir){
+    var especial=!!(abrir&&abrir.forcarAberto===true), aberto=null, antes=PREV_ABERTO;
+    if(especial){
+      if(typeof abrir.validarContexto==='function' && abrir.validarContexto()!==true) return false;
+      try{ if(abrir.irParaView===true) irParaView('vacinas'); }catch(e){ return false; }
+      var sec=document.getElementById('v-vacinas');
+      if(!sec||!sec.classList||!sec.classList.contains('active')) return false;
+      if(abrir.limparFiltros===true){
+        PREV_TIPO='tudo'; PREV_FILTRO='tudo';
+        var busca=document.getElementById('prevBusca'); if(busca) busca.value='';
+      }
+      PREV_ABERTO=chave;
+    }else PREV_ABERTO=(PREV_ABERTO===chave)?'':chave;
     renderPrevencao();
-    if(PREV_ABERTO){ try{ var el=document.getElementById('prevEd_'+chave); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ }
+    if(PREV_ABERTO){ try{ aberto=document.getElementById('prevEd_'+chave); }catch(e){aberto=null;} }
+    // A referência de destino só substitui a anterior quando o editor da ficha realmente abriu.
+    if(especial&&(!aberto || (typeof abrir.aoAbrir==='function'&&abrir.aoAbrir()!==true))){ PREV_ABERTO=antes; renderPrevencao(); return false; }
+    if(PREV_ABERTO){ try{ if(aberto&&aberto.scrollIntoView) aberto.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ }
+    return !!PREV_ABERTO;
   }
   function prevPetDe(chave){
     return (PELUDINHOS||[]).find(function(p){ return pelKey(p)===chave; })||null;
@@ -40435,7 +40453,7 @@
   function prevLanceNovoId(dia){
     try{ var r=DB && DB.ref && DB.ref('daycare/prevencao-correcoes/'+dia).push(); return String((r&&r.key)||''); }catch(e){ return ''; }
   }
-  function prevLanceMontarEnv(p,chave,k,antes,patch,q,o){
+  function prevLanceMontarEnv35(p,chave,k,antes,patch,q,o){
     var dia=dcDataKey(), corrId=prevLanceNovoId(dia), depois={};
     Object.keys(patch||{}).forEach(function(c){ depois[c]=(patch[c]===undefined||patch[c]===null)?null:prevLanceCopia(patch[c]); });
     if(!corrId) return null;
@@ -40444,7 +40462,7 @@
       antes:prevLanceCopia(antes||{}),depois:depois,campos:Object.keys(depois),ator:{login:String((q&&q.login)||'-'),papel:String((q&&q.papel)||''),ts:Number((q&&q.ts)||0),hora:prevLanceHoraSP(Number((q&&q.ts)||0))},
       nome:String((o&&o.nome)||''),dt:String((o&&o.dt)||''),quemDeu:String((o&&o.quem)||''),frase:String((o&&o.frase)||''),atraso:!!(o&&o.atraso)};
   }
-  function prevLanceRec(env){
+  function prevLanceRec35(env){
     return {chave:env.pelKey,dcKey:env.dcKey,pet:env.pet,k:env.k,como:'lance-aqui',tela:'Prevenção',
       antes:prevLanceCopia(env.antes),depois:prevLanceCopia(env.depois),campos:env.campos.slice(),quem:env.ator.login,papel:env.ator.papel,ts:env.ator.ts,
       operacaoId:env.opId,correlacaoId:env.corrId,hora:env.ator.hora};
@@ -40498,8 +40516,8 @@
     PREV_CORR[env.corrId]=rec; prevCorrQuadroRefazer();
   }
   function prevLanceFinalizarRastro(env,volta){
-    var alvo=env.alvo;
-    return prevLanceFichaConfere(env).then(function(f){ return f.ok?prevLanceRastroTransacionar(env):f; }).then(function(r){
+    var alvo=env.alvo, checar=env.execucaoPrevencao?Promise.resolve(prevCuidado36ValidarAntes(env.execucaoPrevencao)):Promise.resolve({ok:true});
+    return checar.then(function(v){ return v&&v.ok?prevLanceFichaConfere(env):v; }).then(function(f){ return f.ok?prevLanceRastroTransacionar(env):f; }).then(function(r){
       if(r && r.ok){ prevLancePendenteLimpar(alvo); prevLanceAplicarRastro(env,r.rec); PREV_LANCE_ESTADO[alvo]={passo:'salvo',ts:Date.now(),frase:env.frase,opId:env.opId,corrId:env.corrId}; prevLanceAuditar(env); }
       else { prevLancePendenteGuardar(env); PREV_LANCE_ESTADO[alvo]={passo:'pendente-rastro',ts:Date.now(),erro:(r&&r.erro)||'rastro pendente',opId:env.opId,corrId:env.corrId,memoriaSomente:!!env.memoriaSomente}; }
       if(typeof volta==='function') volta(); return r;
@@ -40523,7 +40541,7 @@
       });
     return dig;
   }
-  function prevLanceGravar(p,chave,k,it,patch,o){
+  function prevLanceGravar35(p,chave,k,it,patch,o){
     o=o||{};
     var alvo=chave+'|'+k,pend=prevLancePendenteLer(alvo),estadoAnterior=PREV_LANCE_ESTADO[alvo];
     if(PREV_LANCE_PROMESSAS[alvo]) return PREV_LANCE_PROMESSAS[alvo]; if(pend) return prevLanceRepetir(chave,k);
@@ -40550,6 +40568,27 @@
     var retorno=pr.then(function(r){ delete PREV_LANCE_PROMESSAS[alvo]; return r; },function(e){ delete PREV_LANCE_PROMESSAS[alvo]; return {ok:false,erro:e}; });
     PREV_LANCE_PROMESSAS[alvo]=retorno; return retorno;
   }
+  // Cuidado36: mantém o writer35 e só acrescenta um envelope no fluxo explicitamente selecionado.
+  function prevLanceMontarEnv(p,chave,k,antes,patch,q,o){
+    var env=prevLanceMontarEnv35(p,chave,k,antes,patch,q,o);
+    if(env&&o&&o.execucaoPrevencao){ env.execucaoPrevencao=prevLanceCopia(o.execucaoPrevencao); env.execucaoPrevencao.operacaoId=env.opId; }
+    return env;
+  }
+  function prevLanceRec(env){
+    var rec=prevLanceRec35(env);
+    if(env&&env.execucaoPrevencao) rec.execucaoPrevencao=prevLanceCopia(env.execucaoPrevencao);
+    return rec;
+  }
+  function prevLanceGravar(p,chave,k,it,patch,o){
+    var c=prevCuidado36Preparar(p,chave,k,patch,o||{});
+    if(!c.ativo) return prevLanceGravar35(p,chave,k,it,patch,o);
+    if(c.erro){ try{ zAlertao('CUIDADO A CONFERIR',[c.erro,'Os dados digitados continuam na tela.'],{botao:'Entendi'}); }catch(e){} return Promise.resolve({ok:false,erro:c.erro}); }
+    return Promise.resolve(prevCuidado36ValidarAntes(c.op.execucaoPrevencao)).then(function(v){
+      if(!v||!v.ok){ var e=(v&&v.motivo)||'a referência mudou'; try{ zAlertao('CUIDADO A CONFERIR',[e,'Nada foi gravado; confira e tente de novo.'],{botao:'Entendi'}); }catch(x){} return {ok:false,erro:e}; }
+      return prevLanceGravar35(p,chave,k,it,c.patch,c.op);
+    }).then(function(r){ if(r&&r.ok===true){ dashCuidado36Invalidar(c.op.execucaoPrevencao.lancamentoRef.dia); dashCuidado36Limpar(); } return r; });
+  }
+
   // O que a linha do «Lance aqui mesmo» diz depois do «Salvar» (e do «Quem deu»).
   function prevLanceEstadoHTML(chave, k){
     var alvo=chave+'|'+k, E=PREV_LANCE_ESTADO[alvo];
@@ -56843,6 +56882,266 @@
   }
 
 
+  /* CUIDADO36-BEGIN */
+/* Cuidado35: leitor puro do vínculo tarefa autorizada -> cuidado registrado. */
+(function(root,factory){var api=factory();if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.ZeluzCuidado35Vinculo=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  function texto(v){return typeof v==='string'?v.trim():'';}
+  function iso(v){v=texto(v);if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;var d=new Date(v+'T00:00:00Z');return !isNaN(d)&&d.toISOString().slice(0,10)===v;}
+  function proprio(o,k){return Object.prototype.hasOwnProperty.call(o||{},k);}
+  function limpar(v){if(Array.isArray(v))return v.map(limpar);if(v&&typeof v==='object'){var o={};Object.keys(v).forEach(function(k){if(v[k]!==null)o[k]=limpar(v[k]);});return o;}return v;}
+  function estavel(v){if(v===null||typeof v!=='object')return JSON.stringify(v);if(Array.isArray(v))return '['+v.map(estavel).join(',')+']';return '{'+Object.keys(v).sort().map(function(k){return JSON.stringify(k)+':'+estavel(v[k]);}).join(',')+'}';}
+  function igualNormal(a,b){return estavel(a==null?null:limpar(a))===estavel(b==null?null:limpar(b));}
+  function assinaturaResposta(r){return r?estavel({v:texto(r.v),quem:texto(r.quem),ts:Number(r.ts)}):'';}
+  function refValida(r){return !!(r&&iso(r.dia)&&texto(r.grupo)&&texto(r.id)&&!/[/.#$\[\]]/.test(texto(r.grupo)+texto(r.id)));}
+  function materialAssinatura(ref,l){if(!refValida(ref)||!l||typeof l!=='object')return '';return 'daycare/dashboard/'+ref.dia+'/'+ref.grupo+'/'+ref.id+'|'+estavel({chave:texto(l.chave),valor:texto(l.valor),det:(l.det&&typeof l.det==='object')?limpar(l.det):null});}
+  function campos(k){if(k==='verm_p')return {feito:'verm_t',onde:'verm_ondefoi',quem:'verm_por'};if(k==='verm_dose2_p')return {feito:'verm_dose2_t',onde:'verm_dose2_ondefoi',quem:'verm_dose2_por'};var b=texto(k).replace(/_p$/,'');return {feito:b+'_t',onde:b+'_ondefoi',quem:b+'_por'};}
+  var PAPEIS={consultora:true,supervisor:true,gestao:true,diretoria:true};
+  function assinaturaValida(x,papel){return !!(x&&texto(x.quem)&&texto(x.quem)!=='-'&&Number.isFinite(Number(x.ts))&&Number(x.ts)>0&&(!papel||proprio(PAPEIS,texto(x.papel))));}
+  function resultado(estado,motivo,extra){return Object.assign({estado:estado,motivo:motivo||'',vinculo:null,rastro:null},extra||{});}
+  function avaliar(c){
+    c=c||{};var ref=c.ref||{},k=texto(c.itemK), cfg=(c.VENC_LANC||{})[k], tarefa=c.tarefa||{}, venc=c.vencimento||{}, lanc=c.lancamento||null;
+    if(c.pronto!==true)return resultado('a-conferir','fontes ainda não estão prontas');
+    if(!refValida(ref)||!k)return resultado('a-conferir','referência do lançamento ou itemK inválidos');
+    if(!cfg||texto(cfg.item)!==texto(ref.grupo))return resultado('a-conferir','itemK não corresponde ao grupo VENC_LANC');
+    if(texto(tarefa.itemK)!==k||!iso(tarefa.diaOrigem)||!texto(tarefa.chave)||!texto(tarefa.tipo)||!texto(c.pelKey))return resultado('a-conferir','tarefa de vencimentos exata/origem não informada');
+    if(texto(tarefa.diaOrigem)!==texto(venc.diaOrigem)||texto(tarefa.chave)!==texto(venc.chave)||texto(venc.chave)!==texto(c.dcKey))return resultado('a-conferir','origem do vencimento ou dcKey divergente');
+    var auto=((venc.auto||{})[tarefa.tipo])||{}, resposta=((venc.respostas||{})[tarefa.tipo])||{}, item=(Array.isArray(auto.itens)?auto.itens:[]).filter(function(x){return x&&texto(x.k)===k&&texto(x.item)===texto(ref.grupo)&&texto(x.id)===texto(ref.id);})[0];
+    if(!item)return resultado('a-conferir','auto.itens não contém a referência exata e o mesmo itemK');
+    if(item.jaEstava===true)return resultado('a-conferir','lançamento preexistente sem vínculo próprio');
+    var def=typeof c.vencRespDef==='function'?c.vencRespDef(resposta.v):null;
+    if(!def||!def.lanca||texto(def.lanca).toUpperCase()!==texto(auto.onde).toUpperCase()||!assinaturaValida(resposta))return resultado('a-conferir','autorização ausente, revogada ou sem autoria');
+    if(texto(auto.dia)!==texto(ref.dia)||!assinaturaValida(auto))return resultado('a-conferir','agendamento não corresponde ao dia ou não tem autoria');
+    if(!lanc||texto(lanc.chave)!==texto(c.dcKey)||texto((lanc.det||{})[cfg.onde]).toUpperCase()!==texto(auto.onde).toUpperCase()||texto((lanc.det||{})[cfg.onde]).toUpperCase()!==texto(def.lanca).toUpperCase())return resultado('a-conferir','fonte atual do lançamento, dcKey ou origem material divergente');
+    var ass=materialAssinatura(ref,lanc);if(!ass)return resultado('a-conferir','assinatura material indisponível');
+    var base={ref:ref,itemK:k,tarefa:{diaOrigem:tarefa.diaOrigem,chave:tarefa.chave},assinaturaMaterial:ass};
+    var rastros=Array.isArray(c.correcoes)?c.correcoes:[];
+    var achados=rastros.filter(function(x){var e=x&&x.execucaoPrevencao||{},a=e.autorizacaoRef||{};return x&&texto(x.k)===k&&texto(x.chave)===texto(c.pelKey)&&texto(x.dcKey)===texto(c.dcKey)&&e.lancamentoRef&&texto(e.lancamentoRef.dia)===texto(ref.dia)&&texto(e.lancamentoRef.item||e.lancamentoRef.grupo)===texto(ref.grupo)&&texto(e.lancamentoRef.id)===texto(ref.id)&&texto(a.diaOrigem)===texto(tarefa.diaOrigem)&&texto(a.chave)===texto(tarefa.chave)&&texto(a.tipo)===texto(tarefa.tipo);});
+    if(achados.length>1)return resultado('a-conferir','mais de um rastro corresponde; exige seleção explícita',{vinculo:base});
+    var r=achados[0];
+    if(!r)return resultado('pendente','tarefa autorizada e lançamento atual; não há rastro de cuidado', {vinculo:base});
+    if(r.desfeito)return resultado('a-conferir','rastro de cuidado desfeito', {vinculo:base,rastro:r});
+    var env=r.execucaoPrevencao||{}, depois=limpar(r.depois||{}), f=campos(k), ficha=limpar(c.ficha||{});
+    if(texto(env.lancamentoRef.assinaturaFonte)!==ass)return resultado('a-conferir','assinatura material da fonte foi alterada', {vinculo:base,rastro:r});
+    if(texto(r.como)!=='lance-aqui'||texto(r.tela)!=='Prevenção'||!assinaturaValida(r,true)||!texto(env.operacaoId)||texto(env.autorizacaoRef.assinaturaResposta)!==assinaturaResposta(resposta)||texto(env.lancamentoRef.caminho)!=='daycare/dashboard/'+ref.dia+'/'+ref.grupo+'/'+ref.id)return resultado('a-conferir','rastro não é lançamento explícito ativo', {vinculo:base,rastro:r});
+    if(!proprio(depois,f.feito)||!proprio(depois,f.onde)||!proprio(depois,f.quem)||!iso(depois[f.feito])||texto(depois[f.onde])!=='Day Care'||!texto(depois[f.quem]))return resultado('a-conferir','rastro antigo ou incompleto: local/quem/data precisam estar explícitos', {vinculo:base,rastro:r});
+    var lista=(Array.isArray(r.campos)?r.campos.map(String):[]).concat(Object.keys(depois),[f.feito,f.onde,f.quem]).filter(Boolean).filter(function(nome,ix,todos){return todos.indexOf(nome)===ix;});
+    if(!lista.length||lista.some(function(nome){return !igualNormal(ficha[nome],depois[nome]);}))return resultado('a-conferir','ficha atual diverge do rastro', {vinculo:base,rastro:r});
+    if(texto(depois[f.feito])!==texto(ref.dia))return resultado('a-conferir','dia realizado não corresponde à referência do lançamento', {vinculo:base,rastro:r});
+    return resultado('feito','cuidado registrado no Day Care e fonte ainda confere',{vinculo:base,rastro:r,realizadoEm:depois[f.feito],quemDeu:depois[f.quem]});
+  }
+  function estadoUI(x){x=x||{};return x.estado==='feito'?{rotulo:'Cuidado registrado',acao:''}:x.estado==='pendente'?{rotulo:'Cuidado pendente de registro',acao:'Conferir'}:{rotulo:'Cuidado a conferir',acao:'Conferir'};}
+  return {avaliar:avaliar,estadoUI:estadoUI,normalizar:limpar,assinaturaMaterial:materialAssinatura,camposDoItem:campos};
+});
+
+/* Ponte pura Cuidado36: referência nova, presença e revalidação antes do writer35. */
+(function(root,factory){var api=factory();if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.ZeluzCuidado36Ponte=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  'use strict';
+  function txt(v){return typeof v==='string'?v.trim():'';}
+  function iso(v){v=txt(v);if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;var d=new Date(v+'T00:00:00Z');return !isNaN(d)&&d.toISOString().slice(0,10)===v;}
+  function igual(a,b){return JSON.stringify(a)===JSON.stringify(b);}
+  function assResposta(r){return JSON.stringify({quem:txt(r&&r.quem),ts:Number(r&&r.ts),v:txt(r&&r.v)});}
+  function atorOk(a){return !!(a&&txt(a.login)&&txt(a.login)!=='-'&&txt(a.papel)&&Number.isFinite(Number(a.ts))&&Number(a.ts)>0);}
+  function origemValida(o){return !!(o&&iso(o.diaOrigem)&&txt(o.chave)&&txt(o.tipo));}
+  function mesmaOrigem(a,b){return origemValida(a)&&origemValida(b)&&txt(a.diaOrigem)===txt(b.diaOrigem)&&txt(a.chave)===txt(b.chave)&&txt(a.tipo)===txt(b.tipo);}
+  function presencaValida(p,dia,pelKey,dcKey){
+    p=p||{}; if(p.tipo==='checkin') return txt(p.caminho)==='daycare/checkin-corpo/'+dia+'/'+dcKey&&!!(p.registro&&p.registro.fim&&(!p.registro.tipo||p.registro.tipo==='entrada'));
+    if(p.tipo==='estadia'){var e=p.registro||{};return !!(txt(p.id)&&txt(p.caminho)==='auaulandia/estadias/'+txt(p.id)&&txt(e.refKey)===txt(pelKey)&&txt(e.status)==='ativa'&&iso(e.entrada)&&iso(e.saida)&&txt(e.entrada)<=dia&&dia<=txt(e.saida));}
+    return false;
+  }
+  function preparar(lanc,ref){
+    lanc=lanc||{};ref=ref||{};var o=lanc.origemVencimento;
+    if(!iso(ref.dia)||!txt(ref.grupo)||!txt(ref.id)||!origemValida(o)||lanc.jaEstava===true) return {ok:false,motivo:'lançamento sem referência autorizada nova'};
+    return {ok:true,origem:{diaOrigem:txt(o.diaOrigem),chave:txt(o.chave),tipo:txt(o.tipo)}};
+  }
+  function revalidar(x){
+    x=x||{};var e=x.envelope||{}, ref=e.lancamentoRef||{}, tarefa=e.autorizacaoRef||{}, lanc=x.lancamento||{}, venc=x.vencimento||{}, resposta=((venc.respostas||{})[tarefa.tipo])||{}, auto=((venc.auto||{})[tarefa.tipo])||{};
+    if(!origemValida(tarefa)||!iso(ref.dia)||!txt(ref.grupo)||!txt(ref.id)||!txt(e.itemK)||!txt(e.pelKey)||!txt(e.dcKey)) return {ok:false,motivo:'referência do cuidado incompleta'};
+    if(txt(tarefa.chave)!==txt(e.dcKey)||txt(lanc.chave)!==txt(e.dcKey)||!mesmaOrigem(lanc.origemVencimento,tarefa)) return {ok:false,motivo:'origem do lançamento mudou'};
+    if(!atorOk(e.ator)||!atorOk(x.atorAgora)||txt(e.ator.login)!==txt(x.atorAgora.login)||txt(e.ator.papel)!==txt(x.atorAgora.papel)||txt(e.diaOperacional)!==txt(x.diaOperacional)) return {ok:false,motivo:'identidade ou dia mudou'};
+    if(txt(e.diaOperacional)!==txt(ref.dia)) return {ok:false,motivo:'o cuidado precisa ser registrado no dia do lançamento'};
+    if(txt(tarefa.assinaturaResposta)!==assResposta(resposta)||txt(auto.dia)!==txt(ref.dia)||!txt(auto.onde)||!txt(auto.quem)||!Number.isFinite(Number(auto.ts))) return {ok:false,motivo:'autorização mudou ou não está completa'};
+    var item=(Array.isArray(auto.itens)?auto.itens:[]).filter(function(i){return i&&txt(i.k)===txt(e.itemK)&&txt(i.item)===txt(ref.grupo)&&txt(i.id)===txt(ref.id)&&i.jaEstava!==true;})[0];
+    if(!item) return {ok:false,motivo:'a tarefa já não aponta para este lançamento'};
+    var cfg=(x.VENC_LANC||{})[e.itemK], def=typeof x.vencRespDef==='function'?x.vencRespDef(resposta.v):null;
+    if(!cfg||txt(cfg.item)!==txt(ref.grupo)||!def||!txt(def.lanca)||txt(def.lanca).toUpperCase()!==txt(auto.onde).toUpperCase()||txt(def.lanca).toUpperCase()!==txt((lanc.det||{})[cfg.onde]).toUpperCase()) return {ok:false,motivo:'origem material divergiu'};
+    if(typeof x.assinaturaMaterial!=='function'||txt(e.lancamentoRef.assinaturaFonte)!==txt(x.assinaturaMaterial(ref,lanc))) return {ok:false,motivo:'fonte do lançamento mudou'};
+    if(!presencaValida(x.presenca,ref.dia,e.pelKey,e.dcKey)) return {ok:false,motivo:'presença atual não confirma este cuidado'};
+    return {ok:true};
+  }
+  function envelope(d){
+    d=d||{};var r=d.ref||{},o=d.origem||{},p=d.presencaRef||{};
+    if(!iso(r.dia)||!txt(r.grupo)||!txt(r.id)||!origemValida(o)||!txt(d.itemK)||!txt(d.pelKey)||!txt(d.dcKey)||!atorOk(d.ator)||!txt(d.assinaturaFonte)||!txt(o.assinaturaResposta)||!txt(p.tipo)||!txt(p.caminho)) return null;
+    return {itemK:txt(d.itemK),pelKey:txt(d.pelKey),dcKey:txt(d.dcKey),diaOperacional:txt(d.diaOperacional),ator:{login:txt(d.ator.login),papel:txt(d.ator.papel),ts:Number(d.ator.ts)},
+      lancamentoRef:{dia:txt(r.dia),grupo:txt(r.grupo),id:txt(r.id),caminho:'daycare/dashboard/'+txt(r.dia)+'/'+txt(r.grupo)+'/'+txt(r.id),assinaturaFonte:txt(d.assinaturaFonte)},
+      autorizacaoRef:{diaOrigem:txt(o.diaOrigem),chave:txt(o.chave),tipo:txt(o.tipo),assinaturaResposta:txt(o.assinaturaResposta)},
+      presencaRef:{tipo:txt(p.tipo),id:txt(p.id),caminho:txt(p.caminho)}};
+  }
+  return {preparar:preparar,revalidar:revalidar,envelope:envelope,presencaValida:presencaValida,assinaturaResposta:assResposta};
+});
+
+/* Integração da ponte 36. Depende do leitor 35, da ponte pura e das portas já existentes. */
+var DASH_CUIDADO36_SELECAO=null, DASH_CUIDADO36_ABRINDO=false, DASH_CUIDADO36_RASTRO={dia:'',estado:'novo',valor:null,em:null,ver:0}, DASH_CUIDADO36_LINHAS={dia:'',por:{},ver:0};
+function dashCuidado36Msg(t,l){ if(typeof zAlertao==='function') zAlertao(t,l,{botao:'Entendi'}); else alert([t].concat(l||[]).join('\n')); }
+function dashCuidado36Pronto(){var d=(typeof DASH_DADOS_DE!=='undefined')?DASH_DADOS_DE:null;return !!(d&&d.ok===true&&d.dia===dashDia()&&d.obj===DASH_DADOS);}
+function dashCuidado36Ref(k,id){return {dia:dashDia(),grupo:String(k||''),id:String(id||'')};}
+function dashCuidado36Origem(o){return o&&o.origemVencimento&&typeof o.origemVencimento==='object'?o.origemVencimento:null;}
+function dashCuidado36Limpar(){DASH_CUIDADO36_SELECAO=null;}
+// `origemVencimento.chave` é dcKey; a prevenção abre pela pelKey. Nome/tutor nunca é atalho.
+function dashCuidado36PetPorDc(chave){
+  var ps=(typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS))?PELUDINHOS:[];
+  var a=ps.filter(function(p){try{return String(dcKey(p.n,p.tutor))===String(chave);}catch(e){return false;}});
+  return a.length===1?a[0]:null;
+}
+function dashCuidado36MesmoAtor(a,b){return !!(a&&b&&String(a.login||'')===String(b.login||'')&&String(a.papel||'')===String(b.papel||''));}
+function dashCuidado36ContextoAtual(c){return !!(c&&String(c.dia||'')===String(dashDia())&&String(c.diaOperacional||'')===String(dcDataKey())&&dashCuidado36MesmoAtor(c.ator,dashCuidado36Ator()));}
+var dashCuidado36PrevAbrir35=(typeof prevAbrir==='function')?prevAbrir:null;
+if(dashCuidado36PrevAbrir35) prevAbrir=function(chave, abrir){
+  var s=DASH_CUIDADO36_SELECAO,especial=!!(abrir&&abrir.forcarAberto===true),fechando=s&&String(chave)===String(s.pelKey)&&String((typeof PREV_ABERTO!=='undefined'&&PREV_ABERTO)||'')===String(chave);
+  // O atalho especial reabre a ficha atual; o clique legado continua podendo fechá-la.
+  if(fechando&&DASH_CUIDADO36_ABRINDO&&!especial)return;
+  if(s&&String(chave)!==String(s.pelKey)&&!especial) dashCuidado36Limpar();
+  var r=dashCuidado36PrevAbrir35.apply(this,arguments);if(fechando&&!especial)dashCuidado36Limpar();return r;
+};
+var dashCuidado36PrevDesfazer35=(typeof prevCorrDesfazerComLinha==='function')?prevCorrDesfazerComLinha:null;
+if(dashCuidado36PrevDesfazer35) prevCorrDesfazerComLinha=function(id,linha,dia){
+  return Promise.resolve(dashCuidado36PrevDesfazer35.apply(this,arguments)).then(function(r){if(r&&r.ok===true)dashCuidado36Invalidar(dia);return r;});
+};
+function dashCuidado36Rastros(dia){
+  dia=String(dia||((typeof dcDataKey==='function')?dcDataKey():''));
+  if(DASH_CUIDADO36_RASTRO.dia===dia&&DASH_CUIDADO36_RASTRO.estado==='pronto')return Promise.resolve(DASH_CUIDADO36_RASTRO.valor);
+  if(DASH_CUIDADO36_RASTRO.dia===dia&&DASH_CUIDADO36_RASTRO.em)return DASH_CUIDADO36_RASTRO.em;
+  if(!DB||!dia)return Promise.resolve(null);
+  var cache={dia:dia,estado:'lendo',valor:null,em:null,ver:(DASH_CUIDADO36_RASTRO.ver||0)+1};DASH_CUIDADO36_RASTRO=cache;
+  var p=Promise.resolve(DB.ref('daycare/prevencao-correcoes/'+dia).once('value')).then(function(s){
+    var v=(s&&s.val&&s.val())||{};if(DASH_CUIDADO36_RASTRO===cache){cache.estado='pronto';cache.valor=v;cache.em=null;}return v;
+  },function(){if(DASH_CUIDADO36_RASTRO===cache){cache.estado='falha';cache.valor=null;cache.em=null;}return null;});
+  cache.em=p;return p;
+}
+// Decisões de escrita não reutilizam a projeção: outra consultora pode ter alterado o rastro.
+function dashCuidado36RastrosFrescos(dia){
+  dia=String(dia||((typeof dcDataKey==='function')?dcDataKey():''));
+  if(!DB||!dia)return Promise.resolve(null);
+  return Promise.resolve(DB.ref('daycare/prevencao-correcoes/'+dia).once('value')).then(function(s){return (s&&s.val&&s.val())||{};},function(){return null;});
+}
+function dashCuidado36Invalidar(dia){
+  dia=String(dia||'');
+  if(!dia||DASH_CUIDADO36_RASTRO.dia===dia)DASH_CUIDADO36_RASTRO={dia:'',estado:'novo',valor:null,em:null,ver:(DASH_CUIDADO36_RASTRO.ver||0)+1};
+  if(!dia||DASH_CUIDADO36_LINHAS.dia===dia)DASH_CUIDADO36_LINHAS={dia:'',por:{},ver:(DASH_CUIDADO36_LINHAS.ver||0)+1};
+  try{if(String(dashDia())===dia&&typeof renderDash==='function')renderDash();}catch(e){}
+}
+function dashCuidado36LinhaChave(ref){return [ref.dia,ref.grupo,ref.id].join('|');}
+function dashCuidado36LinhaFonte(o){try{return JSON.stringify({origem:o&&o.origemVencimento||null,chave:o&&o.chave||'',det:o&&o.det||null,valor:o&&o.valor||''});}catch(e){return '';}}
+function dashCuidado36RedesenharSeAtual(ref,registro){
+  try{if(dashCuidado36Pronto()&&String(dashDia())===String(ref.dia)&&((DASH_DADOS[ref.grupo]||{})[ref.id])===registro&&typeof renderDash==='function')renderDash();}catch(e){}
+}
+function dashCuidado36ContextoLinha(ref,origem,venc,lanc,ficha,rastros){
+  return {pronto:!!rastros,ref:ref,itemK:String(origem.itemK||''),VENC_LANC:VENC_LANC,
+    tarefa:{itemK:String(origem.itemK||''),diaOrigem:String(origem.diaOrigem||''),chave:String(origem.chave||''),tipo:String(origem.tipo||'')},
+    vencimento:Object.assign({diaOrigem:String(origem.diaOrigem||''),chave:String(origem.chave||'')},venc||{}),vencRespDef:vencRespDef,pelKey:String(origem.pelKey||''),dcKey:String(origem.chave||''),lancamento:lanc,ficha:ficha||{},
+    correcoes:Object.keys(rastros||{}).map(function(id){return Object.assign({id:id},rastros[id]||{});})};
+}
+function dashCuidado36CarregarLinha(k,id,registro){
+  var ref=dashCuidado36Ref(k,id),dia=ref.dia,origem=dashCuidado36Origem(registro),ch=dashCuidado36LinhaChave(ref),fonte=dashCuidado36LinhaFonte(registro);
+  if(!origem||!dashCuidado36Pronto())return;
+  if(DASH_CUIDADO36_LINHAS.dia!==dia)DASH_CUIDADO36_LINHAS={dia:dia,por:{},ver:(DASH_CUIDADO36_LINHAS.ver||0)+1};
+  var linhas=DASH_CUIDADO36_LINHAS,salvo=linhas.por[ch];if(salvo&&salvo.fonte!==fonte){delete linhas.por[ch];salvo=null;}if(salvo&&salvo.em)return salvo.em;if(salvo&&salvo.estado==='pronto')return;
+  var p=dashCuidado36PetPorDc(origem.chave);if(!p){DASH_CUIDADO36_LINHAS.por[ch]={estado:'falha',resultado:{estado:'a-conferir',motivo:'ficha não encontrada de forma única'}};return;}
+  var o={diaOrigem:String(origem.diaOrigem||''),chave:String(origem.chave||''),tipo:String(origem.tipo||''),itemK:'' ,pelKey:String(pelKey(p))};
+  var inicio={dia:dia,registro:registro,fonte:fonte,linhas:linhas};
+  var em=Promise.all([DB.ref('daycare/vencimentos/'+o.diaOrigem+'/'+o.chave).once('value'),DB.ref('daycare/dashboard/'+ref.dia+'/'+ref.grupo+'/'+ref.id).once('value'),DB.ref('daycare/cadastro/'+o.pelKey).once('value'),dashCuidado36Rastros(dia)]).then(function(v){
+    if(DASH_CUIDADO36_LINHAS!==inicio.linhas||String(dashDia())!==inicio.dia||((DASH_DADOS[ref.grupo]||{})[ref.id])!==inicio.registro||dashCuidado36LinhaFonte(inicio.registro)!==inicio.fonte)return null;
+    var venc=(v[0]&&v[0].val&&v[0].val())||{},lanc=(v[1]&&v[1].val&&v[1].val())||null,ficha=(v[2]&&v[2].val&&v[2].val())||{},auto=((venc.auto||{})[o.tipo])||{},itens=Array.isArray(auto.itens)?auto.itens:[];
+    var it=itens.filter(function(x){return x&&String(x.item)===ref.grupo&&String(x.id)===ref.id&&x.jaEstava!==true;});
+    if(v[3]===null||it.length!==1)return {estado:'a-conferir',motivo:v[3]===null?'não consegui ler o histórico de cuidado':'a tarefa não aponta mais para este lançamento'};
+    o.itemK=String(it[0].k||'');var r=ZeluzCuidado35Vinculo.avaliar(dashCuidado36ContextoLinha(ref,o,venc,lanc,ficha,v[3]));return r;
+  },function(){return {estado:'a-conferir',motivo:'não consegui reler as referências do cuidado'};}).then(function(r){
+    if(!r||DASH_CUIDADO36_LINHAS!==inicio.linhas)return null;inicio.linhas.por[ch]={estado:'pronto',resultado:r,em:null,fonte:fonte};dashCuidado36RedesenharSeAtual(ref,registro);return r;
+  });
+  linhas.por[ch]={estado:'lendo',resultado:null,em:em,fonte:fonte};return em;
+}
+function dashCuidado36Presenca(ref,p,dk){
+  var ck='daycare/checkin-corpo/'+ref.dia+'/'+dk;
+  return Promise.resolve(DB.ref(ck).once('value')).then(function(s){
+    var v=(s&&s.val&&s.val())||null,op={hoje:true,dia:ref.dia,diaOperacional:true,dcKey:dcKey,checkins:{pronto:true,valores:{}},hospedes:{pronto:false,itens:[]}};op.checkins.valores[dk]=v;
+    if(typeof ZeluzPresencaExecucao!=='undefined'&&ZeluzPresencaExecucao.qualificar&&ZeluzPresencaExecucao.qualificar({p:p,chave:dk},op).estado==='presente-checkin')return {tipo:'checkin',caminho:ck,registro:v};
+    if(typeof CF_ESTADIAS_LIDO==='undefined'||CF_ESTADIAS_LIDO!==true||typeof ZeluzHospedesAtividades==='undefined'||!ZeluzHospedesAtividades.listarHospedesAtivos)return null;
+    var h=ZeluzHospedesAtividades.listarHospedesAtivos({pronto:true,dia:ref.dia,estadias:(typeof EST_TODAS==='undefined'?{}:EST_TODAS),peludinhos:(typeof PELUDINHOS==='undefined'?[]:PELUDINHOS),dcKey:dcKey,pelKey:pelKey,pelInativo:(typeof pelInativo==='function'?pelInativo:function(){return false;})});
+    if(!h||h.pronto!==true)return null;op.hospedes=h;
+    if(typeof ZeluzPresencaExecucao==='undefined'||!ZeluzPresencaExecucao.qualificar||ZeluzPresencaExecucao.qualificar({p:p,chave:dk},op).estado!=='presente-hospede')return null;
+    var T=(typeof EST_TODAS!=='undefined'&&EST_TODAS)||{},pk=String(pelKey(p)),L=[];
+    Object.keys(T).forEach(function(id){var e=T[id]||{};if(String(e.refKey||'')===pk&&String(e.status||'')==='ativa'&&String(e.entrada||'')<=ref.dia&&ref.dia<=String(e.saida||''))L.push({id:id,e:e});});
+    return L.length===1?{tipo:'estadia',id:String(L[0].id),caminho:'auaulandia/estadias/'+L[0].id,registro:L[0].e}:null;
+  },function(){return null;});
+}
+function dashCuidado36RelerPresenca(p){
+  if(!p||!p.caminho)return Promise.resolve(null);
+  return Promise.resolve(DB.ref(p.caminho).once('value')).then(function(s){return {tipo:p.tipo,id:p.id||'',caminho:p.caminho,registro:(s&&s.val&&s.val())||null};},function(){return null;});
+}
+function dashCuidado36Assinatura(ref,lanc){return window.ZeluzCuidado35Vinculo.assinaturaMaterial(ref,lanc);}
+function dashCuidado36Ator(){return (typeof corrQuemAgora==='function')?corrQuemAgora():{login:'-',papel:'',ts:0};}
+function dashCuidado36Contexto(env,venc,lanc,pres,ficha,rastros){
+  var r=(rastros&&typeof rastros==='object')?rastros:null;
+  return {pronto:r!==null,ref:env.lancamentoRef,itemK:env.itemK,VENC_LANC:VENC_LANC,tarefa:{itemK:env.itemK,diaOrigem:env.autorizacaoRef.diaOrigem,chave:env.autorizacaoRef.chave,tipo:env.autorizacaoRef.tipo},
+    vencimento:Object.assign({diaOrigem:env.autorizacaoRef.diaOrigem,chave:env.autorizacaoRef.chave},venc||{}),vencRespDef:vencRespDef,pelKey:env.pelKey,dcKey:env.dcKey,lancamento:lanc,ficha:ficha||{},correcoes:Object.keys(r||{}).map(function(id){return Object.assign({id:id},r[id]||{});})};
+}
+function dashCuidado36Revalidar(env){
+  if(!env||!DB||!window.ZeluzCuidado36Ponte||!window.ZeluzCuidado35Vinculo)return Promise.resolve({ok:false,motivo:'ponte de cuidado indisponível'});
+  var a=env.autorizacaoRef||{},lr=env.lancamentoRef||{};
+  return Promise.all([
+    DB.ref('daycare/vencimentos/'+a.diaOrigem+'/'+a.chave).once('value'),DB.ref(lr.caminho).once('value'),dashCuidado36Presenca(lr,dashCuidado36PetPorDc(env.dcKey),env.dcKey),DB.ref('daycare/cadastro/'+env.pelKey).once('value'),dashCuidado36RastrosFrescos(lr.dia)
+  ]).then(function(v){
+    var venc=(v[0]&&v[0].val&&v[0].val())||{},lanc=(v[1]&&v[1].val&&v[1].val())||null,pres=v[2],ficha=(v[3]&&v[3].val&&v[3].val())||{},rastros=v[4];
+    var x=ZeluzCuidado36Ponte.revalidar({envelope:env,vencimento:venc,lancamento:lanc,presenca:pres,atorAgora:dashCuidado36Ator(),diaOperacional:dcDataKey(),VENC_LANC:VENC_LANC,vencRespDef:vencRespDef,assinaturaMaterial:dashCuidado36Assinatura});
+    if(!x.ok)return x;
+    var l=ZeluzCuidado35Vinculo.avaliar(dashCuidado36Contexto(env,venc,lanc,pres,ficha,rastros));
+    return l.estado==='a-conferir'?{ok:false,motivo:l.motivo}:{ok:true,estado:l.estado};
+  },function(){return {ok:false,motivo:'não consegui reler as referências do cuidado'};});
+}
+function dashCuidado36LinhaHTML(k,id,o){
+  var origem=dashCuidado36Origem(o);if(!origem)return '';
+  if(!dashCuidado36Pronto())return ' <span style="font-size:11.5px;font-weight:800;color:var(--muted)">cuidado a conferir</span>';
+  var ref=dashCuidado36Ref(k,id),ch=dashCuidado36LinhaChave(ref),linha=(DASH_CUIDADO36_LINHAS.dia===ref.dia&&DASH_CUIDADO36_LINHAS.por[ch])||null;
+  if(!linha){dashCuidado36CarregarLinha(k,id,o);return ' <span style="font-size:11.5px;font-weight:800;color:var(--muted)">conferindo cuidado…</span>';}
+  if(linha.estado==='lendo')return ' <span style="font-size:11.5px;font-weight:800;color:var(--muted)">conferindo cuidado…</span>';
+  var r=linha.resultado||{estado:'a-conferir'},t=r.estado==='feito'?'Cuidado registrado':(r.estado==='pendente'?'Cuidado pendente':'Cuidado a conferir');
+  return ' <span style="font-size:11.5px;font-weight:800;color:'+(r.estado==='feito'?'var(--crm-ok)':'var(--muted)')+'">'+t+'</span>'
+    +' <button type="button" class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;font-weight:800;text-decoration:underline;padding:0 4px" onclick="dashCuidado36Abrir(\''+jsAspas(k)+'\',\''+jsAspas(id)+'\')">Conferir cuidado</button>';
+}
+function dashCuidado36Abrir(k,id){
+  if(!dashCuidado36Pronto()){dashCuidado36Msg('AINDA ESTOU CONFERINDO',['Os lançamentos deste dia não estão prontos.']);return Promise.resolve(false);}
+  var inicio={dia:dashDia(),diaOperacional:dcDataKey(),ator:dashCuidado36Ator()},ref=dashCuidado36Ref(k,id),lanc=((DASH_DADOS[k]||{})[id])||{},origem=dashCuidado36Origem(lanc),p=origem&&dashCuidado36PetPorDc(origem.chave);
+  if(!origem||!p||String(dcKey(p.n,p.tutor))!==String(origem.chave)){dashCuidado36Msg('CUIDADO A CONFERIR',['Este lançamento não tem uma referência atual e única para a ficha.']);return Promise.resolve(false);}
+  return Promise.all([DB.ref('daycare/vencimentos/'+origem.diaOrigem+'/'+origem.chave).once('value'),dashCuidado36Presenca(ref,p,origem.chave)]).then(function(v){
+    if(!dashCuidado36ContextoAtual(inicio)){dashCuidado36Msg('CUIDADO A CONFERIR',['O dia ou a pessoa logada mudou. Abra o lançamento novamente.']);return false;}
+    var venc=(v[0]&&v[0].val&&v[0].val())||{},auto=((venc.auto||{})[origem.tipo])||{},itens=(auto.itens||[]).filter(function(x){return x&&x.id===ref.id&&x.item===ref.grupo&&x.jaEstava!==true;});
+    if(itens.length!==1||!v[1]){dashCuidado36Msg('CUIDADO A CONFERIR',['A autorização, a presença ou a referência mudou. Nada foi salvo.']);return false;}
+    var resposta=((venc.respostas||{})[origem.tipo])||{};
+    var selecao={ref:ref,itemK:String(itens[0].k),origem:{diaOrigem:String(origem.diaOrigem),chave:String(origem.chave),tipo:String(origem.tipo),assinaturaResposta:ZeluzCuidado36Ponte.assinaturaResposta(resposta)},pelKey:String(pelKey(p)),dcKey:String(origem.chave),presencaRef:v[1],ondeAutorizado:String(auto.onde||''),contexto:inicio};
+    // Salvar/Voltar do rascunho mantém a seleção anterior; o destino só entra após abrir.
+    DASH_CUIDADO36_ABRINDO=true;try{return prevAbrir(String(pelKey(p)),{origem:'dash-cuidado36',forcarAberto:true,irParaView:true,limparFiltros:true,validarContexto:function(){
+      if(!dashCuidado36ContextoAtual(inicio)){dashCuidado36Msg('CUIDADO A CONFERIR',['O dia ou a pessoa logada mudou. Abra o lançamento novamente.']);return false;}return true;
+    },aoAbrir:function(){DASH_CUIDADO36_SELECAO=selecao;return true;}});}finally{DASH_CUIDADO36_ABRINDO=false;}
+  },function(){dashCuidado36Msg('NÃO CONSEGUI CONFERIR',['Nada foi salvo. Tente novamente.']);return false;});
+}
+function prevCuidado36Preparar(p,chave,k,patch,o){
+  var s=DASH_CUIDADO36_SELECAO;if(!s)return {ativo:false};
+  var real=String((o&&o.kReg)||k||'');
+  if(!dashCuidado36ContextoAtual(s.contexto)){dashCuidado36Limpar();return {ativo:true,erro:'O dia ou a pessoa logada mudou; abra o lançamento novamente.'};}
+  if(String(chave)!==s.pelKey||String(pelKey(p))!==s.pelKey)return {ativo:true,erro:'A ficha aberta mudou; confira o lançamento antes de salvar.'};
+  if(real!==s.itemK)return {ativo:true,erro:'A série mudou; confira a tarefa antes de salvar. Nada foi gravado.'};
+  var f=ZeluzCuidado35Vinculo.camposDoItem(real),q=String((o&&o.quem)||'').trim(),dt=String((o&&o.dt)||'');
+  if(!q||dt!==s.ref.dia)return {ativo:true,erro:'Para registrar este cuidado, confirme quem deu e a data do próprio lançamento.'};
+  var local=String((pelExtra(p)||{})[f.onde]||'').trim();
+  if(!local)return {ativo:true,erro:'Confirme o local real deste cuidado antes de salvar.'};
+  var a=dashCuidado36Ator(),ass=dashCuidado36Assinatura(s.ref,((DASH_DADOS[s.ref.grupo]||{})[s.ref.id])||{}),env=ZeluzCuidado36Ponte.envelope({ref:s.ref,itemK:real,pelKey:s.pelKey,dcKey:s.dcKey,origem:s.origem,assinaturaFonte:ass,presencaRef:s.presencaRef,ator:a,diaOperacional:dcDataKey()});
+  if(!env)return {ativo:true,erro:'Não consegui preparar o recibo do cuidado.'};
+  var novo=Object.assign({},patch||{});novo[f.feito]=dt;novo[f.onde]=local;novo[f.quem]=q;return {ativo:true,patch:novo,op:Object.assign({},o||{}, {execucaoPrevencao:env})};
+}
+function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
+
+  /* CUIDADO36-END */
+
   /* SNOOPY33-START: candidata local, sem Firebase inteiro, sem CSS novo. */
 /* Confirmação humana de lançamento no Snoopy. Não envia, não cobra e não executa cuidado. */
 (function (root, factory) {
@@ -57350,6 +57649,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
            +'<span class="k"><strong>'+escAttr(o.valor||'')+'</strong>'
            +(o.hora?(' <span style="color:var(--z-blue-soft);font-weight:800">'+escAttr(o.hora)+'</span>'):'')
            +dashSnoopy33LinhaHTML(it.k,id,o)
+           +dashCuidado36LinhaHTML(it.k,id,o)
            +dashEditarEstadoHTML(o)
            // Nome escrito à mão na avaliação, avulso de pré-cadastro, inativo que
            // voltou por um dia: nada disso é erro de digitação nem FILHOt perdido. A
@@ -58290,7 +58590,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
   // Lançamentos — o relógio #dashH_{item} não existe ali, e ler o do outro dia daria a hora
   // errada. Então a hora pode vir por parâmetro. Uma porta só para lançar continua sendo a
   // regra: pendência e recepção usam esta MESMA função.
-  function dashLancar(k, valor, idx, horaOpc){
+  function dashLancar(k, valor, idx, horaOpc, cuidado36Recibo){
     var it=dashItem(k); if(!it||!DB) return;
     var hora=it.hora?((horaOpc!=null&&horaOpc!=='')?String(horaOpc):String((document.getElementById('dashH_'+k)||{}).value||'')):'';
     if(it.hora&&!hora){ alert('Escolha o horário antes — é ele que faz o alarme tocar na TV.'); return; }
@@ -58433,6 +58733,11 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
       return;
     }
     var reg={valor:valor, hora:hora, quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now()};
+    // A origem nasce no mesmo set deste push; não há busca por delta do cache.
+    if(cuidado36Recibo&&cuidado36Recibo.origemVencimento){
+      var _ov=cuidado36Recibo.origemVencimento;
+      if(_ov&&_ov.diaOrigem&&_ov.chave&&_ov.tipo) reg.origemVencimento={diaOrigem:String(_ov.diaOrigem),chave:String(_ov.chave),tipo:String(_ov.tipo)};
+    }
     // `planilha_ok:null` quer dizer "ainda não sei se chegou à planilha". Só faz sentido em
     // quem TEM coluna: na Pernoite ele viraria um "não confirmado" eterno, com um botão de
     // reenviar que não tem para onde enviar.
@@ -58449,7 +58754,8 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     var gravar=function(abaterRep, pRep, saldoRep){
       var ref=DB.ref('daycare/dashboard/'+__diaLanc+'/'+k).push(), gravou=false;
       return ref.set(reg).then(function(){
-        gravou=true;   // 6.48 (K1): daqui em diante o lançamento já entrou
+        gravou=true;
+        if(cuidado36Recibo&&reg.origemVencimento) cuidado36Recibo.id=String(ref.key||'');   // 6.48 (K1): daqui em diante o lançamento já entrou
         if(__diaLanc===dashDia() && DASH_DADOS_DE && DASH_DADOS_DE.dia===__diaLanc){
           DASH_DADOS[k]=DASH_DADOS[k]||{}; DASH_DADOS[k][ref.key]=reg;
           var b=document.getElementById('dashB_'+k); if(b) b.value='';
@@ -61871,13 +62177,15 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
         DASH_DET[cfg.item]=det;
         // A ficha escolhida na OUTRA tela não pode grudar aqui: quem manda é este FILHOt.
         delete DASH_SEL[cfg.item]; delete DASH_SEL_I[cfg.item];
-        var idsAntes=Object.keys(DASH_DADOS[cfg.item]||{});
-        var pr=dashLancar(cfg.item, base, (typeof o.i==='number'?o.i:-1));
+        var origem={diaOrigem:String(dia),chave:String(chave),tipo:String(tipo)};
+        var recibo={origemVencimento:origem};
+        var pr=dashLancar(cfg.item, base, (typeof o.i==='number'?o.i:-1), null, recibo);
         if(!pr||typeof pr.then!=='function'){ falharam.push(x.nome); return passo(i+1); }
         return pr.then(function(entrou){
           if(entrou===false){ falharam.push(x.nome); return passo(i+1); }
-          var novo=Object.keys(DASH_DADOS[cfg.item]||{}).filter(function(id){ return idsAntes.indexOf(id)<0; })[0]||'';
-          feitos.push({k:x.k, item:cfg.item, id:novo, texto:vencAutoTextoItem(x, det),
+          var novo=String(recibo.id||'');
+          if(!novo){ falharam.push(x.nome); return passo(i+1); }
+          feitos.push({k:x.k, item:cfg.item, id:novo, texto:vencAutoTextoItem(x, det),origemVencimento:origem,
                        jaEstava:false, pesar:!!det.pesar});
           return passo(i+1);
         });
