@@ -3129,7 +3129,7 @@
   <!-- ===== PLACEHOLDERS ===== -->
   <section class="view" id="v-daycare">
     <div id="dcAdaptBanner"></div>
-    <div class="dc-titulo"><span id="dcAtivLabel">Chamada</span> · <span id="dcDiaLabel">hoje</span></div>
+    <div class="dc-titulo"><span id="dcAtivLabel">Chamada</span> · <span id="dcDiaLabel">hoje</span></div><div id="dcSaidasHoje" style="margin:0 0 10px"></div>
     <div class="pel-toolbar"><input class="search" id="dcBusca" placeholder="Buscar peludinho, raça ou tutor..." style="width:300px;max-width:100%" oninput="onDcBusca()">
       <!-- A folha de contingência: se o app cair no horário do almoço, a monitora serve pelo papel. -->
       <!-- O Excel da grade mudou de lugar (13/ago/2026): agora mora em Relatórios, com os outros. -->
@@ -29925,7 +29925,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-17-13';
+  const APP_VERSAO='2026-10-17-14';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -47988,6 +47988,7 @@ return { criar };
   // Agora TODA atividade garante a planilha e se redesenha quando ela chega.
   var _planQuando=0, _planCarregando=false, _planDeNovo=false;
   function dcRedesenharAtividade(){
+    try{ if(typeof pmSaidasAtualizar==='function') pmSaidasAtualizar(); }catch(e){}
     try{
       if(dcAtiv==='chamada'){ if(typeof renderDaycare==='function') renderDaycare(); }
       else if(dcAtiv==='almoco'){ if(typeof renderAlmoco==='function') renderAlmoco(); }
@@ -81799,6 +81800,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     try{ if(typeof atualizarBadgeConferencia==='function') atualizarBadgeConferencia(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
     // Redesenho checkout após leitura: somente lista visível, nunca a ficha em edição.
     try{ var vc=document.getElementById('v-checkout'), cl=document.getElementById('co-lista'); if(vc&&vc.classList.contains('active')&&cl&&cl.style.display!=='none'&&typeof coRenderLista==='function') coRenderLista(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    try{ var vp=document.getElementById('v-painelmeu'),vd=document.getElementById('v-daycare'); if((vp&&vp.classList.contains('active'))||(vd&&vd.classList.contains('active'))) pmSaidasAtualizar(); }catch(e){}
     // 6.54 (AC7): a comida mudada em outro aparelho aparece no card do Plantão (em 2 s, só com a lista à vista).
     try{ if(typeof mcrPedirRedesenhoPlantao==='function') mcrPedirRedesenhoPlantao(); }catch(e){} /* silencioso de propósito: redesenho de tela */
     // Quem acabou de fazer check-in sai do cartão "Chegam pelos orçamentos fechados" (25/set).
@@ -88960,6 +88962,20 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
   }
 
   // ------------------------------------------------------------------------ a tela toda
+  var PM_SAIDAS_TIMER=0;
+  function pmSaidasSessao(){try{var u=usuarioAtual()||{};return [u.role||'',u.monId||'',u.nome||''].join('|');}catch(e){return '';}}
+  function pmSaidasPodeVer(){var u=null,m=null;try{if(!podePapel('painel-monitor'))return false;u=usuarioAtual();if(!u||!u.role)return false;if(u.role!=='monitor')return true;if(!u.monId)return false;m=(monitoresValendo()||[]).filter(function(x){return x&&String(x.id)===String(u.monId);})[0]||null;return monAtivo(m);}catch(e){return false;}}
+  function pmSaidasDados(){if(typeof CF_ESTADIAS_LIDO==='undefined'||CF_ESTADIAS_LIDO!==true)return {pronto:false,itens:[]};var h=hojeISO();return {pronto:true,itens:Object.keys(CF_ESTADIAS||{}).map(function(rk){var r=CF_ESTADIAS[rk]||{};return {rk:rk,e:r.e||{}};}).filter(function(o){return (o.e.status||'ativa')==='ativa'&&o.e.saida===h&&!ehMoradorDaCasa(o.e.nome,o.rk);}).sort(function(a,b){return jsNorm(a.e.nome||'').localeCompare(jsNorm(b.e.nome||''));})};}
+  function pmSaidasConteudo(){var d=pmSaidasDados();if(!d.pronto)return '<p class="pm-sub">Conferindo as estadias já lançadas…</p>';if(!d.itens.length)return '<p class="pm-sub">Nenhuma saída de Hotel hoje.</p>';return '<div class="pm-lista">'+d.itens.map(function(o){var e=o.e,et=coEtapaDe(e),tipo=ehPernoite(e)?'PERNOITE':'HÓSPEDE',st=et===2?'NA RECEPÇÃO':'A PREPARAR';return '<button type="button" class="pm-li" data-rk="'+escAttr(o.rk)+'" style="width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;border:0;background:transparent;padding:0" onclick="pmSaidasAbrir(this.dataset.rk)"><div class="pm-li-txt"><b>'+escAttr(e.nome||'—')+'</b><span>Tutor: '+escAttr(e.tutor||'—')+' · '+tipo+'</span></div><span class="mini-med" style="background:'+(et===2?'#1E8449':'var(--crm-critico)')+';color:#fff">'+st+'</span></button>';}).join('')+'</div>';}
+  function pmSaidasTitulo(){var d=pmSaidasDados();return 'Quem vai embora hoje'+(d.pronto?' ('+d.itens.length+')':'');}
+  function pmSaidasCardHTML(){if(!pmSaidasPodeVer())return '';return '<article id="pmSaidasHojeCard" class="pm-card pm-rv pm-c6"><details open><summary id="pmSaidasHojeTitulo" class="pm-tit" style="cursor:pointer">'+pmSaidasTitulo()+'</summary><div id="pmSaidasHojeConteudo" style="margin-top:10px">'+pmSaidasConteudo()+'</div></details></article>';}
+  function pmSaidasFaixa(){if(!pmSaidasPodeVer())return '';var d=pmSaidasDados();if(!d.pronto)return '<div class="hint">Conferindo as saídas de Hotel…</div>';if(!d.itens.length)return '';return '<button type="button" class="card" style="width:100%;margin:0;text-align:left;cursor:pointer" onclick="pmSaidasAbrirLista()"><strong>Quem vai embora hoje</strong> · '+d.itens.length+' '+(d.itens.length===1?'saída':'saídas')+' <span class="hint">Abrir lista de check-out</span></button>';}
+  function pmSaidasAbrirLista(){if(!pmSaidasPodeVer())return;var a=document.querySelector('#nav a[data-v="checkout"]');if(a)a.click();}
+  function pmSaidasAbrir(rk){var sess=pmSaidasSessao();if(!pmSaidasPodeVer())return;var d=pmSaidasDados(),ok=d.pronto&&d.itens.some(function(x){return x.rk===rk;}),a=document.querySelector('#nav a[data-v="checkout"]');if(!ok||!a)return;a.click();setTimeout(function(){var z=pmSaidasDados(),v=document.getElementById('v-checkout');if(sess===pmSaidasSessao()&&pmSaidasPodeVer()&&z.pronto&&z.itens.some(function(x){return x.rk===rk;})&&v&&v.classList.contains('active'))coAbrirFicha(rk);},0);}
+  function pmSaidasAgendar(){clearTimeout(PM_SAIDAS_TIMER);var n=new Date(),q=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1,0,0,5).getTime()-Date.now();PM_SAIDAS_TIMER=setTimeout(function(){pmSaidasAtualizar();pmSaidasAgendar();},Math.max(60000,q));}
+  function pmSaidasAtualizar(){var faixa=document.getElementById('dcSaidasHoje'),c=document.getElementById('pmSaidasHojeConteudo'),t=document.getElementById('pmSaidasHojeTitulo'),card=document.getElementById('pmSaidasHojeCard');if(faixa)faixa.innerHTML=pmSaidasFaixa();if(card)card.style.display=pmSaidasPodeVer()?'':'none';if(t)t.textContent=pmSaidasTitulo();if(c)c.innerHTML=pmSaidasConteudo();pmSaidasAgendar();}
+  window.addEventListener('focus',function(){pmSaidasAtualizar();});
+
   function pmAbrir(forcar){
     var raiz=document.getElementById('pmRoot'); if(!raiz) return;
     // A trava é a MESMA tabela que esconde o item do menu. Quem chegar aqui por link direto
@@ -89014,6 +89030,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
 
       raiz.innerHTML = pmSaudacaoHTML(eu, turma.length, papel)
         + (sd?pcSeuDiaCardHTML(sd, true):'')
+        + pmSaidasCardHTML()
         +'<p class="pm-nota"><strong>Você vê só o que é seu.</strong> Sem tempo por etapa, sem o nome de outras pessoas, sem dinheiro e sem ranking.</p>'
         + pmAreaHTML()
         +'<div class="pm-grid">'
