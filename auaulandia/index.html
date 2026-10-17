@@ -29925,7 +29925,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-17-14';
+  const APP_VERSAO='2026-10-17-15';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -82420,7 +82420,105 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     }
     _hospGravarNova(p, ent, sai, false);
   }
-  function _hospGravarNova(p, ent, sai, forcado){
+  /* PERNOITE54 v2: leitura da ficha atual com contexto congelado até o commit. */
+  /*
+   * Pernoite 54 — decisão pura para a criação rápida da Recepção.
+   * A fonte é sempre a ficha atual pelo refKey; nunca uma estadia anterior.
+   */
+  (function(root, factory){
+    var api=factory();
+    if(typeof module==='object' && module.exports) module.exports=api;
+    if(root) root.ZeluzPernoiteFicha54=api;
+  })(typeof globalThis!=='undefined'?globalThis:this,function(){
+    function texto(v){ return v==null?'':String(v).trim(); }
+    function copia(v){ return v&&typeof v==='object'?JSON.parse(JSON.stringify(v)):v; }
+    function mesmo(a,b){ return texto(a).toLowerCase()===texto(b).toLowerCase(); }
+  
+    function identidadeConfirmada(p, mestre){
+      if(!p || !mestre) return {ok:false,motivo:'ficha não localizada'};
+      var ref=texto(p.refKey);
+      if(!ref || texto(mestre.refKey)!==ref) return {ok:false,motivo:'refKey ausente ou divergente'};
+      if(!mesmo(p.nome,mestre.nome) || !mesmo(p.tutor,mestre.tutor)) return {ok:false,motivo:'nome ou tutor não confirmam a ficha'};
+      return {ok:true,refKey:ref};
+    }
+  
+    function alimDaFicha(registro){
+      var plano=registro&&registro.alim_plano;
+      if(!plano || typeof plano!=='object' || !plano.refs || typeof plano.refs!=='object') return null;
+      return copia(plano);
+    }
+  
+    // Mantém apenas o formato que o check-in já usa na estadia. Não cria refeições,
+    // quantidade, unidade, datas ou a marca que não constem na ficha.
+    function fichaDaAlimentacaoAtual(plano){
+      if(!plano) return null;
+      var alim={};
+      ['tipo','unidade','marca','refs'].forEach(function(c){
+        if(Object.prototype.hasOwnProperty.call(plano,c)) alim[c]=copia(plano[c]);
+      });
+      return {alim:alim};
+    }
+  
+    function preparar(p,mestre,leitura){
+      var id=identidadeConfirmada(p,mestre);
+      if(!id.ok) return {ok:false,pendente:true,motivo:id.motivo};
+      if(!leitura || leitura.estado==='erro') return {ok:true,pendente:true,motivo:'não foi possível confirmar a ficha agora',fonte:'ficha pendente'};
+      var cad=leitura.cadastro;
+      if(!cad || typeof cad!=='object' || cad.excluido===true || texto(cad.movido_para) || texto(cad._renomeado_de) || (Object.prototype.hasOwnProperty.call(cad,'n')&&!mesmo(cad.n,p.nome)) || (Object.prototype.hasOwnProperty.call(cad,'tutor')&&!mesmo(cad.tutor,p.tutor)))
+        return {ok:true,pendente:true,motivo:'o cadastro vivo não confirma esta ficha',fonte:'ficha pendente'};
+      var plano=alimDaFicha(cad);
+      if(!plano) return {ok:true,pendente:true,motivo:'a ficha atual ainda não tem alimentação registrada',fonte:'ficha atual sem plano'};
+      return {
+        ok:true, pendente:false, fonte:'ficha atual',
+        ficha:fichaDaAlimentacaoAtual(plano),
+        // Entrada e saída são decisões desta estadia; nunca vêm de uma permanência anterior.
+        conferirEntradaSaida:true,
+        origem:{fonte:'daycare/cadastro/'+id.refKey+'/alim_plano',refKey:id.refKey,confirmacao:copia(plano.conf||null)}
+      };
+    }
+    return {identidadeConfirmada:identidadeConfirmada,alimDaFicha:alimDaFicha,fichaDaAlimentacaoAtual:fichaDaAlimentacaoAtual,preparar:preparar};
+  });
+  
+  /* Controlador testável da gravação assíncrona do novo pernoite da Recepção. */
+  (function(root,factory){var api=factory();if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.ZeluzPernoiteFicha54Runtime=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
+    function igual(a,b){return JSON.stringify(a)===JSON.stringify(b);}
+    function criar(op){
+      var emCurso=false;
+      function gravar(p,ent,sai,forcado){
+        if(emCurso){op.aviso('Esta pernoite ainda está conferindo a ficha. Aguarde um instante.');return Promise.resolve({ok:false,motivo:'em-curso'});}
+        var antes=JSON.parse(JSON.stringify(op.contexto(p,ent,sai))); if(!antes.ok){op.aviso('A sessão ou a permissão não está pronta para lançar esta pernoite.');return Promise.resolve({ok:false,motivo:'contexto-inicial'});}
+        emCurso=true;
+        return Promise.resolve(op.lerFicha(p)).then(function(prep){
+          if(!igual(antes,op.contexto(p,ent,sai))){op.aviso('A seleção, as datas, a tela ou a sessão mudou enquanto a ficha era conferida. Nenhuma pernoite foi criada.');return {ok:false,motivo:'contexto-mudou-antes-do-push'};}
+          var est=op.estadia(p,ent,sai,forcado,prep,antes.autor); return Promise.resolve(op.push(est)).then(function(){
+            // A escrita já foi confirmada. Só a UI do rascunho original pode ser limpa/redesenhada.
+            var ainda=igual(antes,op.contexto(p,ent,sai));
+            // Erro de aviso, auditoria ou renderização depois do commit não desfaz a escrita
+            // nem pode ser anunciado como falha de lançamento.
+            try{op.auditar(antes.autor,est,prep);}catch(e){}
+            try{if(ainda) op.sucessoOriginal(prep,p,ent,sai); else op.sucessoSemTocarNovo(prep,p,ent,sai);}catch(e){}
+            return {ok:true,uiOriginal:ainda};
+          });
+        }).catch(function(e){op.aviso('Erro ao lançar a pernoite: '+((e&&e.message)||e));return {ok:false,motivo:'erro'};}).then(function(r){emCurso=false;return r;},function(e){emCurso=false;throw e;});
+      }
+      return {gravar:gravar,emCurso:function(){return emCurso;}};
+    }
+    return {criar:criar};
+  });
+  
+  function _hospMestrePernoite54(p){var ref=String((p&&p.refKey)||''),a=null;if(!ref)return null;(PELUDINHOS||[]).forEach(function(x){if(pelKey(x)===ref)a=x;});return(!a||String(a.n||'')!==String(p.nome||'')||String(a.tutor||'')!==String(p.tutor||''))?null:{refKey:ref,nome:a.n||'',tutor:a.tutor||''};}
+  function _hospFichaPernoite54(p){var m=_hospMestrePernoite54(p);if(!m)return Promise.resolve(ZeluzPernoiteFicha54.preparar(p,null,null));if(!DB)return Promise.resolve(ZeluzPernoiteFicha54.preparar(p,m,{estado:'erro'}));return DB.ref('daycare/cadastro/'+m.refKey).once('value').then(function(s){return ZeluzPernoiteFicha54.preparar(p,m,{cadastro:(s&&s.val&&s.val())||{}});}).catch(function(){return ZeluzPernoiteFicha54.preparar(p,m,{estado:'erro'});});}
+  function _hospAutorPernoite54(){var u={};try{u=(typeof usuarioAtual==='function'&&usuarioAtual())||{};}catch(e){} if(typeof u!=='object')u={id:String(u)};return {id:String(u.id||u.uid||u.monId||u.email||''),papel:String(u.papel||u.role||u.perfil||''),nome:String(u.nome||u.name||(typeof quemSou==='function'?quemSou():'-'))};}
+  function _hospCtxPernoite54(p,ent,sai){var i=document.getElementById('hospNovaIni'),f=document.getElementById('hospNovaFim'),a=_hospAutorPernoite54(),h=hospNovaPend||{},v=document.querySelector('.view.active');var sel={refKey:String(h.refKey||''),nome:String(h.nome||''),tutor:String(h.tutor||'')},ped={refKey:String((p&&p.refKey)||''),nome:String((p&&p.nome)||''),tutor:String((p&&p.tutor)||''),entrada:String(ent||''),saida:String(sai||'')};var tela=!!(v&&v.id==='v-hospedes'&&i&&f&&hospNovaPernoite);var datas=!!(i&&f&&String(i.value||'')===ped.entrada&&String(f.value||'')===ped.saida&&ped.entrada&&ped.saida&&ped.saida>=ped.entrada);var mesma=sel.refKey===ped.refKey&&sel.nome===ped.nome&&sel.tutor===ped.tutor;return {ok:!!(typeof hospAbaPode==='function'&&hospAbaPode())&&!!a.id&&tela&&datas&&mesma,autor:a,seleção:sel,tela:tela,entrada:ped.entrada,saida:ped.saida,modo:!!hospNovaPernoite,pedido:ped};}
+  var _hospPernoite54=ZeluzPernoiteFicha54Runtime.criar({
+    contexto:_hospCtxPernoite54,lerFicha:_hospFichaPernoite54,
+    estadia:function(p,ent,sai,forcado,prep,autor){var e={refKey:p.refKey||'',nome:p.nome||'',tutor:p.tutor||'',raca:p.raca||'',entrada:ent,saida:sai,status:'ativa',origem:'pernoite-recepcao',criado_por:autor.nome,criado_por_id:autor.id,criado_por_papel:autor.papel,_ts:Date.now(),pernoite:true,pernoite_pedida_por:autor.nome};if(forcado)e.lancado_mesmo_com_outra_aberta=true;if(prep&&prep.ficha){e.ficha=prep.ficha;e.ficha_alimentacao_origem=prep.origem;}if(!prep||!prep.ficha||prep.conferirEntradaSaida)e.alimentacao_pendente={motivo:(!prep||!prep.ficha)?((prep&&prep.motivo)||'confira a ficha antes do cuidado'):'confirme as refeições de entrada e saída no Check-in',fonte:(prep&&prep.fonte)||'identidade pendente',refKey:p.refKey||'',ts:Date.now()};return e;},
+    push:function(e){return DB.ref('auaulandia/estadias').push(e);},auditar:function(a,e,prep){if(typeof audit==='function')audit('estadia-criada','pernoite lançada pela Recepção; alimentação: '+((prep&&prep.fonte)||'pendente'),{pet:e.nome,entrada:e.entrada,saida:e.saida,refKey:e.refKey,autor_registrado:a,quem:a.nome,role:a.papel});},
+    sucessoOriginal:function(prep,p,ent,sai){hospNovaPend=null;if(typeof carregarHospedes==='function')carregarHospedes();renderHospedesAba();alert(p.nome+' entrou para pernoite de '+((typeof ciBRdata==='function')?ciBRdata(ent):ent)+'.'+((prep&&prep.fonte==='ficha atual')?'\n\nAlimentação: ficha atual confirmada; confirme as refeições de entrada e saída no Check-in.':'\n\nAlimentação: conferir na ficha antes do cuidado — '+((prep&&prep.motivo)||'fonte pendente')+'.')+'\nA medicação continua na agenda vigente da ficha.');},
+    sucessoSemTocarNovo:function(){},aviso:function(t){alert(t);}
+  });
+  function _hospGravarNova(p,ent,sai,forcado){if(hospNovaPernoite)return _hospPernoite54.gravar(p,ent,sai,forcado);return _hospGravarHotelOriginal54(p,ent,sai,forcado);}
+  function _hospGravarHotelOriginal54(p, ent, sai, forcado){
     // Hóspede recorrente (a Lisa hospeda toda quinta e sai sábado): a ALIMENTAÇÃO da última
     // estadia vem junto, para não redigitar tudo. MEDICAÇÃO nunca é copiada — remédio muda de
     // uma semana para a outra e dose repetida às cegas foi o que dobrou a medicação do Zeus.
@@ -82435,8 +82533,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     });
     const est={ refKey:p.refKey||'', nome:p.nome||'', tutor:p.tutor||'', raca:p.raca||'',
       entrada:ent, saida:sai, status:'ativa',
-      origem:(hospNovaPernoite?'pernoite-recepcao':'aba-hospedes'), criado_por:(typeof quemSou==='function'?quemSou():'-'), _ts:Date.now() };
-    if(hospNovaPernoite){ est.pernoite=true; est.pernoite_pedida_por=(typeof quemSou==='function'?quemSou():'-'); }
+      origem:'aba-hospedes', criado_por:(typeof quemSou==='function'?quemSou():'-'), _ts:Date.now() };
     // Quem lançou sabendo que já havia outra aberta fica registrado: se virar duplicata, dá
     // para saber que foi decidido, não que escapou.
     if(forcado){ est.lancado_mesmo_com_outra_aberta=true; }
