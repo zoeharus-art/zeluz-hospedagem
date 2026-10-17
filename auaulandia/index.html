@@ -29925,7 +29925,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-17-17';
+  const APP_VERSAO='2026-10-17-18';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -96871,6 +96871,321 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
 
 </script>
 <!-- SOL57-RUNTIME-END -->
+
+<!-- PROJECAO58-BEGIN: cópia reversível; não altera release57 -->
+<script data-projecao58="core48-aceito.js">
+'use strict';
+(function(root, factory) {
+  var api = factory(typeof require === 'function' ? require('../recibos43') : root.Recibos43);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.ZeluzProjecao48 = api;
+}(typeof globalThis !== 'undefined' ? globalThis : this, function(Recibos43) {
+  var ASSUNTOS = { vacina: true, antip: true, verm2: true, escova: true, aberto: true };
+  function obj(v) { return !!(v && typeof v === 'object' && !Array.isArray(v)); }
+  function texto(v) { return typeof v === 'string' ? v.trim() : ''; }
+  function copia(v) { return JSON.parse(JSON.stringify(v)); }
+  function falha(m) { return { ok: false, status: 'revisao', motivo: m }; }
+  function diaSP(iso) {
+    var p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(iso));
+    var pega = function(k) { var x = p.filter(function(z) { return z.type === k; })[0]; return x && x.value; };
+    return pega('year') + '-' + pega('month') + '-' + pega('day');
+  }
+  function igualLista(a, b) { return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every(function(x, i) { return x === b[i]; }); }
+  function mesma(e, m, prova, ts) {
+    var p = e && e.projecao48;
+    return obj(p) && e.quem === 'Zelozinha' && e.ts === ts && obj(e.comprovante) &&
+      e.comprovante.canalReciboId === prova.canalReciboId && e.comprovante.verificadoEm === prova.verificadoEm &&
+      obj(e.autorHumano) && e.autorHumano.id === m.autorHumanoId && p.groupKey === m.groupKey &&
+      p.canalReciboId === m.canalReciboId && p.autorHumanoId === m.autorHumanoId &&
+      igualLista(p.cycleKeys, m.cycleKeys) && igualLista(p.itemKs, m.itemKs);
+  }
+  function projetar(e) {
+    try {
+      e = e || {}; var st = e.estadoRecibos, g = st && st.groups && st.groups[e.groupKey], d = e.destino || {}, id = d.identidade || {};
+      if (!Recibos43 || !Recibos43.validarEstado43(st) || !g || g.status !== 'enviado' || g.enviado !== true || g.simulado !== false || !obj(g.comprovante) || !texto(g.comprovante.canalReciboId)) return falha('recibo real verificado obrigatório');
+      var chave = JSON.parse(e.groupKey);
+      if (d.confirmado !== true || !texto(d.dcKey) || /[.#$\[\]/]/.test(d.dcKey) || !Array.isArray(chave) || chave.length !== 3 || d.dia !== chave[2] || !Array.isArray(d.ciclos) || d.ciclos.length !== g.cycleKeys.length || texto(id.petId) !== texto(g.petId) || texto(id.tutorId) !== texto(g.tutorId) || texto(id.nomeTutor) !== texto(g.nomeTutor) || texto(id.nomePeludo) !== texto(g.nomePeludo) || texto(d.autorHumanoId) !== texto(g.criadoPor)) return falha('destino técnico ou identidade divergente');
+      var r = e.registro, por = {}, ts = Date.parse(g.comprovante.verificadoEm), agoraTs = Date.parse(e.agora);
+      if (!obj(r) && r !== null && r !== undefined) return falha('registro inválido');
+      r = r || {};
+      if ((r.pet !== undefined && texto(r.pet) !== texto(id.nomePeludo)) ||
+        (r.tutor !== undefined && texto(r.tutor) !== texto(id.nomeTutor)) ||
+        (r.petId !== undefined && texto(r.petId) !== texto(id.petId)) ||
+        (r.tutorId !== undefined && texto(r.tutorId) !== texto(id.tutorId))) return falha('registro pertence a outra identidade');
+      var n = copia(r);
+      if (!Number.isFinite(ts) || !Number.isFinite(agoraTs) || ts > agoraTs || diaSP(g.comprovante.verificadoEm) !== chave[2] || r.enviadas !== undefined && !obj(r.enviadas)) return falha('comprovante futuro, dia divergente ou registro inválido');
+      d.ciclos.forEach(function(c, i) { if (!c || c.cycleKey !== g.cycleKeys[i] || c.itemK !== g.itemKs[i] || !ASSUNTOS[c.tipo]) throw Error('escopo divergente'); (por[c.tipo] || (por[c.tipo] = [])).push(c); });
+      n.enviadas = n.enviadas || {}; var mudou = false;
+      Object.keys(por).forEach(function(tipo) {
+        var L = por[tipo], marca = { groupKey: e.groupKey, canalReciboId: g.comprovante.canalReciboId, autorHumanoId: d.autorHumanoId, cycleKeys: L.map(function(x) { return x.cycleKey; }), itemKs: L.map(function(x) { return x.itemK; }) }, atual = n.enviadas[tipo];
+        if (atual !== undefined) { if (!mesma(atual, marca, g.comprovante, ts)) throw Error('envio existente incompatível'); return; }
+        if (r.resposta !== undefined || r.msg_enviada !== undefined || r.ficha_atualizada !== undefined || ['respostas','tentativas','cobrancas','fechados','enviadas'].some(function(k) { return obj(r[k]) && (r[k][tipo] !== undefined || r[k]['ant_' + tipo] !== undefined); })) throw Error('conversa anterior exige integração humana');
+        n.enviadas[tipo] = { quem: 'Zelozinha', ts: ts, projecao48: marca, comprovante: { canalReciboId: g.comprovante.canalReciboId, verificadoEm: g.comprovante.verificadoEm }, autorHumano: { id: d.autorHumanoId } }; mudou = true;
+      });
+      return { ok: true, status: mudou ? 'projetado' : 'ja_projetado', alterou: mudou, registro: n };
+    } catch (x) { return falha(x.message); }
+  }
+  return { projetar: projetar, constants: { versao: 48, atorTecnico: 'Zelozinha' } };
+}));
+
+</script>
+<script data-projecao58="repositorio48-aceito.js">
+'use strict';
+/* RTDB compatível. Mantém listener vivo; não semeia callback com leitura local. */
+(function(root, factory) {
+  var api = factory(typeof require === 'function' ? require('./index') : root.ZeluzProjecao48);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.ZeluzProjecao48RTDB = api;
+}(typeof globalThis !== 'undefined' ? globalThis : this, function(Core) {
+  function texto(v) { return typeof v === 'string' ? v.trim() : ''; }
+  function falha(motivo) { return { ok: false, status: 'revisao', motivo: motivo }; }
+
+  function criar(op) {
+    op = op || {};
+    if (!op.db || typeof op.db.ref !== 'function' || typeof op.lerRecibos !== 'function' ||
+      typeof op.identificar !== 'function' || typeof op.agora !== 'function') {
+      throw Error('db, lerRecibos, identificar e agora são obrigatórios');
+    }
+    var raiz = texto(op.raiz || 'daycare/vencimentos');
+
+    function escutar(ref) {
+      if (!ref || typeof ref.on !== 'function' || typeof ref.off !== 'function') {
+        return Promise.reject(Error('RTDB on/off obrigatório para confirmar cache frio'));
+      }
+      return new Promise(function(resolve, reject) {
+        var pronto = false;
+        function limpar() { ref.off('value', receber); }
+        function receber(snapshot) {
+          if (pronto) return;
+          if (!snapshot || typeof snapshot.val !== 'function') { pronto = true; limpar(); reject(Error('snapshot do listener ausente')); return; }
+          pronto = true; resolve({ valor: snapshot.val(), soltar: limpar });
+        }
+        function erro() { if (!pronto) { pronto = true; limpar(); reject(Error('falha no listener RTDB')); } }
+        try { ref.on('value', receber, erro); } catch (_) { erro(); }
+      });
+    }
+
+    function projetar(entrada) {
+      entrada = entrada || {};
+      return Promise.resolve().then(function() { return op.lerRecibos(); }).then(function(ledger) {
+        if (!ledger || ledger.confirmado !== true || !ledger.state) return falha('recibos43 não foi relido e confirmado');
+        var grupo = ledger.state.groups && ledger.state.groups[entrada.groupKey];
+        return Promise.resolve().then(function() { return op.identificar({ groupKey: entrada.groupKey, grupo: grupo }); }).then(function(destino) {
+          var base = { estadoRecibos: ledger.state, groupKey: entrada.groupKey, agora: op.agora(), destino: destino };
+          var validado = Core.projetar(Object.assign({ registro: null }, base));
+          if (!validado.ok) return validado;
+          var ref = op.db.ref(raiz + '/' + destino.dia + '/' + destino.dcKey);
+          return escutar(ref).then(function(confirmado) {
+            var naTransacao = null;
+            return Promise.resolve().then(function() { return ref.transaction(function(atual) {
+              if (atual === null && confirmado.valor !== null) return undefined;
+              naTransacao = Core.projetar(Object.assign({ registro: atual }, base));
+              return naTransacao.ok && naTransacao.alterou === true ? naTransacao.registro : undefined;
+            }); }).then(function(tx) {
+              confirmado.soltar();
+              if (!tx || !tx.snapshot || typeof tx.snapshot.val !== 'function') return falha('transação RTDB sem snapshot confirmado');
+              var final = Core.projetar(Object.assign({ registro: tx.snapshot.val() }, base));
+              if (!final.ok) return final;
+              if (tx.committed === true && naTransacao && naTransacao.ok && naTransacao.alterou === true && final.status === 'ja_projetado') return final;
+              if (tx.committed !== true && naTransacao && naTransacao.ok && naTransacao.status === 'ja_projetado' && final.status === 'ja_projetado') return final;
+              return falha('transação não confirmou a projeção');
+            }, function() { confirmado.soltar(); return falha('transação RTDB rejeitada; retome com o mesmo comprovante'); });
+          });
+        }, function() { return falha('identidade técnica não pôde ser confirmada'); });
+      }).then(undefined, function() { return falha('falha ao reler recibos43 confirmados'); });
+    }
+    return { projetar: projetar, raiz: raiz };
+  }
+  return { criar: criar };
+}));
+
+</script>
+<script data-projecao58="projecao58.js">
+'use strict';
+/* Ponte 58: guardas de contexto sobre o repositório48 imutável. */
+(function(root, factory) {
+  var api = factory(root && root.ZeluzProjecao48, root && root.ZeluzProjecao48RTDB);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.ZeluzProjecao58 = api;
+}(typeof globalThis !== 'undefined' ? globalThis : this, function(Core48, Repo48) {
+  function texto(v) { return typeof v === 'string' ? v.trim() : ''; }
+  function obj(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
+  function falha(motivo, extra) { return Object.assign({ ok: false, status: 'revisao', alterou: false, motivo: motivo }, extra || {}); }
+  function diaGrupo(chave) { try { var x = JSON.parse(chave); return Array.isArray(x) && x.length === 3 && JSON.stringify(x) === chave ? texto(x[2]) : ''; } catch (_) { return ''; } }
+  function grupoConfirmado(estado, chave, dia) { var g = estado && estado.groups && estado.groups[chave]; return !!(g && g.status === 'enviado' && g.enviado === true && g.simulado === false && obj(g.comprovante) && texto(g.comprovante.canalReciboId) && diaGrupo(chave) === dia); }
+  function criar(portas) {
+    portas = portas || {};
+    if (!Core48 || typeof Core48.projetar !== 'function' || !Repo48 || typeof Repo48.criar !== 'function') throw Error('núcleo e repositório Projeção48 aceitos são obrigatórios');
+    ['contexto', 'lerRecibos', 'resolverGrupo', 'agora'].forEach(function(k) { if (typeof portas[k] !== 'function') throw Error(k + ' é obrigatório'); });
+    function captura() {
+      var c; try { c = portas.contexto(); } catch (_) { c = null; }
+      if (!c || !texto(c.id) || !texto(c.nome) || !texto(c.papel) || !/^\d{4}-\d{2}-\d{2}$/.test(texto(c.dia)) || !c.db || typeof c.db.ref !== 'function' || c.permitido !== true || c.autenticado !== true) return null;
+      return { id: texto(c.id), nome: texto(c.nome), papel: texto(c.papel), dia: texto(c.dia), db: c.db, permitido: true, autenticado: true };
+    }
+    function vigente(c) { var n = captura(); return !!(n && c && n.id === c.id && n.nome === c.nome && n.papel === c.papel && n.dia === c.dia && n.db === c.db && n.permitido && n.autenticado); }
+    function listarRecuperaveis() {
+      var c = captura(); if (!c) return Promise.resolve(falha('Sessão humana, papel, dia, banco ou permissão não confirmados.'));
+      return Promise.resolve().then(function() { return portas.lerRecibos(); }).then(function(ledger) {
+        if (!vigente(c)) return falha('O contexto mudou durante a leitura. Confira novamente antes de atualizar o acompanhamento.');
+        if (!ledger || ledger.confirmado !== true || !ledger.state || !ledger.state.groups) return falha('Recibos43 não foi relido e confirmado.');
+        return { ok: true, status: 'pronto', grupos: Object.keys(ledger.state.groups).sort().filter(function(k) { return grupoConfirmado(ledger.state, k, c.dia); }).map(function(k) { var g = ledger.state.groups[k]; return { groupKey: k, nome: texto(g.nomePeludo), tutor: texto(g.nomeTutor), cuidados: Array.isArray(g.itemKs) ? g.itemKs.slice() : [] }; }) };
+      }, function() { return falha('Não foi possível reler os comprovantes. Nenhum dado foi tratado como vazio.'); });
+    }
+    function projetarComprovanteConfirmado(entrada) {
+      entrada = entrada || {}; var chave = texto(entrada.groupKey), c = captura();
+      if (!c) return Promise.resolve(falha('Sessão humana, papel, dia, banco ou permissão não confirmados.'));
+      if (!chave || diaGrupo(chave) !== c.dia) return Promise.resolve(falha('Somente um grupo comprovado do dia atual pode atualizar o acompanhamento.'));
+      var guarda = { perdeu: false, possivelGravacao: false };
+      function perder(possivel) { guarda.perdeu = true; guarda.possivelGravacao = guarda.possivelGravacao || possivel === true; }
+      function leitura(fn, ausente) {
+        if (!vigente(c)) { perder(false); return Promise.resolve(ausente); }
+        return Promise.resolve().then(fn).then(function(v) { if (!vigente(c)) { perder(false); return ausente; } return v; }, function() { return ausente; });
+      }
+      function dbGuardado() {
+        return { ref: function(caminho) {
+          var original = c.db.ref(caminho), ouvintes = [];
+          return {
+            on: function(evento, receber, erro) {
+              var protegido = function(s) { if (!vigente(c)) { perder(false); if (typeof erro === 'function') erro(Error('contexto mudou durante listener')); return; } receber(s); };
+              ouvintes.push({ receber: receber, protegido: protegido }); return original.on(evento, protegido, erro);
+            },
+            off: function(evento, receber) { var achado = ouvintes.filter(function(x) { return x.receber === receber; })[0]; return original.off(evento, achado ? achado.protegido : receber); },
+            transaction: function(callback) {
+              if (!vigente(c)) { perder(false); return Promise.resolve({ committed: false, snapshot: { val: function() { return null; } } }); }
+              var escreveu = false;
+              return Promise.resolve(original.transaction(function(atual) {
+                if (!vigente(c)) { perder(false); return undefined; }
+                var proximo = callback(atual); escreveu = proximo !== undefined; return proximo;
+              })).then(function(tx) { if (!vigente(c)) perder(!!(tx && tx.committed === true)); return tx; }, function(erro) { if (escreveu) perder(true); throw erro; });
+            }
+          };
+        } };
+      }
+      var adaptador = Repo48.criar({
+        db: dbGuardado(), raiz: 'daycare/vencimentos', agora: portas.agora,
+        lerRecibos: function() { return leitura(portas.lerRecibos, { confirmado: false, motivo: 'contexto mudou durante a releitura43' }); },
+        identificar: function(x) { return leitura(function() { return portas.resolverGrupo(x); }, { confirmado: false, motivo: 'contexto mudou durante a identidade48' }); }
+      });
+      return Promise.resolve().then(function() { return adaptador.projetar({ groupKey: chave }); }).then(function(resultado) {
+        if (guarda.perdeu || !vigente(c)) return falha(guarda.possivelGravacao ? 'A confirmação da gravação foi perdida ou o contexto mudou depois dela. Releia o mesmo comprovante antes de tentar novamente.' : 'O contexto mudou. Atualize a tela e releia o comprovante antes de tentar novamente.', { status: guarda.possivelGravacao ? 'incerto' : 'revisao', incerto: guarda.possivelGravacao, alterou: guarda.possivelGravacao ? null : false });
+        return resultado;
+      }, function() { return falha('Falha na projeção. Confira o mesmo comprovante antes de tentar novamente.'); });
+    }
+    return { listarRecuperaveis: listarRecuperaveis, projetarComprovanteConfirmado: projetarComprovanteConfirmado, contextoVigente: function() { var c = captura(); return !!c && vigente(c); } };
+  }
+  return { criar: criar };
+}));
+
+</script>
+<script data-projecao58="painel58.js">
+'use strict';
+/* Recuperação manual, deliberadamente local ao perfil Zelozinha já existente. */
+(function(root, factory) {
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.ZeluzPainel58 = api;
+}(typeof globalThis !== 'undefined' ? globalThis : this, function() {
+  var estados = typeof WeakMap === 'function' ? new WeakMap() : new Map();
+  function texto(v) { return v == null ? '' : String(v); }
+  function no(tag, classe, conteudo) { var x = document.createElement(tag); if (classe) x.className = classe; if (conteudo != null) x.textContent = texto(conteudo); return x; }
+  function visivel(x) { for (var p = x; p; p = p.parentNode) if (p.hidden === true) return false; return true; }
+  function igual(a, b) { return !!(a && b && a.id === b.id && a.nome === b.nome && a.papel === b.papel && a.dia === b.dia && a.db === b.db && a.permitido === true && b.permitido === true && a.autenticado === true && b.autenticado === true); }
+  function marcaValida(a) { return !!(a && texto(a.id) && texto(a.nome) && texto(a.papel) && /^\d{4}-\d{2}-\d{2}$/.test(texto(a.dia)) && a.db && a.permitido === true && a.autenticado === true); }
+  function atual(st, marca) { try { return !!(st.ativa && st.marca === marca && st.root.contains(st.caixa) && visivel(st.caixa) && igual(marca, st.contexto())); } catch (_) { return false; } }
+  function mostrar(st, mensagem, estado) { if (!st.status) return; st.status.textContent = mensagem; st.status.dataset.estado = estado || ''; }
+  function limpar(st) { if (st.lista) st.lista.replaceChildren(); }
+  function cancelar(st, marca) { if (marca && st.marca !== marca) return; st.marca = null; if (st.botao) st.botao.disabled = false; limpar(st); mostrar(st, 'Recuperação interrompida. Confira novamente antes de usar o acompanhamento.', 'interrompida'); }
+  function renderizarGrupos(st, marca, resposta) {
+    if (!atual(st, marca)) { cancelar(st, marca); return; }
+    st.botao.disabled = false; limpar(st);
+    if (!resposta || resposta.ok !== true) { mostrar(st, texto(resposta && resposta.motivo) || 'Não foi possível confirmar os comprovantes. Nenhum dado foi tratado como vazio.', 'falha'); return; }
+    var grupos = Array.isArray(resposta.grupos) ? resposta.grupos : [];
+    if (!grupos.length) { mostrar(st, 'Nenhum comprovante confirmado do dia atual para recuperar.', 'vazio'); return; }
+    mostrar(st, 'Escolha um comprovante confirmado para atualizar no acompanhamento humano.', 'pronto');
+    var nomes = { vac_mult_p: 'Vacina múltipla', vac_raiva_p: 'Vacina antirrábica', vac_gripe_p: 'Vacina de gripe', gripe_p: 'Vacina de gripe', ecto_p: 'Proteção contra parasitas', verm_p: 'Vermífugo', verm2_p: 'Segunda dose de vermífugo', escova_p: 'Escova dental' };
+    grupos.forEach(function(g) {
+      var card = no('article', 'card z-projecao58__grupo'), titulo = no('strong', '', (texto(g.nome) || 'Pet a confirmar') + ' · ' + (texto(g.tutor) || 'Família a confirmar'));
+      var detalhe = no('p', 'pm-sub', Array.isArray(g.cuidados) && g.cuidados.length ? g.cuidados.map(function(x) { return nomes[x] || 'Cuidado a confirmar'; }).join(' · ') : 'Cuidados a confirmar');
+      var botao = no('button', 'btn btn-ghost', 'Atualizar no painel'); botao.type = 'button';
+      botao.addEventListener('click', function() {
+        if (!atual(st, marca)) { cancelar(st, marca); return; }
+        botao.disabled = true; mostrar(st, 'Relendo comprovante e identidade antes da projeção…', 'carregando');
+        Promise.resolve(st.porta.projetarComprovanteConfirmado({ groupKey: g.groupKey })).then(function(r) {
+          if (!atual(st, marca)) { cancelar(st, marca); return; }
+          botao.disabled = false;
+          if (!r || r.ok !== true) { mostrar(st, texto(r && r.motivo) || 'Não foi possível atualizar. Releia antes de tentar novamente.', 'falha'); return; }
+          mostrar(st, r.status === 'ja_projetado' ? 'Este comprovante já está no acompanhamento humano.' : 'Comprovante gravado. Atualizando o painel…', 'confirmado');
+          if (typeof st.atualizar === 'function') Promise.resolve(st.atualizar()).then(function(atualizado) { if (atual(st, marca) && atualizado === false) mostrar(st, 'Comprovante gravado, mas não foi possível atualizar o painel. Atualize novamente antes de agir.', 'revisao'); }, function() { if (atual(st, marca)) mostrar(st, 'Comprovante gravado, mas não foi possível atualizar o painel. Atualize novamente antes de agir.', 'revisao'); });
+        }, function() { if (atual(st, marca)) { botao.disabled = false; mostrar(st, 'Não foi possível atualizar. Releia antes de tentar novamente.', 'falha'); } });
+      });
+      card.appendChild(titulo); card.appendChild(detalhe); card.appendChild(botao); st.lista.appendChild(card);
+    });
+  }
+  function conectar(root, op) {
+    op = op || {};
+    if (!root || root.nodeType !== 1 || !op.porta || typeof op.porta.listarRecuperaveis !== 'function' || typeof op.porta.projetarComprovanteConfirmado !== 'function' || typeof op.contexto !== 'function') return false;
+    var antigo = estados.get(root); if (antigo) antigo.ativa = false;
+    var st = { root: root, porta: op.porta, contexto: op.contexto, atualizar: op.atualizar, ativa: true, marca: null, caixa: null, botao: null, status: null, lista: null };
+    estados.set(root, st);
+    root.addEventListener('click', function(ev) {
+      if (!st.ativa) return;
+      var alvo = ev.target && ev.target.closest ? ev.target.closest('.z-painel44__zelozinha') : null;
+      if (!alvo || !root.contains(alvo)) return;
+      var perfil = root.querySelector('.z-painel44__perfil'), conteudo = root.querySelector('.z-painel44__perfil-conteudo');
+      if (!perfil || perfil.hidden || !conteudo) return;
+      if (st.caixa && st.caixa.parentNode) st.caixa.remove();
+      var caixa = no('section', 'card z-projecao58 z-painel44__perfil-secao'); caixa.style.gridColumn = '1 / -1';
+      caixa.appendChild(no('h3', '', 'Acompanhamento de mensagens'));
+      caixa.appendChild(no('p', 'pm-sub', 'Atualize o acompanhamento das mensagens com envio confirmado. Esta ação não envia mensagens, não registra resposta e não altera cuidados clínicos.'));
+      var botao = no('button', 'btn btn-ghost', 'Atualizar acompanhamento'); botao.type = 'button';
+      var status = no('p', 'pm-sub', 'Nenhuma consulta em andamento.'); var lista = no('div', 'z-projecao58__lista');
+      caixa.appendChild(botao); caixa.appendChild(status); caixa.appendChild(lista); conteudo.appendChild(caixa);
+      st.caixa = caixa; st.botao = botao; st.status = status; st.lista = lista;
+      botao.addEventListener('click', function() {
+        var marca; try { marca = st.contexto(); } catch (_) { marca = null; }
+        if (!marcaValida(marca)) { mostrar(st, 'Sessão humana, papel, dia, banco ou permissão não confirmados.', 'falha'); return; }
+        st.marca = marca; botao.disabled = true; limpar(st); mostrar(st, 'Relendo comprovantes confirmados…', 'carregando');
+        Promise.resolve(st.porta.listarRecuperaveis()).then(function(r) { renderizarGrupos(st, marca, r); }, function() { renderizarGrupos(st, marca, { ok: false, motivo: 'Não foi possível confirmar os comprovantes.' }); });
+      });
+    });
+    return true;
+  }
+  return { conectar: conectar };
+}));
+
+</script>
+<script data-projecao58="instalar58.js">
+'use strict';
+/* Instala somente depois da UI50 já existente. Não conecta transporte nem canal. */
+(function(root) {
+  function instalar() {
+    if (root.ZELUZ_PROJECAO58_INSTALADA) return root.ZELUZ_PROJECAO58_INSTALADA;
+    var app = root.ZELUZ_UI50_INSTALADA && root.ZELUZ_UI50_INSTALADA.portas;
+    if (!app || !root.ZeluzProjecao58 || !root.ZeluzPainel58) throw Error('Portas humanas57 e módulos58 precisam estar disponíveis antes da instalação.');
+    var porta = root.ZeluzProjecao58.criar({ contexto: app.contexto, lerRecibos: app.lerRecibos, resolverGrupo: app.resolverGrupo, agora: function() { return new Date().toISOString(); } });
+    root.ZELUZ_PROJECAO58_INSTALADA = porta;
+    /* Esta é a porta de transporte futuro; a composição não a chama sozinha. */
+    root.projetarComprovanteConfirmado58 = function(groupKey) { return porta.projetarComprovanteConfirmado({ groupKey: groupKey }); };
+    function capturaPainel() { try { var c = app.contexto(); return c && c.db && c.id && c.nome && c.papel && c.dia && c.permitido === true && c.autenticado === true ? { db: c.db, id: c.id, nome: c.nome, papel: c.papel, dia: c.dia } : null; } catch (_) { return null; } }
+    function mesmaCaptura(a, b) { return !!(a && b && a.db === b.db && a.id === b.id && a.nome === b.nome && a.papel === b.papel && a.dia === b.dia); }
+    var atualizar = function() { var inicio = capturaPainel(); if (!inicio || typeof root.vencPendCarregar !== 'function' || typeof root.zPainel44Atualizar !== 'function') return Promise.resolve(false); return Promise.resolve(root.vencPendCarregar(true)).then(function(leitura) { if (!leitura || typeof leitura !== 'object' || !mesmaCaptura(inicio, capturaPainel())) return false; root.zPainel44Atualizar(); return true; }, function() { return false; }); };
+    function conectar(raiz) { return root.ZeluzPainel58.conectar(raiz, { porta: porta, contexto: app.contexto, atualizar: atualizar }); }
+    /* Âncora única: o painel44 é montado após login e pode ser remontado. */
+    if (typeof root.zPainel44Montar === 'function' && root.__zPainel44Montar58 !== true) {
+      var montarAnterior = root.zPainel44Montar;
+      root.zPainel44Montar = function(perfil, raiz) { var retorno = montarAnterior.apply(this, arguments); conectar(raiz); return retorno; };
+      root.__zPainel44Montar58 = true;
+    }
+    var paineis = root.document && root.document.querySelectorAll ? root.document.querySelectorAll('.z-painel44') : [];
+    for (var i = 0; i < paineis.length; i++) conectar(paineis[i]);
+    return porta;
+  }
+  root.ZeluzProjecao58Instalar = instalar;
+  instalar();
+}(typeof globalThis !== 'undefined' ? globalThis : this));
+
+</script>
+<!-- PROJECAO58-END -->
 </body>
 <script>
 (function(raiz, fabrica){
