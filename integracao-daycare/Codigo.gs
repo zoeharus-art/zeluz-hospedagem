@@ -137,7 +137,9 @@ function doPost(e) {
     var d = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     if (String(d.token || '') !== _senha()) return _json({ ok: false, erro: 'token invalido' });
     var acao = String(d.acao || 'lancar');
-    if (acao === 'capacidades')      return _json({ ok: true, versao: 8, capacidades: ['editar-v1'] });
+    if (acao === 'capacidades')      return _json({ ok: true, versao: 8, capacidades: ['editar-v1','saidas-tv-v1'] });
+    if (acao === 'reservarSaidasTv') return _json(_umPorVez(function () { return reservarSaidasTv(d); }));
+    if (acao === 'substituirSaidasTv') return _json(_umPorVez(function () { return substituirSaidasTv(d); }));
     if (acao === 'garantirColunas') return _json(_umPorVez(function () { return garantirColunas(); }));
     if (acao === 'diagnostico')     return _json(diagnostico());
     if (acao === 'removerColunas')  return _json(_umPorVez(function () { return removerColunas(d); }));
@@ -164,6 +166,62 @@ function _umPorVez(fn) {
   }
 }
 
+// ===== SAÍDAS DE HOTEL PARA A TV (56) ======================================
+// Fotografia mínima, pública na mesma planilha que a TV já lê. Não recebe ficha,
+// tutor, ID, nota, prescrição ou contato. A reserva impede que uma resposta velha
+// de outro aparelho substitua a fotografia mais nova.
+var TV_SAIDAS_ABA='TV Saídas Hoje', TV_SAIDAS_LIMITE=60, TV_SAIDAS_LEASE_MS=30000;
+function _tvSaidasProps(){ return PropertiesService.getScriptProperties(); }
+function _tvSaidasAgora(){ return Date.now(); }
+function _tvSaidasChave(){ return 'TV_SAIDAS_LEASE_V1'; }
+function _tvSaidasIso(){ return Utilities.formatDate(new Date(), 'America/Sao_Paulo', "yyyy-MM-dd'T'HH:mm:ssXXX"); }
+function _tvSaidasHoje(){ return Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyyy-MM-dd'); }
+function _tvSaidasSeguro(v, n){ v=String(v==null?'':v).trim(); if(v.length>n || /[\u0000-\u001F\u007F]/.test(v)) return null; return /^[=+\-@]/.test(v)?("'"+v):v; }
+function _tvSaidasDia(v){ return /^\d{4}-\d{2}-\d{2}$/.test(String(v||'')); }
+function _tvSaidasToken(){ return Utilities.getUuid().replace(/-/g,''); }
+function reservarSaidasTv(d){
+  var props=_tvSaidasProps(), agora=_tvSaidasAgora(), anterior=null;
+  try{ anterior=JSON.parse(props.getProperty(_tvSaidasChave())||'null'); }catch(e){}
+  if(anterior && anterior.ate>agora) return {ok:false, erro:'fotografia de saídas em atualização', aguardeAte:anterior.ate};
+  var seq=Number((anterior&&anterior.seq)||0)+1, lease={seq:seq, token:_tvSaidasToken(), ate:agora+TV_SAIDAS_LEASE_MS};
+  props.setProperty(_tvSaidasChave(),JSON.stringify(lease));
+  return {ok:true, seq:lease.seq, lease:lease.token, expiraEm:lease.ate};
+}
+function _tvSaidasValidar(d){
+  var s=(d&&d.snapshot)||{}, dia=String(s.dia||''), itens=Array.isArray(s.saidas)?s.saidas:null;
+  if(s.estado!=='pronto'||!_tvSaidasDia(dia)||dia!==_tvSaidasHoje()||!itens||itens.length>TV_SAIDAS_LIMITE) return {ok:false,erro:'fotografia de saídas inválida'};
+  var limpos=[];
+  for(var i=0;i<itens.length;i++){
+    var x=itens[i]||{}, nome=_tvSaidasSeguro(x.nome,80), tipo=String(x.tipo||''), etapa=String(x.etapa||'');
+    if(!nome || (tipo!=='Hóspede'&&tipo!=='Pernoite') || (etapa!=='A preparar'&&etapa!=='Na recepção')) return {ok:false,erro:'item de saída inválido'};
+
+    limpos.push({nome:nome,tipo:tipo,etapa:etapa});
+  }
+  return {ok:true,dia:dia,saidas:limpos};
+}
+function _tvSaidasConfereLease(d){
+  var atual=null; try{atual=JSON.parse(_tvSaidasProps().getProperty(_tvSaidasChave())||'null');}catch(e){}
+  if(!atual || atual.ate<_tvSaidasAgora()) return {ok:false,erro:'reserva de saídas vencida'};
+  if(String(d.lease||'')!==String(atual.token||'') || Number(d.seq)!==Number(atual.seq)) return {ok:false,erro:'resposta de saídas antiga'};
+  return {ok:true,atual:atual};
+}
+function substituirSaidasTv(d){
+  var lease=_tvSaidasConfereLease(d); if(!lease.ok) return lease;
+  var v=_tvSaidasValidar(d); if(!v.ok) return v;
+  var ss=SpreadsheetApp.getActiveSpreadsheet(), sh=ss.getSheetByName(TV_SAIDAS_ABA);
+  if(!sh) sh=ss.insertSheet(TV_SAIDAS_ABA);
+  var gerado=_tvSaidasIso(), cab=['versao','dia','estado','geradoEm','nome','tipo','etapa'], linhas=[cab];
+  if(v.saidas.length) v.saidas.forEach(function(x){linhas.push(['1',v.dia,'pronto',gerado,x.nome,x.tipo,x.etapa]);});
+  else linhas.push(['1',v.dia,'pronto',gerado,'','','']); // zero explícito, nunca ausência
+  var altura=Math.max(TV_SAIDAS_LIMITE+1,sh.getLastRow()||0), matriz=[];
+  for(var i=0;i<altura;i++) matriz.push(i<linhas.length?linhas[i]:['','','','','','','']);
+  // Uma única matriz, já validada: não limpa antes nem deixa uma resposta parcial apagar a última boa.
+  var destino=sh.getRange(1,1,altura,7);
+  destino.setNumberFormat('@'); // Contrato textual: datas ISO nao podem virar Date no gviz.
+  destino.setValues(matriz);
+  _tvSaidasProps().deleteProperty(_tvSaidasChave());
+  return {ok:true,dia:v.dia,geradoEm:gerado,quantidade:v.saidas.length,seq:lease.atual.seq};
+}
 /** Abrir a URL /exec no navegador diz se a ponte está viva e o que ela enxerga. */
 function doGet(e) {
   var abas = _abasDayCare().map(function (s) { return s.getName(); });
@@ -740,3 +798,8 @@ function _linhasDoDia(sh, cData, dia) {
   }
   return out;
 }
+
+
+
+
+

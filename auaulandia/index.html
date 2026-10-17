@@ -29925,7 +29925,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-17-15';
+  const APP_VERSAO='2026-10-17-16';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -31884,6 +31884,7 @@ return { criar };
     return 'hospedagem'; // plantonista, monitor, aprendiz
   }
   function logout(){
+    try{ if(typeof tvSaidas56SessaoEncerrada==='function') tvSaidas56SessaoEncerrada(); }catch(e){} /* TV56: logout invalida a autorizacao vinculada */
     try{if(typeof zelozinha45Logout==='function')zelozinha45Logout();}catch(e){}
     sessionStorage.removeItem('zeluz_login');
     // O NOME DO TURNO SAI JUNTO (achado da auditoria do manual, 15/ago/2026).
@@ -58847,6 +58848,7 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
       var _ap=document.getElementById('dashApagarPonte'); if(_ap) _ap.style.display=_dir?'':'none';
       renderDash();
       dashPonteEditarCapacidade();
+      try{ if(typeof tvSaidas56ConfigPronta==='function') tvSaidas56ConfigPronta(); }catch(e){} /* TV56: a rota autorizada terminou de carregar a ponte */
     });
     var __ret=__leitura.then(function(v){
       if(DASH_CARREGANDO[__diaLido]===__ret) delete DASH_CARREGANDO[__diaLido];
@@ -58965,6 +58967,330 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
       .then(function(t){ try{ return JSON.parse(t); }catch(e){ return {ok:false, erro:String(t).slice(0,140)}; } })
       .catch(function(e){ return {ok:false, erro:(e&&e.name==='AbortError')?'a ponte não respondeu em 12s':String((e&&e.message)||e)}; });
   }
+/* TV56_PUBLICADOR_INICIO
+ * Publica uma fotografia minima de saidas formais na ponte ja carregada pela rota dashdc.
+ * Sem leitura adicional do historico: usa somente EST_TODAS, alimentada pelo listener existente.
+ */
+(function(root){
+  'use strict';
+
+  var RENOVAR_MS=90000, SUCESSO_FRESCO_MS=70000, RETRY_MS=15000, MARGEM_LEASE_MS=800;
+
+  function texto(v){ return String(v==null?'':v).trim(); }
+  function diaValido(v){ return /^\d{4}-\d{2}-\d{2}$/.test(texto(v)); }
+  function itemSeguro(x){
+    return !!x && Object.keys(x).sort().join('|')==='etapa|nome|tipo'
+      && texto(x.nome)!==''
+      && (x.tipo==='Hóspede'||x.tipo==='Pernoite')
+      && (x.etapa==='A preparar'||x.etapa==='Na recepção');
+  }
+  function assinatura(snapshot){
+    return snapshot.dia+'|'+snapshot.saidas.map(function(x){
+      return JSON.stringify([x.nome,x.tipo,x.etapa]);
+    }).join('|');
+  }
+  function projetar(estadias,dia,portas){
+    if(!diaValido(dia)||!estadias||typeof estadias!=='object'||Array.isArray(estadias)
+       ||!portas||typeof portas.morador!=='function'||typeof portas.pernoite!=='function'){
+      return {ok:false,motivo:'fonte-ausente'};
+    }
+    var linhas=[];
+    var ids=Object.keys(estadias);
+    for(var i=0;i<ids.length;i++){
+      var id=ids[i],e=estadias[id];
+      if(!e||typeof e!=='object') return {ok:false,motivo:'fonte-incompleta'};
+      if((e.status||'ativa')!=='ativa'||e.saida!==dia) continue;
+      var morador=false,tipo='';
+      try{ morador=portas.morador(e.nome,e.refKey)===true; }
+      catch(_){ return {ok:false,motivo:'fonte-incompleta'}; }
+      if(morador) continue;
+      var nome=texto(e.nome);
+      if(!nome) return {ok:false,motivo:'fonte-incompleta'};
+      try{ tipo=portas.pernoite(e)===true?'Pernoite':'Hóspede'; }
+      catch(_){ return {ok:false,motivo:'fonte-incompleta'}; }
+      linhas.push({id:id,item:{
+        nome:nome,
+        tipo:tipo,
+        etapa:(e.checkout_etapa1&&e.checkout_etapa1.ts)?'Na recepção':'A preparar'
+      }});
+    }
+    linhas.sort(function(a,b){
+      var n=a.item.nome.localeCompare(b.item.nome,'pt-BR',{sensitivity:'base'});
+      return n||a.item.tipo.localeCompare(b.item.tipo,'pt-BR')||a.id.localeCompare(b.id);
+    });
+    var snapshot={dia:dia,estado:'pronto',saidas:linhas.map(function(x){return x.item;})};
+    if(Object.keys(snapshot).sort().join('|')!=='dia|estado|saidas'
+       ||snapshot.saidas.some(function(x){return !itemSeguro(x);})){
+      return {ok:false,motivo:'contrato-invalido'};
+    }
+    return {ok:true,snapshot:snapshot,assinatura:assinatura(snapshot)};
+  }
+
+  function criarPublicador(portas){
+    if(!portas||typeof portas.contexto!=='function'||typeof portas.mesmoContexto!=='function'
+       ||typeof portas.conectado!=='function'||typeof portas.enfileirar!=='function'
+       ||typeof portas.reservar!=='function'||typeof portas.substituir!=='function'
+       ||typeof portas.projetar!=='function'||typeof portas.agendar!=='function'
+       ||typeof portas.agora!=='function') throw Error('Portas TV56 incompletas.');
+
+    var st={emFila:false,rodando:false,pendente:false,forcar:false,promessa:Promise.resolve(),pedidoContexto:null,
+      ultimoDia:'',ultimaFonte:-1,ultimaAssinatura:'',ultimoSucesso:0,retry:null};
+
+    function programar(ms){
+      if(st.retry) return;
+      st.retry=portas.agendar(function(){st.retry=null;solicitar('retry',true);},Math.max(0,Number(ms)||RETRY_MS));
+    }
+    function contexto(){
+      var c=null; try{c=portas.contexto();}catch(_){c=null;}
+      return c&&diaValido(c.dia)?c:null;
+    }
+    function mudou(c,incluirFonte){
+      var atual=contexto();
+      return !atual||portas.mesmoContexto(c,atual,incluirFonte)!==true;
+    }
+    function reterNovoContexto(anterior){
+      var atual=contexto();
+      // Mudanca apenas da fonte pede outra fotografia. Troca de pessoa, papel, dia,
+      // rota, banco ou ponte cancela o pedido sem herdar o novo contexto.
+      if(atual&&anterior&&portas.mesmoContexto(anterior,atual,false)===true) st.pendente=true;
+      return {ok:false,estado:'contexto-mudou'};
+    }
+    function retry(estado,ms){
+      programar(ms==null?RETRY_MS:ms);
+      return {ok:false,estado:estado||'retry'};
+    }
+    function rodada(){
+      st.rodando=true;
+      var forcar=st.forcar,esperado=st.pedidoContexto;
+      st.forcar=false; st.pendente=false; st.pedidoContexto=null;
+      var c0=contexto();
+      if(!c0) return Promise.resolve({ok:false,estado:'inativo'});
+      if(!esperado||portas.mesmoContexto(esperado,c0,false)!==true)
+        return Promise.resolve({ok:false,estado:'contexto-mudou'});
+      if(!forcar&&st.ultimoDia===c0.dia&&st.ultimaFonte===c0.fonteRev
+         &&portas.agora()-st.ultimoSucesso<SUCESSO_FRESCO_MS){
+        return Promise.resolve({ok:true,estado:'singleflight'});
+      }
+      return Promise.resolve(portas.conectado(c0)).then(function(on){
+        if(on!==true) return retry('sem-conexao');
+        if(mudou(c0,true)) return reterNovoContexto(c0);
+        var reservaPedidaEm=portas.agora();
+        return portas.reservar().then(function(reserva){
+          if(!reserva||reserva.ok!==true){
+            var espera=reserva&&Number(reserva.aguardeAte)-portas.agora()+100;
+            return retry('reserva-indisponivel',Number.isFinite(espera)&&espera>0?espera:RETRY_MS);
+          }
+          var c1=contexto();
+          if(!c1||portas.mesmoContexto(c0,c1,false)!==true) return reterNovoContexto(c0);
+          return Promise.resolve(portas.conectado(c1)).then(function(aindaOn){
+            if(aindaOn!==true||mudou(c1,true)) return reterNovoContexto(c1);
+            // expiraEm nasce no relogio do servidor; Date.now() nasce no aparelho e pode ter
+            // desvio. O cliente usa o tempo decorrido da chamada com a margem existente.
+            // O servidor continua sendo a autoridade final para nonce, seq e vencimento.
+            var decorrido=portas.agora()-reservaPedidaEm;
+            if(!Number.isFinite(decorrido)||decorrido<0||decorrido+MARGEM_LEASE_MS>=30000) return retry('reserva-vencida',100);
+            // A fotografia nasce somente aqui, depois do lease confirmado.
+            var foto=portas.projetar(c1.dia);
+            if(!foto||foto.ok!==true) return {ok:false,estado:(foto&&foto.motivo)||'fonte-invalida'};
+            if(mudou(c1,true)) return reterNovoContexto(c1);
+            var corpo={acao:'substituirSaidasTv',seq:reserva.seq,lease:reserva.lease,snapshot:foto.snapshot};
+            return portas.substituir(corpo).then(function(resp){
+              var c2=contexto();
+              if(!c2||portas.mesmoContexto(c1,c2,true)!==true) return reterNovoContexto(c1);
+              return Promise.resolve(portas.conectado(c2)).then(function(finalOn){
+                if(finalOn!==true||mudou(c2,true)) return reterNovoContexto(c2);
+                var atual=portas.projetar(c2.dia);
+                if(!atual||atual.ok!==true||atual.assinatura!==foto.assinatura) return reterNovoContexto(c2);
+                if(!resp||resp.ok!==true) return retry('falha-publicacao');
+                st.ultimoDia=c2.dia; st.ultimaFonte=c2.fonteRev;
+                st.ultimaAssinatura=foto.assinatura; st.ultimoSucesso=portas.agora();
+                return {ok:true,estado:'publicado',quantidade:foto.snapshot.saidas.length,assinatura:foto.assinatura};
+              });
+            },function(){return retry('falha-publicacao');});
+          });
+        },function(){return retry('falha-reserva');});
+      });
+    }
+    function solicitar(_motivo,forcar){
+      var pedidoAgora=contexto();
+      st.pendente=true; if(forcar===true) st.forcar=true;
+      if(st.emFila){
+        // Antes de a rodada comecar, fonte/config/conexao podem completar o contexto.
+        // Uma sessao diferente nao substitui a que originou um pedido ja valido.
+        if(!st.rodando&&(!st.pedidoContexto||(pedidoAgora&&portas.mesmoContexto(st.pedidoContexto,pedidoAgora,false)===true)))
+          st.pedidoContexto=pedidoAgora;
+        return st.promessa;
+      }
+      st.pedidoContexto=pedidoAgora;
+      st.emFila=true;
+      st.promessa=Promise.resolve(portas.enfileirar(rodada)).catch(function(){return retry('falha-fila');})
+        .then(function(r){
+          st.rodando=false; st.emFila=false;
+          if(st.pendente) Promise.resolve().then(function(){solicitar('coalescido',st.forcar);});
+          return r;
+        });
+      return st.promessa;
+    }
+    function estado(){return {
+      emFila:st.emFila,pendente:st.pendente,ultimoDia:st.ultimoDia,ultimaFonte:st.ultimaFonte,
+      ultimaAssinatura:st.ultimaAssinatura,ultimoSucesso:st.ultimoSucesso
+    };}
+    return {solicitar:solicitar,estado:estado,RENOVAR_MS:RENOVAR_MS};
+  }
+
+  root.ZeluzTvSaidas56Nucleo={projetar:projetar,criarPublicador:criarPublicador,
+    assinatura:assinatura,RENOVAR_MS:RENOVAR_MS};
+})(typeof globalThis!=='undefined'?globalThis:this);
+
+(function(root){
+  'use strict';
+  var N=root.ZeluzTvSaidas56Nucleo,FONTE_REV=0,FONTE_CONFIRMADA=false;
+  var CONEXAO=null,CONEXAO_DB=null,CONEXAO_REF=null,CONEXAO_FN=null,PUB=null;
+  var RECONEXAO_SEQ=0,RECONEXAO_ESPERA_MS=5000,AUTORIZACAO=null;
+
+  function sessao(){
+    try{return typeof usuarioAtual==='function'?usuarioAtual():null;}catch(_){return null;}
+  }
+  function papel(){
+    try{return typeof papelDoCorpo==='function'?String(papelDoCorpo()||''):'';}catch(_){return '';}
+  }
+  function ator(u){
+    try{
+      var nome=typeof quemSou==='function'?quemSou():((u&&u.pessoa)||(u&&u.nome)||'');
+      return String(nome||'').trim();
+    }catch(_){return String((u&&u.pessoa)||(u&&u.nome)||'').trim();}
+  }
+  function rotaAtiva(){
+    var v=document.getElementById('v-dashdc');
+    return !!(v&&v.classList&&v.classList.contains('active'));
+  }
+  function permitido(){
+    try{return typeof dashPodeTirar==='function'&&dashPodeTirar()===true;}catch(_){return false;}
+  }
+  function fonteOk(){
+    return FONTE_CONFIRMADA===true&&typeof CF_ESTADIAS_LIDO!=='undefined'&&CF_ESTADIAS_LIDO===true
+      &&typeof EST_TODAS!=='undefined'&&EST_TODAS&&typeof EST_TODAS==='object'&&!Array.isArray(EST_TODAS);
+  }
+  function contexto(){
+    var u=sessao(),r=papel(),a=ator(u),d='',p=null,db=(typeof DB!=='undefined'&&DB)||null;
+    try{d=typeof zHojeISO==='function'?zHojeISO():'';}catch(_){d='';}
+    try{p=(typeof DASH_PONTE!=='undefined'&&DASH_PONTE)||null;}catch(_){p=null;}
+    if(!AUTORIZACAO) return null;
+    var aindaMesma=!!(u&&a&&String(u.role||'').trim()&&r&&permitido()&&p&&p.url&&p.token&&db
+      &&AUTORIZACAO.ator===a&&AUTORIZACAO.papel===r&&AUTORIZACAO.papelSessao===String(u.role)
+      &&AUTORIZACAO.db===db&&AUTORIZACAO.ponte===p&&AUTORIZACAO.url===String(p.url)
+      &&AUTORIZACAO.token===String(p.token));
+    if(!aindaMesma){AUTORIZACAO=null;return null;}
+    if(!fonteOk()||CONEXAO!==true) return null;
+    return {dia:d,ator:a,papel:r,papelSessao:String(u.role),db:db,
+      ponte:p,url:String(p.url),token:String(p.token),fonteRev:FONTE_REV};
+  }
+  function mesmo(a,b,comFonte){
+    return !!(a&&b&&a.dia===b.dia&&a.ator===b.ator&&a.papel===b.papel
+      &&a.papelSessao===b.papelSessao&&a.db===b.db&&a.ponte===b.ponte
+      &&a.url===b.url&&a.token===b.token&&(!comFonte||a.fonteRev===b.fonteRev));
+  }
+  function conectado(c){
+    if(!c||CONEXAO!==true||typeof DB==='undefined'||DB!==c.db) return Promise.resolve(false);
+    try{return DB.ref('.info/connected').once('value').then(function(s){
+      return CONEXAO===true&&DB===c.db&&s&&typeof s.val==='function'&&s.val()===true;
+    },function(){return false;});}catch(_){return Promise.resolve(false);}
+  }
+  function enfileirar(fn){
+    var vez=DASH_PONTE_FILA.then(fn,fn);
+    DASH_PONTE_FILA=vez.then(function(){return null;},function(){return null;});
+    return vez;
+  }
+  function reservar(){return dashPonteChamarJa({acao:'reservarSaidasTv'});}
+  function substituir(corpo){return dashPonteChamarJa(corpo);}
+  function foto(dia){
+    return N.projetar(EST_TODAS,dia,{morador:function(nome,ref){
+      if(typeof ehMoradorDaCasa!=='function') throw Error('morador indisponivel');
+      return ehMoradorDaCasa(nome,ref);
+    },pernoite:function(e){
+      if(typeof ehPernoite!=='function') throw Error('pernoite indisponivel');
+      return ehPernoite(e);
+    }});
+  }
+  PUB=N.criarPublicador({contexto:contexto,mesmoContexto:mesmo,conectado:conectado,
+    enfileirar:enfileirar,reservar:reservar,substituir:substituir,projetar:foto,
+    agendar:function(fn,ms){return setTimeout(fn,ms);},agora:function(){return Date.now();}});
+
+  function recuperarFonteNaReconexao(db,seq){
+    setTimeout(function(){
+      // O listener normal tem prioridade. A leitura cheia so acontece uma vez nesta
+      // reconexao se ele nao repetir value para uma arvore que permaneceu igual.
+      if(seq!==RECONEXAO_SEQ||CONEXAO!==true||CONEXAO_DB!==db||FONTE_CONFIRMADA===true||!AUTORIZACAO) return;
+      try{
+        db.ref('auaulandia/estadias').once('value').then(function(s){
+          if(seq!==RECONEXAO_SEQ||CONEXAO!==true||CONEXAO_DB!==db||FONTE_CONFIRMADA===true||!AUTORIZACAO) return;
+          var v=s&&typeof s.val==='function'?s.val():null;
+          if(v===null||typeof v!=='object'||typeof _cfIndexarEstadias!=='function') return;
+          _cfIndexarEstadias(Object.assign({},v));
+        },function(){ /* sem fonte confirmada, nenhuma fotografia vazia e enviada */ });
+      }catch(_){ /* sem fonte confirmada, a TV deixa a fotografia expirar */ }
+    },RECONEXAO_ESPERA_MS);
+  }
+  function garantirConexao(){
+    if(typeof DB==='undefined'||!DB||typeof DB.ref!=='function') return;
+    if(CONEXAO_DB===DB) return;
+    if(CONEXAO_REF&&CONEXAO_FN&&typeof CONEXAO_REF.off==='function'){
+      try{CONEXAO_REF.off('value',CONEXAO_FN);}catch(_){}
+    }
+    CONEXAO_DB=DB; CONEXAO=null; CONEXAO_REF=DB.ref('.info/connected');
+    CONEXAO_FN=function(s){
+      var antes=CONEXAO,v=!!(s&&typeof s.val==='function'&&s.val()===true);
+      CONEXAO=v;
+      if(!v){ FONTE_CONFIRMADA=false; RECONEXAO_SEQ++; }
+      if(v){
+        if(antes===false) recuperarFonteNaReconexao(DB,++RECONEXAO_SEQ);
+        PUB.solicitar('conexao',true);
+      }
+    };
+    try{CONEXAO_REF.on('value',CONEXAO_FN,function(){CONEXAO=false;FONTE_CONFIRMADA=false;});}
+    catch(_){CONEXAO=false;FONTE_CONFIRMADA=false;}
+  }
+  root.tvSaidas56FonteConfirmada=function(){
+    garantirConexao();
+    // Reindexacao local pode ocorrer enquanto o SDK esta offline; ela nao confirma a
+    // fonte para publicar zero. Na primeira carga CONEXAO ainda pode ser null; nesse
+    // caso o listener de .info/connected decide antes de a fila conseguir publicar.
+    if(CONEXAO===false){FONTE_CONFIRMADA=false;return;}
+    FONTE_REV++; FONTE_CONFIRMADA=true; PUB.solicitar('fonte',false);
+  };
+  root.tvSaidas56ConfigPronta=function(){
+    garantirConexao();
+    var u=sessao(),r=papel(),a=ator(u),p=null,db=(typeof DB!=='undefined'&&DB)||null;
+    try{p=(typeof DASH_PONTE!=='undefined'&&DASH_PONTE)||null;}catch(_){p=null;}
+    // A autorizacao nasce somente na rota que efetivamente carregou a ponte.
+    if(!rotaAtiva()||!permitido()||!u||!a||!String(u.role||'').trim()||!r
+       ||!p||!p.url||!p.token||!db){AUTORIZACAO=null;return;}
+    AUTORIZACAO={ator:a,papel:r,papelSessao:String(u.role),db:db,ponte:p,
+      url:String(p.url),token:String(p.token)};
+    // Se a configuracao chegou depois de uma reconexao silenciosa da fonte, abre
+    // uma unica janela de recuperacao para esta sessao autorizada.
+    if(CONEXAO===true&&!FONTE_CONFIRMADA) recuperarFonteNaReconexao(db,++RECONEXAO_SEQ);
+    PUB.solicitar('config',true);
+  };
+  root.tvSaidas56SessaoEncerrada=function(){AUTORIZACAO=null;};
+  root.tvSaidas56Estado=function(){return PUB.estado();};
+  setInterval(function(){garantirConexao();PUB.solicitar('renovacao-ou-dia',true);},N.RENOVAR_MS);
+  if(typeof document!=='undefined') document.addEventListener('visibilitychange',function(){
+    if(!document.hidden){garantirConexao();PUB.solicitar('retomada',true);}
+  });
+  if(typeof addEventListener==='function') addEventListener('online',function(){
+    garantirConexao();PUB.solicitar('online',true);
+  });
+})(typeof globalThis!=='undefined'?globalThis:this);
+/* TV56_PUBLICADOR_FIM */
+
+
+
+
+
+
+
+
   function dashPonteEditarCapacidade(){
     if(!(DASH_PONTE&&DASH_PONTE.url)){
       DASH_PONTE_EDITAR={lida:true,lendo:false,ok:false,erro:'ponte não configurada'};
@@ -81815,6 +82141,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       var lista=document.getElementById('cf-lista');
       if(v2&&v2.classList.contains('active')&&lista&&lista.style.display!=='none'&&typeof renderCfLista==='function') renderCfLista();
     }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    try{ if(typeof tvSaidas56FonteConfirmada==='function') tvSaidas56FonteConfirmada(); }catch(e){} /* TV56: listener vivo, depois de atualizar EST_TODAS e seus indices */
   }
   // ==================================================================================
   // ===== PELUDINHOS HÓSPEDES — a tela das ESTADIAS (entrada → saída) ================
