@@ -2748,7 +2748,7 @@
           <!-- SEMPRE 2 conferências: uma na ENTRADA e uma na SAÍDA (Adriana, 03/ago/2026).
                Aqui fica o passo do monitor — juntar a bolsa. Fechar com o tutor e assinar
                é da Central Zêluz, e por isso o Check-out com o tutor mora lá. -->
-          <a data-v="checkout" title="O monitor monta a bolsa e devolve tudo (1º passo)."><span data-icon="bag"></span><span>Check-out</span></a>
+          <a data-v="checkout" title="Quem vai embora hoje — monitor: prepare a bolsa (1º passo)."><span data-icon="bag"></span><span>Quem vai embora hoje</span></a>
           </div>
         </div>
         <div class="acc" data-acc="s-daycare">
@@ -2804,7 +2804,7 @@
           <div class="acc-panel">
           <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="login"></span><span>Check-in</span></a>
           <a data-v="historicocheckins" style="display:none" title="Consulte a hospedagem e os responsáveis pela entrada e pela saída."><span data-icon="search"></span><span>Histórico de hospedagens</span></a>
-          <a data-v="checkoutconf" class="so-conf-saida" title="Conferir a bolsa junto com o tutor e assinar (2º passo)."><span data-icon="door-out"></span><span>Check-out com o tutor</span></a>
+          <a data-v="checkoutconf" class="so-conf-saida" title="Quem vai embora hoje — recepção: conferir e assinar (2º passo)."><span data-icon="door-out"></span><span>Quem vai embora hoje</span></a>
           <a data-v="recepcao" class="so-recepcao" title="Ração acabando, remédio faltando, algo que ficou."><span data-icon="message"></span><span>Pendências com o tutor</span></a>
           <!-- A veterinária é da Central Zêluz (Adriana, 08/set/2026): ela conversa com o
                tutor sobre o que viu no corpo do FILHOt. -->
@@ -7927,8 +7927,8 @@ return { criar };
     linhadotempo:['Linha do tempo do dia','Tudo o que aconteceu, em ordem — escolha o mês e o dia.'],
     acerto:['Financeiro do plantão','Acerto das plantonistas: noites, dobras, quanto pagamos.'],
     ritmo:['Ritmo do Time','Tempo por etapa, dia a dia.'],
-    checkout:['Check-out','O monitor monta a bolsa e devolve tudo (1º passo; a Central fecha com o tutor).'],
-    checkoutconf:['Check-out com o tutor','Conferir a bolsa junto com o tutor e assinar (2º passo).'],
+    checkout:['Quem vai embora hoje','Monitor: prepare a bolsa (1º passo; a Central fecha com o tutor).'],
+    checkoutconf:['Quem vai embora hoje','Recepção: confira a bolsa com o tutor e assine (2º passo).'],
     emporio:['Quem não comeu hoje','A mensagem pronta para avisar o tutor.'],
     hospedes:['Hóspedes de hoje','Quem está na casa, medicação e alimentação.'],
     recepcao:['Pendências com o tutor','Ração acabando, remédio faltando, algo que ficou.'],
@@ -29925,7 +29925,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-17-12';
+  const APP_VERSAO='2026-10-17-13';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -81797,6 +81797,8 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       if(hospEstadiaGanha(e, atual&&atual.e)) CF_ESTADIAS[k]={id:id,e:e};
     });
     try{ if(typeof atualizarBadgeConferencia==='function') atualizarBadgeConferencia(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    // Redesenho checkout após leitura: somente lista visível, nunca a ficha em edição.
+    try{ var vc=document.getElementById('v-checkout'), cl=document.getElementById('co-lista'); if(vc&&vc.classList.contains('active')&&cl&&cl.style.display!=='none'&&typeof coRenderLista==='function') coRenderLista(); }catch(e){} /* silencioso de propósito: redesenho de tela */
     // 6.54 (AC7): a comida mudada em outro aparelho aparece no card do Plantão (em 2 s, só com a lista à vista).
     try{ if(typeof mcrPedirRedesenhoPlantao==='function') mcrPedirRedesenhoPlantao(); }catch(e){} /* silencioso de propósito: redesenho de tela */
     // Quem acabou de fazer check-in sai do cartão "Chegam pelos orçamentos fechados" (25/set).
@@ -87476,12 +87478,15 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
   }
   function coRenderLista(){
     var el=document.getElementById('coGrid'); if(!el) return;
-    // Fora do check-out: FILHOt da casa (Repolho, Stopa, Kako) e PERNOITE — pernoite é quem
-    // estava na creche e o tutor não conseguiu buscar; ele não montou bolsa nenhuma para
-    // conferir na saída (Adriana, 05/ago/2026).
+    // Não trate uma fonte ainda pendente como ausência de saídas; o ouvinte de estadias redesenha ao concluir.
+    if(typeof CF_ESTADIAS_LIDO==='undefined' || CF_ESTADIAS_LIDO!==true){
+      el.innerHTML='<div class="av-empty" style="grid-column:1/-1"><div class="big">Conferindo as estadias já lançadas…</div>A lista aparece assim que o carregamento terminar.</div>'; return;
+    }
+    // Fora do check-out ficam somente moradores da casa. Pernoites formais usam a mesma
+    // estadia com ID real e seguem as mesmas etapas de saída.
     var todas=Object.keys(CF_ESTADIAS||{}).map(function(rk){ return {rk:rk, e:(CF_ESTADIAS[rk]&&CF_ESTADIAS[rk].e)||{}, id:(CF_ESTADIAS[rk]&&CF_ESTADIAS[rk].id)||''}; })
       .filter(function(o){ return (o.e.status||'ativa')==='ativa'; })
-      .filter(function(o){ return !ehMoradorDaCasa(o.e.nome,o.rk) && !ehPernoite(o.e); })
+      .filter(function(o){ return !ehMoradorDaCasa(o.e.nome,o.rk); })
       .sort(function(a,b){ return jsNorm(a.e.nome||'').localeCompare(jsNorm(b.e.nome||'')); });
     var vencidas=todas.filter(function(o){ return estadiaVencida(o.e); });
     var lista=todas.filter(function(o){ return !estadiaVencida(o.e); });
@@ -87489,29 +87494,38 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     var hoje=hojeISO(), amanha=diasISO(1);
     var card=function(o){ var e=o.e; var ini=((e.nome||'?')[0]||'?').toUpperCase();
       var et=coEtapaDe(e);
+      var tipo=ehPernoite(e)?'PERNOITE':'HÓSPEDE';
       var selo=(et===2)
         ?'<span class="mini-med" style="background:#1E8449;color:#fff">NA RECEPÇÃO</span>'
-        :((e.saida===hoje)?'<span class="mini-med" style="background:var(--crm-critico);color:#fff">SAI HOJE</span>':'');
+        :((e.saida===hoje)?'<span class="mini-med" style="background:var(--crm-critico);color:#fff">A PREPARAR</span>':'');
       return '<div class="vet-pet" onclick="coAbrirFicha(\''+escAttr(o.rk)+'\')"><div class="ph" style="background:#234D67">'+escAttr(ini)+'</div>'+selo
+        +'<div class="mini-med" style="background:#EAF0F4;color:#234D67">'+tipo+'</div>'
         +'<div class="nm">'+escAttr(e.nome||'—')+'</div><div class="br">'+escAttr(e.raca||'—')+'</div>'
         +'<div class="tt">'+(e.tutor?'Tutor: '+escAttr(e.tutor):'—')+(e.saida?' · sai '+ciBRdata(e.saida):' · sem data de saída')+'</div></div>'; };
-    var prontos=lista.filter(function(o){ return coEtapaDe(o.e)===2; });
-    var saiHoje=lista.filter(function(o){ return coEtapaDe(o.e)===1 && o.e.saida===hoje; });
+    // O bloco de hoje é único e inclui as duas etapas. Assim a recepção não perde quem já está pronto.
+    var saiHoje=lista.filter(function(o){ return o.e.saida===hoje; });
+    var prontos=lista.filter(function(o){ return coEtapaDe(o.e)===2 && o.e.saida!==hoje; });
+    var prontoHoje=saiHoje.some(function(o){ return coEtapaDe(o.e)===2; });
     // "Em check-out aparecer quem está para sair — amanhã, por exemplo, sai a Cristal da Ana
     // Paula." A saída se prepara na véspera; antes só aparecia no próprio dia (Adriana, 05/ago).
     var saiAmanha=lista.filter(function(o){ return coEtapaDe(o.e)===1 && o.e.saida===amanha; });
     var resto=lista.filter(function(o){ return coEtapaDe(o.e)===1 && o.e.saida!==hoje && o.e.saida!==amanha; });
     var tit=function(txt,cor,sub){ return '<div style="grid-column:1/-1;margin:4px 0 2px"><div style="font-weight:800;font-size:16px;color:'+cor+'">'+txt+'</div>'+(sub?'<div style="font-size:12.5px;color:var(--muted);font-weight:600">'+sub+'</div>':'')+'</div>'; };
     var grade=function(arr){ return '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">'+arr.map(card).join('')+'</div>'; };
+    // As duas abas partem da mesma estadia formal e do mesmo cartão/ID. Só muda a orientação da etapa.
+    var blocoSaidasHoje=function(){ if(!saiHoje.length) return ''; var recepcao=(coModo==='conferencia');
+      return tit('Quem vai embora hoje ('+saiHoje.length+')',recepcao?'var(--muted)':'#B3261E',
+        recepcao?'Acompanhe a etapa mostrada em cada cartão; a recepção só confere após o preparo.':'Veja a etapa mostrada em cada cartão e prepare somente quem ainda está A PREPARAR.')+grade(saiHoje); };
     var h='';
     if(coModo==='conferencia'){
       // Tela das consultoras: só quem os monitores já juntaram.
-      if(!prontos.length){
+      if(!prontos.length && !prontoHoje){
         h='<div class="av-empty" style="grid-column:1/-1"><div class="big">Nada para conferir agora</div>Quando a monitora terminar de juntar as coisas de um FILHOt, ele aparece aqui para você conferir com o tutor.'
           +(saiHoje.length?('<br><br><strong>'+saiHoje.length+'</strong> sai(em) hoje e ainda está(ão) sendo preparado(s) lá dentro.'):'')+'</div>';
+        h+=blocoSaidasHoje();
       } else {
-        h+=tit('Conferir com o tutor e assinar ('+prontos.length+')','#1E8449','A bolsa já foi montada. Passe item por item COM O TUTOR, colha a assinatura e entregue o PDF.')+grade(prontos);
-        if(saiHoje.length) h+=tit('Ainda sendo preparados lá dentro ('+saiHoje.length+')','var(--muted)','Saem hoje, mas a monitora ainda não terminou de juntar.')+grade(saiHoje);
+        if(prontos.length) h+=tit('Conferir com o tutor e assinar ('+prontos.length+')','#1E8449','A bolsa já foi montada. Passe item por item COM O TUTOR, colha a assinatura e entregue o PDF.')+grade(prontos);
+        h+=blocoSaidasHoje();
       }
       if(saiAmanha.length) h+=tit('Saem AMANHÃ ('+saiAmanha.length+')','#DEB428','Avise a monitora para começar a juntar hoje — a saída se prepara na véspera.')+grade(saiAmanha);
       h+=coAvisoVencidas(vencidas,tit,grade);
@@ -87519,7 +87533,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       el.innerHTML=h; return;
     }
     // Tela dos monitores: o que precisa ser juntado.
-    if(saiHoje.length) h+=tit('🔴 Saem HOJE — juntar as coisas ('+saiHoje.length+')','#B3261E','Junte tudo que é do FILHOt e toque em "Juntei tudo" para mandar à recepção.')+grade(saiHoje);
+    h+=blocoSaidasHoje();
     if(saiAmanha.length) h+=tit('Saem AMANHÃ — já pode ir juntando ('+saiAmanha.length+')','#DEB428','')+grade(saiAmanha);
     if(resto.length) h+=tit('Outras estadias em curso ('+resto.length+')','var(--muted)','Ainda não é o dia da saída — só entre aqui se o tutor antecipou.')+grade(resto);
     if(prontos.length) h+=tit('✅ Já entregues à recepção ('+prontos.length+')','#1E8449','Você já juntou. Agora é a consultora que confere com o tutor.')+grade(prontos);
