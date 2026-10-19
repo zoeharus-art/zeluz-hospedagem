@@ -5318,13 +5318,14 @@
   }
   function renderEquipe(root){
     var st = estado(root), dados = Array.isArray(st.opcoes.equipe) ? st.opcoes.equipe : [];
-    st.listaPessoas.replaceChildren();
-    st.equipeVazia = !dados.length;
-    if(!dados.length){ st.vazioEquipe.hidden = false; return; }
-    st.vazioEquipe.hidden = true;
-    dados.forEach(function(pessoa){
+    var areas = ['Banho','Recepção','Veterinária','Monitoria','Plantonistas'];
+    if(dados.some(function(p){return p && p.area==='Gestão e supervisão';})) areas.push('Gestão e supervisão');
+    if(dados.some(function(p){return !p || !p.area || p.area==='Área não informada';})) areas.push('Área não informada');
+    st.listaPessoas.replaceChildren(); st.listaPessoas.className = 'z-painel44__temas';
+    st.equipeVazia = !dados.length; st.vazioEquipe.hidden = true;
+    function adicionarPessoa(lista, pessoa){
       pessoa = pessoa || {};
-      var pessoaId = texto(pessoa.id), nome = texto(pessoa.nome), papel = texto(pessoa.papel);
+      var pessoaId = texto(pessoa.id), nome = texto(pessoa.nome), papel = pessoaId==='zelozinha' ? 'Agente da Recepção' : texto(pessoa.papel);
       var bt = el('button', 'z-painel44__pessoa'); bt.type = 'button';
       var avatar = el('span', 'z-painel44__avatar', texto(pessoa.avatar) || (nome ? nome.slice(0, 1).toUpperCase() : '•'));
       avatar.setAttribute('aria-hidden', 'true');
@@ -5333,7 +5334,26 @@
       bt.appendChild(avatar); bt.appendChild(info); bt.appendChild(el('span', 'z-painel44__pessoa-seta', '›'));
       bt.addEventListener('click', function(){ abrirPerfil(root, pessoa, bt); if(typeof st.opcoes.aoPessoa === 'function') st.opcoes.aoPessoa(pessoa, root); });
       if(pessoaId) bt.dataset.pessoaId = pessoaId;
-      st.listaPessoas.appendChild(bt);
+      lista.appendChild(bt);
+    }
+    areas.forEach(function(area, indice){
+      var artigo = el('article', 'z-painel44__tema');
+      var cabeca = el('button', 'z-painel44__tema-cabeca'); cabeca.type = 'button'; cabeca.setAttribute('aria-expanded', 'false');
+      var icones = {'Banho':'🛁','Recepção':'💬','Veterinária':'🩺','Monitoria':'🐾','Plantonistas':'🌙','Gestão e supervisão':'•','Área não informada':'•'};
+      var icone = el('span', 'z-painel44__tema-icone', icones[area] || '•'); icone.setAttribute('aria-hidden', 'true');
+      var meio = el('span', 'z-painel44__tema-texto'); meio.appendChild(el('span', 'z-painel44__tema-titulo', area));
+      var quantidade = dados.filter(function(p){return (p && p.id==='zelozinha' ? 'Recepção' : texto(p && p.area) || 'Área não informada')===area;}).length;
+      meio.appendChild(el('span', 'z-painel44__tema-passo', quantidade ? quantidade+' '+(quantidade===1?'pessoa':'pessoas') : 'Nenhuma pessoa cadastrada nesta área'));
+      var pill = el('span', 'z-painel44__pill', String(quantidade)); pill.hidden = !quantidade;
+      var seta = el('span', 'z-painel44__seta', '›'); seta.setAttribute('aria-hidden', 'true');
+      cabeca.appendChild(icone); cabeca.appendChild(meio); cabeca.appendChild(pill); cabeca.appendChild(seta);
+      var corpo = el('div', 'z-painel44__tema-corpo'); corpo.id = st.prefixo + '-area-' + indice; corpo.hidden = true; cabeca.setAttribute('aria-controls', corpo.id);
+      var lista = el('div', 'z-painel44__pessoas');
+      dados.forEach(function(pessoa){ if(pessoa && pessoa.id==='zelozinha') return; var setor = texto(pessoa && pessoa.area) || 'Área não informada'; if(setor===area) adicionarPessoa(lista,pessoa); });
+      if(!quantidade) lista.appendChild(el('p','z-painel44__vazio','Nenhuma pessoa cadastrada nesta área.'));
+      if(area==='Recepção') lista.appendChild(st.zelo);
+      corpo.appendChild(lista); artigo.appendChild(cabeca); artigo.appendChild(corpo); st.listaPessoas.appendChild(artigo);
+      cabeca.addEventListener('click', function(){var aberto=cabeca.getAttribute('aria-expanded')!=='true';cabeca.setAttribute('aria-expanded',String(aberto));artigo.classList.toggle('aberto',aberto);corpo.hidden=!aberto;});
     });
   }
   function renderZelozinha(root){
@@ -5373,7 +5393,13 @@
     tabDia.addEventListener('click', function(){ mudarAba(root, 'dia'); }); tabEquipe.addEventListener('click', function(){ mudarAba(root, 'equipe'); });
     tabs.addEventListener('keydown', function(event){ var tecla=event.key, proxima=null; if(tecla==='ArrowLeft'||tecla==='ArrowUp'||tecla==='Home') proxima=tabDia; if(tecla==='ArrowRight'||tecla==='ArrowDown'||tecla==='End') proxima=tabEquipe; if(proxima){ event.preventDefault(); mudarAba(root, proxima===tabDia?'dia':'equipe'); proxima.focus(); } });
     voltarPerfil.addEventListener('click', function(){ fecharPerfil(root); });
-    zelo.addEventListener('click', function(){ abrirPerfil(root,{nome:'Zelozinha',papel:'Assistente desconectada',responsabilidades:['Preparar somente o primeiro contato quando estiver disponível.'],tarefas:['Aguardar uma pessoa responder, autorizar e retornar às 13h30.']},zelo); });
+    zelo.addEventListener('click', function(){
+      var equipe = Array.isArray(st.opcoes.equipe) ? st.opcoes.equipe : [];
+      var cadastro = equipe.filter(function(pessoa){ return pessoa && pessoa.id==='zelozinha'; })[0];
+      var pessoa = cadastro ? Object.assign({}, cadastro, {papel:'Agente da Recepção'}) : {id:'zelozinha',nome:'Zelozinha',papel:'Agente da Recepção',area:'Recepção',responsabilidades:[],tarefas:[]};
+      abrirPerfil(root,pessoa,zelo);
+      if(typeof st.opcoes.aoPessoa === 'function') st.opcoes.aoPessoa(pessoa, root);
+    });
     (Array.isArray(opcoes.temas) ? opcoes.temas : []).forEach(function(t){ renderTema(root, normalizarTema(t)); });
     st.contagem.textContent = Object.keys(st.itens).length ? Object.keys(st.itens).length + ' temas' : 'Nenhum tema';
     renderEquipe(root); renderZelozinha(root); mudarAba(root, st.aba);
@@ -5882,7 +5908,7 @@ function zelozinha46ConectarFila(raiz){
   'use strict';
 
   const TIME_ZONE = 'America/Sao_Paulo';
-  const DEFAULT_CONFIG = Object.freeze({ windowStartHour: 7, windowEndHour: 11, minDispatchGapMs: 120000 });
+  const DEFAULT_CONFIG = Object.freeze({ windowStartHour: 7, windowEndHour: 12, minDispatchGapMs: 120000 });
   const WEEKDAYS = new Set(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
   const VET_DAYS = new Set(['Mon', 'Tue', 'Wed', 'Fri']);
 
@@ -5993,7 +6019,7 @@ function zelozinha46ConectarFila(raiz){
       if (state.channelSuspended) return { action: 'hold', status: 'aguardando_horario', reason: 'Canal suspenso por resultado desconhecido de outro ciclo; este aviso ainda não foi tentado.' };
       if (!inWindow(now, options)) {
         if (WEEKDAYS.has(local.weekday) && local.hour >= options.windowEndHour) return { action: 'hold', status: 'revisar_humano', reason: 'Aviso ainda não enviado / fora do horário; não reagendar alegando presença de hoje.' };
-        return { action: 'hold', status: 'aguardando_horario', reason: 'Aguardando janela de segunda a sexta, 07:00–11:00 em São Paulo.' };
+        return { action: 'hold', status: 'aguardando_horario', reason: 'Aguardando janela de segunda a sexta, 07:00–12:00 em São Paulo.' };
       }
       return { action: 'send' };
     }
@@ -6456,7 +6482,7 @@ return { criar };
   if (root) root.Agrupador42 = api;
 }(typeof globalThis !== 'undefined' ? globalThis : this, function (MensagemUnica41) {
   var TZ = 'America/Sao_Paulo';
-  var JANELA_INICIO = 7, JANELA_FIM = 11, GAP_MS = 120000;
+  var JANELA_INICIO = 7, JANELA_FIM = 12, GAP_MS = 120000;
   var DIAS_UTEIS = { Mon: true, Tue: true, Wed: true, Thu: true, Fri: true };
   var ITENS = { vac_mult_p: true, vac_gripe_p: true, vac_raiva_p: true, verm_p: true, verm_dose2_p: true, ecto_p: true, col_p: true };
 
@@ -6542,7 +6568,7 @@ return { criar };
     if (state.lastAttemptAt !== null && !isoInstante(state.lastAttemptAt)) return { ok: false, grupos: [], revisoes: [{ escopo: 'estado', motivo: 'lastAttemptAt inválido; estado suspenso' }], suspenso: true };
     if (state.channelSuspended === true) return { ok: true, grupos: [], revisoes: [{ escopo: 'estado', motivo: 'canal suspenso pelo engine26; não preparar nova primeira mensagem' }], suspenso: true };
     if (state.lastAttemptAt && Date.parse(agora) - Date.parse(state.lastAttemptAt) < GAP_MS) return { ok: true, grupos: [], revisoes: [], suspenso: true, motivo: 'intervalo global mínimo de 120 segundos ainda não cumprido' };
-    if (!emJanela(local)) return { ok: true, grupos: [], revisoes: [], aguardandoJanela: true, motivo: 'fora da janela seg–sex, 07:00–11:00 em São Paulo' };
+    if (!emJanela(local)) return { ok: true, grupos: [], revisoes: [], aguardandoJanela: true, motivo: 'fora da janela seg–sex, 07:00–12:00 em São Paulo' };
 
     keys = Object.keys(state.items).sort();
     for (i = 0; i < keys.length; i++) {
@@ -6914,7 +6940,7 @@ return { criar };
     if(!instant(agora))return null;
     try{p=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,weekday:'short',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(agora));get=function(k){var x=p.filter(function(a){return a.type===k;})[0];return x&&x.value;};return {dia:get('year')+'-'+get('month')+'-'+get('day'),semana:get('weekday'),hora:Number(get('hour'))};}catch(_){return null;}
   }
-  function janela(l){return !!(l&&DIAS[l.semana]&&l.hora>=7&&l.hora<11);}
+  function janela(l){return !!(l&&DIAS[l.semana]&&l.hora>=7&&l.hora<12);}
   function jsonKey(v){try{var x=JSON.parse(v);return Array.isArray(x)&&JSON.stringify(x)===v?x:null;}catch(_){return null;}}
   function cycleOk(k,pet,tutor,itemK){var x=jsonKey(k);return !!(x&&x.length===5&&x.every(function(v){return text(v)!=='';})&&x[0]===pet&&x[1]===tutor&&x[4]===itemK&&JSON.stringify(x)===k);}
   function groupOk(k,pet,tutor,dia){var x=jsonKey(k);return !!(x&&x.length===3&&x[0]===pet&&x[1]===tutor&&x[2]===dia&&JSON.stringify(x)===k);}
@@ -7030,7 +7056,7 @@ return { criar };
         if(!e.active||e.active.reservaId!==reservaId||e.active.fase!=='reservado'){motivo='reserva correspondente não está ativa';return undefined;}
         g=e.groups[e.active.groupKey];if(!g||g.reservaId!==reservaId||g.status!=='reservado'){motivo='grupo da reserva mudou';return undefined;}
         if(modo==='real'){
-          if(!janela(l)){motivo='fora da janela seg–sex, 07:00–11:00 em São Paulo';return undefined;}
+          if(!janela(l)){motivo='fora da janela seg–sex, 07:00–12:00 em São Paulo';return undefined;}
           if(e.lastAttemptAt&&Date.parse(entrada.agora)-Date.parse(e.lastAttemptAt)<GAP){motivo='intervalo global mínimo de 120 segundos ainda não cumprido';return undefined;}
           g.status='tentativa_iniciada';e.active.fase='tentativa_iniciada';e.lastAttemptAt=entrada.agora;
         }else{g.status='tentativa_simulada';e.active.fase='tentativa_simulada';}
@@ -29925,7 +29951,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-18-01';
+  const APP_VERSAO='2026-10-18-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -95857,17 +95883,27 @@ function zPainel44Prevenir(perfil){
     +'<div data-z44-despacho="'+perfil+'"><p class="pm-sub">Conferindo a origem dos envios…</p></div>'
     +'<details><summary>Conferir outros prazos na ficha</summary>'+outros+'</details>';
 }
+function zPainel44Area(area,setor,papel,id){
+  var chave=String(area||setor||papel||'').trim().toLocaleLowerCase('pt-BR');
+  if(id==='zelozinha'||chave==='recepção'||chave==='recepcao'||chave==='consultora') return 'Recepção';
+  if(chave==='banho') return 'Banho';
+  if(chave==='vet'||chave==='veterinária'||chave==='veterinaria') return 'Veterinária';
+  if(chave==='monitor'||chave==='monitoria') return 'Monitoria';
+  if(chave==='plantonista'||chave==='plantonistas') return 'Plantonistas';
+  if(chave==='gestao'||chave==='gestão'||chave==='supervisor'||chave==='supervisão'||chave==='diretoria') return 'Gestão e supervisão';
+  return 'Área não informada';
+}
 function zPainel44Equipe(){
-  // Usa somente nomes do cadastro vigente, sem copiar senha ou dados privados.
+  // Usa somente pessoas e campos do cadastro vigente, sem copiar senha ou dados privados.
   var lista=typeof monitoresValendo==='function'?monitoresValendo():[];
   var equipe=(Array.isArray(lista)?lista:[]).filter(monAtivo).map(function(m){
-    return {id:String(m.id||''),nome:String(m.nome||''),papel:'Equipe Zêluz',
+    return {id:String(m.id||''),nome:String(m.nome||''),papel:m.id==='zelozinha'?'Agente da Recepção':'Equipe Zêluz',area:zPainel44Area(m.area,m.setor,m.role,m.id),
       responsabilidades:['Consultar as tarefas da sua função e registrar o que realizou.'],
       tarefas:['A distribuição individual de tarefas ainda está em integração.']};
   }).filter(function(m){return m.id&&m.nome;});
-  if(!equipe.some(function(m){return m.id==='zelozinha';})) equipe.unshift({id:'zelozinha',nome:'Zelozinha',papel:'Agente da equipe',responsabilidades:['Acompanhar envios confirmados e respostas humanas.','Sinalizar os contatos que precisam de ação da equipe.'],tarefas:['Manter cada mensagem ligada ao cuidado e à família corretos.']});
+  if(!equipe.some(function(m){return m.id==='zelozinha';})) equipe.unshift({id:'zelozinha',nome:'Zelozinha',papel:'Agente da Recepção',area:'Recepção',responsabilidades:['Acompanhar envios confirmados e respostas humanas.','Sinalizar os contatos que precisam de ação da equipe.'],tarefas:['Manter cada mensagem ligada ao cuidado e à família corretos.']});
   var eu=usuarioAtual()||{}, nome=String(eu.nome||'').trim();
-  if(nome&&!equipe.some(function(m){return m.nome===nome;})) equipe.unshift({id:'perfil-atual',nome:nome,papel:'Seu perfil',responsabilidades:['Registrar respostas e decisões com o seu acesso.'],tarefas:['Use os temas de Meu dia para abrir o atendimento correspondente.']});
+  if(nome&&!equipe.some(function(m){return m.nome===nome;})) equipe.unshift({id:'perfil-atual',nome:nome,papel:'Seu perfil',area:zPainel44Area(eu.area,eu.setor,eu.role,eu.id),responsabilidades:['Registrar respostas e decisões com o seu acesso.'],tarefas:['Use os temas de Meu dia para abrir o atendimento correspondente.']});
   return equipe;
 }
 function paCartaoPresenca(d){
