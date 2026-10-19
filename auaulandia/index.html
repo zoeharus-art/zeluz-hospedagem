@@ -5338,7 +5338,7 @@
   }
   function renderZelozinha(root){
     var st = estado(root);
-    st.canal.textContent = 'Desconectada'; st.canal.dataset.canal = 'desconectado';
+    st.canal.textContent = 'Conferir envios'; st.canal.dataset.canal = 'nao_confirmado';
     st.avisoZelozinha.textContent = 'Quando disponível, ela prepara só o primeiro contato; uma pessoa responde, autoriza e retorna às 13h30.';
   }
   function montar(root, opcoes){
@@ -5487,11 +5487,11 @@ return{projetar:projetar,constants:{timeZone:TZ,retornoMinutosSP:810}};}));
     var grupos=Array.isArray(r&&r.grupos)?r.grupos:[];
     if(!r||r.ok!==true){mostrar(st,texto(r&&r.motivo)||'Não foi possível confirmar a fila. Nenhum dado foi tratado como vazio.','falha');return;}
     if(r.aguardandoJanela===true||r.suspenso===true||r.status==='sem-fila-confirmada'){
-      mostrar(st,'Canal desconectado. '+(texto(r.motivo)||'A preparação requer conferência humana nesta consulta.'),'restrita');
+      mostrar(st,'Confira envios. '+(texto(r.motivo)||'A preparação requer conferência humana nesta consulta.'),'restrita');
       if(r.fontes&&r.fontes.veterinaria===false)st.grupos.appendChild(no('p','z-fila46__vet','Presença veterinária não confirmada nesta consulta.'));
       return;
     }
-    mostrar(st,'Canal desconectado. Mensagens preparadas não são envio nem autorização.','desconectada');
+    mostrar(st,'Status de envio não confirmado. Mensagens preparadas não são envio nem autorização.','desconectada');
     if(r.fontes&&r.fontes.veterinaria===false)st.grupos.appendChild(no('p','z-fila46__vet','Presença veterinária não confirmada nesta consulta.'));
     var temRevisoes=revisoes(st,r.revisoes);
     if(temRevisoes&&grupos.length===0)return;
@@ -5523,7 +5523,7 @@ return{projetar:projetar,constants:{timeZone:TZ,retornoMinutosSP:810}};}));
       st.marca=null;
       var caixa=no('section','z-fila46 card z-painel44__perfil-secao');caixa.style.gridColumn='1 / -1';caixa.appendChild(no('h3','', 'Fila de prevenção'));
       caixa.appendChild(no('p','z-fila46__nota','Consulte a preparação atual. Nada aqui envia mensagem ou autoriza contato.'));
-      var acoes=no('div','actions'),botao=no('button','btn btn-primary z-fila46__conferir','Conferir fila de hoje');botao.type='button';var status=no('p','z-fila46__status','Canal desconectado.'),grupos=no('div','z-fila46__grupos');
+      var acoes=no('div','actions'),botao=no('button','btn btn-primary z-fila46__conferir','Conferir fila de hoje');botao.type='button';var status=no('p','z-fila46__status','Status de envio não confirmado. Confira envios.'),grupos=no('div','z-fila46__grupos');
       acoes.appendChild(botao);caixa.appendChild(acoes);caixa.appendChild(status);caixa.appendChild(grupos);conteudo.appendChild(caixa);st.caixa=caixa;st.perfil=perfil;st.botao=botao;st.status=status;st.grupos=grupos;
       botao.addEventListener('click',function(){conferir(st);});
     });
@@ -5542,7 +5542,7 @@ function zelozinha46ConectarFila(raiz){
     ator:function(){try{return typeof zPainel44Ator==='function'?zPainel44Ator():'';}catch(_){return '';}},
     dia:function(){try{return typeof zPainel44Dia==='function'?zPainel44Dia():'';}catch(_){return '';}},
     porta:{preparar:function(){
-      if(typeof zelozinha45Preparar!=='function')return Promise.resolve({ok:false,status:'desconectado',canal:'desconectado',motivo:'A fila ainda não está conectada neste painel.'});
+      if(typeof zelozinha45Preparar!=='function')return Promise.resolve({ok:false,status:'desconectado',canal:'nao_confirmado',motivo:'A fila ainda não está conectada neste painel.'});
       return zelozinha45Preparar();
     }}
   });
@@ -5606,10 +5606,10 @@ function zelozinha46ConectarFila(raiz){
   function cancelar(st,marca,mensagem){if(marca&&st.marca!==marca)return;st.marca=null;if(st.botao)st.botao.disabled=false;if(st.grupos)limparGrupos(st);if(st.status)mostrar(st,mensagem||'Consulta interrompida. Confira novamente antes de usar esta preparação.','interrompida');}
   function revisoes(st,revisoes){if(!Array.isArray(revisoes)||!revisoes.length)return false;var caixa=no('section','z-fila46__revisoes');caixa.appendChild(no('h4','','Pontos para conferência humana'));revisoes.forEach(function(revisao){var motivo=texto(revisao&&revisao.motivo);if(motivo)caixa.appendChild(no('p','z-fila46__revisao',motivo));});if(!caixa.children.length||caixa.children.length===1)return false;st.grupos.appendChild(caixa);return true;}
   function grupo(st,g){var card=no('article','z-fila46__grupo'),titulo=no('h4','','Mensagem preparada'),estado=texto(g&&g.status);card.appendChild(titulo);if(estado)card.appendChild(no('p','z-fila46__estado',estado==='preparado_sem_envio'?'Preparada · ainda não enviada':'Status retornado: '+estado));var mensagem=no('div','z-fila46__texto',texto(g&&g.texto)||'Mensagem indisponível para conferência.');mensagem.style.whiteSpace='pre-wrap';mensagem.style.overflowWrap='anywhere';mensagem.style.font='inherit';card.appendChild(mensagem);st.grupos.appendChild(card);}
-  function resultado(st,marca,r){if(!atual(st,marca)){cancelar(st,marca);return;}st.botao.disabled=false;limparGrupos(st);var grupos=Array.isArray(r&&r.grupos)?r.grupos:[];if(!r||r.ok!==true){mostrar(st,texto(r&&r.motivo)||'Não foi possível confirmar a fila. Nenhum dado foi tratado como vazio.','falha');return;}if(r.aguardandoJanela===true||r.suspenso===true||r.status==='sem-fila-confirmada'){mostrar(st,'Canal desconectado. '+(texto(r.motivo)||'A preparação requer conferência humana nesta consulta.'),'restrita');if(r.fontes&&r.fontes.veterinaria===false)st.grupos.appendChild(no('p','z-fila46__vet','Presença veterinária não confirmada nesta consulta.'));return;}mostrar(st,'Canal desconectado. Mensagens preparadas não são envio nem autorização.','desconectada');if(r.fontes&&r.fontes.veterinaria===false)st.grupos.appendChild(no('p','z-fila46__vet','Presença veterinária não confirmada nesta consulta.'));var temRevisoes=revisoes(st,r.revisoes);if(temRevisoes&&grupos.length===0)return;if(!grupos.length){st.grupos.appendChild(no('p','z-fila46__vazio','Nenhuma mensagem preparada nesta consulta. Confira também Prevenção e respostas.'));return;}grupos.forEach(function(g){grupo(st,g);});}
+  function resultado(st,marca,r){if(!atual(st,marca)){cancelar(st,marca);return;}st.botao.disabled=false;limparGrupos(st);var grupos=Array.isArray(r&&r.grupos)?r.grupos:[];if(!r||r.ok!==true){mostrar(st,texto(r&&r.motivo)||'Não foi possível confirmar a fila. Nenhum dado foi tratado como vazio.','falha');return;}if(r.aguardandoJanela===true||r.suspenso===true||r.status==='sem-fila-confirmada'){mostrar(st,'Confira envios. '+(texto(r.motivo)||'A preparação requer conferência humana nesta consulta.'),'restrita');if(r.fontes&&r.fontes.veterinaria===false)st.grupos.appendChild(no('p','z-fila46__vet','Presença veterinária não confirmada nesta consulta.'));return;}mostrar(st,'Status de envio não confirmado. Mensagens preparadas não são envio nem autorização.','desconectada');if(r.fontes&&r.fontes.veterinaria===false)st.grupos.appendChild(no('p','z-fila46__vet','Presença veterinária não confirmada nesta consulta.'));var temRevisoes=revisoes(st,r.revisoes);if(temRevisoes&&grupos.length===0)return;if(!grupos.length){st.grupos.appendChild(no('p','z-fila46__vazio','Nenhuma mensagem preparada nesta consulta. Confira também Prevenção e respostas.'));return;}grupos.forEach(function(g){grupo(st,g);});}
   function conferir(st){if(!st.permitir()){mostrar(st,'Consulta disponível somente para a equipe autorizada.','bloqueada');return;}var marca={ator:st.contexto.ator(),dia:st.contexto.dia(),id:{}};st.marca=marca;st.botao.disabled=true;limparGrupos(st);mostrar(st,'Conferindo a fila atual…','carregando');var cancelado={};Promise.resolve().then(function(){if(!atual(st,marca)){cancelar(st,marca);return cancelado;}return st.porta.preparar();}).then(function(r){if(r!==cancelado)resultado(st,marca,r);},function(){resultado(st,marca,{ok:false,motivo:'Não foi possível confirmar a fila. Nenhum dado foi tratado como vazio.'});});}
   function conectar(root,op){op=op||{};if(!root||root.nodeType!==1||!op.porta||typeof op.porta.preparar!=='function'||typeof op.permitir!=='function'||typeof op.ator!=='function'||typeof op.dia!=='function')return false;if(op.permitir()!==true)return false;var antigo=estados.get(root);if(antigo){antigo.ativo=false;}if(antigo&&antigo.observador)antigo.observador.disconnect();var st={root:root,porta:op.porta,permitir:op.permitir,contexto:{ator:op.ator,dia:op.dia},ativo:true,marca:null,caixa:null,perfil:null,botao:null,status:null,grupos:null,observador:null};estados.set(root,st);if(typeof MutationObserver==='function'){st.observador=new MutationObserver(function(registros){if(!st.marca||!st.caixa)return;for(var i=0;i<registros.length;i++){var no=registros[i].target;if(registros[i].type==='attributes'&&no&&typeof no.contains==='function'&&no.contains(st.caixa)){cancelar(st);return;}}});st.observador.observe(root,{attributes:true,attributeFilter:['hidden','class','style'],subtree:true});for(var ancestral=root.parentNode;ancestral;ancestral=ancestral.parentNode)if(ancestral.nodeType===1)st.observador.observe(ancestral,{attributes:true,attributeFilter:['hidden','class','style']});}
-    root.addEventListener('click',function(e){if(!st.ativo)return;var mudar=e.target&&e.target.closest&&(e.target.closest('.z-painel44__abas')||e.target.closest('.z-painel44__voltar'));if(mudar&&st.marca)cancelar(st);var alvo=e.target&&e.target.closest?e.target.closest('.z-painel44__zelozinha'):null;if(!alvo||!root.contains(alvo))return;var perfil=root.querySelector('.z-painel44__perfil'),conteudo=root.querySelector('.z-painel44__perfil-conteudo');if(!perfil||!conteudo||perfil.hidden)return;st.marca=null;var caixa=no('section','z-fila46 card z-painel44__perfil-secao');caixa.style.gridColumn='1 / -1';caixa.appendChild(no('h3','', 'Fila de prevenção'));caixa.appendChild(no('p','z-fila46__nota','Consulte a preparação atual. Nada aqui envia mensagem ou autoriza contato.'));var acoes=no('div','actions'),botao=no('button','btn btn-primary z-fila46__conferir','Conferir fila de hoje');botao.type='button';var status=no('p','z-fila46__status','Canal desconectado.'),grupos=no('div','z-fila46__grupos');acoes.appendChild(botao);caixa.appendChild(acoes);caixa.appendChild(status);caixa.appendChild(grupos);conteudo.appendChild(caixa);st.caixa=caixa;st.perfil=perfil;st.botao=botao;st.status=status;st.grupos=grupos;botao.addEventListener('click',function(){conferir(st);});});return true;
+    root.addEventListener('click',function(e){if(!st.ativo)return;var mudar=e.target&&e.target.closest&&(e.target.closest('.z-painel44__abas')||e.target.closest('.z-painel44__voltar'));if(mudar&&st.marca)cancelar(st);var alvo=e.target&&e.target.closest?e.target.closest('.z-painel44__zelozinha'):null;if(!alvo||!root.contains(alvo))return;var perfil=root.querySelector('.z-painel44__perfil'),conteudo=root.querySelector('.z-painel44__perfil-conteudo');if(!perfil||!conteudo||perfil.hidden)return;st.marca=null;var caixa=no('section','z-fila46 card z-painel44__perfil-secao');caixa.style.gridColumn='1 / -1';caixa.appendChild(no('h3','', 'Fila de prevenção'));caixa.appendChild(no('p','z-fila46__nota','Consulte a preparação atual. Nada aqui envia mensagem ou autoriza contato.'));var acoes=no('div','actions'),botao=no('button','btn btn-primary z-fila46__conferir','Conferir fila de hoje');botao.type='button';var status=no('p','z-fila46__status','Status de envio não confirmado. Confira envios.'),grupos=no('div','z-fila46__grupos');acoes.appendChild(botao);caixa.appendChild(acoes);caixa.appendChild(status);caixa.appendChild(grupos);conteudo.appendChild(caixa);st.caixa=caixa;st.perfil=perfil;st.botao=botao;st.status=status;st.grupos=grupos;botao.addEventListener('click',function(){conferir(st);});});return true;
   }
   function invalidarPreparacao(root){var st=estados.get(root);if(!st||st.ativo!==true||!st.caixa)return false;cancelar(st,st.marca,'A presença veterinária mudou. Confira novamente a fila antes de usar esta preparação.');return true;}
   return {conectar:conectar,invalidarPreparacao:invalidarPreparacao};
@@ -7194,7 +7194,7 @@ return { criar };
         if(!leitura||leitura.ok!==true)return {ok:false,status:'revisao',grupos:[],motivo:leitura&&leitura.motivo||'Fontes atuais incompletas.'};
         // Relógio é lido de novo após I/O; não usar a hora anterior ao atravessar 11h.
         const resultado=Agrupador42.preparar({agora:op.agora(),state,snapshot:leitura.snapshot});
-        return Object.assign({},resultado,{enviado:false,canal:'desconectado',fontes:leitura.fontes||null});
+        return Object.assign({},resultado,{enviado:false,canal:'nao_confirmado',fontes:leitura.fontes||null});
       }catch(e){return {ok:false,status:'revisao',grupos:[],motivo:'Não foi possível preparar com fontes confirmadas.',enviado:false};}
     }
     async function reservar({grupo,atorId}){
@@ -7468,8 +7468,8 @@ return { criar };
     estado.ator=null;
     if(estado.api){estado.api.invalidar();estado.api=null;}
   }
-  function preparar(){return sessaoValida()&&estado.api?estado.api.preparar():Promise.resolve({ok:false,status:'desconectado',canal:'desconectado',enviado:false,motivo:'Fila ainda não está inicializada.'});}
-  function lerFila(){return sessaoValida()&&estado.api?estado.api.lerFila():Promise.resolve({ok:false,status:'desconectado',canal:'desconectado',enviado:false,motivo:'Fila ainda não está inicializada.'});}
+  function preparar(){return sessaoValida()&&estado.api?estado.api.preparar():Promise.resolve({ok:false,status:'desconectado',canal:'nao_confirmado',enviado:false,motivo:'Fila ainda não está inicializada.'});}
+  function lerFila(){return sessaoValida()&&estado.api?estado.api.lerFila():Promise.resolve({ok:false,status:'desconectado',canal:'nao_confirmado',enviado:false,motivo:'Fila ainda não está inicializada.'});}
   root.zelozinha45BancoPronto=bancoPronto;
   root.zelozinha45CatalogoPronto=catalogoPronto;
   root.zelozinha45AtorMudou=atorMudou;
@@ -29925,7 +29925,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-17-18';
+  const APP_VERSAO='2026-10-18-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -73996,6 +73996,17 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
   function presencaExecucaoRedesenharAgora(){
     if(presencaExecucaoViewAtiva('v-daycare')){ try{ if(typeof dcRedesenharAtividade==='function') dcRedesenharAtividade(); }catch(e){} return; }
     if(presencaExecucaoViewAtiva('v-dashdc')){ try{ if(typeof renderDash==='function') renderDash(); }catch(e){} return; }
+    if(presencaExecucaoViewAtiva('v-painel-amanda')){
+      try{
+        var paDados=(typeof PO_CACHE!=='undefined'&&PO_CACHE&&PO_CACHE.dados&&PO_CACHE.dia===PO_DIA)?PO_CACHE.dados:null;
+        var paAtual=document.getElementById('paCardPresenca');
+        if(paDados&&paAtual){
+          var paAbertos=presencaExecucaoDetalhesAbertos(paAtual), paHtml=paCartaoPresenca(paDados), paCaixa=document.createElement('div');paCaixa.innerHTML=paHtml;
+          paAtual.innerHTML=paCaixa.firstElementChild?paCaixa.firstElementChild.innerHTML:paHtml;
+          presencaExecucaoRestaurarDetalhes(paAtual,paAbertos);
+        }
+      }catch(e){}
+    }
     if(presencaExecucaoViewAtiva('v-paineloperacao')){
       try{
         var d=(typeof PO_CACHE!=='undefined'&&PO_CACHE&&PO_CACHE.dados&&PO_CACHE.dia===PO_DIA)?PO_CACHE.dados:null;
@@ -92630,7 +92641,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     ((op.hospedes&&op.hospedes.itens)||[]).forEach(function(o){var p=o.p||o,k=String(o.chave||'');try{if(!k)k=dcKey(p.n,p.tutor);}catch(e){}if(k)hospedes[k]=true;});
     return ZeluzPresencaLogica.montar({dia:d.dia,agora:Date.now(),participantes:pessoas,turmaEstado:pronta,chamada:{estado:d.chamadaEstado||'falha',valores:d.chamada||{}},chamadaMeta:{estado:d.chamadaMetaEstado||'falha',valores:d.chamadaMeta||{}},checkins:{estado:(op.checkins&&op.checkins.pronto)?'pronto':'carregando',valores:(op.checkins&&op.checkins.valores)||{}},hospedes:{estado:(op.hospedes&&op.hospedes.pronto)?'pronto':'carregando',valores:hospedes}});
   }
-  function poCardPresenca(d,T){ PO_PRESENCA_ATUAL=poPresencaDados(d,T); var card=PO_PRESENCA_ATUAL?ZeluzPresencaLogica.cardHTML(PO_PRESENCA_ATUAL):poSemLeituraHTML('o módulo de presença'); return '<div id="poCardPresenca" style="display:contents">'+card+'</div>'; }
+  function poCardPresenca(d,T,op){ PO_PRESENCA_ATUAL=poPresencaDados(d,T); var card=PO_PRESENCA_ATUAL?ZeluzPresencaLogica.cardHTML(PO_PRESENCA_ATUAL):poSemLeituraHTML('o módulo de presença'); if(op&&op.somenteLeitura)card=card.replace(/<button\b[^>]*data-presenca-id="[^"]*"[^>]*>Confirmar falta<\/button>/g,''); return '<div id="poCardPresenca" style="display:contents">'+card+'</div>'; }
   function presencaAtualizar(){ try{poAbrir(true);}catch(e){_logLeituraFalhou('atualizar presença',e);} }
   function presencaConfirmarFalta(k){
     var api=(typeof ZeluzPresencaLogica!=='undefined')?ZeluzPresencaLogica:null,hoje=api&&api.agoraSP?api.agoraSP(Date.now()).dia:'';
@@ -93696,12 +93707,14 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     // Adriana, 08/set/2026: "ela é uma colaboradora, precisa de água e etc". Uma função só,
     // três usos: nenhuma cópia da lógica nasce aqui.
     var contextoPa44={ator:zPainel44Ator(),dia:zPainel44Dia()};
+    PO_DIA=PA_DIA; // reaproveita o cache/leitor de presença da Márcia no mesmo dia; leitura única, sem listener novo
     Promise.all([
       paLer(forcar===true),
-      pcSeuDiaLer(PA_DIA, forcar===true).catch(function(e){ _logLeituraFalhou('Seu dia (Dashboard da Amanda)', e); return null; })
+      pcSeuDiaLer(PA_DIA, forcar===true).catch(function(e){ _logLeituraFalhou('Seu dia (Dashboard da Amanda)', e); return null; }),
+      poLer(forcar===true).catch(function(e){ _logLeituraFalhou('Presença (Dashboard da Amanda)', e); return null; })
     ]).then(function(rr){
       if(!podePapel("painel-amanda")||contextoPa44.ator!==zPainel44Ator()||contextoPa44.dia!==zPainel44Dia())return;
-      var d=rr[0], sd=rr[1];
+      var d=rr[0], sd=rr[1], presencaDia=rr[2];
       if(!d){
         raiz.innerHTML='<div class="pm-card"><h3 class="pm-tit">Não consegui ler o dia agora</h3>'
           +'<p class="pm-sub">Nada foi perdido — as listas só observam. Abra a tela de novo em instantes.</p></div>';
@@ -93729,7 +93742,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       var lendoNota=L.lendo.length
         ? '<p class="pm-nota"><strong>Ainda lendo:</strong> '+esc(L.lendo.join(' · '))+'. Os números não contam o que ainda não chegou — isto não quer dizer que não há nada.</p>'
         : '';
-      zPainel44Montar('pa',raiz,d,sd,L);
+      zPainel44Montar('pa',raiz,d,sd,L,presencaDia);
       zPrev27Atualizar();
       // Acompanhamento usa a mesma leitura inteira/cache de três minutos do Orçamento; não grava ao renderizar.
       try{ if(window.OrcAcompanhamento) window.OrcAcompanhamento.renderPainel('amanda', document.getElementById('z44-pa-orcamentos')||raiz,
@@ -95784,6 +95797,8 @@ var Z44_FONTE = null;
 var Z44_ABERTURAS = {};
 var Z44_TIMER = null;
 var Z44_PEND_PROMESSA = null;
+var Z44_DISPATCH_REQ = 0;
+var Z44_DISPATCH80 = {auth:null,authListener:null,db:null,ref:null,listener:null,uid:"",dados:null,erro:"",carregando:false,importados:{},importando:{}};
 function zPainel44Dia(){
   var p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()), x={};
   p.forEach(function(a){x[a.type]=a.value;});return x.year+'-'+x.month+'-'+x.day;
@@ -95839,6 +95854,7 @@ function zPainel44Prevenir(perfil){
     : '<div id="pcCardVence">'+blocoVenceHTML()+'</div>'+pcQuadroColeira();
   return '<div id="'+id+'"><p class="pm-sub">Lendo os cuidados de quem chegou…</p></div>'
     +'<div data-z44-acompanhamento="'+perfil+'"><p class="pm-sub">Lendo os contatos confirmados…</p></div>'
+    +'<div data-z44-despacho="'+perfil+'"><p class="pm-sub">Conferindo a origem dos envios…</p></div>'
     +'<details><summary>Conferir outros prazos na ficha</summary>'+outros+'</details>';
 }
 function zPainel44Equipe(){
@@ -95849,9 +95865,26 @@ function zPainel44Equipe(){
       responsabilidades:['Consultar as tarefas da sua função e registrar o que realizou.'],
       tarefas:['A distribuição individual de tarefas ainda está em integração.']};
   }).filter(function(m){return m.id&&m.nome;});
+  if(!equipe.some(function(m){return m.id==='zelozinha';})) equipe.unshift({id:'zelozinha',nome:'Zelozinha',papel:'Agente da equipe',responsabilidades:['Acompanhar envios confirmados e respostas humanas.','Sinalizar os contatos que precisam de ação da equipe.'],tarefas:['Manter cada mensagem ligada ao cuidado e à família corretos.']});
   var eu=usuarioAtual()||{}, nome=String(eu.nome||'').trim();
   if(nome&&!equipe.some(function(m){return m.nome===nome;})) equipe.unshift({id:'perfil-atual',nome:nome,papel:'Seu perfil',responsabilidades:['Registrar respostas e decisões com o seu acesso.'],tarefas:['Use os temas de Meu dia para abrir o atendimento correspondente.']});
   return equipe;
+}
+function paCartaoPresenca(d){
+  if(!d||d.dia!==PA_DIA||d.dia!==PO_DIA) return poSemLeituraHTML('a presença do dia');
+  try{ var T=poTurma(d.chamada||{}); return poCardPresenca(d,T,{somenteLeitura:true}).replace('id="poCardPresenca"','id="paCardPresenca"'); }
+  catch(e){ return poSemLeituraHTML('a presença do dia'); }
+}
+function paCartaoEmAdaptacao(){
+  if(typeof CARTEIRA_CARREGADA==='undefined'||CARTEIRA_CARREGADA!==true||!Array.isArray(PELUDINHOS)||typeof adaptEmCursoLista!=='function')
+    return '<article class="pm-card pm-rv pm-c12"><h3 class="pm-tit">Em adaptação</h3><p class="pm-sub">Ainda lendo as fichas atuais; não vou presumir quem está em adaptação.</p></article>';
+  var lista; try{lista=adaptEmCursoLista();}catch(e){lista=null;}
+  if(!Array.isArray(lista)) return '<article class="pm-card pm-rv pm-c12"><h3 class="pm-tit">Em adaptação</h3><p class="pm-sub">Não consegui conferir as fichas agora.</p></article>';
+  var nomes=lista.map(function(x){return String((x&&x.nome)||'').trim();}).filter(Boolean);
+  return '<article class="pm-card pm-rv pm-c12"><h3 class="pm-tit">Em adaptação</h3>'
+    +'<p class="pm-sub">Peludinhos com adaptação em andamento.</p>'
+    +(nomes.length?'<div class="pm-lista">'+nomes.map(function(n){return '<div class="pm-li"><span class="pm-badge pm-b-atencao">Em adaptação</span><div class="pm-li-txt"><b>'+esc(n)+'</b></div></div>';}).join('')+'</div>'
+      :'<p class="pm-sub">Nenhuma ficha com adaptação ativa nesta leitura.</p>')+'</article>';
 }
 function zPainel44Grupo(L,areas){
   var linhas=(L&&L.pend||[]).filter(function(r){return areas.indexOf(r.area)>=0;});
@@ -95860,7 +95893,7 @@ function zPainel44Grupo(L,areas){
   var aviso=faltam.length?'<p class="pm-nota">Ainda não foi possível confirmar '+esc(faltam.join(' · '))+'. Abra os registros para conferir; a lista pode estar incompleta.</p>':'';
   return aviso+((linhas.length||!faltam.length)?paColunaHTML(linhas,'Nenhuma pendência nesta leitura','Use os atalhos para conferir os registros atuais.'):'');
 }
-function zPainel44Montar(perfil,raiz,d,sd,L){
+function zPainel44Montar(perfil,raiz,d,sd,L,presencaDia){
   var pa=perfil==='pa', eu=pa?(typeof quemSou==='function'?quemSou():'Supervisão'):d.eu;
   var temas=[
     {id:'prevencao',icone:'💛',titulo:'Prevenção e respostas',passo:'Conferir o cuidado → registrar a resposta da família',html:zPainel44Prevenir(perfil),quantidade:null},
@@ -95870,7 +95903,10 @@ function zPainel44Montar(perfil,raiz,d,sd,L){
     {id:'snoopy',icone:'🧾',titulo:'Snoopy',passo:'Lançar a cobrança no Snoopy e confirmar aqui',html:'<p class="pm-sub">A pessoa responsável faz o lançamento no Snoopy. A confirmação fica no cuidado correspondente, com autoria. Este painel não confirma cobrança sozinho.</p>'+zPainel44Botao('dashdc','Conferir lançamentos e Snoopy'),quantidade:null},
     {id:'atendimento',icone:'💬',titulo:'Outros atendimentos',passo:'Reposições, planos, cadastro e conversa com as famílias',html:(pa?zPainel44Grupo(L,['Planos','Cadastro','Tutor']):pcQuadroRecepcao(pcDadosRecepcao()))+zPainel44Botao('reposicao','Abrir reposições')+'<p class="pm-sub">Campanhas e distribuição individual de tarefas ainda estão em integração.</p>',quantidade:null}
   ];
-  window.ZeluzPainel44.montar(raiz,{perfil:perfil,saudacaoHTML:pcSaudacaoHTML(eu),bemEstarHTML:pcSeuDiaCardHTML(sd||d),temas:temas,equipe:zPainel44Equipe(),canal:'desconectado',stickerUrl:'assets/painel44/Auau.png'});
+  if(pa){ temas.filter(function(t){return t.id==='cuidados';}).forEach(function(t){
+    t.html+=paCartaoPresenca(presencaDia)+paCartaoEmAdaptacao();
+  }); }
+  window.ZeluzPainel44.montar(raiz,{perfil:perfil,saudacaoHTML:pcSaudacaoHTML(eu),bemEstarHTML:pcSeuDiaCardHTML(sd||d),temas:temas,equipe:zPainel44Equipe(),canal:'nao_confirmado',stickerUrl:'assets/painel44/Auau.png'});
   try{zelozinha46ConectarFila(raiz);}catch(e){}
   /* VET47-BEGIN-WIRE */
   try{zelozinha47ConectarVeterinaria(raiz);}catch(e){}
@@ -95893,23 +95929,28 @@ function zPainel44Montar(perfil,raiz,d,sd,L){
 }
 function zPainel44RetornosHTML(r){
   var h='<h3 class="pm-tit">Respostas das famílias</h3>'
-    +'<p class="pm-sub">A pessoa registra a resposta e a autorização. Às 13h30, confira quem ainda não respondeu.</p>'
+    +'<p class="pm-sub">Zelozinha acompanha envios confirmados, respostas humanas e itens que precisam de ação da equipe.</p>'
     +'<button type="button" class="btn btn-ghost" data-z44-reler>Atualizar respostas</button>';
   if(r.estado!=='pronto') return h+'<p class="pm-sub">Ainda não foi possível confirmar os contatos atuais. Atualize antes de agir.</p>';
-  var linhas=(r.itens||[]).filter(function(x){return x.estado!=='resposta_registrada';});
+  var linhas=r.itens||[], totais={enviadas:0,aguardando:0,acao:0,respostas:0};
+  linhas.forEach(function(x){(x.assuntos||[]).forEach(function(a){if(a.envio)totais.enviadas++;if(a.resposta)totais.respostas++;if(a.estado==='aguardando_resposta')totais.aguardando++;if(a.estado==='retorno_humano')totais.acao++;});});
+  h+='<p class="pm-sub">Envios confirmados: '+totais.enviadas+' · Respostas humanas: '+totais.respostas+' · Aguardando resposta: '+totais.aguardando+' · Precisa ação: '+totais.acao+'</p>';
   if(r.limitacoes&&r.limitacoes.length) h+='<p class="pm-sub">Há registros que precisam de conferência. A lista pode estar incompleta.</p>';
   if(!linhas.length) return h+'<p class="pm-sub">'+(r.limitacoes&&r.limitacoes.length?'Atualize e confira as informações antes de encerrar o acompanhamento.':'Nenhuma resposta pendente nos contatos confirmados desta leitura.')+'</p>';
   return h+linhas.map(function(x){
     var ref={dia:x.dia,dcKey:x.dcKey,pelKey:x.pelKey||'',tipo:x.tipo||''};
-    var status=x.estado==='retorno_humano'?'Retorno da equipe':x.estado==='aguardando_resposta'?'Aguardando resposta':'Conferir registro';
+    var status=x.estado==='retorno_humano'?'Precisa ação':x.estado==='aguardando_resposta'?'Aguardando resposta':x.estado==='resposta_registrada'?'Resposta registrada':x.estado==='revisao'?'Conferir envio ou registro':'Conferir registro';
     return '<details class="pm-card"><summary><strong>'+esc(x.nome||'Conferir identificação')+'</strong> · '+esc(status)+'</summary>'
       +'<p class="pm-sub">'+esc(x.tutor||'Família a conferir')+' · '+esc(x.dia||'')+'</p>'
       +(x.assuntos||[]).map(function(a){
         var nomes={vacina:'Vacinas',antip:'Vermífugo e proteção contra parasitas',verm2:'Segunda dose de vermífugo',escova:'Escova dental',aberto:'Outros cuidados'};
         var estados={resposta_registrada:'Resposta registrada',aguardando_resposta:'Aguardando resposta',retorno_humano:'Retorno da equipe',revisao:'Conferir registro'};
-        var ev=a.resposta||a.envio, autor=ev&&ev.autor?' · registrado por '+ev.autor:'';
-        var horario=ev&&ev.em?' às '+new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}).format(new Date(ev.em)):'';
-        return '<p class="pm-sub">'+esc(nomes[a.tipo]||a.rotulo||'Cuidado')+' · '+esc(estados[a.estado]||'Conferir registro')+esc(autor+horario)+'</p>';
+        function autoria(ev,titulo){if(!ev)return '';var autor=ev.autor?' · por '+ev.autor:'';var horario=ev.em?' · '+new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}).format(new Date(ev.em)):'';return '<p class="pm-sub">'+titulo+esc(autor+horario)+'</p>';}
+        var statusItem=a.estado==='retorno_humano'?'Precisa ação':a.estado==='aguardando_resposta'?'Aguardando resposta':a.estado==='resposta_registrada'?'Resposta registrada':a.estado==='revisao'?'Conferir envio ou registro':(estados[a.estado]||'Conferir registro');
+        var html='<p class="pm-sub">'+esc(nomes[a.tipo]||a.rotulo||'Cuidado')+' · '+esc(statusItem)+'</p>';
+        if(a.envio)html+=autoria(a.envio,'Envio confirmado');
+        if(a.resposta)html+=autoria(a.resposta,'Resposta humana'+(a.resposta.valor?' · '+a.resposta.valor:''));
+        return html;
       }).join('')
       +(x.estado==='revisao'?'<p class="pm-sub">'+esc(x.limitacao||'Confira os dados na ficha antes de conversar com a família.')+'</p>':
         '<button type="button" class="btn btn-ghost" data-z44-ref="'+escAttr(JSON.stringify(ref))+'">Abrir contato e registrar resposta</button>')+'</details>';
@@ -95920,11 +95961,89 @@ function zPainel44Atualizar(){
   var alvos=document.querySelectorAll('[data-z44-acompanhamento]');
   if(!alvos.length) return;
   var r=zPainel44Ler(), html=zPainel44RetornosHTML(r);
+  zPainel44AtualizarDespacho80();
   alvos.forEach(function(el){
     // Conserva os detalhes abertos durante a atualização de uma resposta.
     var abertos=Array.from(el.querySelectorAll('details[open]')).map(function(d){var b=d.querySelector('[data-z44-ref]');return b&&b.getAttribute('data-z44-ref');});
     el.innerHTML=html;
     el.querySelectorAll('details').forEach(function(d){var b=d.querySelector('[data-z44-ref]');if(b&&abertos.indexOf(b.getAttribute('data-z44-ref'))>=0)d.open=true;});
+  });
+}
+function zPainel44Despacho80Limpar(mensagem){var alvos=document.querySelectorAll('[data-z44-despacho]');alvos.forEach(function(el){el.innerHTML='<p class="pm-sub">'+esc(mensagem)+'</p>';});}
+function zPainel44Despacho80PararLeitura(){
+  var st=Z44_DISPATCH80;if(st.ref&&st.listener){try{st.ref.off('value',st.listener);}catch(_){}}st.ref=null;st.listener=null;st.db=null;st.uid='';st.dados=null;st.carregando=false;st.importados={};st.importando={};
+}
+function zPainel44Despacho80Acesso(){
+  try{return typeof zPrev27Permite==='function'&&zPrev27Permite()===true;}catch(_){return false;}
+}
+function zPainel44Despacho80Conectar(){
+  var st=Z44_DISPATCH80,auth=null,user=null;if(!zPainel44Despacho80Acesso()){zPainel44Despacho80PararLeitura();st.erro='Acompanhamento disponível somente para a equipe autorizada.';return;}
+  try{auth=window.firebase&&typeof window.firebase.auth==='function'?window.firebase.auth():null;user=auth&&auth.currentUser;}catch(_){auth=null;user=null;}
+  if(!auth||typeof auth.onAuthStateChanged!=='function'||!user||!String(user.uid||'')){zPainel44Despacho80PararLeitura();st.erro='Sessão autenticada indisponível. Entre novamente para consultar os envios.';return;}
+  if(st.auth!==auth){if(st.auth&&st.authListener){try{st.authListener();}catch(_){}}zPainel44Despacho80PararLeitura();st.auth=auth;st.authListener=auth.onAuthStateChanged(function(atual){if(!atual||!atual.uid||!zPainel44Despacho80Acesso()){zPainel44Despacho80PararLeitura();st.erro='Sessão encerrada ou acesso alterado. Nenhum envio foi presumido.';zPainel44Despacho80Limpar(st.erro);zPainel44Atualizar();return;}if(st.uid&&st.uid!==String(atual.uid))zPainel44Despacho80PararLeitura();st.erro='';zPainel44Despacho80Conectar();zPainel44Atualizar();});}
+  if(st.db===DB&&st.uid===String(user.uid)&&st.ref)return;
+  zPainel44Despacho80PararLeitura();st.db=DB;st.uid=String(user.uid);st.erro='';st.carregando=true;
+  try{st.ref=DB.ref('piloto59/interno-20261019/painel81/2026-10-19');st.listener=function(snapshot){if(st.db!==DB||st.uid!==String((auth.currentUser||{}).uid||''))return;if(!zPainel44Despacho80Acesso()){zPainel44Despacho80PararLeitura();st.erro='Acesso alterado. Nenhum envio foi presumido.';zPainel44Despacho80Limpar(st.erro);return;}var v=snapshot&&typeof snapshot.val==='function'?snapshot.val():null;var normalizada=zPainel44ValidarFonte80(v);if(!normalizada){st.dados=null;st.erro='A projeção do painel está ausente ou inválida. Atualize a fonte antes de agir.';st.carregando=false;zPainel44Atualizar();return;}st.dados=normalizada;st.erro='';st.carregando=false;zPainel44Atualizar();};st.ref.on('value',st.listener,function(){if(st.uid===String((auth.currentUser||{}).uid||'')){st.dados=null;st.erro='Não foi possível ler a projeção autorizada. Nenhum status foi presumido.';st.carregando=false;zPainel44Atualizar();}});}catch(_){zPainel44Despacho80PararLeitura();st.erro='Leitura da projeção não disponível. Nenhum status foi presumido.';st.carregando=false;}
+}
+function zPainel44ValidarFonte80(v){
+  if(!v||typeof v!=='object'||Array.isArray(v)||v.versao!==81||v.dia!=='2026-10-19'||!v.atualizadoEm||!Number.isFinite(Date.parse(v.atualizadoEm)))return null;
+  if(!v.autoria||v.autoria.id!=='zelozinha-zeluz'||v.autoria.nome!=='Zelozinha'||v.autoria.tipo!=='servico'||!v.estadoRecibos43||!window.Recibos43||typeof window.Recibos43.validarEstado43!=='function')return null;
+  var envelopeLedger=v.estadoRecibos43,ledgerKeys=Object.keys(envelopeLedger).sort(),estado;
+  if(envelopeLedger.versao!==43||typeof envelopeLedger.stateJson!=='string'||ledgerKeys.length!==2||ledgerKeys[0]!=='stateJson'||ledgerKeys[1]!=='versao')return null;
+  try{estado=JSON.parse(envelopeLedger.stateJson);}catch(_){return null;}
+  if(!estado||typeof estado!=='object'||Array.isArray(estado)||window.Recibos43.validarEstado43(estado)!==true)return null;
+  if(!v.identidadesPets||typeof v.identidadesPets!=='object'||Array.isArray(v.identidadesPets)||!v.grupos||typeof v.grupos!=='object'||Array.isArray(v.grupos))return null;
+  var retorno=[],vistos={},gkeys=Object.keys(v.grupos);
+  for(var i=0;i<gkeys.length;i++){
+    var hash=gkeys[i],g=v.grupos[hash];if(!/^[a-f0-9]{32}$/i.test(hash)||!g||typeof g!=='object'||Array.isArray(g))return null;
+    if(!zPainel44Grupo80Valido(g,v.dia,estado,v.identidadesPets))return null;
+    if(vistos[g.groupKey])return null;vistos[g.groupKey]=true;retorno.push(g);
+  }
+  var confirmados=retorno.filter(function(g){return g.statusPainel==='enviado_confirmado';}).map(function(g){return g.groupKey;});
+  var esperados=Object.keys(estado.groups).filter(function(k){try{var p=JSON.parse(k);return Array.isArray(p)&&p.length===3&&JSON.stringify(p)===k&&p[2]===v.dia;}catch(_){return false;}});
+  if(esperados.length!==confirmados.length||esperados.some(function(k){return confirmados.indexOf(k)<0;}))return null;
+  retorno.sort(function(a,b){return a.groupKey.localeCompare(b.groupKey);});
+  return {versao:v.versao,dia:v.dia,atualizadoEm:v.atualizadoEm,autoria:v.autoria,grupos:retorno,estadoRecibos43:estado,identidadesPets:v.identidadesPets};
+}
+function zPainel44Grupo80Valido(g,dia,estado,identidades){
+  if(!g||typeof g!=='object'||Array.isArray(g)||!g.groupKey||!g.petId||!g.tutorId)return false;
+  var k,ledger,id;try{k=JSON.parse(g.groupKey);}catch(_){return false;}
+  if(!Array.isArray(k)||k.length!==3||JSON.stringify(k)!==g.groupKey||k[0]!==g.petId||k[1]!==g.tutorId||k[2]!==dia)return false;
+  if(['enviado_confirmado','entrega_pendente','incerto_conciliacao','em_preparacao'].indexOf(g.statusPainel)<0)return false;
+  ledger=estado&&estado.groups&&estado.groups[g.groupKey];id=identidades&&identidades[g.petId];
+  if(!id||id.petId!==g.petId||id.tutorRefId!==g.tutorId||!id.dcKeyAtual||!id.pelKeyAtual||!g.autoria||g.autoria.id!=='zelozinha-zeluz'||g.autoria.nome!=='Zelozinha'||g.autoria.tipo!=='servico')return false;
+  if(g.statusPainel==='enviado_confirmado'){
+    if(!ledger||ledger.petId!==g.petId||ledger.tutorId!==g.tutorId||ledger.status!=='enviado'||ledger.enviado!==true||ledger.simulado!==false||!ledger.comprovante||g.canalReciboId!==ledger.comprovante.canalReciboId||g.verificadoEm!==ledger.comprovante.verificadoEm||!Number.isFinite(Date.parse(g.verificadoEm))||g.respostaHumana!=='pendente')return false;
+  }else{
+    if(ledger!==undefined||g.canalReciboId!=null||g.verificadoEm!=null||g.respostaHumana!=='nao_aplicavel')return false;
+  }
+  if(g.statusPainel==='incerto_conciliacao'&&estado.channelSuspended!==true)return false;
+  if(g.retornoHumanoPrevisto!=='13:30')return false;
+  return true;
+}
+function zPainel44Projecao80Atual(){var st=Z44_DISPATCH80,proj=st&&st.dados;return proj&&proj.dia==='2026-10-19'&&proj.estadoRecibos43&&window.Recibos43&&window.Recibos43.validarEstado43(proj.estadoRecibos43)===true?proj:null;}
+function zPainel44AtualizarDespacho80(){
+  var alvos=document.querySelectorAll('[data-z44-despacho]');if(!alvos.length)return;var pedido=++Z44_DISPATCH_REQ,st=Z44_DISPATCH80;
+  function exibir(html){if(pedido!==Z44_DISPATCH_REQ)return;alvos.forEach(function(el){el.innerHTML=html;});}
+  zPainel44Despacho80Conectar();
+  if(st.erro){exibir('<p class="pm-sub">'+esc(st.erro)+'</p>');return;}
+  if(st.carregando||!st.dados){exibir('<p class="pm-sub">Conferindo a projeção autorizada de envios…</p>');return;}
+  if(st.dados.dia!=='2026-10-19'||!Array.isArray(st.dados.grupos)){exibir('<p class="pm-sub">A projeção não corresponde ao dia e às fontes esperadas. Confira antes de agir.</p>');return;}
+  var nomes={enviado_confirmado:'Envio confirmado',entrega_pendente:'Aguardando confirmação de entrega',incerto_conciliacao:'Envio incerto · conciliação necessária · envios suspensos',em_preparacao:'Em preparação ou revisão · ainda não enviado'},html='<h3 class="pm-tit">Envios e respostas · 19/10</h3><p class="pm-sub">Somente envios confirmados entram como concluídos. A resposta humana é acompanhada separadamente; envio não autoriza cuidado.</p>';
+  if(!st.dados.grupos.length){exibir(html+'<p class="pm-sub">A projeção confirmou nenhum grupo somente após leitura válida do painel.</p>');return;}
+  html+=st.dados.grupos.map(function(g){var status=nomes[g&&g.statusPainel]||'Status a conferir',lg=st.dados.estadoRecibos43.groups[g.groupKey]||{};var meta='Peludinho: '+esc(lg.nomePeludo||'a conferir')+' · família: '+esc(lg.nomeTutor||'a conferir');if(g&&g.autoria&&g.autoria.nome)meta+=' · autoria: '+esc(g.autoria.nome);if(g&&g.statusPainel==='enviado_confirmado'&&g.verificadoEm)meta+=' · confirmado em '+esc(new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'}).format(new Date(g.verificadoEm)));var retorno=g&&g.respostaHumana==='pendente'?'Resposta humana pendente · retorno previsto às '+esc(g.retornoHumanoPrevisto||'13:30'):g&&g.respostaHumana==='nao_aplicavel'?'Resposta humana não aplicável':'';return '<article class="pm-card"><strong>'+esc(status)+'</strong><p class="pm-sub">'+meta+'</p>'+(retorno?'<p class="pm-sub">'+retorno+'</p>':'')+'</article>';}).join('');exibir(html);zPainel44Despacho80Importar();
+}
+function zPainel44Despacho80Importar(){
+  var st=Z44_DISPATCH80,proj=zPainel44Projecao80Atual(),alvos=document.querySelectorAll('[data-z44-despacho]');
+  if(zPainel44Dia()!=='2026-10-19'||!zPainel44Despacho80Acesso()||!proj||!alvos.length||typeof window.projetarComprovanteConfirmado58!=='function')return;
+  if(!Array.prototype.some.call(alvos,function(el){try{return el.getClientRects().length>0;}catch(_){return false;}}))return;
+  proj.grupos.forEach(function(g){
+    if(g.statusPainel!=='enviado_confirmado'||g.respostaHumana!=='pendente'||st.importados[g.groupKey]||st.importando[g.groupKey])return;
+    st.importando[g.groupKey]=true;
+    Promise.resolve().then(function(){return window.projetarComprovanteConfirmado58(g.groupKey);}).then(function(r){
+      if(r&&r.ok===true)st.importados[g.groupKey]=true;
+      delete st.importando[g.groupKey];
+    },function(){delete st.importando[g.groupKey];});
   });
 }
 function zPainel44ProgramarRetorno(){
@@ -96330,6 +96449,12 @@ zPrev27Instalar();
     function sessaoHumana(){var c=contexto();return {confirmada:contextoValido(c),humana:contextoValido(c),id:c.id,papel:c.papel,nome:c.nome,assinatura:c.assinatura};}
     function lerRecibos(){
       var c=contexto();if(!contextoValido(c))return Promise.resolve({confirmado:false,motivo:'contexto humano não confirmado'});
+      if(c.dia==='2026-10-19'){
+        var proj=typeof zPainel44Projecao80Atual==='function'?zPainel44Projecao80Atual():null;
+        if(!proj||proj.dia!==c.dia||!proj.estadoRecibos43||!window.Recibos43||window.Recibos43.validarEstado43(proj.estadoRecibos43)!==true)return Promise.resolve({confirmado:false,motivo:'projeção80 do dia não foi confirmada'});
+        var fim80=contexto();if(!mesmoContexto(c,fim80))return Promise.resolve({confirmado:false,motivo:'contexto mudou durante leitura da projeção80'});
+        return Promise.resolve({confirmado:true,state:proj.estadoRecibos43,projecao80:proj});
+      }
       var repo=RecibosRepo.criar({db:c.db,caminho:raiz+'/recibos'});
       return repo.ler().then(function(x){var fim=contexto(),st=x&&x.snapshot&&x.snapshot.val();if(!mesmoContexto(c,fim)||!st)return {confirmado:false,motivo:'contexto mudou ou ledger43 está vazio'};return {confirmado:true,state:st};},function(){return {confirmado:false,motivo:'ledger43 não pôde ser relido'};});
     }
@@ -96339,9 +96464,12 @@ zPrev27Instalar();
       return lerRecibos().then(function(ledger){
         var grupo=ledger&&ledger.confirmado&&ledger.state&&ledger.state.groups&&ledger.state.groups[groupKey],g;
         try{g=JSON.parse(groupKey);}catch(_){g=null;}
-        if(!grupo||grupo.status!=='enviado'||grupo.enviado!==true||grupo.simulado!==false||!Array.isArray(g)||g.length!==3||JSON.stringify(g)!==groupKey||g[0]!==grupo.petId||g[1]!==grupo.tutorId)return {confirmado:false,motivo:'grupo43 enviado não confirmado'};
+        if(!grupo||grupo.status!=='enviado'||grupo.enviado!==true||grupo.simulado!==false||!Array.isArray(g)||g.length!==3||JSON.stringify(g)!==groupKey||g[0]!==grupo.petId||g[1]!==grupo.tutorId||g[2]!==captura.dia)return {confirmado:false,motivo:'grupo43 enviado não confirmado para o dia atual'};
         if(proibida(grupo.petId))return {confirmado:false,motivo:'petId técnico inválido'};
-        return umaLeitura(captura.db,raiz+'/identidades/pets/'+grupo.petId).then(function(id){
+        var proj80=g[2]==='2026-10-19'&&typeof zPainel44Projecao80Atual==='function'?zPainel44Projecao80Atual():null;
+        var id80=proj80&&proj80.dia===g[2]&&proj80.estadoRecibos43===ledger.state&&proj80.identidadesPets&&proj80.identidadesPets[grupo.petId];
+        var identidadeAtual=id80?Promise.resolve(id80):umaLeitura(captura.db,raiz+'/identidades/pets/'+grupo.petId);
+        return identidadeAtual.then(function(id){
           if(!obj(id)||texto(id.petId)!==texto(grupo.petId)||texto(id.tutorRefId)!==texto(grupo.tutorId)||proibida(id.pelKeyAtual)||proibida(id.dcKeyAtual)||deps.cadastroPronto()!==true)return {confirmado:false,motivo:'identidade ou cadastro não confirmado'};
           var catalogo=deps.catalogo();if(!Array.isArray(catalogo))return {confirmado:false,motivo:'catálogo atual não confirmado'};
           var candidatos=catalogo.filter(function(p){try{return p&&texto(deps.pelKey(p))===texto(id.pelKeyAtual)&&texto(deps.dcKey(p.n,p.tutor))===texto(id.dcKeyAtual);}catch(_){return false;}});
@@ -96401,7 +96529,7 @@ zPrev27Instalar();
         var titulo=doc.createElement('h3');titulo.id=uid+'Titulo';titulo.textContent='Resposta por cuidado';estilo(titulo,'margin:0;background:var(--z-blue,#234D67);color:var(--z-cream,#FFFDF6);padding:20px 22px;font-weight:800;font-size:24px;line-height:1.15');caixa.appendChild(titulo);
         if(op.identidade&&texto(op.identidade.nomePeludo)&&texto(op.identidade.nomeTutor)){var quem=doc.createElement('div');quem.setAttribute('data-ui50-identidade','');quem.textContent=texto(op.identidade.nomePeludo)+' · tutor '+texto(op.identidade.nomeTutor);estilo(quem,'padding:8px 22px;background:var(--z-cream-warm,#F9F5EC);color:var(--z-blue,#234D67);font-size:14px;font-weight:800;overflow-wrap:anywhere;border-bottom:1px solid var(--line,#e7e0d2)');caixa.appendChild(quem);}
         var corpo=doc.createElement('div');estilo(corpo,'padding:20px 22px;overflow:auto;color:var(--z-blue,#234D67);font-size:16px;line-height:1.5;font-weight:600');
-        var dica=doc.createElement('p');dica.id=uid+'Dica';dica.className='hint';dica.textContent='Autorizações para cuidados aqui geram uma tarefa; a realização será registrada pela equipe.';estilo(dica,'margin:0 0 12px;color:var(--z-blue-soft,#3A6A85);font-size:14px;font-weight:600');corpo.appendChild(dica);
+        var dica=doc.createElement('p');dica.id=uid+'Dica';dica.className='hint';dica.textContent='Autorizou Empório: produto Zêluz; cuidado gera tarefa e pendência do Snoopy após validação. Vai dar em casa: acompanhamento externo, sem aplicação por monitor. Mandou na mochila: produto do tutor; cuidado gera tarefa, sem cobrança do produto. O cuidado só é concluído após registro e conferência humana.';estilo(dica,'margin:0 0 12px;color:var(--z-blue-soft,#3A6A85);font-size:14px;font-weight:600');corpo.appendChild(dica);
         var primeiroCampo=null;
         (op.todos||[]).forEach(function(x,indice){
           var card=doc.createElement('div'),nome=doc.createElement('strong');card.className='card';card.setAttribute('data-ui50-item',x.itemK||'');estilo(card,'margin:10px 0;padding:12px 14px;border:1px solid var(--line,#e7e0d2);border-radius:12px;background:var(--z-cream-warm,#F9F5EC);overflow-wrap:anywhere');nome.textContent=x.nome||x.itemK||'Cuidado';estilo(nome,'display:block;color:var(--z-blue,#234D67);font-weight:800');card.appendChild(nome);
@@ -96413,10 +96541,10 @@ zPrev27Instalar();
           [lDec,lOri,lOnd].forEach(function(l){estilo(l,'display:block;margin-top:10px;font-size:13px;font-weight:800;color:var(--z-blue,#234D67)');});
           decisao.id=did;origem.id=oid;onde.id=wid;decisao.setAttribute('data-ui50-decisao','');origem.setAttribute('data-ui50-origem','');onde.setAttribute('data-ui50-onde','');onde.type='text';onde.placeholder='Opcional quando for fora da Zêluz';
           [decisao,origem,onde].forEach(function(c){estilo(c,'width:100%;box-sizing:border-box;margin-top:5px;padding:11px 12px;border:1.5px solid var(--line,#e7e0d2);border-radius:10px;font-family:inherit;font-size:15px;font-weight:600;color:var(--z-blue,#234D67);background:var(--z-white,#FFFFFF)');});
-          [['','Não alterar este cuidado'],['aguardar','Aguardar retorno'],['autorizar','Autorizar'],['recusar','Recusar']].forEach(function(v){var o=doc.createElement('option');o.value=v[0];o.textContent=v[1];decisao.appendChild(o);});
+          [['','Não alterar este cuidado'],['aguardar','Aguardar retorno'],['autorizar_loja','Autorizou Empório'],['autorizar_externo','Vai dar em casa'],['autorizar_bolsa','Mandou na mochila'],['autorizar','Autorizar · escolher origem'],['recusar','Recusar']].forEach(function(v){var o=doc.createElement('option');o.value=v[0];o.textContent=v[1];decisao.appendChild(o);});
           [['','Escolha a origem'],['loja','Loja Zêluz'],['bolsa','Bolsa do peludinho'],['externo','Fora da Zêluz']].forEach(function(v){var o=doc.createElement('option');o.value=v[0];o.textContent=v[1];origem.appendChild(o);});
           visivel(origem,false);visivel(lOri,false);visivel(onde,false);visivel(lOnd,false);
-          decisao.addEventListener('change',function(){var exibir=decisao.value==='autorizar';visivel(origem,exibir);visivel(lOri,exibir);var externo=exibir&&origem.value==='externo';visivel(onde,externo);visivel(lOnd,externo);});
+          decisao.addEventListener('change',function(){var presets={autorizar_loja:'loja',autorizar_externo:'externo',autorizar_bolsa:'bolsa'},rapida=presets[decisao.value],exibir=decisao.value==='autorizar';if(rapida)origem.value=rapida;visivel(origem,exibir);visivel(lOri,exibir);var externo=exibir&&origem.value==='externo';visivel(onde,externo);visivel(lOnd,externo);});
           origem.addEventListener('change',function(){var externo=origem.value==='externo';visivel(onde,externo);visivel(lOnd,externo);});
           card.appendChild(lDec);card.appendChild(decisao);card.appendChild(lOri);card.appendChild(origem);card.appendChild(lOnd);card.appendChild(onde);corpo.appendChild(card);linhas.push({item:x,decisao:decisao,origem:origem,onde:onde});if(!primeiroCampo)primeiroCampo=decisao;
         });
@@ -96424,7 +96552,7 @@ zPrev27Instalar();
         var acoes=doc.createElement('div');estilo(acoes,'padding:0 22px 22px;display:flex;flex-direction:column;gap:9px');var salvar=doc.createElement('button'),cancelar=doc.createElement('button');salvar.type='button';cancelar.type='button';salvar.className='btn btn-primary';cancelar.className='btn';salvar.textContent='Registrar resposta';cancelar.textContent='Cancelar';salvar.setAttribute('data-ui50-salvar','');cancelar.setAttribute('data-ui50-cancelar','');estilo(salvar,'width:100%;border:0;border-radius:14px;background:var(--z-blue,#234D67);color:var(--z-cream,#FFFDF6);font-family:inherit;font-weight:800;font-size:17px;padding:15px;cursor:pointer');estilo(cancelar,'width:100%;border:1.5px solid var(--line,#e7e0d2);border-radius:14px;background:var(--z-cream-warm,#F9F5EC);color:var(--z-blue,#234D67);font-family:inherit;font-weight:800;font-size:17px;padding:15px;cursor:pointer');
         cancelar.addEventListener('click',function(){if(!gravando)finalizar({ok:false,status:'cancelado',motivo:'Resposta não registrada.'});});
         salvar.addEventListener('click',function(){
-          var escolhas=[],invalida=false;linhas.forEach(function(l){var d=l.decisao.value;if(!d)return;if(d==='autorizar'&&!l.origem.value){invalida=true;return;}escolhas.push({cycleKey:l.item.cycleKey,itemK:l.item.itemK,decisao:d,origem:d==='autorizar'?l.origem.value:null,onde:d==='autorizar'&&l.origem.value==='externo'?texto(l.onde.value):'',baseRevision:l.item.baseRevision});});
+          var escolhas=[],invalida=false;linhas.forEach(function(l){var d=l.decisao.value,rapidas={autorizar_loja:'loja',autorizar_externo:'externo',autorizar_bolsa:'bolsa'},origem=rapidas[d]||l.origem.value;if(!d)return;if(rapidas[d])d='autorizar';if(d==='autorizar'&&!origem){invalida=true;return;}escolhas.push({cycleKey:l.item.cycleKey,itemK:l.item.itemK,decisao:d,origem:d==='autorizar'?origem:null,onde:d==='autorizar'&&origem==='externo'&&!rapidas[l.decisao.value]?texto(l.onde.value):'',baseRevision:l.item.baseRevision});});
           if(invalida||!escolhas.length){erro.textContent=invalida?'Escolha a origem do cuidado autorizado.':'Escolha ao menos um cuidado para registrar.';return;}
           gravando=true;salvar.disabled=true;cancelar.disabled=true;erro.textContent='Registrando…';
           Promise.resolve(op.enviar(escolhas)).then(function(r){if(r&&r.ok){finalizar(r);return;}diagnosticarFalha50(r);erro.textContent=falhaPublica50();gravando=false;salvar.disabled=false;cancelar.disabled=false;},function(e){diagnosticarFalha50({motivo:e&&e.message});erro.textContent=falhaPublica50();gravando=false;salvar.disabled=false;cancelar.disabled=false;});
@@ -97173,7 +97301,7 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
     /* Âncora única: o painel44 é montado após login e pode ser remontado. */
     if (typeof root.zPainel44Montar === 'function' && root.__zPainel44Montar58 !== true) {
       var montarAnterior = root.zPainel44Montar;
-      root.zPainel44Montar = function(perfil, raiz) { var retorno = montarAnterior.apply(this, arguments); conectar(raiz); return retorno; };
+      root.zPainel44Montar = function(perfil, raiz) { var retorno = montarAnterior.apply(this, arguments); conectar(raiz); if (typeof root.zPainel44Despacho80Importar === 'function') root.zPainel44Despacho80Importar(); return retorno; };
       root.__zPainel44Montar58 = true;
     }
     var paineis = root.document && root.document.querySelectorAll ? root.document.querySelectorAll('.z-painel44') : [];
