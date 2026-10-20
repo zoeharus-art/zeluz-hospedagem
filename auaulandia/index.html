@@ -30034,7 +30034,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-19-07';
+  const APP_VERSAO='2026-10-20-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -96248,18 +96248,27 @@ function zPainel44ValidarFonte80(v){
   if(envelopeLedger.versao!==43||typeof envelopeLedger.stateJson!=='string'||ledgerKeys.length!==2||ledgerKeys[0]!=='stateJson'||ledgerKeys[1]!=='versao')return null;
   try{estado=JSON.parse(envelopeLedger.stateJson);}catch(_){return null;}
   if(!estado||typeof estado!=='object'||Array.isArray(estado)||window.Recibos43.validarEstado43(estado)!==true)return null;
-  if(!v.identidadesPets||typeof v.identidadesPets!=='object'||Array.isArray(v.identidadesPets)||!v.grupos||typeof v.grupos!=='object'||Array.isArray(v.grupos))return null;
-  var retorno=[],vistos={},gkeys=Object.keys(v.grupos);
+  var identidadesPets=v.identidadesPets,grupos=v.grupos,semIdentidades=identidadesPets==null,semGrupos=grupos==null;
+  if(semIdentidades||semGrupos){
+    if(!semIdentidades||!semGrupos)return null;
+    var ledgerDoDia=Object.keys(estado.groups).filter(function(k){try{var p=JSON.parse(k);return Array.isArray(p)&&p.length===3&&JSON.stringify(p)===k&&p[2]===v.dia;}catch(_){return false;}});
+    if(ledgerDoDia.length)return null;
+    // O RTDB remove mapas vazios. A ausência conjunta representa a projeção diária
+    // confirmada sem grupos; ausência parcial continua inválida.
+    identidadesPets={};grupos={};
+  }
+  if(typeof identidadesPets!=='object'||Array.isArray(identidadesPets)||typeof grupos!=='object'||Array.isArray(grupos))return null;
+  var retorno=[],vistos={},gkeys=Object.keys(grupos);
   for(var i=0;i<gkeys.length;i++){
-    var hash=gkeys[i],g=v.grupos[hash];if(!/^[a-f0-9]{32}$/i.test(hash)||!g||typeof g!=='object'||Array.isArray(g))return null;
-    if(!zPainel44Grupo80Valido(g,v.dia,estado,v.identidadesPets))return null;
+    var hash=gkeys[i],g=grupos[hash];if(!/^[a-f0-9]{32}$/i.test(hash)||!g||typeof g!=='object'||Array.isArray(g))return null;
+    if(!zPainel44Grupo80Valido(g,v.dia,estado,identidadesPets))return null;
     if(vistos[g.groupKey])return null;vistos[g.groupKey]=true;retorno.push(g);
   }
   var confirmados=retorno.filter(function(g){return g.statusPainel==='enviado_confirmado';}).map(function(g){return g.groupKey;});
   var esperados=Object.keys(estado.groups).filter(function(k){try{var p=JSON.parse(k);return Array.isArray(p)&&p.length===3&&JSON.stringify(p)===k&&p[2]===v.dia;}catch(_){return false;}});
   if(esperados.length!==confirmados.length||esperados.some(function(k){return confirmados.indexOf(k)<0;}))return null;
   retorno.sort(function(a,b){return a.groupKey.localeCompare(b.groupKey);});
-  return {versao:v.versao,dia:v.dia,atualizadoEm:v.atualizadoEm,autoria:v.autoria,grupos:retorno,estadoRecibos43:estado,identidadesPets:v.identidadesPets};
+  return {versao:v.versao,dia:v.dia,atualizadoEm:v.atualizadoEm,autoria:v.autoria,grupos:retorno,estadoRecibos43:estado,identidadesPets:identidadesPets};
 }
 function zPainel44Grupo80Valido(g,dia,estado,identidades){
   if(!g||typeof g!=='object'||Array.isArray(g)||!g.groupKey||!g.petId||!g.tutorId)return false;
@@ -96354,8 +96363,8 @@ function zPainel94CoberturaHTML(proj){
     if(a&&a.resposta49){var autor=String(a.resposta49.nome||'').trim()||zPainel94AutorNome(a.resposta49.autor),rot=String(a.resposta49.rotulo||'').trim();return{estado:rot?('Resposta: '+rot):'Resposta humana registrada',falta:a.estado==='cuidado_pendente'?'Conferir realização e autoria no cuidado':a.estado==='tarefa_pendente'?'Recuperar a tarefa do cuidado':a.estado==='acompanhamento_externo'?'Acompanhar o cuidado fora da Zêluz':a.estado==='retorno_humano'||a.estado==='aguardando_resposta'?'Retorno humano pendente':a.estado==='revisao'?'Revisar o registro':'Nenhuma realização presumida',responsavel:autor};}
     if(h&&h.estado==='feito'){var hn=String(h.humanoNome||'equipe');return{estado:'Contato humano registrado',falta:'Registrar a resposta recebida por cuidado',responsavel:hn};}
     if(h&&h.estado==='retorno_pendente')return{estado:'Não respondeu',falta:'Entrar em contato e registrar a resposta quando chegar',responsavel:String(h.humanoNome||'Equipe')};
-    if(g){var estados={enviado_confirmado:'Entrega confirmada',entrega_pendente:'Enviada · entrega a confirmar',incerto_conciliacao:'Envio incerto; revisão necessária',em_preparacao:'Ainda não enviado'};return{estado:estados[g.statusPainel]||'Estado a conferir',falta:g.statusPainel==='incerto_conciliacao'?'Revisar a conciliação antes de agir':g.statusPainel==='em_preparacao'?'Conferir a preparação do contato':'Registrar a resposta de cada cuidado',responsavel:String(g.autoria&&g.autoria.nome||'Zelozinha')+' · resposta: equipe'};}
-    if(h)return{estado:h.estado==='pendente'?'Contato humano pendente':'Contato humano a conferir',falta:'Abrir o contato humano nesta central',responsavel:'Equipe'};
+    if(g){var estados={enviado_confirmado:'Entrega confirmada',entrega_pendente:'Envio registrado · entrega a confirmar',incerto_conciliacao:'Envio incerto; revisão necessária',em_preparacao:'Ainda não enviado'};return{estado:estados[g.statusPainel]||'Estado a conferir',falta:g.statusPainel==='incerto_conciliacao'?'Revisar a conciliação antes de agir':g.statusPainel==='em_preparacao'?'Conferir a preparação do contato':'Registrar a resposta de cada cuidado',responsavel:String(g.autoria&&g.autoria.nome||'Zelozinha')+' · resposta: equipe'};}
+    if(h)return{estado:h.estado==='pendente'?'Contato humano pendente':'Contato humano a conferir',falta:String(h.motivoContato||'').trim()||'Envio automático ainda não registrado.',responsavel:'Equipe'};
     return{estado:'Contato não confirmado',falta:fontesProntas?'Contato ainda não registrado; equipe precisa conferir se já falou com a família':'Atualizar as fontes antes de decidir o contato',responsavel:'Equipe'};
   }
   function acaoDe(g,h,dc,presenca){
@@ -99176,14 +99185,15 @@ renderAtual=function(){
       var escopoSha=await sha(JSON.stringify([89,'contato_humano',dia,dk,pk,petId,tutorId,cycleKeys.map(function(k,i){return[k,itemKs[i]];})]));
       var contatoId='ch89_'+(await sha(JSON.stringify([groupKey,escopoSha]))).slice(0,32),key=b64key(contatoId);
       var existente=await ler('daycare/vencimentos/'+dia+'/'+dk+'/contatosHumanos89/'+key);
-      var base={row:row,cadastro:cadastro,dia:dia,dcKey:dk,pelKey:pk,petId:petId,tutorId:tutorId,ciclos:ciclos,cycleKeys:cycleKeys,itemKs:itemKs,groupKey:groupKey,escopoSha:escopoSha,contatoId:contatoId,key:key};
+      var motivoContato=modoHumano(cadastro.comunicacaoZelozinha)?'Contato humano conforme configuração da ficha.':'Envio automático ainda não registrado.';
+      var base={row:row,cadastro:cadastro,dia:dia,dcKey:dk,pelKey:pk,petId:petId,tutorId:tutorId,ciclos:ciclos,cycleKeys:cycleKeys,itemKs:itemKs,groupKey:groupKey,escopoSha:escopoSha,contatoId:contatoId,key:key,motivoContato:motivoContato};
       var envios=await enviosCorrespondentes(base,painel);if(envios===null)return{estado:'envios_indisponiveis',row:row};
       if(envios.length)return Object.assign({estado:'envio_aceito',envios:envios,envioNaoResolvido:envios.some(function(x){return x.relacao==='revisao';})},base);
       if(existente&&obj(existente)&&existente.versao===89&&existente.escopoSha===escopoSha){
         if(existente.tipo==='contato_humano'&&existente.status==='feito')return Object.assign({estado:'feito',existente:existente},base);
         if(existente.tipo==='retorno_humano'&&existente.status==='retorno_pendente')return Object.assign({estado:'retorno_pendente',existente:existente},base);
       }
-      return{estado:'pendente',row:row,cadastro:cadastro,dia:dia,dcKey:dk,pelKey:pk,petId:petId,tutorId:tutorId,ciclos:ciclos,cycleKeys:cycleKeys,itemKs:itemKs,groupKey:groupKey,escopoSha:escopoSha,contatoId:contatoId,key:key};
+      return Object.assign({estado:'pendente'},base);
     }
     async function listar(forcar){
       authorize();var dia=txt(portas.dia());if(!dia)throw Error('Dia atual indisponível.');
@@ -99252,7 +99262,7 @@ renderAtual=function(){
     }else if(c.estado==='envios_indisponiveis'){
       html+='<p class="pm-sub">Não foi possível confirmar as fontes de hoje. Atualize antes de registrar contato.</p>';
     }else{
-      html+='<p class="pm-sub">Toque na resposta recebida. O contato humano e a resposta serão assinados juntos; nenhuma mensagem é enviada.</p>'+escolhas(c,id);
+      html+='<p class="pm-sub">'+esc(txt(c.motivoContato)||'Envio automático ainda não registrado.')+' Toque na resposta recebida. O contato humano e a resposta serão assinados juntos; nenhuma mensagem é enviada.</p>'+escolhas(c,id);
     }
     return html+'</article>';
   }
@@ -99279,7 +99289,7 @@ renderAtual=function(){
         lerPainel:async function(){var b=window.ZeluzRespostaApp88;if(!b||typeof b.painel!=='function')return null;return await b.painel();},
         resolverEnvio:function(groupKey){var b=window.ZeluzRespostaApp88;if(!b||typeof b.resolverGrupo!=='function')return Promise.resolve(null);return b.resolverGrupo({groupKey:groupKey});}
       });
-      var result=await estado.api.listar(true);if(req!==estado.seq)return;window.Z94_CONTATOS_HUMANOS={dia:result&&result.dia||'',itens:(result&&result.itens||[]).map(function(c){return{dcKey:c.dcKey||'',pelKey:c.pelKey||'',petId:c.petId||'',tutorId:c.tutorId||'',estado:c.estado||'',groupKey:c.groupKey||'',contatoId:c.contatoId||'',cycleKeys:Array.isArray(c.cycleKeys)?c.cycleKeys.slice():[],itemKs:Array.isArray(c.itemKs)?c.itemKs.slice():[],escopoSha:c.escopoSha||'',humanoNome:c.existente&&c.existente.humano&&c.existente.humano.nome||''};})};var html=renderMarkup(result);setTimeout(function(){if(typeof zPainel44AtualizarDespacho80==='function')zPainel44AtualizarDespacho80();},0);alvos.forEach(function(el){el.innerHTML=html;});
+      var result=await estado.api.listar(true);if(req!==estado.seq)return;window.Z94_CONTATOS_HUMANOS={dia:result&&result.dia||'',itens:(result&&result.itens||[]).map(function(c){return{dcKey:c.dcKey||'',pelKey:c.pelKey||'',petId:c.petId||'',tutorId:c.tutorId||'',estado:c.estado||'',groupKey:c.groupKey||'',contatoId:c.contatoId||'',cycleKeys:Array.isArray(c.cycleKeys)?c.cycleKeys.slice():[],itemKs:Array.isArray(c.itemKs)?c.itemKs.slice():[],escopoSha:c.escopoSha||'',humanoNome:c.existente&&c.existente.humano&&c.existente.humano.nome||'',motivoContato:c.motivoContato||''};})};var html=renderMarkup(result);setTimeout(function(){if(typeof zPainel44AtualizarDespacho80==='function')zPainel44AtualizarDespacho80();},0);alvos.forEach(function(el){el.innerHTML=html;});
     }catch(e){if(req!==estado.seq)return;alvos.forEach(function(el){el.innerHTML='<p class="pm-sub">Não foi possível confirmar as fontes de hoje. Nenhuma ação foi registrada.</p>';});}finally{if(req===estado.seq)estado.renderedTargets=alvos;estado.inFlight=null;}})();await estado.inFlight;
   }
   var basePrevenir=window.zPainel44Prevenir;
