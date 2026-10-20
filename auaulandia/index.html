@@ -30034,7 +30034,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-20-01';
+  const APP_VERSAO='2026-10-20-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -99126,6 +99126,17 @@ renderAtual=function(){
   function b64key(v){var b;if(typeof btoa==='function')b=btoa(unescape(encodeURIComponent(v)));else b=Buffer.from(v,'utf8').toString('base64');return 'v1_'+b.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'');}
   async function sha(v){if(!root.crypto||!root.crypto.subtle)throw Error('assinatura indisponível');var a=await root.crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));return Array.from(new Uint8Array(a)).map(function(x){return x.toString(16).padStart(2,'0');}).join('');}
   function modoHumano(c){return obj(c)&&c.versao===1&&c.modo==='humano'&&txt(c.atualizadoEm)&&txt(c.atualizadoPor);}
+  var vetLeitura={dia:'',em:0,promise:null},VET_TTL=15000;
+  function lerVeterinariaCompartilhada(dia){
+    if(vetLeitura.dia===dia&&vetLeitura.promise&&Date.now()-vetLeitura.em<VET_TTL)return vetLeitura.promise;
+    var api=root.zelozinha47Veterinaria,prom=Promise.resolve().then(function(){if(!api||typeof api.ler!=='function')return null;return api.ler();}).catch(function(){return null;});
+    vetLeitura={dia:dia,em:Date.now(),promise:prom};return prom;
+  }
+  async function motivoVeterinaria(ciclos,dia,humano){
+    if(humano||!Array.isArray(ciclos)||!ciclos.length||!ciclos.every(function(c){return c&&c.care==='vacina';}))return '';
+    var v=await lerVeterinariaCompartilhada(dia);if(v&&v.ok===true&&v.dia===dia&&v.confirmada===true&&v.tipo==='confirmada')return '';if(v&&v.ok===true&&v.dia===dia&&v.confirmada===false&&['indisponivel','saida'].indexOf(v.tipo)>=0)return 'Aguardando confirmação da veterinária';
+    return 'Confirmar presença da veterinária';
+  }
   function entradaConfirmada(v){if(!obj(v)||v.tipo!=='entrada'||!txt(v.quem))return false;var f=v.fim;if(typeof f==='number')return Number.isFinite(f)&&f>0;var s=String(f==null?'':f).trim();if(!s)return false;if(/^\d{10,13}$/.test(s))return Number.isFinite(Number(s))&&Number(s)>0;return Number.isFinite(Date.parse(s));}
   function identidadeExata(ler,painel,pk,dk){var ids=painel&&painel.identidadesPets;if(obj(ids)){var exatos=[],colisao=false;Object.keys(ids).forEach(function(k){var i=ids[k];if(!obj(i)||txt(k)!==txt(i.petId)||!txt(i.tutorRefId))return;if(txt(i.pelKeyAtual)===pk&&txt(i.dcKeyAtual)===dk)exatos.push(i);else if(txt(i.pelKeyAtual)===pk||txt(i.dcKeyAtual)===dk)colisao=true;});if(exatos.length>1||colisao)return null;if(exatos.length===1)return{petId:txt(exatos[0].petId),tutorId:txt(exatos[0].tutorRefId)};}return ler('daycare/zelozinha-operacao/v1/identidades/aliases/'+pk).then(function(alias){var petId=typeof alias==='string'?txt(alias):obj(alias)?txt(alias.petId):'';if(!petId)return null;return ler('daycare/zelozinha-operacao/v1/identidades/pets/'+petId).then(function(rec){if(!obj(rec)||txt(rec.petId)!==petId||!txt(rec.tutorRefId)||txt(rec.pelKeyAtual)!==pk||txt(rec.dcKeyAtual)!==dk||!obj(rec.aliases)||rec.aliases[pk]!==true)return null;return{petId:petId,tutorId:txt(rec.tutorRefId)};});});}
 
@@ -99193,6 +99204,7 @@ renderAtual=function(){
         if(existente.tipo==='contato_humano'&&existente.status==='feito')return Object.assign({estado:'feito',existente:existente},base);
         if(existente.tipo==='retorno_humano'&&existente.status==='retorno_pendente')return Object.assign({estado:'retorno_pendente',existente:existente},base);
       }
+      var motivoVet=await motivoVeterinaria(ciclos,dia,modoHumano(cadastro.comunicacaoZelozinha));if(motivoVet)base.motivoContato=motivoVet;
       return Object.assign({estado:'pendente'},base);
     }
     async function listar(forcar){
