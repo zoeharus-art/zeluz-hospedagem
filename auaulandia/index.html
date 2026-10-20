@@ -30034,7 +30034,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-19-06';
+  const APP_VERSAO='2026-10-19-07';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -96015,7 +96015,7 @@ var Z44_ABERTURAS = {};
 var Z44_TIMER = null;
 var Z44_PEND_PROMESSA = null;
 var Z44_DISPATCH_REQ = 0;
-var Z44_DISPATCH80 = {auth:null,authListener:null,db:null,ref:null,listener:null,uid:"",dados:null,erro:"",carregando:false,importados:{},importando:{}};
+var Z44_DISPATCH80 = {auth:null,authListener:null,db:null,ref:null,listener:null,uid:"",dia:"",dados:null,erro:"",carregando:false,importados:{},importando:{}};
 function zPainel44Dia(){
   var p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()), x={};
   p.forEach(function(a){x[a.type]=a.value;});return x.year+'-'+x.month+'-'+x.day;
@@ -96227,7 +96227,7 @@ function zPainel44Atualizar(){
 }
 function zPainel44Despacho80Limpar(mensagem){var alvos=document.querySelectorAll('[data-z44-despacho]');alvos.forEach(function(el){el.innerHTML='<p class="pm-sub">'+esc(mensagem)+'</p>';});}
 function zPainel44Despacho80PararLeitura(){
-  var st=Z44_DISPATCH80;if(st.ref&&st.listener){try{st.ref.off('value',st.listener);}catch(_){}}st.ref=null;st.listener=null;st.db=null;st.uid='';st.dados=null;st.carregando=false;st.importados={};st.importando={};
+  var st=Z44_DISPATCH80;if(st.ref&&st.listener){try{st.ref.off('value',st.listener);}catch(_){}}st.ref=null;st.listener=null;st.db=null;st.uid='';st.dia='';st.dados=null;st.carregando=false;st.importados={};st.importando={};
 }
 function zPainel44Despacho80Acesso(){
   try{return typeof zPrev27Permite==='function'&&zPrev27Permite()===true;}catch(_){return false;}
@@ -96237,12 +96237,12 @@ function zPainel44Despacho80Conectar(){
   try{auth=window.firebase&&typeof window.firebase.auth==='function'?window.firebase.auth():null;user=auth&&auth.currentUser;}catch(_){auth=null;user=null;}
   if(!auth||typeof auth.onAuthStateChanged!=='function'||!user||!String(user.uid||'')){zPainel44Despacho80PararLeitura();st.erro='Sessão autenticada indisponível. Entre novamente para consultar os envios.';return;}
   if(st.auth!==auth){if(st.auth&&st.authListener){try{st.authListener();}catch(_){}}zPainel44Despacho80PararLeitura();st.auth=auth;st.authListener=auth.onAuthStateChanged(function(atual){if(!atual||!atual.uid||!zPainel44Despacho80Acesso()){zPainel44Despacho80PararLeitura();st.erro='Sessão encerrada ou acesso alterado. Nenhum envio foi presumido.';zPainel44Despacho80Limpar(st.erro);zPainel44Atualizar();return;}if(st.uid&&st.uid!==String(atual.uid))zPainel44Despacho80PararLeitura();st.erro='';zPainel44Despacho80Conectar();zPainel44Atualizar();});}
-  if(st.db===DB&&st.uid===String(user.uid)&&st.ref)return;
-  zPainel44Despacho80PararLeitura();st.db=DB;st.uid=String(user.uid);st.erro='';st.carregando=true;
-  try{st.ref=DB.ref('piloto59/interno-20261019/painel81/2026-10-19');st.listener=function(snapshot){if(st.db!==DB||st.uid!==String((auth.currentUser||{}).uid||''))return;if(!zPainel44Despacho80Acesso()){zPainel44Despacho80PararLeitura();st.erro='Acesso alterado. Nenhum envio foi presumido.';zPainel44Despacho80Limpar(st.erro);return;}var v=snapshot&&typeof snapshot.val==='function'?snapshot.val():null;var normalizada=zPainel44ValidarFonte80(v);if(!normalizada){st.dados=null;st.erro='A projeção do painel está ausente ou inválida. Atualize a fonte antes de agir.';st.carregando=false;zPainel44Atualizar();return;}st.dados=normalizada;st.erro='';st.carregando=false;zPainel44Atualizar();};st.ref.on('value',st.listener,function(){if(st.uid===String((auth.currentUser||{}).uid||'')){st.dados=null;st.erro='Não foi possível ler a projeção autorizada. Nenhum status foi presumido.';st.carregando=false;zPainel44Atualizar();}});}catch(_){zPainel44Despacho80PararLeitura();st.erro='Leitura da projeção não disponível. Nenhum status foi presumido.';st.carregando=false;}
+  var diaAtual=zPainel44Dia();if(st.db===DB&&st.uid===String(user.uid)&&st.ref&&st.dia===diaAtual)return;
+  zPainel44Despacho80PararLeitura();st.db=DB;st.uid=String(user.uid);st.dia=diaAtual;st.erro='';st.carregando=true;
+  try{st.ref=DB.ref('piloto59/interno-20261019/painel81/'+diaAtual);st.listener=function(snapshot){if(st.db!==DB||st.uid!==String((auth.currentUser||{}).uid||'')||st.dia!==diaAtual||zPainel44Dia()!==diaAtual)return;if(!zPainel44Despacho80Acesso()){zPainel44Despacho80PararLeitura();st.erro='Acesso alterado. Nenhum envio foi presumido.';zPainel44Despacho80Limpar(st.erro);return;}var v=snapshot&&typeof snapshot.val==='function'?snapshot.val():null;var normalizada=zPainel44ValidarFonte80(v);if(!normalizada){st.dados=null;st.erro='A projeção do painel está ausente ou inválida. Atualize a fonte antes de agir.';st.carregando=false;zPainel44Atualizar();return;}st.dados=normalizada;st.erro='';st.carregando=false;zPainel44Atualizar();};st.ref.on('value',st.listener,function(){if(st.uid===String((auth.currentUser||{}).uid||'')){st.dados=null;st.erro='Não foi possível ler a projeção autorizada. Nenhum status foi presumido.';st.carregando=false;zPainel44Atualizar();}});}catch(_){zPainel44Despacho80PararLeitura();st.erro='Leitura da projeção não disponível. Nenhum status foi presumido.';st.carregando=false;}
 }
 function zPainel44ValidarFonte80(v){
-  if(!v||typeof v!=='object'||Array.isArray(v)||v.versao!==81||v.dia!=='2026-10-19'||!v.atualizadoEm||!Number.isFinite(Date.parse(v.atualizadoEm)))return null;
+  var diaAtual=zPainel44Dia();if(!v||typeof v!=='object'||Array.isArray(v)||v.versao!==81||v.dia!==diaAtual||!v.atualizadoEm||!Number.isFinite(Date.parse(v.atualizadoEm)))return null;
   if(!v.autoria||v.autoria.id!=='zelozinha-zeluz'||v.autoria.nome!=='Zelozinha'||v.autoria.tipo!=='servico'||!v.estadoRecibos43||!window.Recibos43||typeof window.Recibos43.validarEstado43!=='function')return null;
   var envelopeLedger=v.estadoRecibos43,ledgerKeys=Object.keys(envelopeLedger).sort(),estado;
   if(envelopeLedger.versao!==43||typeof envelopeLedger.stateJson!=='string'||ledgerKeys.length!==2||ledgerKeys[0]!=='stateJson'||ledgerKeys[1]!=='versao')return null;
@@ -96277,7 +96277,7 @@ function zPainel44Grupo80Valido(g,dia,estado,identidades){
   if(g.retornoHumanoPrevisto!=='13:30')return false;
   return true;
 }
-function zPainel44Projecao80Atual(){var st=Z44_DISPATCH80,proj=st&&st.dados;return proj&&proj.dia==='2026-10-19'&&proj.estadoRecibos43&&window.Recibos43&&window.Recibos43.validarEstado43(proj.estadoRecibos43)===true?proj:null;}
+function zPainel44Projecao80Atual(){var st=Z44_DISPATCH80,proj=st&&st.dados;return proj&&proj.dia===zPainel44Dia()&&proj.estadoRecibos43&&window.Recibos43&&window.Recibos43.validarEstado43(proj.estadoRecibos43)===true?proj:null;}
 var Z86_RENDER_REQ=0;
 var Z94_PRESENCA_PATHS={checkin:'',checkout:'',chamada:''};
 function zPainel44Hora86(v){var n=typeof v==='number'?v:Date.parse(String(v||''));if(!Number.isFinite(n))return 'horário indisponível';try{return new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(n));}catch(_){return 'horário indisponível';}}
@@ -96430,7 +96430,7 @@ async function zPainel44RegistrarConferencia86(dado,raiz,botao){
 }
 function zPainel44Despacho80Importar(){
   var st=Z44_DISPATCH80,proj=zPainel44Projecao80Atual(),alvos=document.querySelectorAll('[data-z44-despacho]');
-  if(zPainel44Dia()!=='2026-10-19'||!zPainel44Despacho80Acesso()||!proj||!alvos.length||typeof window.projetarComprovanteConfirmado58!=='function')return;
+  if(!proj||proj.dia!==zPainel44Dia()||!zPainel44Despacho80Acesso()||!alvos.length||typeof window.projetarComprovanteConfirmado58!=='function')return;
   if(!Array.prototype.some.call(alvos,function(el){try{return el.getClientRects().length>0;}catch(_){return false;}}))return;
   proj.grupos.forEach(function(g){
     if(g.statusPainel!=='enviado_confirmado'||g.respostaHumana!=='pendente'||st.importados[g.groupKey]||st.importando[g.groupKey])return;
@@ -96443,8 +96443,8 @@ function zPainel44Despacho80Importar(){
 }
 function zPainel44ProgramarRetorno(){
   if(Z44_TIMER) clearTimeout(Z44_TIMER);
-  var hoje=zPainel44Dia(), t=new Date(hoje+'T13:30:00-03:00').getTime()-Date.now();
-  if(t>0) Z44_TIMER=setTimeout(function(){Z44_TIMER=null;zPainel44Atualizar();},t+50);
+  var hoje=zPainel44Dia(),agora=Date.now(),t=new Date(hoje+'T13:30:00-03:00').getTime()-agora,p=hoje.split('-').map(Number),prox=new Date(Date.UTC(p[0],p[1]-1,p[2]+1)).toISOString().slice(0,10),virada=new Date(prox+'T00:00:00-03:00').getTime()-agora,espera=t>0?Math.min(t,virada):virada;
+  if(espera>0) Z44_TIMER=setTimeout(function(){Z44_TIMER=null;zPainel44Atualizar();zPainel44ProgramarRetorno();},espera+50);
 }
 async function zPainel44AbrirContato(ref){
   if(!zPrev27Permite()||!ref||!ref.dcKey||!ref.dia) return false;
@@ -96845,7 +96845,8 @@ zPrev27Instalar();
     function sessaoHumana(){var c=contexto();return {confirmada:contextoValido(c),humana:contextoValido(c),id:c.id,papel:c.papel,nome:c.nome,assinatura:c.assinatura};}
     function lerRecibos(){
       var c=contexto();if(!contextoValido(c))return Promise.resolve({confirmado:false,motivo:'contexto humano não confirmado'});
-      if(c.dia==='2026-10-19'){
+      var diaAtual=typeof zPainel44Dia==='function'?zPainel44Dia():'';
+      if(c.dia===diaAtual){
         var proj=typeof zPainel44Projecao80Atual==='function'?zPainel44Projecao80Atual():null;
         if(!proj||proj.dia!==c.dia||!proj.estadoRecibos43||!window.Recibos43||window.Recibos43.validarEstado43(proj.estadoRecibos43)!==true)return Promise.resolve({confirmado:false,motivo:'projeção80 do dia não foi confirmada'});
         var fim80=contexto();if(!mesmoContexto(c,fim80))return Promise.resolve({confirmado:false,motivo:'contexto mudou durante leitura da projeção80'});
@@ -96862,7 +96863,7 @@ zPrev27Instalar();
         try{g=JSON.parse(groupKey);}catch(_){g=null;}
         if(!grupo||grupo.status!=='enviado'||grupo.enviado!==true||grupo.simulado!==false||!Array.isArray(g)||g.length!==3||JSON.stringify(g)!==groupKey||g[0]!==grupo.petId||g[1]!==grupo.tutorId||g[2]!==captura.dia)return {confirmado:false,motivo:'grupo43 enviado não confirmado para o dia atual'};
         if(proibida(grupo.petId))return {confirmado:false,motivo:'petId técnico inválido'};
-        var proj80=g[2]==='2026-10-19'&&typeof zPainel44Projecao80Atual==='function'?zPainel44Projecao80Atual():null;
+        var proj80=g[2]===captura.dia&&typeof zPainel44Projecao80Atual==='function'?zPainel44Projecao80Atual():null;
         var id80=proj80&&proj80.dia===g[2]&&proj80.estadoRecibos43===ledger.state&&proj80.identidadesPets&&proj80.identidadesPets[grupo.petId];
         var identidadeAtual=id80?Promise.resolve(id80):umaLeitura(captura.db,raiz+'/identidades/pets/'+grupo.petId);
         return identidadeAtual.then(function(id){
