@@ -30034,7 +30034,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-20-05';
+  const APP_VERSAO='2026-10-21-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -99312,7 +99312,15 @@ renderAtual=function(){
       cache={dia:'',em:0,promise:null};
       return ['pendente','feito','retorno_pendente','envio_aceito','envios_indisponiveis','revisao_identidade'].indexOf(c.estado)>=0?c:null;
     }
-    return{listar:listar,atualizarUm:atualizarUm,marcar:marcar,marcarRetorno:marcarRetorno,invalidate:function(){cache={dia:'',em:0,promise:null};}};
+    /* Story 6.94 (correção do QA, M1): a presença de UM FILHOt agora. Só lê o check-in e o check-out do dia (uma leitura de cada) e não grava nada.
+       `saiu`: existe registro de check-out (o mesmo critério do `resolver`); `presente`: entrada confirmada e nenhuma saída. */
+    async function presencaUm(dcKey){
+      authorize();var dia=txt(portas.dia());if(!dia)throw Error('Dia atual indisponível.');
+      var dk=txt(dcKey);if(!dk)throw Error('FILHOt indisponível.');
+      var v=await Promise.all([ler('daycare/checkin-corpo/'+dia+'/'+dk),ler('daycare/checkout-corpo/'+dia+'/'+dk)]),entrada=v[0],saida=v[1],saiu=saida!==null&&saida!==undefined;
+      return{dia:dia,dcKey:dk,saiu:saiu,presente:!saiu&&entradaConfirmada(entrada),saida:saiu?saida:null};
+    }
+    return{listar:listar,atualizarUm:atualizarUm,presencaUm:presencaUm,marcar:marcar,marcarRetorno:marcarRetorno,invalidate:function(){cache={dia:'',em:0,promise:null};}};
   }
   return{criar:criar,modoHumano:modoHumano,entradaConfirmada:entradaConfirmada,ciclo:ciclo,sha:sha,codificarChave:b64key};
 });
@@ -99368,6 +99376,15 @@ renderAtual=function(){
     return String(dia)<hoje||(String(dia)===hoje&&p.hora*60+p.min>=810);
   }
   function msAte1330(agoraMs,dia){var alvo=Date.parse(String(dia)+'T13:30:00-03:00');return Number.isFinite(alvo)?alvo-agoraMs:NaN;}
+  /* O instante (em ms) a partir do qual o texto das 13h30 vale naquele dia (hora de São Paulo). A presença que o libera tem de ter sido conferida desse instante em diante. */
+  function inicio1330(dia){return Date.parse(String(dia)+'T13:30:00-03:00');}
+  /* A hora do check-out («hh:mm» de São Paulo): o instante `fim` do registro (número, texto de data ou texto só de dígitos) e, na falta dele, o `hora` que o app grava junto; vazio quando não há nenhum. */
+  function horaDaSaida(reg){
+    if(!obj(reg))return '';
+    var f=reg.fim;if(typeof f==='string'&&/^\d{10,13}$/.test(f.trim()))f=Number(f.trim());
+    var h=hora(f);if(h)return h;
+    var t=txt(reg.hora);return /^([01]\d|2[0-3]):[0-5]\d$/.test(t)?t:'';
+  }
   /* Grupo do FILHOt (AC2.2). `p.cuidados`: [{pode:boolean, resp:'' | valor da resposta}] */
   function grupoDoPet(p){
     var libs=(p&&p.cuidados||[]).filter(function(c){return c&&c.pode===true;});
@@ -99473,7 +99490,7 @@ renderAtual=function(){
     return{id:'criada',texto:'falta aplicar e conferir'};
   }
   return{RESPOSTAS:RESPOSTAS,FRASE_JA_NO_SNOOPY:FRASE_JA_NO_SNOOPY,FRASE_JA_APLICADO:FRASE_JA_APLICADO,FRASE_TROCA_APLICADO:FRASE_TROCA_APLICADO,
-    rotuloResposta:rotuloResposta,mascara:mascara,hora:hora,quandoEnviado:quandoEnviado,retornoDepois:retornoDepois,msAte1330:msAte1330,
+    rotuloResposta:rotuloResposta,mascara:mascara,hora:hora,quandoEnviado:quandoEnviado,retornoDepois:retornoDepois,msAte1330:msAte1330,inicio1330:inicio1330,horaDaSaida:horaDaSaida,
     grupoDoPet:grupoDoPet,resumo:resumo,rotuloGrupo:rotuloGrupo,topo:topo,ordenar:ordenar,camposDoCuidado:camposDoCuidado,ondePadrao:ondePadrao,faltaEscolher:faltaEscolher,
     podeEscolher:podeEscolher,mesclarEscolha:mesclarEscolha,decidirTroca:decidirTroca,estadoDaTarefa:estadoDaTarefa};
 });
@@ -99485,7 +99502,7 @@ renderAtual=function(){
 (function(){
   if(window.__zelozinhaContatos89Instalado)return;window.__zelozinhaContatos89Instalado=true;
   var T=window.ZelozinhaTela94;
-  var estado={linhas:{},api:null,alvos:[],seq:0,itens:{},grupos:[],ordemDepois:false,inFlight:null,projecao:null,resultado:null,dia:'',vet:null,sujo:true,projEm:'',salvando:{},avisos:{},msgs:{},copiaSt:{},agora94:{},abertos:{},diaCarregado:'',diaLendo:null,snoopyEstado:'novo',recarregarDia:true,obs:null,anexando:false,timer:null,scrollY:null,erro:''};
+  var estado={linhas:{},api:null,alvos:[],seq:0,itens:{},grupos:[],ordemDepois:false,inFlight:null,projecao:null,resultado:null,dia:'',vet:null,sujo:true,projEm:'',salvando:{},avisos:{},msgs:{},copiaSt:{},agora94:{},presenca:{},abertos:{},diaCarregado:'',diaLendo:null,snoopyEstado:'novo',recarregarDia:true,obs:null,anexando:false,timer:null,scrollY:null,erro:''};
   function instalarEstilo(){
     if(!document||!document.createElement||!document.head||document.getElementById&&document.getElementById('zelozinha-contatos89-style'))return;
     var st=document.createElement('style');st.id='zelozinha-contatos89-style';
@@ -99570,6 +99587,40 @@ renderAtual=function(){
   function depois1330(){return T.retornoDepois(agora(),estado.dia||diaAtual());}
   function avisoRetorno(dep){return dep?'Hora de retomar o contato (retorno humano das 13h30).':'Retorno humano às 13h30.';}
   function horaDe(rv){var h=T.hora(Number(rv&&rv.ts));return h||'hora não registrada';}
+  /* ---------- a presença de quem está em «Não respondeu» (o texto das 13h30 só vale com o FILHOt na casa) ---------- */
+  /* `estado.presenca[dcKey]`: {presente:true} | {saiu:true, hora} | {semEntrada:true} | {falhou:true}, sempre com `lidoEm` (o instante da conferência). A lista inteira marca todos como presentes
+     quando é lida; o resto vem de `presencaUm` (uma leitura do check-in e do check-out daquele FILHOt). */
+  var PRESENCA_VALE_MS=5*60*1000,confirmando={};
+  function pedePresenca(c){return !!c&&depois1330()&&vmsDe(c).some(function(v){return v.valor==='aguardar'&&!!v.atual;});}
+  function presencaDe(c){return estado.presenca[c.dcKey]||null;}
+  /* o texto das 13h30 só aparece com a presença conferida a partir das 13h30 daquele dia, e sem saída */
+  function caixaLiberada(c){var p=presencaDe(c);return !!p&&p.presente===true&&p.lidoEm>=T.inicio1330(c.dia);}
+  function conferindoPresenca(c){if(!pedePresenca(c))return false;var p=presencaDe(c);return !p||(p.presente===true&&!(p.lidoEm>=T.inicio1330(c.dia)));}
+  function conferirPresenca(dc){
+    if(confirmando[dc])return confirmando[dc];
+    if(!estado.itens[dc]||!estado.api||typeof estado.api.presencaUm!=='function')return Promise.resolve(null);
+    confirmando[dc]=(async function(){
+      var t0=agora(),r=null;
+      try{r=await estado.api.presencaUm(dc);}catch(_){r=null;}
+      var p=!r?{falhou:true,lidoEm:t0}:r.saiu?{saiu:true,hora:T.horaDaSaida(r.saida),lidoEm:t0}:r.presente?{presente:true,lidoEm:t0}:{semEntrada:true,lidoEm:t0};
+      estado.presenca[dc]=p;return p;
+    })().then(function(p){delete confirmando[dc];return p;},function(){delete confirmando[dc];return null;});
+    return confirmando[dc];
+  }
+  /* Quem está em «Não respondeu» depois das 13h30 só mostra o texto das 13h30 com a presença conferida: quando falta a conferência (ou ela é de antes das 13h30, ou tem mais de alguns minutos),
+     lê o check-in e o check-out daquele FILHOt e redesenha só a linha dele. Às 13h30 toda conferência anterior é "de antes" e é refeita. Quem já saiu não precisa de nova leitura: a saída vale pelo resto do dia. */
+  async function reconferirPresencas(){
+    var dcs=Object.keys(estado.itens).filter(function(dc){
+      var c=estado.itens[dc];if(!pedePresenca(c))return false;
+      var p=presencaDe(c);if(p&&p.saiu)return false;
+      return !p||!(p.lidoEm>=T.inicio1330(c.dia))||agora()-p.lidoEm>PRESENCA_VALE_MS;
+    });
+    if(!dcs.length)return;
+    await Promise.all(dcs.map(conferirPresenca));
+    var ancora=guardarAncora();
+    dcs.forEach(function(dc){redesenharLinha(dc,true);});
+    voltarAncora(ancora);
+  }
   /* ---------- as peças que a linha desenha ---------- */
   function vetTexto(c){var v=estado.vet;return v&&v.ok===true&&v.dia===c.dia&&v.confirmada===true&&v.tipo==='confirmada'?'Veterinária: confirmada hoje':'Falta a veterinária confirmar a presença hoje';}
   function linhaPronta(dia){try{return typeof DASH_DADOS_DE!=='undefined'&&!!DASH_DADOS_DE&&DASH_DADOS_DE.ok===true&&DASH_DADOS_DE.dia===dia&&DASH_DADOS_DE.obj===DASH_DADOS;}catch(_){return false;}}
@@ -99669,10 +99720,11 @@ renderAtual=function(){
   function copiaMsg(c,i,texto){var s=estado.copiaSt[c.dcKey+'|'+i];return s&&s.texto===texto?s.msg:'';}
   /* O texto do retorno das 13h30 (H94-3: a Adriana escolheu em 20/out/2026 o texto que já estava publicado na `mensagemAprovada`). Vem da MESMA função, com as condições dela: presença do corpo,
      sem check-out, depois das 13h30 (hora de São Paulo), nome do tutor e do peludinho. A lista desta tela só traz quem está presente e sem check-out na última leitura (o `resolver` descarta o resto).
-     O texto muda com o cuidado: dois cuidados em «Não respondeu» dão dois textos. */
+     O texto muda com o cuidado: dois cuidados em «Não respondeu» dão dois textos.
+     O texto vai a um tutor e afirma que o FILHOt está na casa: só aparece com a presença conferida a partir das 13h30 (`caixaLiberada`); quem saiu depois da última leitura da lista não tem texto. */
   function textosRetornoDe(c,vms){
     var b=window.ZeluzRespostaApp88,tutor=tutorNome(c),pet=txt(c.row&&c.row.p&&c.row.p.n),out=[],vistos={};
-    if(!b||typeof b.mensagemAprovada!=='function'||!tutor||!pet)return out;
+    if(!b||typeof b.mensagemAprovada!=='function'||!tutor||!pet||!caixaLiberada(c))return out;
     vms.forEach(function(v){
       if(v.valor!=='aguardar'||!v.atual)return;
       var x=b.mensagemAprovada({nomeTutor:tutor,nomePeludo:pet},{itemK:v.cy.itemK},v.atual,{presencaCorporal:true,checkout:false,dia:c.dia});
@@ -99682,17 +99734,26 @@ renderAtual=function(){
   }
   function caixasDe(c,vms){
     var casa=textosEmCasaDe(c,vms),ret=textosRetornoDe(c,vms),out=[];
-    casa.forEach(function(x){out.push({texto:x.texto,titulo:'Mensagem para o tutor, pronta para enviar'+(casa.length>1?(x.vacina?': vacina':': demais cuidados'):'')});});
-    ret.forEach(function(x){out.push(x);});
+    casa.forEach(function(x){out.push({tipo:'casa',texto:x.texto,titulo:'Mensagem para o tutor, pronta para enviar'+(casa.length>1?(x.vacina?': vacina':': demais cuidados'):'')});});
+    ret.forEach(function(x){out.push({tipo:'retorno',texto:x.texto,titulo:x.titulo});});
     return out;
   }
   function copiaHTML(c,vms){
     var textos=caixasDe(c,vms),semTel=!telDe(c);
     if(!textos.length)return '';
     var caixas=textos.map(function(x,i){
-      return '<div class="zt694-copia" data-zt694-copia="'+i+'"><p class="zt694-copia-tit">'+esc(x.titulo)+'</p><div class="zt694-texto" data-zt694-texto tabindex="0">'+esc(x.texto)+'</div><div class="zt694-copia-bt"><button type="button" class="zt694-acao" data-zt694-acao="copiar">Copiar mensagem</button><button type="button" class="zt694-acao" data-zt694-acao="whats-texto"'+(semTel?' disabled':'')+'>Abrir no WhatsApp</button></div><span class="zt694-sub" aria-live="polite" data-zt694-copia-st>'+esc(copiaMsg(c,i,x.texto))+'</span></div>';
+      return '<div class="zt694-copia" data-zt694-copia="'+i+'" data-zt694-tipo="'+x.tipo+'"><p class="zt694-copia-tit">'+esc(x.titulo)+'</p><div class="zt694-texto" data-zt694-texto tabindex="0">'+esc(x.texto)+'</div><div class="zt694-copia-bt"><button type="button" class="zt694-acao" data-zt694-acao="copiar">Copiar mensagem</button><button type="button" class="zt694-acao" data-zt694-acao="whats-texto"'+(semTel?' disabled':'')+'>Abrir no WhatsApp</button></div><span class="zt694-sub" aria-live="polite" data-zt694-copia-st>'+esc(copiaMsg(c,i,x.texto))+'</span></div>';
     }).join('');
     return caixas+'<p class="zt694-sub">'+(semTel?'Sem telefone na ficha: use Copiar. ':'')+'Nenhuma aplicação ou cobrança foi criada.</p>';
+  }
+  /* a frase que a linha mostra no lugar do texto das 13h30 enquanto a presença não está confirmada (M1) */
+  function presencaHTML(c){
+    if(!pedePresenca(c))return '';
+    var p=presencaDe(c),nome=esc(nomePet(c));
+    if(p&&p.saiu)return '<p class="zt694-aviso" data-zt694-saiu>'+nome+' já saiu da casa'+(p.hora?' às '+esc(p.hora):' (hora não registrada)')+'. O texto das 13h30 não aparece mais.</p>';
+    if(p&&(p.falhou||p.semEntrada))return '<p class="zt694-aviso" data-zt694-presenca-incerta>Não consegui confirmar que '+nome+' está na casa agora. Sem texto pronto; toque em «Atualizar envios».</p>';
+    if(conferindoPresenca(c))return '<p class="zt694-sub" data-zt694-conferindo>Conferindo se '+nome+' está na casa…</p>';
+    return '';
   }
   function petHTML(c){
     var dc=c.dcKey,id=encodeURIComponent(dc),tutor=tutorNome(c),mask=T.mascara(telDe(c)),bt=bloqueadoTotal(c),vms=vmsDe(c);
@@ -99709,11 +99770,14 @@ renderAtual=function(){
       var motivo=txt(vms[0].st.motivo).replace(/\.$/,'');
       quando='<span class="zt694-quando"><span>A Zelozinha não mandou: '+esc(motivo)+'.</span></span>';precisaWhats=true;
     }
-    if(vms.some(function(v){return v.valor==='aguardar';})&&!textosRetornoDe(c,vms).length)precisaWhats=true;
+    /* «Abrir WhatsApp» vazio: o retorno sem texto precisa dele; mas quando a linha tem caixa de texto (ou está conferindo se o FILHOt ainda está na casa, e a caixa vem a seguir) a caixa já traz o seu «Abrir no WhatsApp» */
+    var temCaixa=caixasDe(c,vms).length>0,conferindo=conferindoPresenca(c);
+    if(vms.some(function(v){return v.valor==='aguardar';})&&!temCaixa&&!conferindo)precisaWhats=true;
+    if(temCaixa||conferindo)precisaWhats=false;
     var whats=precisaWhats?'<button type="button" class="zt694-acao" data-zt694-acao="whats-vazio"'+(telDe(c)?'':' disabled')+' aria-label="Abrir WhatsApp de '+esc(tutor||'tutor')+'">Abrir WhatsApp</button>':'';
     var cab='<header class="zt694-cab"><div class="zt694-id"><strong class="zt694-nome">'+esc(nomePet(c))+'</strong><span class="zt694-quem">'+quem+'</span>'+(whats?'':quando)+msg+'</div></header>'+(whats?'<div class="zt694-sem">'+quando+whats+'</div>':'');
     var corpo=vms.map(function(v,i){return careHTML(c,v,i);}).join('');
-    return '<article class="zt694-pet" data-zt694-pet="'+esc(id)+'" data-z104-pet="'+esc(c.petId||c.dcKey||'')+'" data-z89-dc="'+esc(id)+'">'+cab+todosHTML(c,vms)+corpo+copiaHTML(c,vms)+'<span class="zt694-status" aria-live="polite" data-zt694-status>'+esc(estado.msgs[dc]||'')+'</span></article>';
+    return '<article class="zt694-pet" data-zt694-pet="'+esc(id)+'" data-z104-pet="'+esc(c.petId||c.dcKey||'')+'" data-z89-dc="'+esc(id)+'">'+cab+presencaHTML(c)+todosHTML(c,vms)+corpo+copiaHTML(c,vms)+'<span class="zt694-status" aria-live="polite" data-zt694-status>'+esc(estado.msgs[dc]||'')+'</span></article>';
   }
   function algumaEscolha(){return Object.keys(estado.itens).some(function(dc){var c=estado.itens[dc];return vmsDe(c).some(function(v){return daLinha(v.valor)&&T.camposDoCuidado(v.cy.itemK).length&&v.tstate.id!=='nao-criada';});});}
   function descs(){return (estado.resultado&&estado.resultado.itens||[]).map(function(c){return descPet(estado.itens[c.dcKey]||c);});}
@@ -99722,8 +99786,8 @@ renderAtual=function(){
     var r=estado.resultado;
     if(estado.erro)return '<p class="pm-sub">'+esc(estado.erro)+'</p><button type="button" class="zt694-acao" data-zt694-acao="ler-de-novo">Tentar de novo</button>';
     if(!r)return '<p class="pm-sub">Conferindo presenças e cuidados de hoje…</p>';
-    if(!(r.itens||[]).length)return '<p class="pm-sub">Nenhum cuidado de animal presente foi confirmado nesta leitura.</p>';
-    var nota=algumaEscolha()?'<p class="zt694-nota">As escolhas de produto e lugar. Fica registrado aqui. O Encãotador ainda vê só “conferir orientação”.</p>':'';
+    if(!(r.itens||[]).length)return '<p class="pm-sub">Nenhum cuidado de FILHOt presente foi confirmado nesta leitura.</p>';
+    var nota=algumaEscolha()?'<p class="zt694-nota">As escolhas de produto e lugar ficam registradas aqui. O Encãotador ainda vê só “conferir orientação”.</p>':'';
     return '<div class="zt694" data-zt694><p class="zt694-topo" aria-live="polite" data-zt694-topo>'+esc(topoTexto())+'</p>'+nota+estado.grupos.map(function(g){
       return '<h4 class="zt694-grupo" data-zt694-grupo="'+g.id+'"'+(g.id==='retorno'&&depois1330()?' data-zt694-retomar':'')+'>'+esc(T.rotuloGrupo(g.id,depois1330()))+'</h4>'+g.pets.map(function(p){var c=estado.itens[p.dcKey];return c?petHTML(c):'';}).join('');
     }).join('')+'</div>';
@@ -99762,6 +99826,7 @@ renderAtual=function(){
     if(a&&a.linha&&document.querySelector('[data-zt694-pet="'+a.linha.dc+'"]'))voltarAncora(a);
     else if(y!=null&&Math.abs(window.pageYOffset-y)>2)rolarSemAnimar(y);
     anotarVista();
+    reconferirPresencas();
   }
   function redesenharLinha(dc,semTopo){
     var id=encodeURIComponent(dc),c=estado.itens[dc];if(!c)return;
@@ -99778,11 +99843,11 @@ renderAtual=function(){
     Array.prototype.forEach.call(document.querySelectorAll('[data-zt694-pet] [data-z104-retorno]'),function(el){el.textContent=avisoRetorno(dep);});
     voltarAncora(ancora);anotarVista();
   }
-  /* às 13h30, com a tela aberta: o rótulo vira «Hora de retomar o contato» e a caixa do texto do retorno entra nas linhas em «Não respondeu», sem reler nada e sem mudar o que a pessoa está vendo */
-  function atualizarRetornos(){
-    var ancora=guardarAncora();
-    Object.keys(estado.itens).forEach(function(dc){if(vmsDe(estado.itens[dc]).some(function(v){return v.valor==='aguardar';}))redesenharLinha(dc,true);});
-    atualizarTopo();voltarAncora(ancora);
+  /* às 13h30, com a tela aberta: o rótulo vira «Hora de retomar o contato» e a caixa do texto do retorno entra nas linhas em «Não respondeu», sem reler a lista e sem mudar o que a pessoa está vendo; antes de a caixa entrar, a presença de cada um deles é conferida (check-in e check-out daquele FILHOt) */
+  async function atualizarRetornos(){
+    atualizarTopo();/* o rótulo e o topo mudam já às 13h30 */
+    await reconferirPresencas();/* o texto das 13h30 entra só depois de conferir, FILHOt por FILHOt, que ele continua na casa (uma leitura do check-in e do check-out de cada um em «Não respondeu»; a lista não é relida) */
+    atualizarTopo();
   }
   function dizerNaLinha(dc,texto){estado.msgs[dc]=texto||'';Array.prototype.forEach.call(document.querySelectorAll('[data-zt694-pet="'+encodeURIComponent(dc)+'"] [data-zt694-status]'),function(el){el.textContent=texto||'';});}
   /* ---------- as leituras ---------- */
@@ -99806,7 +99871,7 @@ renderAtual=function(){
   function precisaLer(){var pe=projEmAtual();return !estado.resultado||estado.sujo||estado.dia!==diaAtual()||(!!pe&&pe!==estado.projEm);}
   async function lerTudo(){
     if(estado.inFlight)return estado.inFlight;
-    var req=++estado.seq,alvos=alvosAtuais(),pe=projEmAtual();
+    var req=++estado.seq,alvos=alvosAtuais(),pe=projEmAtual(),t0=agora();
     if(!estado.resultado)alvos.forEach(function(el){el.innerHTML=montarMarkup();el.setAttribute('data-zt694-ok','1');});
     estado.inFlight=(async function(){try{
       if(!estado.api)criarApi();
@@ -99814,7 +99879,10 @@ renderAtual=function(){
       if(req!==estado.seq)return;
       estado.erro='';estado.linhas={};estado.resultado=result;estado.projecao=dados[1];estado.vet=dados[2];estado.dia=result&&result.dia||diaAtual();estado.projEm=pe;estado.sujo=false;estado.avisos={};estado.msgs={};estado.copiaSt={};estado.agora94={};
       indexar(result);publicarHumanos();
+      /* quem a lista trouxe estava na casa (check-in confirmado, sem check-out) quando ela começou a ser lida */
+      estado.presenca={};(result&&result.itens||[]).forEach(function(c){if(c&&txt(c.dcKey)&&!bloqueadoTotal(c))estado.presenca[c.dcKey]={presente:true,lidoEm:t0};});
       pintar(alvosAtuais(),true);programarRelogio();
+      reconferirPresencas();
       garantirDia(estado.recarregarDia,false);
     }catch(e){
       if(req!==estado.seq)return;
@@ -99833,9 +99901,12 @@ renderAtual=function(){
   /* `esperado`: {cycleKey: valor da resposta} — se o registro em memória ainda não mostra a resposta nova (o `registrar` só o refaz quando conhece o destino), lê só o registro deste FILHOt. */
   async function atualizarLinha(dc,esperado){
     var c0=estado.itens[dc];if(!c0)return null;
-    var novo=null;
+    var novo=null,t0=agora();
     try{novo=await estado.api.atualizarUm(dc,estado.projecao);}catch(_){novo=undefined;}
-    if(novo){normalizar(novo);estado.itens[dc]=novo;var arr=estado.resultado&&estado.resultado.itens||[];for(var k=0;k<arr.length;k++){if(arr[k].dcKey===dc){arr[k]=novo;break;}}}
+    if(novo){normalizar(novo);estado.itens[dc]=novo;var arr=estado.resultado&&estado.resultado.itens||[];for(var k=0;k<arr.length;k++){if(arr[k].dcKey===dc){arr[k]=novo;break;}}
+      /* a releitura da linha confere o check-in e o check-out: quem voltou na lista está na casa agora */
+      if(bloqueadoTotal(novo))delete estado.presenca[dc];else estado.presenca[dc]={presente:true,lidoEm:t0};}
+    else if(novo===null)await conferirPresenca(dc);/* a linha deixou de ser da lista (por exemplo, o FILHOt saiu): confere a presença para a linha dizer o que houve */
     var c=estado.itens[dc];
     if(esperado&&c){
       var ok=(c.ciclos||[]).every(function(cy){return !(cy.cycleKey in esperado)||valorAtual(respostaAtual(c,cy))===esperado[cy.cycleKey];});
@@ -99930,14 +100001,22 @@ renderAtual=function(){
     return r;
   }
   function marcarSalvando(c,idxs,btn){
-    estado.salvando[c.dcKey]=true;
+    estado.salvando[c.dcKey]=estado.salvando[c.dcKey]||true;
     var art=document.querySelector('[data-zt694-pet="'+encodeURIComponent(c.dcKey)+'"]');
     if(art)Array.prototype.forEach.call(art.querySelectorAll('[data-zt694-acao="resp"],[data-zt694-acao="todos"],[data-zt694-acao="esc"]'),function(b){b.disabled=true;});
     if(btn)btn.textContent='Salvando…';
     dizerNaLinha(c.dcKey,'Salvando a resposta…');
   }
+  /* A guarda de «salvando» fecha ANTES do primeiro `await` (a leitura do Snoopy, por exemplo): o segundo toque de um toque duplo cai nela e não passa. Quem sai sem ter gravado
+     (barrado, cartaz cancelado, erro) solta a guarda e a linha volta a ficar tocável; quem grava a solta ao terminar (`gravarRespostas`). */
   async function responder(c,idxs,valor,btn){
     var dc=c.dcKey;if(estado.salvando[dc])return;
+    var guarda={};estado.salvando[dc]=guarda;
+    try{return await responder1(c,idxs,valor,btn);}
+    finally{if(estado.salvando[dc]===guarda){delete estado.salvando[dc];redesenharLinha(dc,true);}}
+  }
+  async function responder1(c,idxs,valor,btn){
+    var dc=c.dcKey;
     var mapa=mapaDe(valor);if(!mapa)return;
     var vms=idxs.map(function(i){return vmCuidado(c,c.ciclos[i]);});
     if(vms.some(function(v){return v.bloqueado;})){dizerNaLinha(dc,'A resposta não está disponível agora. Atualize e confira.');return;}
@@ -100107,17 +100186,47 @@ renderAtual=function(){
     return{ok:true};
   }
   function caixaDoBotao(el){return el.closest('[data-zt694-copia]');}
-  function copiarTexto(el){
+  function copiarTexto(el,liberar){
     var box=caixaDoBotao(el),node=box&&box.querySelector('[data-zt694-texto]'),st=box&&box.querySelector('[data-zt694-copia-st]'),art=el.closest('[data-zt694-pet]');if(!node||!art)return;
     var texto=node.textContent,idx=box.getAttribute('data-zt694-copia')||'0',dc='';try{dc=decodeURIComponent(art.getAttribute('data-zt694-pet')||'');}catch(_){dc='';}
     function vivo(sel,velho){var x=document.querySelector('[data-zt694-pet="'+encodeURIComponent(dc)+'"] [data-zt694-copia="'+idx+'"] '+sel);return x||velho;}
     function dizer(m){estado.copiaSt[dc+'|'+idx]={texto:texto,msg:m};var e=vivo('[data-zt694-copia-st]',st);if(e)e.textContent=m;}
     var pronto=function(){dizer('Mensagem copiada.');};
     function selecionar(){try{var r=document.createRange();r.selectNodeContents(vivo('[data-zt694-texto]',node));var s=window.getSelection();s.removeAllRanges();s.addRange(r);var ok=false;try{ok=document.execCommand('copy');}catch(_){ok=false;}if(ok){pronto();return;}}catch(_){/* silencioso de propósito: sem seleção o aviso abaixo diz o que fazer */}dizer('Selecione o texto para copiar.');}
+    /* O texto das 13h30 só sai da tela com o FILHOt na casa (`liberar` confere). No Safari do iPhone o gesto do toque se perde depois de um `await`: a escrita na área de transferência começa NO PRÓPRIO TOQUE,
+       com uma promessa que só entrega o texto se ele está na casa; se saiu ou a leitura falhou, a promessa rejeita e nada é copiado. Sem `ClipboardItem`, confere primeiro e segue o caminho de sempre. */
+    if(liberar){
+      var liberou=null,promessa=liberar().then(function(ok){liberou=ok===true;if(!liberou)throw new Error('sem presença confirmada');return new Blob([texto],{type:'text/plain'});});
+      promessa.catch(function(){/* silencioso de propósito: o motivo (saiu, ou não deu para conferir) já está na linha, que a conferência redesenhou */});
+      try{if(typeof ClipboardItem==='function'&&navigator&&navigator.clipboard&&typeof navigator.clipboard.write==='function'){navigator.clipboard.write([new ClipboardItem({'text/plain':promessa})]).then(pronto,function(){promessa.then(selecionar,function(){/* silencioso de propósito: quem saiu não ganha nem a seleção do texto */});});return;}}catch(_){/* silencioso de propósito: sem a escrita no toque, segue depois da conferência */}
+      promessa.then(function(){copiarTexto(el);},function(){/* silencioso de propósito: a linha já diz por quê */});
+      return;
+    }
     try{if(navigator&&navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){navigator.clipboard.writeText(texto).then(pronto,selecionar);return;}}catch(_){/* silencioso de propósito: cai na seleção do texto */}
     selecionar();
   }
+  /* No toque em «Copiar mensagem» ou «Abrir no WhatsApp» da caixa das 13h30: lê o check-in e o check-out daquele FILHOt. Se ele saiu (ou não deu para conferir), nada é copiado nem aberto:
+     a caixa some e a linha diz por quê. */
+  async function retornoLiberado(c){
+    var p=await conferirPresenca(c.dcKey);
+    if(p&&p.presente===true&&p.lidoEm>=T.inicio1330(c.dia))return true;
+    redesenharLinha(c.dcKey,true);
+    return false;
+  }
   function abrirWhats(c,texto){var tel=telDe(c);if(!tel||typeof window.zWhatsAbrir!=='function')return false;return window.zWhatsAbrir(tel,texto||'');}
+  /* «Abrir no WhatsApp» da caixa das 13h30: a janela abre NO PRÓPRIO TOQUE (o Safari do iPhone bloqueia a que abre depois de uma espera); a presença é lida depois e só então a janela vai para o link do tutor.
+     Se o FILHOt saiu ou a leitura falhou, a janela é fechada e nada é aberto. Janela bloqueada: o mesmo aviso do `zWhatsAbrir`. */
+  function abrirWhatsRetorno(c,texto){
+    var tel=telDe(c);if(!tel||typeof window.zWhatsLink!=='function')return false;
+    var w=null;try{w=window.open('','_blank');}catch(_){w=null;}/* silencioso de propósito: o aviso abaixo diz o que fazer */
+    if(!w){alert('O navegador não abriu o WhatsApp (janela bloqueada). Nada foi marcado como mandado. Use o Copiar e mande por fora.');return false;}
+    function fechar(){try{w.close();}catch(_){/* silencioso de propósito: a janela já tinha fechado */}}
+    retornoLiberado(c).then(function(ok){
+      if(!ok){fechar();return;}
+      try{w.location.href=window.zWhatsLink(tel,texto||'');}catch(_){fechar();}
+    },fechar);
+    return true;
+  }
   function tratarSnoopy(btn){
     var m=/^\s*(\w+)\(this\)\s*$/.exec(btn.getAttribute('onclick')||''),f=m&&window[m[1]],caixa=btn.closest('[data-zt694-snoopy]'),art=btn.closest('[data-zt694-pet]');
     if(typeof f!=='function'||!art)return;
@@ -100152,8 +100261,12 @@ renderAtual=function(){
     if(acao==='esc'){if(cy)gravarEscolha(c,cy,el.getAttribute('data-zt694-campo')||'',valor,{});return;}
     if(acao==='tarefa-tentar'){if(cy){var v=vmCuidado(c,cy);responder(c,[ic],v.valor,el);}return;}
     if(acao==='completar'){if(cy){var v2=vmCuidado(c,cy);trocarComAnulacao(c,v2,ic,v2.valor,{soCompletar:true});}return;}
-    if(acao==='copiar'){copiarTexto(el);return;}
-    if(acao==='whats-texto'){var tx=el.closest('[data-zt694-copia]').querySelector('[data-zt694-texto]');abrirWhats(c,tx?tx.textContent:'');return;}
+    if(acao==='copiar'||acao==='whats-texto'){
+      var cx=el.closest('[data-zt694-copia]'),tn=cx&&cx.querySelector('[data-zt694-texto]'),textoCaixa=tn?tn.textContent:'';
+      /* o texto das 13h30 vai a um tutor e afirma que o FILHOt está na casa: a presença é conferida de novo, mas a janela do WhatsApp e a escrita na área de transferência começam já no toque (ver abrirWhatsRetorno e copiarTexto) */
+      if(cx&&cx.getAttribute('data-zt694-tipo')==='retorno'){if(acao==='copiar')copiarTexto(el,function(){return retornoLiberado(c);});else abrirWhatsRetorno(c,textoCaixa);return;}
+      if(acao==='copiar')copiarTexto(el);else abrirWhats(c,textoCaixa);return;
+    }
     if(acao==='whats-vazio'){abrirWhats(c,'');return;}
   }
   /* A tela inteira pode ser refeita pelo painel (a projeção do serviço mudou, a hora virou, «Atualizar envios»): o que a pessoa via volta já no mesmo quadro. */
