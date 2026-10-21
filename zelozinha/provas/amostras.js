@@ -64,6 +64,17 @@ function positivas() {
       j('"to', 'ken": "', 'x9'.repeat(8), '"'),
       j('AUTOMATICO_', 'SECRET=', '"', 'k8'.repeat(10), '"'),
     ],
+    // A chave escrita SEM aspas: linha Environment= de um drop-in do systemd, YAML, cabeçalho de um curl e endereço
+    // (o risco 12 e o AC5.2 esperam justamente isto no espelho do drop-in; a chave do Evolution não tem prefixo de fornecedor).
+    'credencial-sem-aspas': [
+      j('Environment=EVOLUTION_', 'API_KEY=', 'a1b2c3d4e5f6a7b8c9d0e1f2'),
+      j('Environment="AUTOMATICO_', 'SECRET=', 'k8k8k8k8k8k8k8k8k8k8k8k8', '"'),
+      j('api', 'key: ', 'a1b2c3d4e5f6a7b8c9d0e1f2'),
+      j("curl -H 'api", "key: ", "a1b2c3d4e5f6a7b8c9d0e1f2", "' https://servidor-de-mentira.exemplo.invalid/mensagem"),
+      j('https://servidor-de-mentira.exemplo.invalid/mensagem?api', 'key=', 'a1b2c3d4e5f6a7b8c9d0e1f2', '&canal=1'),
+      j('export EVOLUTION_', 'TOKEN=', 'Zx9Zx9Zx9Zx9Zx9Zx9Zx9'),
+      j('sen', 'ha: ', 'Abc123Def456Ghi789Jkl'),
+    ],
     'senha-em-endereco': [
       j('postgres', '://usuario:', 'abc123xyz', '@servidor-de-mentira.exemplo.invalid/base'),
       j('https', '://admin:', 'trocar123', '@exemplo.invalid'),
@@ -139,6 +150,23 @@ function negativas() {
     'cpf de teste 00000000000 e 11111111111',
     'contato@exemplo.invalid',
     "const SENHA_NOVA = 'segredo-de-mentira-do-teste-123456';",
+    // configuração sem aspas que NÃO é segredo: fuso, modo, caminhos, variáveis, marcadores, datas, nomes de arquivo e código
+    'Environment=TZ=America/Sao_Paulo e Environment=NODE_ENV=production',
+    'LoadCredential=evolution-key:/etc/zeluz-piloto/chave-evolution-2026.txt',
+    'Environment=EVOLUTION_API_KEY_ARQUIVO=/etc/zeluz-piloto/evolution-api-key-2026.txt',
+    'EnvironmentFile=/etc/zeluz-piloto/segredos.env',
+    'apikey: ${EVOLUTION_CHAVE}',
+    'curl -H "apikey: $EVOLUTION_CHAVE" https://servidor-de-mentira.exemplo.invalid/mensagem',
+    'curl -H apikey:<chave> https://servidor-de-mentira.exemplo.invalid/mensagem?apikey=<chave>&canal=1',
+    'token_expira: 2026-10-21T13:30:00-03:00',
+    'senha: sem valor nesta linha de texto corrido, escrita só para explicar',
+    'api_key_do_servico: usar-a-chave-de-exemplo-0000000000',
+    'cache_key: compute.cache.chave20261021abcd',
+    'sort_key: senhas-fixas-20261021-revisadas.json',
+    'secret: false',
+    'token: null',
+    'password: ******************',
+    '.senha-input:focus{outline:0}',
   ];
 }
 

@@ -10,7 +10,9 @@
  *          os valores plantados são SINTÉTICOS e montados em execução (amostras.js);
  *   AC12.4 a varredura procura o endereço, o domínio e a porta da VPS (sem que nenhum arquivo
  *          do projeto tenha o domínio escrito: a lista é de impressões digitais SHA-256);
- *   AC12.7 o log do GitHub é público: a saída da varredura NUNCA mostra o valor achado.
+ *   AC12.7 o log do GitHub é público: a saída da varredura NUNCA mostra o valor achado;
+ *   QA 1ª rodada (V15 a V19): o conteúdo que o git trata como binário (byte nulo, `-diff`, `binary` no .gitattributes
+ *          do próprio pull request) é lido; a chave escrita SEM aspas (Environment=, YAML, cabeçalho, endereço) é achada.
  *
  * Todos os repositórios são descartáveis (pasta temporária). Sem rede, sem banco, sem segredo de verdade.
  *
@@ -113,7 +115,7 @@ prova('V6 — escopo: dado pessoal e endereço só valem na superfície do proje
   assert.deepStrictEqual(V.varrerTexto(p['ip-publico'][0], CAMINHO_DO_APP), []);
   assert.deepStrictEqual(V.varrerTexto(p['chave-api'][0], CAMINHO_DO_APP), [], 'a chave do Firebase no HTML do app é pública por natureza');
   // segredo de verdade vale em qualquer lugar
-  ['chave-privada', 'token', 'jwt', 'senha-em-endereco', 'credencial-atribuida'].forEach((id) => {
+  ['chave-privada', 'token', 'jwt', 'senha-em-endereco', 'credencial-atribuida', 'credencial-sem-aspas'].forEach((id) => {
     assert.ok(achou(V.varrerTexto(p[id][0], CAMINHO_DO_APP), id), id + ' deveria valer em qualquer arquivo');
   });
   assert.ok(achou(V.varrerTexto(p['chave-api'][1], CAMINHO_DO_APP), 'chave-api'), 'chave da AWS deveria valer em qualquer arquivo');
@@ -292,6 +294,161 @@ prova('V14 (AC6.7, AC8) — o projeto novo passa pela própria varredura: AGENTS
   const lista = r.achados.map((a) => a.caminho + ':' + a.linha + ' [' + a.regra + ']');
   assert.deepStrictEqual(lista, [], 'a varredura achou algo no projeto novo');
   assert.ok(fs.existsSync(path.join(A.RAIZ, 'AGENTS.md')), 'AGENTS.md não existe');
+});
+
+// ---------------------------------------------------------------------------------------------
+// QA, 1ª rodada: o que o git trata como binário não pode ficar sem leitura (SEC-002) e a chave sem aspas (SEC-003)
+// ---------------------------------------------------------------------------------------------
+
+const montar = (...pedacos) => pedacos.join('');
+
+/** Cria um repositório com a base, abre o ramo e devolve { repo, base }. */
+function repositorioComRamo() {
+  const repo = A.repositorioNovo({ 'LEIA.txt': 'base\n' });
+  const base = A.commitar(repo, 'base');
+  A.git(repo, ['checkout', '-q', '-b', 'ramo']);
+  return { repo, base };
+}
+
+prova('V15 (AC8.1, SEC-002, Q6) — arquivo de texto com um byte nulo (o git o chama de binário): o token dentro dele é achado, na linha certa, e a saída conta o arquivo com byte nulo', () => {
+  const p = S.positivas();
+  const { repo, base } = repositorioComRamo();
+  A.escrever(repo, { 'zelozinha/runtime/a.js': Buffer.from("const a = 1;\nconst t = '" + p['token'][0] + "';\n// fim\0\n", 'utf8') });
+  const c1 = A.commitar(repo, 'adiciona a.js, com um byte nulo');
+  const r = V.varrerCommits(repo, base + '..' + c1);
+  assert.deepStrictEqual(r.achados.map((a) => a.regra + '@' + a.caminho + ':' + a.linha), ['token@zelozinha/runtime/a.js:2']);
+  assert.deepStrictEqual(r.comByteNulo, ['zelozinha/runtime/a.js']);
+  assert.strictEqual(r.arquivos, 1, 'o arquivo com byte nulo tem de contar como lido');
+  const cli = rodarCli(['--commits', base + '..' + c1, '--repo', repo]);
+  assert.strictEqual(cli.status, 1, cli.saida);
+  assert.ok(/zelozinha\/runtime\/a\.js:2/.test(cli.saida) && /byte nulo[^\n]*: 1\b/.test(cli.saida), cli.saida);
+  assert.ok(!cli.saida.includes(p['token'][0]), 'a saída da CLI mostrou o valor');
+});
+
+prova('V16 (AC8.1, SEC-002, Q5) — `-diff` e `binary` no .gitattributes do próprio pull request (no mesmo commit, num commit depois ou num commit antes) e filtro de conversão de quem roda não escondem o conteúdo de nenhum commit', () => {
+  const p = S.positivas();
+  const temTrue = !cp.spawnSync('true').error;   // o filtro de teste é o comando `true`, que devolve texto nenhum
+  [
+    { nome: 'no mesmo commit', ordem: 'junto', atributos: '*.js -diff\n' },
+    { nome: 'num commit depois', ordem: 'depois', atributos: '*.js -diff\n' },
+    { nome: 'num commit antes', ordem: 'antes', atributos: '*.js -diff\n' },
+    { nome: 'com a macro binary, junto', ordem: 'junto', atributos: '*.js binary\n' },
+    { nome: 'filtro de conversão (textconv) que devolve texto nenhum', ordem: 'junto', atributos: '*.js diff=escondido\n', config: ['diff.escondido.textconv', 'true'], precisaDoTrue: true },
+  ].forEach((caso) => {
+    if (caso.precisaDoTrue && !temTrue) return;
+    const { repo, base } = repositorioComRamo();
+    if (caso.config) A.git(repo, ['config'].concat(caso.config));
+    const arquivo = { 'zelozinha/runtime/b.js': "const t = '" + p['token'][0] + "';\n" };
+    let ultimo;
+    if (caso.ordem === 'junto') {
+      A.escrever(repo, Object.assign({ '.gitattributes': caso.atributos }, arquivo));
+      ultimo = A.commitar(repo, 'atributos e arquivo juntos');
+    } else if (caso.ordem === 'depois') {
+      A.escrever(repo, arquivo);
+      A.commitar(repo, 'adiciona o arquivo');
+      A.escrever(repo, { '.gitattributes': caso.atributos });
+      ultimo = A.commitar(repo, 'atributos depois');
+    } else {
+      A.escrever(repo, { '.gitattributes': caso.atributos });
+      A.commitar(repo, 'atributos antes');
+      A.escrever(repo, arquivo);
+      ultimo = A.commitar(repo, 'adiciona o arquivo');
+    }
+    const r = V.varrerCommits(repo, base + '..' + ultimo);
+    assert.deepStrictEqual(r.achados.map((a) => a.regra + '@' + a.caminho + ':' + a.linha), ['token@zelozinha/runtime/b.js:1'], caso.nome + ': ' + JSON.stringify(r.achados));
+    assert.strictEqual(rodarCli(['--commits', base + '..' + ultimo, '--repo', repo]).status, 1, caso.nome + ': a CLI deveria sair com 1');
+  });
+});
+
+prova('V17 (AC8.1, SEC-002, Q17) — .gitattributes aninhado em zelozinha/runtime/ com `* binary` (pode vir na pasta da release): token e e-mail do .js são achados, e a CLI não diz VERDE', () => {
+  const p = S.positivas();
+  const { repo, base } = repositorioComRamo();
+  A.escrever(repo, {
+    'zelozinha/runtime/.gitattributes': '* binary\n',
+    'zelozinha/runtime/automatico81/executar.js': "const t = '" + p['token'][0] + "';\n// contato: " + p['email'][0] + '\n',
+  });
+  const c1 = A.commitar(repo, 'release com .gitattributes aninhado');
+  const r = V.varrerCommits(repo, base + '..' + c1);
+  assert.deepStrictEqual(r.achados.map((a) => a.regra + ':' + a.linha).sort(), ['email:2', 'token:1']);
+  assert.ok(r.arquivos >= 2, 'a varredura contou ' + r.arquivos + ' arquivo(s) lido(s)');
+  const cli = rodarCli(['--commits', base + '..' + c1, '--repo', repo]);
+  assert.strictEqual(cli.status, 1, cli.saida);
+  assert.ok(!/VERDE/.test(cli.saida), cli.saida);
+});
+
+prova('V17b (AC8.1, SEC-002) — o resultado final do intervalo (o que a junção trouxe) também é lido quando o arquivo tem byte nulo ou `binary` no .gitattributes', () => {
+  const p = S.positivas();
+  const repo = A.repositorioNovo({ 'f.txt': 'a\n' });
+  const base = A.commitar(repo, 'base');
+  A.git(repo, ['checkout', '-q', '-b', 'outro']);
+  A.escrever(repo, { 'zelozinha/g.txt': 'g\n' });
+  A.commitar(repo, 'outro ramo');
+  A.git(repo, ['checkout', '-q', '-b', 'ramo', base]);
+  A.escrever(repo, { 'zelozinha/h.txt': 'h\n' });
+  A.commitar(repo, 'commit comum, limpo');
+  A.git(repo, ['merge', '--no-commit', '--no-ff', '-q', 'outro']);
+  A.escrever(repo, { 'zelozinha/.gitattributes': '* binary\n', 'zelozinha/h.txt': Buffer.from('h\nchave = ' + p['jwt'][0] + '\n\0\n', 'utf8') });
+  const juncao = A.commitar(repo, 'junção com a resolução suja e binária');
+  const r = V.varrerCommits(repo, base + '..' + juncao);
+  assert.deepStrictEqual(r.achados.map((a) => a.regra), ['jwt'], JSON.stringify(r.achados));
+  assert.strictEqual(r.achados[0].commit, '', 'o achado do resultado final não tem commit próprio');
+  assert.ok(r.comByteNulo.includes('zelozinha/h.txt'));
+});
+
+prova('V18 (AC8.1, SEC-002) — texto em UTF-16 (um byte nulo entre as letras) também é lido: o segredo dentro dele é achado; a saída conta o arquivo', () => {
+  const p = S.positivas();
+  [['utf16le', '﻿'], ['utf16le', ''], ['utf16be', '']].forEach(([codificacao, bom]) => {
+    const { repo, base } = repositorioComRamo();
+    let bytes = Buffer.from(bom + "const t = '" + p['token'][0] + "';\n", 'utf16le');
+    if (codificacao === 'utf16be') bytes = Buffer.from(bytes).swap16();
+    A.escrever(repo, { 'zelozinha/config/modelo.txt': bytes });
+    const c1 = A.commitar(repo, 'arquivo em ' + codificacao);
+    const r = V.varrerCommits(repo, base + '..' + c1);
+    assert.deepStrictEqual(r.achados.map((a) => a.regra), ['token'], codificacao + ': ' + JSON.stringify(r.achados));
+    assert.deepStrictEqual(r.comByteNulo, ['zelozinha/config/modelo.txt'], codificacao);
+  });
+});
+
+prova('V19 (AC8.2, SEC-003, Q1 a Q4) — chave escrita SEM aspas num drop-in do systemd, em YAML, no cabeçalho de um curl e dentro de um endereço é achada, em cada arquivo onde aparece, e o valor nunca é mostrado', () => {
+  const p = S.positivas()['credencial-sem-aspas'];
+  const arquivos = {
+    'zelozinha/implantacao/systemd/zz-evolution.conf': '[Service]\nEnvironment=TZ=America/Sao_Paulo\n' + p[0] + '\n',          // Q1
+    'zelozinha/config/exemplo.yml': 'evolution:\n  url: http://localhost:8080\n  ' + p[2] + '\n',                                  // Q2
+    'zelozinha/implantacao/testar.sh': '#!/bin/sh\n' + p[3] + '\n',                                                                    // Q3
+    'zelozinha/docs/chamada.md': 'Chame:\n\n    ' + p[4] + '\n',                                                                      // Q4
+  };
+  const esperados = ['zelozinha/config/exemplo.yml:3', 'zelozinha/docs/chamada.md:3', 'zelozinha/implantacao/systemd/zz-evolution.conf:3', 'zelozinha/implantacao/testar.sh:2'];
+  const { repo, base } = repositorioComRamo();
+  A.escrever(repo, arquivos);
+  const c1 = A.commitar(repo, 'quatro arquivos com a chave sem aspas');
+  const r = V.varrerCommits(repo, base + '..' + c1);
+  assert.deepStrictEqual(r.achados.map((a) => a.caminho + ':' + a.linha).sort(), esperados, JSON.stringify(r.achados));
+  assert.ok(r.achados.every((a) => a.regra === 'credencial-sem-aspas'), JSON.stringify(r.achados.map((a) => a.regra)));
+  const cli = rodarCli(['--commits', base + '..' + c1, '--repo', repo]);
+  assert.strictEqual(cli.status, 1, cli.saida);
+  p.forEach((amostra) => assert.ok(!cli.saida.includes(amostra), 'a saída da CLI mostrou o valor'));
+  // a mesma linha em um arquivo do app (fora da superfície): segredo vale em qualquer arquivo
+  assert.ok(achou(V.varrerTexto(p[0], 'auaulandia/config.txt'), 'credencial-sem-aspas'));
+});
+
+prova('V19b (AC8.2, SEC-003) — configuração comum do serviço (fuso, modo, caminho de arquivo secreto, variável, marcador, data) não é achada em drop-in, YAML nem script', () => {
+  const conf = [
+    '[Service]',
+    'Environment=TZ=America/Sao_Paulo',
+    'Environment=NODE_ENV=production',
+    'Environment="NODE_OPTIONS=--max-old-space-size=384"',
+    'EnvironmentFile=/etc/zeluz-piloto/segredos.env',
+    'LoadCredential=evolution-key:/etc/zeluz-piloto/chave-evolution-2026.txt',
+    'Environment=EVOLUTION_API_KEY_ARQUIVO=/etc/zeluz-piloto/evolution-api-key-2026.txt',
+    'evolution:',
+    '  apikey: ${EVOLUTION_CHAVE}',
+    '  token: <preencher na VPS>',
+    '  secret: false',
+    'curl -H "apikey: $EVOLUTION_CHAVE" "http://localhost:8080/instance/fetchInstances?token=<token>"',
+  ].join('\n');
+  ['zelozinha/implantacao/systemd/zz-evolution.conf', 'zelozinha/config/exemplo.yml', 'zelozinha/implantacao/testar.sh'].forEach((caminho) => {
+    assert.deepStrictEqual(V.varrerTexto(conf, caminho), [], 'falso positivo em ' + caminho);
+  });
 });
 
 rodar();

@@ -5,7 +5,8 @@
  *
  * Para que serve: o projeto é ABERTO na internet e o histórico dele é público. Esta varredura roda em
  * todo pull request (e no commit do Merge) e fica vermelha se achar, em qualquer commit:
- *   - segredo: chave privada, token, JWT, chave de API, credencial atribuída a uma variável, senha em endereço;
+ *   - segredo: chave privada, token, JWT, chave de API, credencial atribuída a uma variável ou chave (com aspas ou, numa
+ *     linha de configuração, cabeçalho ou endereço, sem aspas), senha em endereço;
  *   - dado pessoal: telefone com DDD, identificador do WhatsApp, e-mail, CPF;
  *   - endereço da VPS: IP, porta de SSH, impressão digital de SSH e os nomes da lista hosts-proibidos.sha256.
  *
@@ -15,8 +16,10 @@
  * Dois modos:
  *   node zelozinha/provas/varredura.js --commits <base>..<head> [--repo <pasta>] [--escopo-total]
  *       Todos os commits do intervalo (sem os de junção): a mensagem de cada um e as linhas ACRESCENTADAS
- *       por ele; mais o resultado final do intervalo, para pegar o que uma junção trouxe. Um segredo posto no 1º commit e tirado no 2º continua sendo achado (AC8.1). Linhas que já
- *       estavam no projeto não são lidas de novo.
+ *       por ele; mais o resultado final do intervalo, para pegar o que uma junção trouxe. Um segredo posto no 1º commit
+ *       e tirado no 2º continua sendo achado (AC8.1). Linhas que já estavam no projeto não são lidas de novo.
+ *       O git é mandado ler TODO arquivo como texto (--text): arquivo com byte nulo, ou que o .gitattributes do próprio
+ *       pull request marcou como binário, é lido do mesmo jeito; a saída conta e lista os que têm byte nulo.
  *   node zelozinha/provas/varredura.js --arvore <pasta> [--so a,b,c]
  *       Todos os arquivos de texto de uma pasta (ou só os caminhos de --so). Com escopo total.
  *
@@ -27,9 +30,10 @@
  *
  * Saída: 0 = verde, 1 = vermelho (achou algo), 2 = uso errado ou erro (nunca verde por engano).
  *
- * Limites ditos com honestidade: telefone sem pontuação e sem o 55 na frente não é achado; binários e arquivos
- * maiores que 5 MB não são lidos (a saída conta quantos); nome de FILHOt e de tutor não se acha por padrão,
- * só por leitura (AC2.1(d), AC9.1).
+ * Limites ditos com honestidade: telefone sem pontuação e sem o 55 na frente não é achado; no modo de pasta, binários
+ * e arquivos maiores que 5 MB não são lidos (a saída conta quantos); no modo de commits, um binário (imagem, por exemplo)
+ * é lido como texto bruto, então só o que está escrito em claro nele é conferido, e texto em UTF-16 é lido também sem os
+ * bytes nulos; nome de FILHOt e de tutor não se acha por padrão, só por leitura (AC2.1(d), AC9.1).
  */
 
 const cp = require('child_process');
@@ -87,6 +91,31 @@ function credencialAtribuida(linha, superficie) {
   let m;
   while ((m = RE_ATRIBUICAO.exec(linha)) !== null) {
     if (parecerSegredo(m[1], superficie)) return true;
+  }
+  return false;
+}
+
+// Segredo escrito SEM aspas (QA, SEC-003): linha Environment= de um drop-in do systemd, "apikey: valor" em YAML,
+// cabeçalho de um curl (-H 'apikey: valor') e endereço (?apikey=valor). É a forma que o espelho do drop-in tem
+// (AC5.2, risco 12) e a chave do Evolution não tem prefixo de fornecedor que a denuncie, então o que a denuncia é o NOME do campo.
+// O nome tem de dizer que é segredo (token, secret, senha, password, apikey, ..._key) e o valor, depois do ":" ou do "=",
+// é lido até o primeiro espaço, aspa, vírgula, ponto e vírgula, "&", dois-pontos ou parêntese.
+const CAMPOS_QUE_DENUNCIAM = '(?:token|secret|segredo|senha|password|passwd|passphrase|api[_-]?key|apikey|private[_-]?key|chave[_-]?(?:privada|api)|(?:access|auth|master|signing|service|encryption|session|admin|license)[_-]?key|[a-z0-9]+[_-]key)';
+const RE_ATRIBUICAO_SEM_ASPAS = new RegExp('(?<![A-Za-z0-9])' + CAMPOS_QUE_DENUNCIAM + '[A-Za-z0-9_-]*["\']?\\s*[:=]\\s*([^\\s"\'`,;&|\\\\<>(){}\\[\\]:]{16,})', 'gi');
+
+function parecerSegredoSemAspas(valor, superficie) {
+  if (/^(?:[./~]|[a-z][a-z0-9+.-]*:\/\/)/i.test(valor)) return false;           // caminho de arquivo ou endereço
+  if (EXTENSAO_DE_ARQUIVO.test(valor)) return false;                              // nome de arquivo
+  if (!/[A-Za-z]/.test(valor) || !/\d/.test(valor)) return false;                 // sem letra ou sem número: nome, número, data
+  if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+$/.test(valor)) return false;     // a.b.c: nome de campo em código
+  return parecerSegredo(valor, superficie);                                       // marcador, variável, máscara, "exemplo"...
+}
+
+function credencialSemAspas(linha, superficie) {
+  RE_ATRIBUICAO_SEM_ASPAS.lastIndex = 0;
+  let m;
+  while ((m = RE_ATRIBUICAO_SEM_ASPAS.exec(linha)) !== null) {
+    if (parecerSegredoSemAspas(m[1], superficie)) return true;
   }
   return false;
 }
@@ -216,6 +245,7 @@ const REGRAS = [
   { id: 'jwt', grupo: 'segredo', escopo: 'tudo', rotulo: 'JWT', testar: (l) => RE_JWT.test(l) },
   { id: 'chave-api', grupo: 'segredo', escopo: 'tudo', rotulo: 'chave de API', testar: (l, c) => algumaCasa(RE_CHAVE_API, l) || (c.superficie && RE_CHAVE_GOOGLE.test(l)) },
   { id: 'credencial-atribuida', grupo: 'segredo', escopo: 'tudo', rotulo: 'valor de segredo atribuído a uma variável ou chave', testar: (l, c) => credencialAtribuida(l, c.superficie) },
+  { id: 'credencial-sem-aspas', grupo: 'segredo', escopo: 'tudo', rotulo: 'valor de segredo atribuído sem aspas (configuração, cabeçalho ou endereço)', testar: (l, c) => credencialSemAspas(l, c.superficie) },
   { id: 'senha-em-endereco', grupo: 'segredo', escopo: 'tudo', rotulo: 'senha dentro de um endereço', testar: (l) => RE_SENHA_EM_ENDERECO.test(l) },
   { id: 'telefone-ddd', grupo: 'pessoal', escopo: 'superficie', rotulo: 'telefone com DDD', testar: (l) => algumaCasa(RE_TELEFONE, l) },
   { id: 'jid-whatsapp', grupo: 'pessoal', escopo: 'superficie', rotulo: 'identificador do WhatsApp', testar: (l) => RE_JID.test(l) },
@@ -263,17 +293,24 @@ function dentroDaSuperficie(caminho) {
   return SUPERFICIE.some((s) => (s.endsWith('/') ? c.startsWith(s) : c === s));
 }
 
+const BYTE_NULO = '\u0000';
+
+function regraCasaNaLinha(r, linha, contexto) {
+  if (linha.length <= TAMANHO_DA_JANELA) return r.testar(linha, contexto);
+  for (let i = 0; i < linha.length; i += TAMANHO_DA_JANELA - 256) {
+    if (r.testar(linha.slice(i, i + TAMANHO_DA_JANELA), contexto)) return true;
+  }
+  return false;
+}
+
 function linhaComAlgumaRegra(linha, regras, contexto) {
+  // Texto em UTF-16 tem um byte nulo entre as letras e escaparia de toda regra: a linha com byte nulo é lida duas vezes,
+  // como veio e sem os bytes nulos (QA, SEC-002).
+  const leituras = linha.indexOf(BYTE_NULO) === -1 ? [linha] : [linha, linha.split(BYTE_NULO).join('')];
   const ids = [];
   regras.forEach((r) => {
     if (r.escopo === 'superficie' && !contexto.superficie) return;
-    if (linha.length <= TAMANHO_DA_JANELA) {
-      if (r.testar(linha, contexto)) ids.push(r);
-      return;
-    }
-    for (let i = 0; i < linha.length; i += TAMANHO_DA_JANELA - 256) {
-      if (r.testar(linha.slice(i, i + TAMANHO_DA_JANELA), contexto)) { ids.push(r); return; }
-    }
+    if (leituras.some((texto) => regraCasaNaLinha(r, texto, contexto))) ids.push(r);
   });
   return ids;
 }
@@ -388,6 +425,14 @@ function linhasAcrescentadas(diff) {
   return saida;
 }
 
+/**
+ * Como o git escreve o diff para a varredura. `--text` manda o git tratar TODO arquivo como texto: sem ele, o git escreve só
+ * "Binary files differ" para um arquivo com byte nulo, ou que o .gitattributes do próprio pull request marcou com `-diff` ou
+ * `binary` (também um .gitattributes aninhado em zelozinha/runtime/), e a varredura daria VERDE sem ler nada (QA, SEC-002).
+ * `--no-textconv` e `--no-ext-diff` impedem que um filtro de quem roda troque o conteúdo por outro texto.
+ */
+const OPCOES_DE_LEITURA = ['--no-color', '--no-ext-diff', '--no-textconv', '--text', '--unified=0'];
+
 function intervaloValido(intervalo) {
   return typeof intervalo === 'string' && /^[0-9A-Za-z_@{}\/~^.][0-9A-Za-z_@{}\/~^.-]*$/.test(intervalo) && intervalo.includes('..');
 }
@@ -402,14 +447,15 @@ function varrerCommits(repo, intervalo, opcoes) {
   } catch (e) {
     throw new Error('Intervalo de commits não encontrado (' + e.message + ')');
   }
-  const resultado = { commits: commits.length, arquivos: 0, achados: [] };
+  const resultado = { commits: commits.length, arquivos: 0, comByteNulo: [], achados: [] };
   const vistos = new Set();
+  const comByteNulo = new Set();   // arquivos que o git chamaria de binário: lidos como texto, e a saída diz quantos
   commits.forEach((commit) => {
     const mensagem = gitNoRepositorio(repo, ['show', '-s', '--format=%B', commit]);
     varrerTexto(mensagem, MENSAGEM_DO_COMMIT, Object.assign({}, o, { escopoTotal: true })).forEach((a) => {
       resultado.achados.push(Object.assign({ commit }, a));
     });
-    const diff = gitNoRepositorio(repo, ['show', '--format=', '--no-color', '--no-ext-diff', '--unified=0', commit]);
+    const diff = gitNoRepositorio(repo, ['show', '--format='].concat(OPCOES_DE_LEITURA, [commit]));
     const porArquivo = new Map();
     linhasAcrescentadas(diff).forEach((l) => {
       if (!porArquivo.has(l.caminho)) porArquivo.set(l.caminho, []);
@@ -417,6 +463,7 @@ function varrerCommits(repo, intervalo, opcoes) {
     });
     porArquivo.forEach((linhas, caminho) => {
       vistos.add(caminho);
+      if (linhas.some((l) => l.texto.indexOf(BYTE_NULO) !== -1)) comByteNulo.add(caminho);
       const contexto = {
         superficie: !!o.escopoTotal || dentroDaSuperficie(caminho),
         hashes: o.hashesProibidos || hashesDaCasa(),
@@ -433,8 +480,9 @@ function varrerCommits(repo, intervalo, opcoes) {
   const pontas = intervalo.split(/\.\.\.?/);
   if (pontas.length === 2 && pontas[0] !== '' && pontas[1] !== '') {
     const jaAchados = new Set(resultado.achados.map((a) => a.caminho + '\n' + a.regra));
-    const liquido = gitNoRepositorio(repo, ['diff', '--no-color', '--no-ext-diff', '--no-renames', '--unified=0', pontas[0] + '...' + pontas[1]]);
+    const liquido = gitNoRepositorio(repo, ['diff', '--no-renames'].concat(OPCOES_DE_LEITURA, [pontas[0] + '...' + pontas[1]]));
     linhasAcrescentadas(liquido).forEach((l) => {
+      if (l.texto.indexOf(BYTE_NULO) !== -1) { comByteNulo.add(l.caminho); vistos.add(l.caminho); }
       const contexto = {
         superficie: !!o.escopoTotal || dentroDaSuperficie(l.caminho),
         hashes: o.hashesProibidos || hashesDaCasa(),
@@ -449,6 +497,7 @@ function varrerCommits(repo, intervalo, opcoes) {
     });
   }
   resultado.arquivos = vistos.size;
+  resultado.comByteNulo = Array.from(comByteNulo).sort();
   return resultado;
 }
 
@@ -470,6 +519,8 @@ function fecho(achados) {
   console.log('VERMELHO: ' + achados.length + ' achado(s). Nenhum valor é mostrado, porque o log do GitHub deste projeto é público. Tire o que foi achado (e, se era segredo, troque o segredo: apagar do histórico não basta) e rode de novo.');
   return 1;
 }
+
+const LIMITE_DA_LISTA = 10;
 
 function plural(n, singular, pluralTexto) { return n + ' ' + (n === 1 ? singular : pluralTexto); }
 
@@ -493,7 +544,9 @@ function principal(argv) {
     }
     if (intervalo !== null) {
       const r = varrerCommits(repo, intervalo, { escopoTotal });
-      console.log('Varredura de segredo, dado pessoal e endereço da VPS: ' + plural(r.commits, 'commit', 'commits') + ' (' + intervalo + '), ' + plural(r.arquivos, 'arquivo com linhas acrescentadas', 'arquivos com linhas acrescentadas') + '.');
+      console.log('Varredura de segredo, dado pessoal e endereço da VPS: ' + plural(r.commits, 'commit', 'commits') + ' (' + intervalo + '), ' + plural(r.arquivos, 'arquivo com linhas acrescentadas', 'arquivos com linhas acrescentadas') + '. Com byte nulo (o git os chama de binários; lidos como texto, também sem os bytes nulos): ' + r.comByteNulo.length + '.');
+      r.comByteNulo.slice(0, LIMITE_DA_LISTA).forEach((c) => console.log('AVISO   ' + c + '  tem byte nulo: foi lido como texto bruto; se for imagem ou outro binário, só o que está escrito em claro nele foi conferido'));
+      if (r.comByteNulo.length > LIMITE_DA_LISTA) console.log('AVISO   (mais ' + (r.comByteNulo.length - LIMITE_DA_LISTA) + ' arquivo(s) com byte nulo)');
       mostrarAchados(r.achados);
       return fecho(r.achados);
     }

@@ -32,7 +32,7 @@ Mapa das pastas:
 | `SEGURANCA.md`, `AUDITORIA-FASE0-FASE1.md` | Segurança do banco e auditoria inicial do app |
 | `zelozinha/` | A Zelozinha. Hoje: `README.md` e `provas/`. Chegam com o código da Codex: `runtime/`, `manifesto/`, `testes/`, `config/`, `implantacao/`, `docs/` |
 | `regras-banco/` (ainda não existe) | Espelho, só de leitura, das regras que estão no Console do Firebase |
-| `.github/` (ainda não existe) | Provas automáticas de cada pull request (a cargo do @devops) |
+| `.github/workflows/zelozinha-provas.yml` | As provas automáticas do GitHub (a cargo do @devops): rodam em todo pull request e no commit do Merge, e passam a valer a partir do Merge do pull request que as traz (task 10 da Story 6.112). O `zelozinha-publicar.yml`, que publica na VPS, é da Fase 3 e ainda não existe |
 
 ## 2. Quem decide
 
@@ -56,7 +56,7 @@ Cada mudança nasce de uma story, e o commit a cita, no padrão do histórico: `
 
 **A Zelozinha.**
 
-- Hoje: `node zelozinha/provas/rodar-todas.js` roda as provas do projeto (manual, varredura de segredos, configuração do git, regra do número da versão). Sem rede, sem banco e sem WhatsApp. Elas rodam também antes de cada pull request, no GitHub, quando o arquivo de provas estiver no ar.
+- Hoje: `node zelozinha/provas/rodar-todas.js` roda as provas do projeto (manual, varredura de segredos, configuração do git, regra do número da versão). Sem rede, sem banco e sem WhatsApp. O GitHub roda as mesmas provas, mais a varredura de todos os commits e a regra do número da versão, em todo pull request e no commit do Merge (`.github/workflows/zelozinha-provas.yml`), a partir do Merge do pull request que traz esse arquivo.
 - Quando o código da Codex entrar: `node zelozinha/testes/rodar.js` (ainda não existe) roda os testes dela, que a Codex reportou como 44 principais, 30 de revisão independente e 8 do adaptador, mais as regras do banco no emulador. Esses testes rodam com a rede proibida e sem dado de verdade. Onde estão hoje e se usam dado real: a confirmar pela Codex.
 - Nunca teste mandando mensagem a um tutor.
 
@@ -83,8 +83,8 @@ Cada mudança nasce de uma story, e o commit a cita, no padrão do histórico: `
 9. **Usar `/local/acompanhamento` como teste de saúde.** Ele grava uma projeção no banco.
 10. **Usar `pull_request_target` ou runner próprio na VPS.** Em projeto aberto, um pull request de fora poderia rodar código na máquina que tem o WhatsApp e o banco.
 11. **Regra: mudança de lugar e mudança de comportamento nunca no mesmo pull request.** Mover ou copiar código muda zero byte do que roda; mudar o que a Zelozinha faz é outro pull request, com a história própria.
-12. **Regra: Merge só com sinal verde.** Verde é: as provas do projeto passam (`node zelozinha/provas/rodar-todas.js`) e, quando o arquivo de provas do GitHub estiver no ar, o sinal dele também. Vermelho é não dar o Merge; o GitHub sozinho não impede.
-13. **Regra: nada da pasta `zelozinha` direto no master.** Sempre pull request. Um envio direto ao master não publica a Zelozinha e fica vermelho.
+12. **Regra: Merge só com sinal verde.** Verde é: as provas do projeto passam (`node zelozinha/provas/rodar-todas.js`) e o sinal do GitHub (`zelozinha-provas`) também, a partir do Merge que o traz. Vermelho é não dar o Merge; o GitHub sozinho não impede.
+13. **Regra: nada da pasta `zelozinha` direto no master.** Sempre pull request. Um envio direto ao master não muda o que roda na VPS, mas hoje nada o acusa: o aviso vermelho de «entrou sem Merge» é do `zelozinha-publicar.yml` (Fase 3, ainda não existe), e o `zelozinha-provas.yml` fica verde se as provas passarem.
 
 ## 6. Como escrever para a equipe e para as famílias
 
