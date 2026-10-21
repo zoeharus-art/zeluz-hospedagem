@@ -16,7 +16,7 @@ A Zêluz é um centro de cuidados que atende FILHOts (o termo da casa para os pe
 - **O app da AuAulândia e do Day Care**, ferramenta da equipe (os Zelosos). É um site estático, publicado pelo GitHub Pages, com o Firebase Realtime Database `hospedagem-zeluz` por trás. A tela da equipe é `auaulandia/index.html` (um arquivo grande), com a lógica em `auaulandia/*.js`.
 - **A Zelozinha**, um serviço Node que roda numa VPS e manda, por WhatsApp (pela Evolution API), a mensagem de cuidados ao tutor depois do check-in do corpo do FILHOt. Ela é determinística, não é agente de linguagem: não interpreta resposta, não autoriza nada e não registra aplicação de cuidado. Pessoas respondem, autorizam, aplicam e registram (no Dr. Snoopy, o sistema onde a equipe registra e lança cobrança, fora deste projeto). Janela de envio: segunda a sexta, das 07:00 (inclusive) às 13:00 (exclusive), horário de São Paulo, com no mínimo 120 segundos entre duas tentativas. Detalhes em `zelozinha/README.md`.
 
-Há ainda um perfil da Zelozinha no Hermes (conversa por Telegram, ligado ao cérebro da empresa na VPS). O serviço de envio não o usa, e ele fica fora deste projeto por enquanto (quais arquivos o formam: a confirmar pela Codex).
+Há ainda um perfil da Zelozinha no Hermes (conversa por Telegram, ligado ao cérebro da empresa na VPS). Não há evidência documentada de que o serviço de envio o use (handoff da Codex, seção 6), e ele fica fora deste projeto por enquanto (quais arquivos o formam: a confirmar pela Codex).
 
 Mapa das pastas:
 
@@ -40,7 +40,7 @@ A Adriana, diretora da Zêluz, decide tudo o que é marca, dinheiro, pessoas, pr
 
 Stories, PRD, arquitetura e o histórico das decisões ficam no projeto fechado `zoeharus-art/aios-zeluz` (`docs/stories/` e `docs/zeluz/auaulandia/`). Esta mudança tem a story `docs/stories/6.112.story.md` e o desenho `docs/zeluz/auaulandia/arquitetura-zelozinha-no-projeto.md`. Quem só tem acesso a este projeto tem o código e este manual, mas não o histórico das decisões: peça acesso aos dois.
 
-A Codex é a outra IA do projeto e hoje a única com acesso à VPS; o Claude não entra nela. Mudar o que a Zelozinha manda, para quem e quando é pedido da Adriana, em story própria.
+A Codex é a outra IA do projeto e hoje a única com acesso documentado à VPS da Zelozinha. A sessão do Claude que escreveu este manual não entra nela. Mas o `tests/lib/retrato.js` do app entra por SSH, com acesso de administração e a chave de quem roda a prova, numa VPS que guarda o backup diário do banco; se essa for a mesma VPS da Zelozinha, quem roda o retrato com a chave dele também chega nela (a confirmar pela Codex, C7). Mudar o que a Zelozinha manda, para quem e quando é pedido da Adriana, em story própria.
 
 Cada mudança nasce de uma story, e o commit a cita, no padrão do histórico: `tipo(escopo): descrição [Story N.N]`, por exemplo `fix(zelozinha): ... [Story 6.94]`.
 
@@ -66,7 +66,7 @@ Cada mudança nasce de uma story, e o commit a cita, no padrão do histórico: `
 
 **As regras do banco** não se publicam por pull request: a Adriana as cola no Console do Firebase, mesclando. As regras publicadas para a Zelozinha (namespace `piloto59`) não são as do repositório; o espelho delas chega em `regras-banco/` com o código da Codex.
 
-**A Zelozinha hoje.** Quem troca o que roda na VPS é a Codex, a pedido da Adriana. Como ela instala e como volta, com o comando exato: a confirmar pela Codex. No ar está a 106 (`automatico106-1225a25c`, instalada em 20/10/2026 às 21h12min46s); a 105 (`automatico105-35ac05e7`) está guardada para volta. Qualquer volta preserva o ledger e a projeção.
+**A Zelozinha hoje.** Quem troca o que roda na VPS é a Codex, a pedido da Adriana. Como ela instala e como volta, com o comando exato: a confirmar pela Codex. No ar está a 106 (`automatico106-1225a25c`, instalada em 20/10/2026 às 21h12min46s); a 105 (`automatico105-35ac05e7`) está guardada para volta. Qualquer volta precisa preservar o ledger e a projeção.
 
 **A Zelozinha depois** (Fases 3 e 4 da Story 6.112; ainda não feitas, e a pergunta 29 à Adriana está aberta). O Merge passa a publicar na VPS pelo GitHub: as provas repetem, a VPS monta a versão nova, testa sem rede e só troca fora da janela protegida (segunda a sexta, das 6h45 às 13h05; Merge dentro dela espera até as 13h05). Se a versão nova não subir, a VPS volta sozinha à anterior. Voltar em um comando e parar numa emergência: ver `zelozinha/README.md`. **Hoje nada disso existe.**
 
@@ -106,6 +106,11 @@ O valor nunca aparece neste projeto. Aqui só está onde mora e quem troca.
 | Configuração da Zelozinha, `/etc/zeluz-piloto/automatico80.json`: chave do Evolution e acesso da identidade técnica do Firebase (as chaves exatas: a confirmar pela Codex) | Só na VPS. No projeto entra apenas o modelo sem valores, `automatico80.modelo.json` | Quem tem acesso à VPS (hoje, a Codex) e, para o Firebase, quem tem acesso ao Console |
 | Arquivos secretos do `servidor-senha` (conta de serviço e senhas fixas), em `/etc/zeluz/` | Só na VPS | Quem tem acesso à VPS |
 | Regras do banco e chaves do App Check | Console do Firebase | A Adriana |
+| `PONTE_SENHA`, a palavra-chave das três pontes de Google Apps Script (`integracao-daycare/`, `integracao-planilha/` e `integracao-telegram/`) | Nas Propriedades do script de cada ponte, no Google. O app guarda a palavra correspondente nas Configurações, e as duas pontas têm de ser iguais (`docs/INDICE-MENU-APP.md`) | A Gestão, no script e no app |
+| `TOKEN_BOT` (o robô do Telegram) e `APPCHECK_DEBUG_TOKEN` (o App Check da ponte do Telegram) | Nas Propriedades do script de `integracao-telegram/`. O token de depuração do App Check nasce no Console do Firebase | Quem edita o script no Google; o token de depuração, quem tem acesso ao Console (a Adriana) |
+| `FIREBASE_APPCHECK_DEBUG_TOKEN` | Variável de ambiente de quem roda `tools/carimbar-versao.js`, `tools/configurar-pin-gestao.js` e as provas que usam `tests/lib/appcheck.js`. Nunca em arquivo | Quem tem acesso ao Console do Firebase cria e apaga o token de depuração; quem roda o guarda no próprio ambiente |
+| Chave de SSH de quem roda `tests/lib/retrato.js` (o retrato do banco) | No computador de quem roda, na pasta `.ssh` dele; nunca no projeto. Entra por SSH numa VPS que guarda o backup diário do banco (se é a da Zelozinha: C7) | Quem tem acesso a essa VPS tira a chave autorizada de lá; quem roda gera outra |
+| PINs do app: o de cada pessoa do Time, as senhas fixas trocadas na tela e o da Gestão | No banco `hospedagem-zeluz`: o PIN de cada pessoa em `daycare/config/monitores`; as senhas fixas trocadas em `daycare/config/senhas-fixas/<id>` e o PIN da Gestão em `daycare/config/pin-gestao`, estes dois só como código (`{hash, sal}`) | O PIN de cada pessoa, na tela do Time; a Gestão troca as senhas fixas em Time › Senhas; o PIN da Gestão, quem a Diretoria autorizar, com `node tools/configurar-pin-gestao.js` |
 | Chave de publicação (Fases 3 e 4 da Story 6.112; ainda não existe) | Nos segredos do ambiente `vps-zelozinha` do GitHub, liberado só para o `master` | Quem tem acesso à VPS (apaga uma linha lá) e a Adriana, no GitHub |
 | Acesso de administração à própria VPS | Hoje, com a Codex. De quem é a conta, quanto custa e quem mais tem acesso: a confirmar (pergunta 31 à Adriana; C7 à Codex) | Quem tem a conta |
 
@@ -115,7 +120,7 @@ Se um segredo vazar: troque a chave na hora (apagar do histórico não basta, po
 
 ## 8. O que ainda não se sabe (a confirmar pela Codex)
 
-O que este manual diz da VPS vem do handoff da Codex de 20/10/2026. O Claude, que escreveu esta primeira versão, não entra na VPS e não o conferiu; só a Codex confirma. Estes pontos estão em aberto, e cada um tem o nome C1 a C9 nas perguntas à Codex:
+O que este manual diz da VPS vem do handoff da Codex de 20/10/2026. A sessão do Claude que escreveu esta primeira versão não entrou na VPS e não conferiu nada lá; só a Codex confirma. Estes pontos estão em aberto, e cada um tem o nome C1 a C9 nas perguntas à Codex:
 
 - C1: usuário da unidade, versão do Node, `package.json` e lockfile da release, onde fica o `node_modules`, e as versões dos pacotes de terceiros.
 - C2: o que o drop-in do calendário (`zz106-calendario.conf`) tem além do calendário; se há `Environment=` com segredo.

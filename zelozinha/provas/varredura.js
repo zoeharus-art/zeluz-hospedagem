@@ -5,9 +5,9 @@
  *
  * Para que serve: o projeto é ABERTO na internet e o histórico dele é público. Esta varredura roda em
  * todo pull request (e no commit do Merge) e fica vermelha se achar, em qualquer commit:
- *   - segredo: chave privada, token, JWT, chave de API, credencial atribuída a uma variável ou chave (com aspas ou, numa
- *     linha de configuração, cabeçalho ou endereço, sem aspas), campo com «chave» no nome (chaveDoCanal, EVOLUTION_CHAVE, "chave:"
- *     em YAML), senha em endereço;
+ *   - segredo: chave privada, token, JWT, chave de API, credencial atribuída a uma variável ou chave (entre aspas simples, duplas ou
+ *     crases, ou numa lista numa linha só; ou, numa linha de configuração, cabeçalho ou endereço, sem aspas), campo com «chave» no nome
+ *     (chaveDoCanal, chaveEvolução, EVOLUTION_CHAVE, "chave do canal", "chave:" em YAML), senha em endereço;
  *   - dado pessoal: telefone com DDD, identificador do WhatsApp, e-mail, CPF;
  *   - endereço da VPS: IP, porta de SSH, impressão digital de SSH e os nomes da lista hosts-proibidos.sha256.
  *
@@ -36,7 +36,10 @@
  * e arquivos maiores que 5 MB não são lidos (a saída conta quantos); no modo de commits, um binário (imagem, por exemplo)
  * é lido como texto bruto, então só o que está escrito em claro nele é conferido, e texto em UTF-16 é lido também sem os
  * bytes nulos; nome de FILHOt e de tutor não se acha por padrão, só por leitura (AC2.1(d), AC9.1); campo cujo nome não diz que é
- * segredo (credencial, autorizacao, codigoDeAcesso...) só é achado se o valor tiver um formato conhecido (token, JWT, chave de API...).
+ * segredo (credencial, autorizacao, codigoDeAcesso...) só é achado se o valor tiver um formato conhecido (token, JWT, chave de API...);
+ * a varredura lê uma linha de cada vez, então o valor numa linha e o nome do campo em outra não é achado (YAML com «chave: >-», lista em
+ * JSON com um item por linha, texto entre crases em várias linhas); valor sem aspas com menos de 16 caracteres, ou entre aspas com menos
+ * de 12, também não (QA, SEC-013; a prova V23 guarda estes limites).
  */
 
 const cp = require('child_process');
@@ -79,7 +82,25 @@ const RE_CHAVE_API = [
 ];
 const RE_CHAVE_GOOGLE = /\bAIza[0-9A-Za-z_-]{35}\b/;   // a do Firebase no HTML do app é pública: só vale na superfície
 
-const RE_ATRIBUICAO = /(?:token|secret|segredo|senha|password|passwd|api[_-]?key|apikey|private[_-]?key|chave[_-]?(?:privada|api))\w*["']?\s*[:=]\s*["']([^"'\s]{12,})["']/gi;
+// Peças comuns das regras que leem «nome do campo, ":" ou "=", valor» (QA, SEC-012 e SEC-013):
+//   - ASPA: aspa simples, aspa dupla OU crase. A crase é a terceira forma de texto do JavaScript, a língua do runtime e dos testes
+//     (const token = `valor`); o que vem com ${...} dentro continua sendo marcador e é filtrado em parecerSegredo;
+//   - LETRAS: letra (com acento), número e "_". O nome de um campo em português pode ter acento (chaveEvolução);
+//   - caudaDoNome: o resto do nome depois da palavra que denuncia. Ou é uma palavra colada (com aspa de fechamento opcional), ou, SÓ quando
+//     o nome do campo termina numa aspa, pode ter espaço e hífen no meio ("chave do canal": "valor", "senha do usuário": "valor");
+//   - LISTA: lista numa linha só ("chaves": ["a", "b"]); o corpo é conferido item por item (itensDaLista).
+const ASPA = '["\'`]';
+const LETRAS = '\\p{L}\\p{N}_';
+const VALOR_ENTRE_ASPAS = ASPA + '([^"\'`\\s]{12,})' + ASPA;
+const LISTA = '\\[([^\\]\\n]{0,4000})\\]';
+const ATE_O_VALOR = '\\s*[:=]\\s*';
+const caudaDoNome = (palavraColada) => '(?:' + palavraColada + '["\']?|[' + LETRAS + ' -]{0,60}["\'])';
+const RE_ITEM_DA_LISTA = /["'`]([^"'`\s]{12,})["'`]/g;
+
+const NOMES_QUE_DENUNCIAM = '(?:token|secret|segredo|senha|password|passwd|api[_-]?key|apikey|private[_-]?key|chave[_-]?(?:privada|api))';
+const CAUDA_DO_NOME_COMUM = caudaDoNome('[' + LETRAS + ']*');
+const RE_ATRIBUICAO = new RegExp(NOMES_QUE_DENUNCIAM + CAUDA_DO_NOME_COMUM + ATE_O_VALOR + VALOR_ENTRE_ASPAS, 'giu');
+const RE_ATRIBUICAO_EM_LISTA = new RegExp(NOMES_QUE_DENUNCIAM + CAUDA_DO_NOME_COMUM + ATE_O_VALOR + LISTA, 'giu');
 
 function parecerSegredo(valor, superficie) {
   if (/[<>${}*]/.test(valor)) return false;                       // marcador, variável ou máscara
@@ -89,13 +110,32 @@ function parecerSegredo(valor, superficie) {
   return (/[A-Za-z]/.test(valor) && /\d/.test(valor)) || valor.length >= 32;
 }
 
-function credencialAtribuida(linha, superficie) {
-  RE_ATRIBUICAO.lastIndex = 0;
-  let m;
-  while ((m = RE_ATRIBUICAO.exec(linha)) !== null) {
-    if (parecerSegredo(m[1], superficie)) return true;
+/** Algum item da lista "a", "b" (já sem os colchetes) parece segredo? */
+function itensDaLista(corpo, superficie) {
+  RE_ITEM_DA_LISTA.lastIndex = 0;
+  let item;
+  while ((item = RE_ITEM_DA_LISTA.exec(corpo)) !== null) {
+    if (parecerSegredo(item[1], superficie)) return true;
   }
   return false;
+}
+
+/** O campo tem um valor entre aspas (ou crases), ou uma lista de valores numa linha, que parece segredo? */
+function valorOuListaParecemSegredo(reValor, reLista, linha, superficie) {
+  let m;
+  reValor.lastIndex = 0;
+  while ((m = reValor.exec(linha)) !== null) {
+    if (parecerSegredo(m[1], superficie)) return true;
+  }
+  reLista.lastIndex = 0;
+  while ((m = reLista.exec(linha)) !== null) {
+    if (itensDaLista(m[1], superficie)) return true;
+  }
+  return false;
+}
+
+function credencialAtribuida(linha, superficie) {
+  return valorOuListaParecemSegredo(RE_ATRIBUICAO, RE_ATRIBUICAO_EM_LISTA, linha, superficie);
 }
 
 // Segredo escrito SEM aspas (QA, SEC-003): linha Environment= de um drop-in do systemd, "apikey: valor" em YAML,
@@ -104,7 +144,8 @@ function credencialAtribuida(linha, superficie) {
 // O nome tem de dizer que é segredo (token, secret, senha, password, apikey, ..._key) e o valor, depois do ":" ou do "=",
 // é lido até o primeiro espaço, aspa, vírgula, ponto e vírgula, "&", dois-pontos ou parêntese.
 const CAMPOS_QUE_DENUNCIAM = '(?:token|secret|segredo|senha|password|passwd|passphrase|api[_-]?key|apikey|private[_-]?key|chave[_-]?(?:privada|api)|(?:access|auth|master|signing|service|encryption|session|admin|license)[_-]?key|[a-z0-9]+[_-]key)';
-const RE_ATRIBUICAO_SEM_ASPAS = new RegExp('(?<![A-Za-z0-9])' + CAMPOS_QUE_DENUNCIAM + '[A-Za-z0-9_-]*["\']?\\s*[:=]\\s*([^\\s"\'`,;&|\\\\<>(){}\\[\\]:]{16,})', 'gi');
+const VALOR_DO_CAMPO_SEM_ASPAS = '([^\\s"\'`,;&|\\\\<>(){}\\[\\]:]{16,})';
+const RE_ATRIBUICAO_SEM_ASPAS = new RegExp('(?<![A-Za-z0-9])' + CAMPOS_QUE_DENUNCIAM + '[' + LETRAS + '-]*["\']?' + ATE_O_VALOR + VALOR_DO_CAMPO_SEM_ASPAS, 'giu');
 
 function parecerSegredoSemAspas(valor, superficie) {
   if (/^(?:[./~]|[a-z][a-z0-9+.-]*:\/\/)/i.test(valor)) return false;           // caminho de arquivo ou endereço
@@ -131,16 +172,14 @@ function credencialSemAspas(linha, superficie) {
 // identificador de registro têm «Chave» no nome e um valor que parece hexadecimal, e um pull request do app não pode ficar
 // vermelho por isso. O valor passa pelos mesmos filtros das outras duas regras (marcador, variável, máscara, caminho, endereço, exemplo).
 // O valor sem aspas é lido com a mesma classe de caracteres da regra de cima (até espaço, aspa, vírgula, ";", "&", ":" ou parêntese).
-const VALOR_DO_CAMPO_SEM_ASPAS = '([^\\s"\'`,;&|\\\\<>(){}\\[\\]:]{16,})';
-const RE_CHAVE_COM_ASPAS = /chave[\w-]{0,60}["']?\s*[:=]\s*["']([^"'\s]{12,})["']/gi;   // {0,60}: o nome de um campo não passa disso, e o limite mantém a busca linear numa linha enorme
-const RE_CHAVE_SEM_ASPAS = new RegExp('chave[A-Za-z0-9_-]{0,60}["\']?\\s*[:=]\\s*' + VALOR_DO_CAMPO_SEM_ASPAS, 'gi');
+const CAUDA_DE_CHAVE = caudaDoNome('[' + LETRAS + '-]{0,60}');   // {0,60}: o nome de um campo não passa disso, e o limite mantém a busca linear numa linha enorme
+const RE_CHAVE_COM_ASPAS = new RegExp('chave' + CAUDA_DE_CHAVE + ATE_O_VALOR + VALOR_ENTRE_ASPAS, 'giu');
+const RE_CHAVE_EM_LISTA = new RegExp('chave' + CAUDA_DE_CHAVE + ATE_O_VALOR + LISTA, 'giu');
+const RE_CHAVE_SEM_ASPAS = new RegExp('chave[' + LETRAS + '-]{0,60}["\']?' + ATE_O_VALOR + VALOR_DO_CAMPO_SEM_ASPAS, 'giu');
 
 function chaveEmPortugues(linha, superficie) {
+  if (valorOuListaParecemSegredo(RE_CHAVE_COM_ASPAS, RE_CHAVE_EM_LISTA, linha, superficie)) return true;
   let m;
-  RE_CHAVE_COM_ASPAS.lastIndex = 0;
-  while ((m = RE_CHAVE_COM_ASPAS.exec(linha)) !== null) {
-    if (parecerSegredo(m[1], superficie)) return true;
-  }
   RE_CHAVE_SEM_ASPAS.lastIndex = 0;
   while ((m = RE_CHAVE_SEM_ASPAS.exec(linha)) !== null) {
     if (parecerSegredoSemAspas(m[1], superficie)) return true;

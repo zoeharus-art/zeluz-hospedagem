@@ -2,7 +2,7 @@
 
 O serviço que manda, por WhatsApp, a mensagem de cuidados às famílias depois do check-in do corpo do FILHOt. Esta pasta é onde ele vai morar dentro do projeto da AuAulândia. O manual do projeto inteiro é o `AGENTS.md`, na raiz: leia-o antes deste.
 
-Esta é a primeira versão do README (Story 6.112, Fase 2A). O que depende do código ou da VPS está marcado «a confirmar pela Codex» e será completado quando o código chegar. Tudo o que está dito aqui da VPS vem do handoff da Codex de 20/10/2026. O Claude, que escreveu esta primeira versão, não entra na VPS e não o conferiu; só a Codex confirma.
+Esta é a primeira versão do README (Story 6.112, Fase 2A). O que depende do código ou da VPS está marcado «a confirmar pela Codex» e será completado quando o código chegar. Tudo o que está dito aqui da VPS vem do handoff da Codex de 20/10/2026. A sessão do Claude que escreveu esta primeira versão não entrou na VPS e não conferiu nada lá; só a Codex confirma. O handoff não diz quem mais chega à VPS: o `tests/lib/retrato.js` do app, por exemplo, entra por SSH numa VPS que guarda o backup do banco, com a chave de quem roda, e se for a mesma da Zelozinha ela também chega nela (a confirmar pela Codex, C7; veja a parte 2 do `AGENTS.md`).
 
 ## Estado de hoje (21/10/2026)
 
@@ -30,7 +30,7 @@ Esta é a primeira versão do README (Story 6.112, Fase 2A). O que depende do c�
 - Contato humano, fonte indisponível, identidade inconsistente ou estado do ledger ambíguo interrompem a rota automática. Ela nunca infere presença a partir de uma falha de leitura.
 - Não escreve em dado clínico (a instalação 106 confirmou zero escrita clínica direta).
 - Mensagem aceita pelo WhatsApp não é mensagem entregue: só há entrega com recibo técnico correspondente.
-- Não depende de Claude, Telegram nem Hermes para enviar.
+- Segundo o handoff da Codex, não há evidência documentada de integração de envio com Claude, Telegram ou Hermes: o envio é um serviço Node determinístico, que usa o Firebase e a Evolution.
 
 ## A janela de envio
 

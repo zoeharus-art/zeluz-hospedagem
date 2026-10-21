@@ -15,6 +15,8 @@
  *          do próprio pull request) é lido; a chave escrita SEM aspas (Environment=, YAML, cabeçalho, endereço) é achada.
  *   QA 2ª rodada (V20): a chave com nome em português («chave», como em chaveDoCanal, EVOLUTION_CHAVE e "chave:" em YAML) é achada, com
  *          aspas ou sem, na superfície do projeto novo; fora dela (no app) um identificador de registro com «Chave» no nome não trava nada.
+ *   QA 3ª rodada (V21 a V23): o valor entre crases (const token = `…`) passa pelas regras de credencial (SEC-012); a lista numa linha só, o nome
+ *          com acento e o nome com espaço entre aspas também (SEC-013); e os dois limites escritos no LEIA-ME são verdadeiros (V23).
  *
  * Todos os repositórios são descartáveis (pasta temporária). Sem rede, sem banco, sem segredo de verdade.
  *
@@ -491,6 +493,88 @@ prova('V20 (AC8.2, SEC-007, R1 a R3) — chave com nome em português (chaveDoCa
   //     dado de teste lá usa um marcador ou a palavra «exemplo»)
   p.forEach((amostra) => assert.ok(achou(V.varrerTexto(amostra, CAMINHO_DO_APP, { escopoTotal: true }), 'chave-em-portugues'), 'escopo total não pegou uma amostra'));
   registros.forEach((linha) => assert.ok(achou(V.varrerTexto(linha, CAMINHO_DA_SUPERFICIE), 'chave-em-portugues'), 'na superfície o identificador de registro deveria ser achado'));
+});
+
+// ---------------------------------------------------------------------------------------------
+// QA, 3ª rodada: o valor entre crases (SEC-012) e as formas raras do campo «chave» (SEC-013)
+// ---------------------------------------------------------------------------------------------
+
+prova('V21 (AC8.2, SEC-012, T1 e T2) — valor entre crases (const chaveDoCanal = `…`, const token = `…`) é achado em arquivo da superfície, num intervalo de commits de verdade; crase com ${…} dentro é marcador e não é achada; o valor nunca é mostrado', () => {
+  const f = S.formasDaRodada3();
+
+  // (a) T1 (nome em português) e T2 (nome em inglês) em dois testes da superfície, como a Codex os escreveria
+  const { repo, base } = repositorioComRamo();
+  A.escrever(repo, {
+    'zelozinha/testes/canal.test.js': "'use strict';\n" + f.T1.linha + '\n',
+    'zelozinha/testes/token.test.js': "'use strict';\n" + f.T2.linha + '\n',
+  });
+  const c1 = A.commitar(repo, 'dois testes com o valor entre crases');
+  const r = V.varrerCommits(repo, base + '..' + c1);
+  assert.deepStrictEqual(r.achados.map((a) => a.caminho + ':' + a.linha + ' ' + a.regra).sort(),
+    ['zelozinha/testes/canal.test.js:2 chave-em-portugues', 'zelozinha/testes/token.test.js:2 credencial-atribuida'], JSON.stringify(r.achados));
+  const cli = rodarCli(['--commits', base + '..' + c1, '--repo', repo]);
+  assert.strictEqual(cli.status, 1, cli.saida);
+  assert.ok(/VERMELHO: 2 achado/.test(cli.saida), cli.saida);
+  [f.T1.valor, f.T2.valor].forEach((valor) => assert.ok(!cli.saida.includes(valor), 'a saída da CLI mostrou o valor'));
+
+  // (b) as outras formas com crase: propriedade de objeto e duas atribuições na mesma linha, a primeira inofensiva
+  ['T1b', 'T1c', 'T2b'].forEach((nome) => {
+    const achados = V.varrerTexto(f[nome].linha, CAMINHO_DA_SUPERFICIE);
+    assert.ok(achou(achados, f[nome].regra), nome + ': a regra ' + f[nome].regra + ' não pegou a forma com crase');
+    assert.ok(!JSON.stringify(achados).includes(f[nome].valor), nome + ': o achado repetiu o valor');
+  });
+
+  // (c) escopo: o token vale em qualquer arquivo (segredo); a regra da «chave» só na superfície (SEC-007)
+  assert.ok(achou(V.varrerTexto(f.T2.linha, CAMINHO_DO_APP), 'credencial-atribuida'), 'segredo entre crases deveria valer em qualquer arquivo');
+  assert.deepStrictEqual(V.varrerTexto(f.T1.linha, CAMINHO_DO_APP), [], 'a regra da «chave» não deveria valer fora da superfície');
+
+  // (d) crase que só monta texto ou aponta para uma variável não é segredo
+  [
+    'const token = `${process.env.TOKEN_DA_VPS}`;',
+    'const token = `prefixo-${prefixo}-sufixo-12345678`;',
+    'const chaveDoCanal = `<segredo: fica só na VPS>`;',
+    'const senha = `nova senha do usuário`;',
+    'throw new Error(`token inválido: ${t}`);',
+  ].forEach((linha) => assert.deepStrictEqual(V.varrerTexto(linha, CAMINHO_DA_SUPERFICIE), [], 'falso positivo em: ' + linha));
+});
+
+prova('V22 (AC8.2, SEC-013, T3, T5 e T6) — lista numa linha só, nome com acento e nome com espaço entre aspas são achados, em cada arquivo onde aparecem; a segunda atribuição da linha vale (TEST-003); o valor nunca é mostrado', () => {
+  const f = S.formasDaRodada3();
+  const nomes = ['T3', 'T3b', 'T3c', 'T3d', 'T5', 'T5b', 'T5c', 'T6', 'T6b', 'TEST003'];
+  const arquivos = {};
+  nomes.forEach((nome) => { arquivos['zelozinha/config/caso-' + nome + '.txt'] = 'antes\n' + f[nome].linha + '\n'; });
+  const { repo, base } = repositorioComRamo();
+  A.escrever(repo, arquivos);
+  const c1 = A.commitar(repo, 'dez arquivos com as formas raras do campo');
+  const r = V.varrerCommits(repo, base + '..' + c1);
+  const esperados = nomes.map((nome) => 'zelozinha/config/caso-' + nome + '.txt:2 ' + f[nome].regra).sort();
+  assert.deepStrictEqual(r.achados.map((a) => a.caminho + ':' + a.linha + ' ' + a.regra).sort(), esperados, JSON.stringify(r.achados));
+  const cli = rodarCli(['--commits', base + '..' + c1, '--repo', repo]);
+  assert.strictEqual(cli.status, 1, cli.saida);
+  assert.ok(/VERMELHO: 10 achado/.test(cli.saida), cli.saida);
+  nomes.forEach((nome) => assert.ok(!cli.saida.includes(f[nome].valor), nome + ': a saída da CLI mostrou o valor'));
+
+  // fora da superfície só valem as regras de segredo comum (a da «chave» não)
+  assert.deepStrictEqual(['T3', 'T3b', 'T3d', 'T5', 'T5b', 'T6', 'TEST003'].filter((nome) => V.varrerTexto(f[nome].linha, CAMINHO_DO_APP).length > 0), [], 'a regra da «chave» valeu fora da superfície');
+  assert.deepStrictEqual(['T3c', 'T5c', 'T6b'].filter((nome) => V.varrerTexto(f[nome].linha, CAMINHO_DO_APP).length === 0), [], 'o segredo comum deveria valer em qualquer arquivo');
+});
+
+prova('V23 (SEC-013, T7 e T8) — os dois limites escritos no LEIA-ME são verdadeiros: o valor numa linha e o nome do campo em outra não é achado, e valor sem aspas com menos de 16 caracteres (ou entre aspas com menos de 12) também não; o limite começa exatamente aí', () => {
+  const f = S.formasDaRodada3();
+  const v = f.T1.valor;   // 24 caracteres, com letra e número
+  const nada = (linha) => assert.deepStrictEqual(V.varrerTexto(linha, CAMINHO_DA_SUPERFICIE), [], 'este limite virou achado, então o LEIA-ME está desatualizado: ' + linha.split('\n')[0]);
+  const acha = (linha) => assert.ok(V.varrerTexto(linha, CAMINHO_DA_SUPERFICIE).length > 0, 'deveria ser achado: ' + linha.split('\n')[0]);
+
+  // T7: o valor na linha de baixo (YAML com «>-», lista em JSON com um item por linha, texto entre crases em várias linhas)
+  nada('chave: >-\n  ' + v);
+  nada('"chaves": [\n  "' + v + '"\n]');
+  nada('const chaveDoCanal =\n  `' + v + '`;');
+  // T8: sem aspas, menos de 16 caracteres; entre aspas, menos de 12
+  nada('Environment=EVOLUTION_' + 'CHAVE=' + v.slice(0, 14));
+  nada('chaveDoCanal: ' + v.slice(0, 15));
+  nada('"chaveDoCanal": "' + v.slice(0, 11) + '"');
+  acha('chaveDoCanal: ' + v.slice(0, 16));
+  acha('"chaveDoCanal": "' + v.slice(0, 12) + '"');
 });
 
 rodar();

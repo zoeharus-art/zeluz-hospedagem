@@ -32,10 +32,41 @@ function formatarCpf(onze) {
   return onze.slice(0, 3) + '.' + onze.slice(3, 6) + '.' + onze.slice(6, 9) + '-' + onze.slice(9);
 }
 
+/**
+ * As formas que a 3ª rodada do QA (SEC-012 e SEC-013) mostrou que passavam, com o nome que o QA deu (T1, T2, T3, T5, T6) e mais as
+ * que achei no caminho (T1b, T1c, T2b, T3b a T3d, T5b, T5c, T6b e TEST003). Cada uma diz a regra que tem de pegá-la. Entram sozinhas
+ * em positivas() (V1 e V2 as cobrem) e as provas V21 e V22 as usam pelo nome. O valor é sempre sintético e a linha é montada em execução.
+ */
+function formasDaRodada3() {
+  const v = 'k9m2p4x7q1w8e3r5t6y0u2i4';
+  const w = 'Abc123Def456Ghi789Jkl';
+  const crase = '`';
+  return {
+    // SEC-012: o valor entre crases, a terceira forma de texto do JavaScript
+    T1: { regra: 'chave-em-portugues', valor: v, linha: j('const cha', 'veDoCanal = ', crase, v, crase, ';') },
+    T1b: { regra: 'chave-em-portugues', valor: v, linha: j('{ cha', 'veDoCanal: ', crase, v, crase, ' }') },
+    T1c: { regra: 'chave-em-portugues', valor: v, linha: j('const cha', 'veArquivo = ', crase, '${ARQUIVO_DA_CHAVE}', crase, ', cha', 'veDoCanal = ', crase, v, crase, ';') },
+    T2: { regra: 'credencial-atribuida', valor: w, linha: j('const to', 'ken = ', crase, w, crase, ';') },
+    T2b: { regra: 'credencial-atribuida', valor: w, linha: j('{ sen', 'ha: ', crase, w, crase, ' }') },
+    // SEC-013: lista numa linha só, nome com acento e nome com espaço
+    T3: { regra: 'chave-em-portugues', valor: v, linha: j('"cha', 'ves": ["', v, '"]') },
+    T3b: { regra: 'chave-em-portugues', valor: v, linha: j('"cha', 'ves": ["nome-do-canal-principal", "', v, '"]') },
+    T3d: { regra: 'chave-em-portugues', valor: v, linha: j('const cha', 'ves = [', crase, v, crase, '];') },
+    T3c: { regra: 'credencial-atribuida', valor: w, linha: j('"to', 'kens": ["', w, '"]') },
+    T5: { regra: 'chave-em-portugues', valor: v, linha: j('cha', 'veEvolução: ', v) },
+    T5b: { regra: 'chave-em-portugues', valor: v, linha: j('"cha', 'veEvolução": "', v, '"') },
+    T5c: { regra: 'credencial-sem-aspas', valor: w, linha: j('sen', 'haAdministração: ', w) },
+    T6: { regra: 'chave-em-portugues', valor: v, linha: j('"cha', 've do canal": "', v, '"') },
+    T6b: { regra: 'credencial-atribuida', valor: w, linha: j('"sen', 'ha do usuário": "', w, '"') },
+    // TEST-003 (QA): duas atribuições na mesma linha, a primeira inofensiva (linha minificada)
+    TEST003: { regra: 'chave-em-portugues', valor: v, linha: j('{"cha', 'veArquivo":"${ARQUIVO_DA_CHAVE}","cha', 'veDoCanal":"', v, '"}') },
+  };
+}
+
 /** regra -> lista de linhas que o varredor TEM de achar. */
 function positivas() {
   const cpf = cpfComDigitos('529982247');
-  return {
+  const lista = {
     'chave-privada': [
       j('-----BEGIN ', 'RSA ', 'PRIVATE ', 'KEY-----'),
       j('-----BEGIN OPENSSH ', 'PRIVATE KEY-----'),
@@ -131,6 +162,10 @@ function positivas() {
       j('ssh-ed', '25519 AAAA', 'C3NzaC1lZDI1NTE5', 'A'.repeat(40)),
     ],
   };
+  // As formas da 3ª rodada do QA entram no fim de cada lista (V20 usa as três primeiras da regra «chave-em-portugues» pela posição).
+  const novas = formasDaRodada3();
+  Object.keys(novas).forEach((nome) => lista[novas[nome].regra].push(novas[nome].linha));
+  return lista;
 }
 
 /** Linhas comuns que NÃO podem ser achadas (nome técnico, exemplo, máscara, versão, data, hash...). */
@@ -199,6 +234,25 @@ function negativas() {
     '"chave": "************************"',
     "const chave = 'valor-de-exemplo-do-canal-0001';",
     'a chave de acesso fica só na VPS e nunca vai para o projeto',
+    // 3ª rodada do QA: crase com variável, marcador, texto e exemplo; lista de marcadores ou de nomes; nome com acento ou espaço sem valor de segredo
+    'const token = `${process.env.TOKEN_DA_VPS}`;',
+    'const token = `prefixo-${prefixo}-sufixo-12345678`;',
+    'const chaveDoCanal = `<segredo: fica só na VPS>`;',
+    'const senha = `nova senha do usuário`;',
+    'const chave = `valor-de-exemplo-do-canal-0001`;',
+    'throw new Error(`token inválido: ${t}`);',
+    '"chaves": ["<segredo: fica só na VPS>"]',
+    '"chaves": ["nome-do-canal-principal", "outro-nome-do-canal"]',
+    'chaves: ["${CHAVE_A}", "${CHAVE_B}"]',
+    '"chave do canal": "<segredo: fica só na VPS>"',
+    '"chave do canal": "nome-do-canal-principal"',
+    '"senha do usuário": "nova senha do usuário"',
+    'chaveEvolução: usar-a-chave-de-exemplo-0000000000',
+    'chaveEvolução: ${EVOLUTION_CHAVE}',
+    'senhaAdministração: ${SENHA_ADMIN}',
+    'A chave do canal "principal": ela fica só na VPS e nunca vai para o projeto',
+    '{"chaveArquivo":"${ARQUIVO_DA_CHAVE}","chaveDoCanal":"<segredo: fica só na VPS>"}',
+    'const chaveArquivo = `${ARQUIVO_DA_CHAVE}`, chaveDoCanal = `<segredo: fica só na VPS>`;',
   ];
 }
 
@@ -216,4 +270,4 @@ function registrosDoApp() {
   ];
 }
 
-module.exports = { cpfComDigitos, formatarCpf, j, negativas, positivas, registrosDoApp };
+module.exports = { cpfComDigitos, formatarCpf, formasDaRodada3, j, negativas, positivas, registrosDoApp };

@@ -14,7 +14,10 @@
  *   - o que não se sabe da VPS aparece escrito como «a confirmar pela Codex»;
  *   - marca e português (AC25.1): sem emoji, sem "Zeluz" sem circunflexo fora de código, sem as
  *     palavras proibidas da marca fora de uma linha de instrução;
- *   - nenhum segredo, dado pessoal, endereço ou porta da VPS (a mesma varredura do AC8).
+ *   - nenhum segredo, dado pessoal, endereço ou porta da VPS (a mesma varredura do AC8);
+ *   - (QA 3ª rodada, DOC-003) a parte 7 cita pelo NOME cada segredo que o projeto lê (as pontes, o App Check, o SSH do retrato, os PINs);
+ *   - (QA 3ª rodada, DOC-004) as frases que diziam mais do que a fonte não voltam, e a parte 2 conta que o `tests/lib/retrato.js` entra
+ *     por SSH numa VPS, em vez de dizer que o Claude não entra nela.
  *
  * Como as provas funcionam: `verificarManual` recebe os textos e devolve a lista de problemas. Ela
  * roda com os arquivos reais (lista vazia) e com "defeitos plantados": cópias estragadas de propósito,
@@ -69,6 +72,27 @@ const SECOES_README = [
   'Como voltar',
   'Como parar numa emergência',
   'Histórico de releases',
+];
+
+// DOC-003: cada segredo que o projeto lê tem de aparecer, pelo nome, numa linha da tabela da parte 7 (só o nome; o valor nunca).
+// Cada exigência é um conjunto de expressões que a MESMA linha tem de satisfazer. O lookbehind separa APPCHECK_DEBUG_TOKEN (a ponte
+// do Telegram) de FIREBASE_APPCHECK_DEBUG_TOKEN (o ambiente de quem roda).
+const SEGREDOS_DA_PARTE_7 = [
+  { id: 'S1', descricao: 'PONTE_SENHA, das três pontes', res: [/PONTE_SENHA/] },
+  { id: 'S2', descricao: 'TOKEN_BOT, da ponte do Telegram', res: [/TOKEN_BOT/] },
+  { id: 'S3', descricao: 'APPCHECK_DEBUG_TOKEN, da ponte do Telegram', res: [/(?<![A-Z_])APPCHECK_DEBUG_TOKEN/] },
+  { id: 'S4', descricao: 'FIREBASE_APPCHECK_DEBUG_TOKEN, do ambiente de quem roda', res: [/FIREBASE_APPCHECK_DEBUG_TOKEN/] },
+  { id: 'S5', descricao: 'a chave de SSH de quem roda tests/lib/retrato.js', res: [/SSH/, /retrato\.js/] },
+  { id: 'S6', descricao: 'os PINs do app (a equipe, as senhas fixas trocadas e a Gestão)', res: [/PINs/, /pin-gestao/, /senhas-fixas/] },
+];
+
+// DOC-004: frases que diziam mais do que a fonte (o handoff da Codex e o código do app). Nenhuma pode voltar.
+const FRASES_QUE_DIZIAM_MAIS = [
+  { id: 'F1', re: /Qualquer volta preserva/i, fonte: 'o handoff diz «qualquer rollback precisa preservar»' },
+  { id: 'F2', re: /O serviço de envio não o usa/i, fonte: 'o handoff diz «não há evidência documentada de integração de envio»' },
+  { id: 'F3', re: /Não depende de Claude, Telegram nem Hermes/i, fonte: 'o handoff diz «não há evidência documentada de integração de envio»' },
+  { id: 'F4', re: /o Claude não entra nela/i, fonte: 'o tests/lib/retrato.js entra por SSH numa VPS, com a chave de quem roda' },
+  { id: 'F5', re: /O Claude, que escreveu esta primeira versão, não entra na VPS/i, fonte: 'a frase vale só para a sessão que escreveu o texto' },
 ];
 
 const PALAVRAS_PROIBIDAS = /\b(cachorros?|cães|cão|cãozinhas?|animais|animal|bichos?|donos?|proprietários?|funcionários?|atendentes?|vendedoras?|monitor(?:es|as?)?|pets?|hospedagem|hotel canino)\b/i;
@@ -128,6 +152,15 @@ function problemasDoClaude(texto) {
   return p;
 }
 
+function problemasDeFrases(nome, texto) {
+  const p = [];
+  FRASES_QUE_DIZIAM_MAIS.forEach((f) => {
+    if (f.re.test(texto)) p.push(nome + ': frase que diz mais do que a fonte (' + f.id + '): ' + f.fonte);
+  });
+  if (/ledger/i.test(texto) && !/(?:precisa|tem de) preservar o ledger/i.test(texto)) p.push(nome + ': a volta tem de dizer «precisa preservar» (ou «tem de preservar») o ledger e a projeção (F1)');
+  return p;
+}
+
 /** Devolve a lista de problemas dos três textos (null = arquivo que não existe). */
 function verificarManual(t) {
   const p = [];
@@ -152,7 +185,19 @@ function verificarManual(t) {
         if (quais.length > 1) p.push('AGENTS.md, parte 5: ' + e.id + ' aparece em mais de um item (cada regra mora em um item só)');
       });
     }
+    const s2 = secao(t.agents, PARTES[1][1]);
+    if (s2 !== null && !(/retrato\.js/.test(s2) && /SSH/.test(s2) && /C7/.test(s2))) {
+      p.push('AGENTS.md, parte 2: falta dizer que o tests/lib/retrato.js entra por SSH numa VPS e que se é a da Zelozinha está a confirmar (C7) (F4)');
+    }
+    const s7 = secao(t.agents, PARTES[6][1]);
+    if (s7 !== null) {
+      const linhasDaTabela = s7.split('\n').filter((l) => l.startsWith('|'));
+      SEGREDOS_DA_PARTE_7.forEach((e) => {
+        if (itemQueCumpre(linhasDaTabela, e).length === 0) p.push('AGENTS.md, parte 7: falta o segredo «' + e.descricao + '» (' + e.id + ')');
+      });
+    }
     p.push.apply(p, problemasDeEstado('AGENTS.md', t.agents));
+    p.push.apply(p, problemasDeFrases('AGENTS.md', t.agents));
     p.push.apply(p, problemasDeMarca('AGENTS.md', t.agents));
   }
   if (t.claude !== null) {
@@ -164,6 +209,7 @@ function verificarManual(t) {
       if (!new RegExp('^## ' + titulo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'm').test(t.readme)) p.push('README: falta a seção «' + titulo + '»');
     });
     p.push.apply(p, problemasDeEstado('README', t.readme));
+    p.push.apply(p, problemasDeFrases('README', t.readme));
     p.push.apply(p, problemasDeMarca('README', t.readme));
   }
   // AC6.7: a mesma varredura de segredo e de dado pessoal do AC8, sobre os três textos.
@@ -275,6 +321,51 @@ prova('M9 (AC6.7, d58) — defeito plantado: segredo, telefone, e-mail, endereç
       assert.ok(!problemas.join('\n').includes(plantas[regra][0]), 'a mensagem de problema repetiu o valor plantado (' + regra + ')');
     });
   });
+});
+
+prova('M10 (DOC-003) — a parte 7 cita cada segredo do projeto pelo nome, e defeito plantado: tirar a linha de qualquer um deles é pego', () => {
+  const t = reais();
+  const s7 = secao(t.agents, PARTES[6][1]);
+  const linhas = s7.split('\n').filter((l) => l.startsWith('|'));
+  SEGREDOS_DA_PARTE_7.forEach((e) => {
+    assert.strictEqual(itemQueCumpre(linhas, e).length >= 1, true, e.id + ' não está na tabela da parte 7');
+    const sem = t.agents.split('\n').filter((linha) => !(linha.startsWith('|') && e.res.every((re) => re.test(linha)))).join('\n');
+    assert.notStrictEqual(sem, t.agents, e.id + ': a linha nem foi encontrada para tirar');
+    const problemas = verificarManual({ agents: sem, claude: t.claude, readme: t.readme });
+    assert.ok(problemas.some((x) => x.includes(e.id)), 'tirar ' + e.id + ' passou sem ser pego');
+  });
+  // a tabela cita o nome, nunca o valor: a varredura do M1 já confere, e aqui nenhuma linha da parte 7 tem "=" seguido de valor
+  assert.ok(!/(?:PONTE_SENHA|TOKEN_BOT|DEBUG_TOKEN)\s*[:=]\s*\S/.test(s7), 'a parte 7 parece trazer um valor, e deveria trazer só o nome');
+});
+
+prova('M11 (DOC-004) — as cinco frases que diziam mais do que a fonte não voltam: plantar qualquer uma delas no AGENTS.md ou no README é pego, e a volta tem de dizer «precisa preservar»', () => {
+  const t = reais();
+  const plantas = {
+    F1: 'Qualquer volta preserva o ledger e a projeção.',
+    F2: 'O serviço de envio não o usa.',
+    F3: 'Não depende de Claude, Telegram nem Hermes para enviar.',
+    F4: 'Quem decide é a Codex; o Claude não entra nela.',
+    F5: 'O Claude, que escreveu esta primeira versão, não entra na VPS.',
+  };
+  Object.keys(plantas).forEach((id) => {
+    ['agents', 'readme'].forEach((qual) => {
+      const entrada = Object.assign({}, t, { [qual]: t[qual] + '\n' + plantas[id] + '\n' });
+      assert.ok(verificarManual(entrada).some((x) => x.includes('(' + id + ')')), qual + ' + ' + id + ' passou sem ser pego');
+    });
+  });
+  // a volta sem «precisa preservar» também é pega
+  const semPreservar = t.agents.replace(/precisa preservar o ledger/, 'preserva o ledger');
+  assert.notStrictEqual(semPreservar, t.agents);
+  assert.ok(verificarManual({ agents: semPreservar, claude: t.claude, readme: t.readme }).some((x) => x.includes('(F1)')), 'a volta sem «precisa preservar» passou');
+});
+
+prova('M12 (DOC-004) — a parte 2 do AGENTS.md conta que o tests/lib/retrato.js entra por SSH numa VPS (e que se é a da Zelozinha está a confirmar); sem isso é pego', () => {
+  const t = reais();
+  const s2 = secao(t.agents, PARTES[1][1]);
+  assert.ok(/retrato\.js/.test(s2) && /SSH/.test(s2) && /C7/.test(s2), 'a parte 2 não conta do retrato');
+  const sem = t.agents.replace(/`tests\/lib\/retrato\.js`/, 'um script de teste');
+  assert.notStrictEqual(sem, t.agents);
+  assert.ok(verificarManual({ agents: sem, claude: t.claude, readme: t.readme }).some((x) => x.includes('(F4)')), 'tirar o retrato da parte 2 passou sem ser pego');
 });
 
 rodar();
