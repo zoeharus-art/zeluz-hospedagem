@@ -13,6 +13,8 @@
  *   AC12.7 o log do GitHub é público: a saída da varredura NUNCA mostra o valor achado;
  *   QA 1ª rodada (V15 a V19): o conteúdo que o git trata como binário (byte nulo, `-diff`, `binary` no .gitattributes
  *          do próprio pull request) é lido; a chave escrita SEM aspas (Environment=, YAML, cabeçalho, endereço) é achada.
+ *   QA 2ª rodada (V20): a chave com nome em português («chave», como em chaveDoCanal, EVOLUTION_CHAVE e "chave:" em YAML) é achada, com
+ *          aspas ou sem, na superfície do projeto novo; fora dela (no app) um identificador de registro com «Chave» no nome não trava nada.
  *
  * Todos os repositórios são descartáveis (pasta temporária). Sem rede, sem banco, sem segredo de verdade.
  *
@@ -107,7 +109,7 @@ prova('V5 (AC12.4, d58) — endereço, porta e impressão digital da VPS são pe
   });
 });
 
-prova('V6 — escopo: dado pessoal e endereço só valem na superfície do projeto (AGENTS.md, CLAUDE.md, .github/, zelozinha/, regras-banco/); segredo vale em qualquer arquivo do pull request', () => {
+prova('V6 — escopo: dado pessoal e endereço só valem na superfície do projeto (AGENTS.md, CLAUDE.md, .github/, zelozinha/, regras-banco/); segredo vale em qualquer arquivo do pull request (a regra da «chave» em português é a exceção, só na superfície: V20)', () => {
   const p = S.positivas();
   // fora da superfície (um arquivo do app): e-mail, telefone, IP e a chave do Firebase do HTML (pública) não bloqueiam
   assert.deepStrictEqual(V.varrerTexto(p['email'][0], CAMINHO_DO_APP), []);
@@ -181,11 +183,14 @@ prova('V9 (AC8.1, d10) — todos os commits do pull request: segredo plantado no
 
   const r = V.varrerCommits(repo, base + '..' + c2);
   assert.strictEqual(r.commits, 2);
-  assert.strictEqual(r.achados.length, 1, 'esperava 1 achado, veio ' + r.achados.length);
-  assert.strictEqual(r.achados[0].regra, 'token');
-  assert.strictEqual(r.achados[0].commit, c1);
-  assert.strictEqual(r.achados[0].caminho, 'zelozinha/runtime/a.js');
-  assert.strictEqual(r.achados[0].linha, 4, 'o número da linha do achado tem de ser o do arquivo novo');
+  // A linha plantada é «const chave = '<token>'»: o token é achado como token e, desde o SEC-007, a atribuição a um campo «chave» também.
+  assert.strictEqual(r.achados.length, 2, 'esperava 2 achados (token e chave-em-portugues), veio ' + r.achados.length + ': ' + JSON.stringify(r.achados.map((a) => a.regra)));
+  assert.deepStrictEqual(r.achados.map((a) => a.regra).sort(), ['chave-em-portugues', 'token']);
+  r.achados.forEach((a) => {
+    assert.strictEqual(a.commit, c1);
+    assert.strictEqual(a.caminho, 'zelozinha/runtime/a.js');
+    assert.strictEqual(a.linha, 4, 'o número da linha do achado tem de ser o do arquivo novo');
+  });
   assert.ok(!JSON.stringify(r).includes(p['token'][0]), 'o resultado repetiu o valor plantado');
 
   // a CLI conta a mesma história
@@ -449,6 +454,43 @@ prova('V19b (AC8.2, SEC-003) — configuração comum do serviço (fuso, modo, c
   ['zelozinha/implantacao/systemd/zz-evolution.conf', 'zelozinha/config/exemplo.yml', 'zelozinha/implantacao/testar.sh'].forEach((caminho) => {
     assert.deepStrictEqual(V.varrerTexto(conf, caminho), [], 'falso positivo em ' + caminho);
   });
+});
+
+prova('V20 (AC8.2, SEC-007, R1 a R3) — chave com nome em português (chaveDoCanal, EVOLUTION_CHAVE, «chave:» em YAML) é achada, com aspas ou sem, na superfície; fora dela (no app) um identificador de registro com «Chave» no nome não trava nada; o valor nunca é mostrado', () => {
+  const p = S.positivas()['chave-em-portugues'];
+
+  // (a) os três defeitos do QA em arquivos da superfície, num intervalo de commits de verdade (R1: JSON de teste; R2: drop-in do systemd; R3: YAML)
+  const arquivos = {
+    'zelozinha/testes/canal.json': '{\n  ' + p[0] + '\n}\n',
+    'zelozinha/implantacao/systemd/zz-evolution.conf': '[Service]\nEnvironment=TZ=America/Sao_Paulo\n' + p[1] + '\n',
+    'zelozinha/config/exemplo.yml': 'evolution:\n  url: http://localhost:8080\n  ' + p[2] + '\n',
+  };
+  const { repo, base } = repositorioComRamo();
+  A.escrever(repo, arquivos);
+  const c1 = A.commitar(repo, 'três arquivos com a chave em português');
+  const r = V.varrerCommits(repo, base + '..' + c1);
+  assert.deepStrictEqual(r.achados.map((a) => a.caminho + ':' + a.linha).sort(), ['zelozinha/config/exemplo.yml:3', 'zelozinha/implantacao/systemd/zz-evolution.conf:3', 'zelozinha/testes/canal.json:2'], JSON.stringify(r.achados));
+  assert.ok(r.achados.every((a) => a.regra === 'chave-em-portugues'), JSON.stringify(r.achados.map((a) => a.regra)));
+  const cli = rodarCli(['--commits', base + '..' + c1, '--repo', repo]);
+  assert.strictEqual(cli.status, 1, cli.saida);
+  assert.ok(/VERMELHO: 3 achado/.test(cli.saida), cli.saida);
+  p.forEach((amostra) => assert.ok(!cli.saida.includes(amostra), 'a saída da CLI mostrou o valor'));
+
+  // (b) fora da superfície (um arquivo do app) a regra não vale: nem as amostras nem os identificadores de registro do app são achados,
+  //     e um pull request do app só com esses identificadores fica verde
+  p.forEach((amostra) => assert.deepStrictEqual(V.varrerTexto(amostra, CAMINHO_DO_APP), [], 'a regra da «chave» não deveria valer fora da superfície'));
+  const registros = S.registrosDoApp();
+  registros.forEach((linha) => assert.deepStrictEqual(V.varrerTexto(linha, 'tests/fase0-ciclo-fechado.test.js'), [], 'identificador de registro do app foi achado fora da superfície'));
+  const { repo: repoApp, base: baseApp } = repositorioComRamo();
+  A.escrever(repoApp, { 'tests/fase0-ciclo-fechado.test.js': registros.join('\n') + '\n' });
+  const cApp = A.commitar(repoApp, 'app: identificadores de registro');
+  assert.deepStrictEqual(V.varrerCommits(repoApp, baseApp + '..' + cApp).achados, [], 'pull request do app só com identificadores de registro não pode ficar vermelho');
+  assert.strictEqual(rodarCli(['--commits', baseApp + '..' + cApp, '--repo', repoApp]).status, 0);
+
+  // (c) com o escopo total, vale em qualquer arquivo; e na superfície o mesmo identificador de registro é achado (limite dito no LEIA-ME:
+  //     dado de teste lá usa um marcador ou a palavra «exemplo»)
+  p.forEach((amostra) => assert.ok(achou(V.varrerTexto(amostra, CAMINHO_DO_APP, { escopoTotal: true }), 'chave-em-portugues'), 'escopo total não pegou uma amostra'));
+  registros.forEach((linha) => assert.ok(achou(V.varrerTexto(linha, CAMINHO_DA_SUPERFICIE), 'chave-em-portugues'), 'na superfície o identificador de registro deveria ser achado'));
 });
 
 rodar();

@@ -75,6 +75,21 @@ function positivas() {
       j('export EVOLUTION_', 'TOKEN=', 'Zx9Zx9Zx9Zx9Zx9Zx9Zx9'),
       j('sen', 'ha: ', 'Abc123Def456Ghi789Jkl'),
     ],
+    // A chave com nome em português (QA, SEC-007): a Codex nomeia tudo em português. As três primeiras são as do QA (R1 a R3):
+    // o nome do modelo da configuração, o da chave do Evolution num drop-in do systemd e «chave:» em YAML. O valor é sempre sintético.
+    'chave-em-portugues': [
+      j('"cha', 'veDoCanal": "', 'k9m2p4x7q1w8e3r5t6y0u2i4', '"'),
+      j('Environment=EVOLUTION_', 'CHAVE=', 'k9m2p4x7q1w8e3r5t6y0u2i4'),
+      j('cha', 've: ', 'k9m2p4x7q1w8e3r5t6y0u2i4'),
+      j('"exemplo', 'ChaveDoCanal": "', 'k9m2p4x7q1w8e3r5t6y0u2i4', '"'),
+      j('exemplo', 'ChaveDoCanal: ', 'k9m2p4x7q1w8e3r5t6y0u2i4'),
+      j('"cha', 've-do-canal": "', 'k9m2p4x7q1w8e3r5t6y0u2i4', '"'),
+      j('Environment="EVOLUTION_', 'CHAVE=', 'k9m2p4x7q1w8e3r5t6y0u2i4', '"'),
+      j('export CHAVE_DO_', 'CANAL=', 'k9m2p4x7q1w8e3r5t6y0u2i4'),
+      j("curl -H 'cha", "ve: ", "k9m2p4x7q1w8e3r5t6y0u2i4", "' https://servidor-de-mentira.exemplo.invalid/mensagem"),
+      j('https://servidor-de-mentira.exemplo.invalid/mensagem?cha', 've=', 'k9m2p4x7q1w8e3r5t6y0u2i4', '&canal=1'),
+      j('const cha', "ve = '", 'k9m2p4x7q1w8e3r5t6y0u2i4', "';"),
+    ],
     'senha-em-endereco': [
       j('postgres', '://usuario:', 'abc123xyz', '@servidor-de-mentira.exemplo.invalid/base'),
       j('https', '://admin:', 'trocar123', '@exemplo.invalid'),
@@ -167,7 +182,38 @@ function negativas() {
     'token: null',
     'password: ******************',
     '.senha-input:focus{outline:0}',
+    // «chave» no nome, valor que NÃO é segredo: marcador, variável, máscara, caminho, nome de campo, data, texto, "exemplo"
+    '"chaveDoCanal": "<segredo: fica só na VPS>"',
+    '"exemploChaveDoCanal": "<segredo: fica só na VPS>"',
+    'chave: ${EVOLUTION_CHAVE}',
+    'curl -H "chave: $EVOLUTION_CHAVE" https://servidor-de-mentira.exemplo.invalid/mensagem',
+    'curl -H chave:<chave> https://servidor-de-mentira.exemplo.invalid/mensagem?chave=<chave>&canal=1',
+    'Environment=EVOLUTION_CHAVE_ARQUIVO=/etc/zeluz-piloto/chave-evolution-2026.txt',
+    'LoadCredential=chave-evolution:/etc/zeluz-piloto/chave-evolution-2026.txt',
+    'chave: usar-a-chave-de-exemplo-0000000000',
+    'chave_do_canal: nome-do-canal-principal-da-casa',
+    'chaveDoCanal: 2026-10-21T13:30:00-03:00',
+    'chave: ******************',
+    'chave: null',
+    '"chave": "nome-do-canal-principal"',
+    '"chave": "************************"',
+    "const chave = 'valor-de-exemplo-do-canal-0001';",
+    'a chave de acesso fica só na VPS e nunca vai para o projeto',
   ];
 }
 
-module.exports = { cpfComDigitos, formatarCpf, j, negativas, positivas };
+/**
+ * Linhas de um arquivo do APP que têm «Chave» no nome e um valor que parece hexadecimal: são identificadores de registro (a impressão
+ * digital de uma função, por exemplo), não segredo. A regra da «chave» em português vale só na superfície do projeto novo, então
+ * NENHUMA destas pode ser achada fora dela (a prova V20 confere). Os valores são inventados e os nomes, montados em execução.
+ */
+function registrosDoApp() {
+  return [
+    j('    rep', 'FaltaChave: ', "'", '1a2b3c4d5e6f7a8b', "', rep", 'VeioChave: ', "'", '9f8e7d6c5b4a3921', "',"),
+    j('  const BASE = { pend', 'ChaveDoLancamento: ', "'", 'a1b2c3d4e5f60789', "', pendGravar: '", '0123456789abcdef', "' };"),
+    j('const BASE2 = {"orcFeriados', 'Chave": "', 'f0e1d2c3b4a59687'.repeat(4), '"};'),
+    j('    contatoEstadia', 'Chave: ', "'", '0f1e2d3c4b5a6978', "',"),
+  ];
+}
+
+module.exports = { cpfComDigitos, formatarCpf, j, negativas, positivas, registrosDoApp };

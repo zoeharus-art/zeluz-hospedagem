@@ -6,7 +6,8 @@
  * Para que serve: o projeto é ABERTO na internet e o histórico dele é público. Esta varredura roda em
  * todo pull request (e no commit do Merge) e fica vermelha se achar, em qualquer commit:
  *   - segredo: chave privada, token, JWT, chave de API, credencial atribuída a uma variável ou chave (com aspas ou, numa
- *     linha de configuração, cabeçalho ou endereço, sem aspas), senha em endereço;
+ *     linha de configuração, cabeçalho ou endereço, sem aspas), campo com «chave» no nome (chaveDoCanal, EVOLUTION_CHAVE, "chave:"
+ *     em YAML), senha em endereço;
  *   - dado pessoal: telefone com DDD, identificador do WhatsApp, e-mail, CPF;
  *   - endereço da VPS: IP, porta de SSH, impressão digital de SSH e os nomes da lista hosts-proibidos.sha256.
  *
@@ -26,14 +27,16 @@
  * Escopo (modo de commits): as regras de SEGREDO valem em qualquer arquivo; as de dado pessoal e de endereço
  * da VPS valem na "superfície" do projeto novo (AGENTS.md, CLAUDE.md, .github/, zelozinha/, regras-banco/),
  * para não travar o Merge de um pull request do app por um e-mail ou telefone que já mora no app.
- * A chave de API do Firebase que está no HTML do app é pública por natureza e por isso só vale na superfície.
+ * A chave de API do Firebase que está no HTML do app é pública por natureza e por isso só vale na superfície. A regra do campo com
+ * «chave» no nome também só vale lá: no app, campos de identificador de registro têm «Chave» no nome e valor que parece hexadecimal.
  *
  * Saída: 0 = verde, 1 = vermelho (achou algo), 2 = uso errado ou erro (nunca verde por engano).
  *
  * Limites ditos com honestidade: telefone sem pontuação e sem o 55 na frente não é achado; no modo de pasta, binários
  * e arquivos maiores que 5 MB não são lidos (a saída conta quantos); no modo de commits, um binário (imagem, por exemplo)
  * é lido como texto bruto, então só o que está escrito em claro nele é conferido, e texto em UTF-16 é lido também sem os
- * bytes nulos; nome de FILHOt e de tutor não se acha por padrão, só por leitura (AC2.1(d), AC9.1).
+ * bytes nulos; nome de FILHOt e de tutor não se acha por padrão, só por leitura (AC2.1(d), AC9.1); campo cujo nome não diz que é
+ * segredo (credencial, autorizacao, codigoDeAcesso...) só é achado se o valor tiver um formato conhecido (token, JWT, chave de API...).
  */
 
 const cp = require('child_process');
@@ -115,6 +118,31 @@ function credencialSemAspas(linha, superficie) {
   RE_ATRIBUICAO_SEM_ASPAS.lastIndex = 0;
   let m;
   while ((m = RE_ATRIBUICAO_SEM_ASPAS.exec(linha)) !== null) {
+    if (parecerSegredoSemAspas(m[1], superficie)) return true;
+  }
+  return false;
+}
+
+// Segredo cujo nome do campo usa a palavra em português «chave» (QA, SEC-007). A Codex nomeia tudo em português, e os nomes que o
+// projeto cita para a chave do Evolution e para o modelo da configuração (EVOLUTION_CHAVE, chaveDoCanal, "chave:" em YAML) têm
+// «chave» no nome sem terminar em «privada» nem «api», que são as únicas formas que as duas regras de cima conhecem. O nome pode
+// ter qualquer coisa antes e depois de «chave» (maiúscula, minúscula, "_" ou "-"), com aspas (JSON, JS) ou sem (systemd, YAML,
+// cabeçalho de curl, endereço). Esta regra vale só na superfície do projeto novo, como a chave do Google: no app, campos de
+// identificador de registro têm «Chave» no nome e um valor que parece hexadecimal, e um pull request do app não pode ficar
+// vermelho por isso. O valor passa pelos mesmos filtros das outras duas regras (marcador, variável, máscara, caminho, endereço, exemplo).
+// O valor sem aspas é lido com a mesma classe de caracteres da regra de cima (até espaço, aspa, vírgula, ";", "&", ":" ou parêntese).
+const VALOR_DO_CAMPO_SEM_ASPAS = '([^\\s"\'`,;&|\\\\<>(){}\\[\\]:]{16,})';
+const RE_CHAVE_COM_ASPAS = /chave[\w-]{0,60}["']?\s*[:=]\s*["']([^"'\s]{12,})["']/gi;   // {0,60}: o nome de um campo não passa disso, e o limite mantém a busca linear numa linha enorme
+const RE_CHAVE_SEM_ASPAS = new RegExp('chave[A-Za-z0-9_-]{0,60}["\']?\\s*[:=]\\s*' + VALOR_DO_CAMPO_SEM_ASPAS, 'gi');
+
+function chaveEmPortugues(linha, superficie) {
+  let m;
+  RE_CHAVE_COM_ASPAS.lastIndex = 0;
+  while ((m = RE_CHAVE_COM_ASPAS.exec(linha)) !== null) {
+    if (parecerSegredo(m[1], superficie)) return true;
+  }
+  RE_CHAVE_SEM_ASPAS.lastIndex = 0;
+  while ((m = RE_CHAVE_SEM_ASPAS.exec(linha)) !== null) {
     if (parecerSegredoSemAspas(m[1], superficie)) return true;
   }
   return false;
@@ -246,6 +274,7 @@ const REGRAS = [
   { id: 'chave-api', grupo: 'segredo', escopo: 'tudo', rotulo: 'chave de API', testar: (l, c) => algumaCasa(RE_CHAVE_API, l) || (c.superficie && RE_CHAVE_GOOGLE.test(l)) },
   { id: 'credencial-atribuida', grupo: 'segredo', escopo: 'tudo', rotulo: 'valor de segredo atribuído a uma variável ou chave', testar: (l, c) => credencialAtribuida(l, c.superficie) },
   { id: 'credencial-sem-aspas', grupo: 'segredo', escopo: 'tudo', rotulo: 'valor de segredo atribuído sem aspas (configuração, cabeçalho ou endereço)', testar: (l, c) => credencialSemAspas(l, c.superficie) },
+  { id: 'chave-em-portugues', grupo: 'segredo', escopo: 'superficie', rotulo: 'valor de segredo atribuído a um campo com «chave» no nome', testar: (l, c) => chaveEmPortugues(l, c.superficie) },
   { id: 'senha-em-endereco', grupo: 'segredo', escopo: 'tudo', rotulo: 'senha dentro de um endereço', testar: (l) => RE_SENHA_EM_ENDERECO.test(l) },
   { id: 'telefone-ddd', grupo: 'pessoal', escopo: 'superficie', rotulo: 'telefone com DDD', testar: (l) => algumaCasa(RE_TELEFONE, l) },
   { id: 'jid-whatsapp', grupo: 'pessoal', escopo: 'superficie', rotulo: 'identificador do WhatsApp', testar: (l) => RE_JID.test(l) },
