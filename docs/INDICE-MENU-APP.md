@@ -1,6 +1,47 @@
-# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01, 02, 06, 07, 08, 09, 10 e 12/out/2026)
+# Índice do app — menu aprovado pela Adriana (reorganizado em 08/set/2026, ajustado em 15, 17, 18, 19, 21, 24, 25, 27, 28 e 30/set e 01, 02, 06, 07, 08, 09, 10, 12 e 20/out/2026)
 
 > Regra: o app tem de ser autoexplicativo, para treinamento rápido. Cada item tem **Título** e **subtítulo** (a explicação curta que aparece como dica no menu e no índice da Gestão no computador). Nomes são decisão da Adriana.
+
+## O que mudou em 20/out/2026 (versão a carimbar na publicação) — Contatos e respostas de hoje: a resposta da família em um toque, a mensagem de «Vai fazer em casa» pronta e o retorno das 13h30 (Story 6.94)
+
+> Adriana, 20/out/2026: *"precisa ser fácil, rápido."* Nenhuma tela nova no menu: é a mesma tela de sempre, aberta pelo Início (Supervisão ou Consultoras), dentro do tema **«Contatos e respostas de hoje»**. Só quem já via a tela vê (Consultora, Supervisão, Gestão e Diretoria); o Encãotador, a veterinária e os outros papéis continuam sem ela. A Zelozinha (o serviço que manda as mensagens) não mudou em nada.
+
+### (EF) Contatos e respostas de hoje — uma linha por FILHOt, com as quatro respostas à vista
+
+| Antes | Agora |
+|---|---|
+| Cada FILHOt era um cartão fechado: era preciso abrir um por um para saber quem já respondeu. Responder custava 3 toques (4 desde o Início), e cada toque trocava a lista inteira por «Conferindo presenças e cuidados de hoje…» e levava a pessoa de volta ao alto da tela | Cada FILHOt é **uma linha** com nome, tutor, telefone mascarado «(31) *****-1234» (o número inteiro não aparece em lugar nenhum da tela), os cuidados que a Zelozinha mandou e «entrega confirmada às 10:42». **«Ver mensagem»** abre o texto enviado, inteiro, ali mesmo. Sem hora na projeção, diz «hora não registrada» (nunca a hora do aparelho) |
+| Os quatro botões ficavam escondidos dentro do cartão aberto | Os quatro botões — **Mandou na bolsa, Autorizou pegar na loja, Vai fazer em casa, Não respondeu** — já estão à vista, de 44 px, quatro por fileira no celular. **Um toque grava**; o botão fica marcado e a linha diz «Resposta salva por Amanda às 10:42». FILHOt com 2 ou mais cuidados sem resposta ganha **«Todos: …»**, os mesmos quatro botões para os cuidados de uma vez |
+| Não dava para ver quem faltava responder | O topo diz **«Falta responder: N cuidados em M FILHOts»** e, quando houver, «Retorno às 13h30: K» e «Para conferir: K (atualize envios)»; com tudo respondido, **«Todos respondidos»**. Os FILHOts ficam em grupos: **Falta responder**, **Retorno às 13h30** e **Respondidos**, cada grupo por nome. A linha que acabou de ser respondida fica onde estava; só muda de grupo em **«Atualizar envios»** ou ao reabrir a tela |
+| A tela pulava a cada toque (a página encolhia de 3.087 para 1.091 px) e relia todos os presentes | O toque redesenha **só a linha tocada**, com «Salvando…» no mesmo instante e os botões do cuidado desligados até a resposta (toque duplo grava uma vez). A página varia no máximo 8 px e a rolagem no máximo 2 px; as leituras do toque são as mesmas com 1, 10 e 30 presentes (66 por toque; antes cresciam com os presentes: 87 com 1, 303 com 10 e mais de 780 com 30) |
+| O título «Contatos e respostas de hoje» aparecia duas vezes | Aparece uma vez só |
+
+### (EG) O que cada resposta faz
+
+| Resposta | O que acontece |
+|---|---|
+| **Mandou na bolsa** | Entra **uma** linha na lista do Day Care de hoje (a mesma que os Lançamentos do dia, o cartão «Cuidados autorizados de hoje» do Encãotador e a TV leem), com «Foi para a lista do Day Care: Vermífugo — falta aplicar e conferir» (depois «sendo aplicado» e «aplicado e conferido»). **Quanto** e **onde** (e o **produto**, no carrapaticida) são escolhidos com um toque, na própria linha; a dose do peso já vem marcada. As escolhas ficam gravadas na linha do Day Care; **o Encãotador e a TV ainda leem «conferir orientação»**: levar a escolha até eles é a Story 6.95 (proposta) |
+| **Autorizou pegar na loja** | O mesmo da bolsa, mais a parte humana do Snoopy na própria linha: «Falta lançar no Snoopy e receber do tutor» e o **componente de sempre** (botão «Já lancei no Snoopy», quem e quando, desfazer). Vacina diz «Snoopy: só depois da vacina aplicada». O app não cobra nem envia nada: só guarda a declaração de quem lançou. Com «loja» na tela, ela lê o dia dos Lançamentos e o Snoopy uma vez por abertura |
+| **Vai fazer em casa** | Aparece a **mensagem pronta** ao tutor, inteira, com **«Copiar mensagem»** e **«Abrir no WhatsApp»** (com o número da ficha e o texto; sem telefone, o botão fica desligado e a linha diz «Sem telefone na ficha: use Copiar»). O texto é o que já estava publicado (o que a Adriana autorizou em 20/out/2026), com o nome do tutor: um para vacina (pede a foto do cartão com data, assinatura e carimbo do veterinário) e outro para os demais cuidados (pede a data e o produto usado). Como o texto não cita o cuidado, dois cuidados com o mesmo texto mostram uma caixa só; vacina e outro cuidado mostram duas, uma por texto. Nada é criado no Day Care. O texto fica num lugar só do código (a janela «Abrir resposta» usa o mesmo) |
+| **Não respondeu** | O FILHOt entra no grupo **«Retorno às 13h30»**, com o nome de quem marcou. Às 13h30 o grupo passa a dizer **«Hora de retomar o contato»** e o topo, «Retomar o contato: K», **sem refazer a lista e sem mudar a rolagem** (o painel dos envios deixa de ser refeito às 13h30 quando esta tela está aberta). **Antes das 13h30** o **«Abrir WhatsApp»** abre a conversa vazia. **Depois das 13h30**, com o peludinho na casa e sem check-out, a linha mostra a **caixa com o texto do retorno, pronta para copiar** («Olá, {tutor}! Podemos fazer {o cuidado} de {peludinho} hoje, enquanto está com a gente? …», o texto que já existia na janela «Abrir resposta», com o coração), com **«Copiar mensagem»** e **«Abrir no WhatsApp»** (que abre com o texto). Uma caixa por texto: dois cuidados em «Não respondeu» dão dois textos, porque o cuidado muda. Às 13h30, com a tela aberta, a caixa entra na linha sem refazer a lista |
+| **Marcou errado** | Trocar a resposta é 1 toque: «Trocada de Vai fazer em casa para Não respondeu por Amanda às 10:42», com a troca na auditoria do dia. Se a resposta anterior tinha criado a linha do Day Care, abre antes o cartaz **«Anular»** (motivo de pelo menos 4 palavras e a própria senha), que tira a linha da lista do Encãotador e da TV e a pendência do Snoopy. Cuidado já em aplicação ou aplicado não troca: a frase manda corrigir na ficha de Prevenção |
+
+### (EH) O que não mudou
+
+| Item | Fica como está |
+|---|---|
+| Nina e Buh (ficha «só contato humano») | Sem mensagem pronta e sem «enviada»; as quatro respostas gravam o contato humano em nome de quem tocou |
+| Vacina | A linha diz «Veterinária: confirmada hoje» ou «Falta a veterinária confirmar a presença hoje»; a resposta grava, mas a vacina só é executada com a veterinária confirmada agora |
+| Horário | Depois das 13h e depois das 13h30 a tela lista e aceita as respostas; o limite das 13h (ampliado de 12h para 13h em 20/out/2026) vale só para o envio automático |
+| Serviço da Zelozinha | Nada é gravado em `piloto59/…` nem em `daycare/zelozinha-operacao/…`; a projeção só vale nas versões 86, 89, 92 e 104 |
+| Permissões | Nenhuma capacidade nova: `PERM` continua com 45 |
+
+### (EI) O que a Adriana decidiu em 20/out/2026 e o que continua com ela
+
+1. **H94-1 — o texto de «Vai fazer em casa».** Decidido: vale o texto que já estava publicado, com o coração (*"emojis são bem-vindos. Já autorizei os textos."*). A tela nova só passou a usar o mesmo texto da janela «Abrir resposta», num lugar só do código.
+2. **H94-2 — o retorno às 13h30.** Decidido: continua às 13h30.
+3. **H94-3 — a mensagem das 13h30.** Decidido: vale o texto que já existia na janela «Abrir resposta» (*«Olá, {tutor}! Podemos fazer {o cuidado} de {peludinho} hoje, enquanto está com a gente? Assim, vocês já resolvem esse cuidado sem precisar organizar outra visita e, juntos, cuidamos da segurança e do bem-estar de todos os nossos Aulunos.»*, com o coração). A tela nova o mostra depois das 13h30, pela mesma função da janela, que não foi mexida.
+4. **H94-4 — a escolha de produto e lugar no Encãotador e na TV.** Decidido: sim, numa história seguinte (6.95), não nesta. Por enquanto a escolha fica registrada na linha da tela, e o Encãotador e a TV ainda leem «conferir orientação».
 
 ## O que mudou em 12/out/2026 (v 2026-10-09-29) — Planos e recebimentos, parte 2: «Já cobrei» e «Não renova» na Renovação de planos, «Fechar o mês» com quem e quando e o ajuste com motivo no quadro «Recebimentos do mês», e a tabela de planos em Configurações sem mudar mês fechado (S8 da revisão tela por tela, parte 2; Story 6.73)
 
