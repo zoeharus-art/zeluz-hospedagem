@@ -15,6 +15,7 @@
  *       PROVAS=P1,P7 node tests/zelozinha-tela94.test.js   (só estas)
  *       APP94=/caminho/index.html   (outra cópia do app, para os defeitos plantados)
  *       APP94_BASE=/caminho/index.html   (o app da base b044ecd, só para comparar as leituras por toque da P25)
+ *       LATENCIA94=15 node tests/zelozinha-tela94.test.js   (cada leitura e gravação do banco de mentira demora 15 ms: nenhuma prova pode depender de tempo fixo; as esperas são por CONDIÇÃO)
  */
 const fs = require('fs');
 const path = require('path');
@@ -42,6 +43,7 @@ function criarBancoFalso(seed, opcoes) {
   var log = { leituras: [], gravacoes: [] };
   var ouvintes = [];
   var falhas = [], falhasEscrita = [];
+  var pend = 0;   /* operações do banco ainda em andamento (só existem com latência): as provas só dão o toque por terminado com zero delas */
   var SV = { '.sv': 'timestamp' };
   function clone(x) { return x === undefined ? undefined : JSON.parse(JSON.stringify(x)); }
   function partes(p) { return String(p || '').split('/').filter(function (x) { return x !== ''; }); }
@@ -88,7 +90,7 @@ function criarBancoFalso(seed, opcoes) {
     };
   }
   function avisar(p) { ouvintes.slice().forEach(function (o) { if (p === o.path || p.indexOf(o.path + '/') === 0 || o.path.indexOf(p + '/') === 0) { Promise.resolve().then(function () { o.fn(snap(pegar(o.path), partes(o.path).pop())); }); } }); }
-  function esperar(v) { return opcoes.latencia ? new Promise(function (r) { setTimeout(function () { r(v); }, typeof opcoes.latencia === 'function' ? opcoes.latencia() : opcoes.latencia); }) : Promise.resolve(v); }
+  function esperar(v) { if (!opcoes.latencia) return Promise.resolve(v); pend++; return new Promise(function (r) { setTimeout(function () { pend--; r(v); }, typeof opcoes.latencia === 'function' ? opcoes.latencia() : opcoes.latencia); }); }
   function ref(path) {
     path = partes(path).join('/');
     var r = {
@@ -152,7 +154,7 @@ function criarBancoFalso(seed, opcoes) {
     return c;
   }
   var contador = 0;
-  return { falhar: function (prefixos) { falhas = prefixos || []; }, falharEscrita: function (prefixos) { falhasEscrita = prefixos || []; }, ref: ref, log: log, arvore: function () { return arv; }, ler: function (p) { return clone(pegar(p)); }, poe: function (p, v) { por(p, v); }, SV: SV };
+  return { pendentes: function () { return pend; }, falhar: function (prefixos) { falhas = prefixos || []; }, falharEscrita: function (prefixos) { falhasEscrita = prefixos || []; }, ref: ref, log: log, arvore: function () { return arv; }, ler: function (p) { return clone(pegar(p)); }, poe: function (p, v) { por(p, v); }, SV: SV };
 }
 const BANCO_SRC = criarBancoFalso.toString();
 
@@ -200,6 +202,8 @@ const igual = (a, b, msg) => assert.deepStrictEqual(JSON.parse(JSON.stringify(a)
 /* Roda no navegador. S = {filhots:[{n,tutor,tel,modo:'enviada'|'humano',cuidados:[itemK],peso,status,semHora,statusPorCuidado,vence}], respostas:[{pet,k,valor,nome,tarefa,linha}],
    semIdentidade:[i], semProjecao:[{pet,k}], vetConfirmada, detalhes, latencia, usuario} */
 async function montarMundo94(S) {
+  /* a faxina de fotos antigas (o app a agenda 4 s depois de abrir o Início, grava `daycare/limpeza-fotos/` e uma linha de auditoria) é um relógio do PRÓPRIO app, não da tela: no mundo de teste ela não roda, para não cair no meio de uma prova de «nada gravado» (N1 do QA). O `m.log()` ainda tira da conta o que ela deixar. */
+  window.ckLimparFotosEnviadas = function () { return Promise.resolve(0); };
   var dia = zPainel44Dia();
   var banco = criarBancoFalso({}, { latencia: S.latencia || 0 });
   window.__banco = banco; DB = banco;
@@ -273,12 +277,25 @@ async function montarMundo94(S) {
   zPainel44Despacho80Conectar = function () {};
   Z44_DISPATCH80.dados = zPainel44ValidarFonte80(proj); Z44_DISPATCH80.erro = ''; Z44_DISPATCH80.carregando = false;
   window.zelozinha47Veterinaria = { ler: function () { return Promise.resolve({ ok: true, dia: zPainel44Dia(), confirmada: !!S.vetConfirmada, tipo: S.vetConfirmada ? 'confirmada' : 'pendente' }); } };
-  window.__ab = { zWhats: [], senha: '1234' };
+  window.__ab = { zWhats: [], senha: '1234', janelas: [], ordem: [], bloquearJanela: false };
   window.zWhatsAbrir = function (tel, texto) { window.__ab.zWhats.push({ tel: tel, texto: texto }); return true; };
+  /* o `window.open` do mundo de teste: o «Abrir no WhatsApp» do texto das 13h30 abre a janela NO TOQUE (em branco) e só depois a leva ao link, ou a fecha; cada janela fica guardada com o link para onde foi e se foi fechada, e `ordem` conta o que aconteceu primeiro (N3) */
+  window.open = function (url, alvo) {
+    var j = { url: url, alvo: alvo, href: url ? String(url) : '', fechada: false };   /* aberta com um endereço, a janela já está nele; aberta em branco, só vai ao link depois */
+    window.__ab.ordem.push('janela-aberta'); window.__ab.janelas.push(j);
+    if (window.__ab.bloquearJanela) return null;
+    return { location: { set href(v) { j.href = String(v); window.__ab.ordem.push('janela-no-link'); }, get href() { return j.href; } }, close: function () { j.fechada = true; window.__ab.ordem.push('janela-fechada'); }, get closed() { return j.fechada; } };
+  };
   window.senhaQuem = function (s) { return s === window.__ab.senha ? { nome: 'Amanda', role: 'supervisor' } : null; };
   window.senhaProvisoriaAinda = function () { return false; }; window.senhaCodigoSemConferir = function () { return false; };
   window.__mundo = info;
-  VENC_PEND = null; await vencPendCarregar(true);
+  /* a carga dos registros do dia termina depois, quando o banco demora: espera pela CONDIÇÃO (cada registro semeado já está na memória do app) e carrega de novo se uma carga anterior, em andamento, não os trouxe */
+  var semeados = Object.keys(porDc);
+  for (var tent = 0; tent < 120; tent++) {
+    VENC_PEND = null; await vencPendCarregar(true);
+    if (!semeados.length || (VENC_PEND && VENC_PEND[dia] && semeados.every(function (dk) { return !!VENC_PEND[dia][dk]; }))) break;
+    await new Promise(function (r) { setTimeout(r, 25); });
+  }
   return info;
 }
 
@@ -294,6 +311,7 @@ async function garantirNavegador() {
 }
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 const ENC = encodeURIComponent;
+const LATENCIA_PADRAO = Number(process.env.LATENCIA94 || 0);   /* atraso de cada operação do banco de mentira (ms); 0 = sem atraso */
 /* espera, em passos de 80 ms, até `fn()` devolver algo verdadeiro (ou até o prazo); devolve o último valor. As provas esperam pela CONDIÇÃO, não por um tempo fixo: o app refaz o painel sozinho de tempos em tempos e a máquina pode estar ocupada */
 const ate = async (fn, ms) => { const fim = Date.now() + (ms || 8000); let v; for (;;) { v = await fn(); if (v || Date.now() >= fim) return v; await esperar(80); } };
 /* abre o app REAL, com o relógio fixado, e monta o dia de teste. opcoes: {app, relogio, usuario, latencia, abrir:false, largura} */
@@ -314,8 +332,9 @@ async function mundo(S, opcoes) {
   await page.addInitScript(montarMundo94.toString() + '\nwindow.montarMundo94=montarMundo94;');
   await page.clock.setFixedTime(opcoes.relogio || '2026-10-20T10:00:00-03:00');
   await page.goto('file://' + (opcoes.app || APP));
-  await esperar(450);
-  S = Object.assign({ latencia: opcoes.latencia || 0, usuario: opcoes.usuario }, S);
+  /* o app pronto = os scripts rodaram e as portas que o mundo de teste troca existem (nada de tempo fixo) */
+  await page.waitForFunction(() => document.readyState === 'complete' && typeof montarMundo94 === 'function' && typeof aplicarLogin === 'function' && typeof zPainel44Dia === 'function' && typeof vencPendCarregar === 'function' && typeof ZeluzRespostaApp88 === 'object' && !!window.__zelozinhaContatos89Instalado, null, { timeout: 20000 });
+  S = Object.assign({ latencia: opcoes.latencia || LATENCIA_PADRAO, usuario: opcoes.usuario }, S);
   m.info = await page.evaluate((s) => montarMundo94(s), S);
   m.ev = (fn, arg) => page.evaluate(fn, arg);
   m.sel = (n) => '[data-zt694-pet="' + ENC(m.dcDe(n)) + '"]';
@@ -324,20 +343,31 @@ async function mundo(S, opcoes) {
   m.cicloDe = (n, k) => { const x = m.info.filter((i) => i.n === n)[0]; const c = x.ciclos.filter((y) => y.itemK === k)[0]; if (!c) throw new Error('cuidado ' + k + ' não existe em ' + n); return c.cycleKey; };
   m.botao = (n, k, valor) => m.cuidadoSel(n, k) + ' [data-zt694-acao="resp"][data-zt694-valor="' + valor + '"]';
   m.todos = (n, valor) => m.sel(n) + ' [data-zt694-acao="todos"][data-zt694-valor="' + valor + '"]';
-  m.log = () => page.evaluate(() => ({ leituras: window.__banco.log.leituras.slice(), gravacoes: window.__banco.log.gravacoes.slice() }));
+  /* o registro do banco de mentira; as gravações dos relógios do PRÓPRIO app (limpeza de fotos antigas, aviso de aniversário) caem no meio das provas quando o banco demora e não são da tela: ficam fora da conta */
+  m.log = async () => { const l = await page.evaluate(() => ({ leituras: window.__banco.log.leituras.slice(), gravacoes: window.__banco.log.gravacoes.slice() })); l.gravacoes = l.gravacoes.filter((g) => !/^daycare\/(fotos-corpo|limpeza-fotos|aniversario-enviado)\//.test(g.path) && !(/^daycare\/auditoria\//.test(g.path) && g.valor && g.valor.acao === 'limpeza-fotos')); return l; };  /* a faxina de fotos (4 s depois de abrir) também deixa uma linha de auditoria com acao 'limpeza-fotos': é do relógio do app, não da tela (N1 do QA) */
   m.zerarLog = () => page.evaluate(() => { window.__banco.log.leituras.length = 0; window.__banco.log.gravacoes.length = 0; });
   m.ler = (p) => page.evaluate((p) => window.__banco.ler(p), p);
   m.texto = (n) => page.evaluate((s) => { const e = document.querySelector(s); return e ? e.innerText : null; }, m.sel(n));
   m.telaTexto = () => page.evaluate(() => { const e = document.querySelector('[data-z89-contatos]'); return e ? e.innerText : ''; });
-  /* espera o toque terminar: nenhum «Salvando…» e o banco quieto por ~350 ms */
+  /* espera o toque terminar: nenhum «Salvando…», nenhuma operação do banco em andamento e o banco sem leitura nem gravação nova por 3 conferências seguidas.
+     Quem precisa de um resultado específico (o texto do Snoopy, uma linha criada) espera por ELE com `ate`; o `quieto` só garante que nada ficou pela metade. */
   m.quieto = async (extra) => {
     let ultimo = -1, estavel = 0;
-    for (let i = 0; i < 120; i++) {
-      const t = await page.evaluate(() => ({ n: window.__banco.log.leituras.length + window.__banco.log.gravacoes.length, salvando: [...document.querySelectorAll('[data-zt694-status]')].some((e) => /Salvando/.test(e.textContent)) || !!document.querySelector('[aria-busy="true"]') }));
-      if (t.n === ultimo && !t.salvando) estavel++; else estavel = 0;
+    for (let i = 0; i < 160; i++) {
+      const t = await page.evaluate(() => ({ n: window.__banco.log.leituras.length + window.__banco.log.gravacoes.length, pend: window.__banco.pendentes(), salvando: [...document.querySelectorAll('[data-zt694-status]')].some((e) => /Salvando/.test(e.textContent)) || !!document.querySelector('[aria-busy="true"]') }));
+      if (t.n === ultimo && !t.salvando && t.pend === 0) estavel++; else estavel = 0;
       ultimo = t.n; if (estavel >= 3) break; await esperar(120);
     }
     await esperar(extra || 60);
+  };
+  /* espera a página assentar: nenhuma operação do banco em andamento e dois quadros de desenho seguidos sem mudar o número de operações (serve para provar que algo NÃO aparece) */
+  m.assentou = async () => {
+    let ultimo = -1, estavel = 0;
+    for (let i = 0; i < 100 && estavel < 4; i++) {
+      const t = await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r({ n: window.__banco.log.leituras.length + window.__banco.log.gravacoes.length, pend: window.__banco.pendentes() })))));
+      if (t.n === ultimo && t.pend === 0) estavel++; else estavel = 0;
+      ultimo = t.n;
+    }
   };
   m.tocar = async (n, k, valor) => { await page.click(m.botao(n, k, valor)); await m.quieto(); };
   m.abrirTela = async (rota) => {
@@ -742,22 +772,25 @@ prova('P11', '«Foi para a lista do Day Care» sobrevive ao redesenho e acompanh
 
 // ================================================================= P12 — Autorizou pegar na loja → Day Care + Snoopy (AC6.1 a 6.6)
 const snoopyTexto = (m, nome) => m.ev((s) => { const e = document.querySelector(s + ' [data-zt694-snoopy]'); return e ? e.innerText : null; }, m.sel(nome));
+/* espera pela CONDIÇÃO (não por tempo): o texto do Snoopy daquele FILHOt casa com `re`; devolve o texto (ou o último que viu, se o prazo acabar, para a prova dizer o que apareceu) */
+const esperaSnoopy = async (m, nome, re) => { const t = await ate(async () => { const x = await snoopyTexto(m, nome); return x && re.test(x) ? x : ''; }, 15000); return t || await snoopyTexto(m, nome); };
+const PENDENTE_NO_SNOOPY = /Falta lançar no Snoopy e receber do tutor/, LANCADO_NO_SNOOPY = /Snoopy: lançado por Amanda em \d\d\/\d\d às \d\d:\d\d/;
 /* quantas vezes o app LEU do banco os Lançamentos do dia e o Snoopy do dia (as leituras de verdade, não as chamadas) */
 const leiturasDoDia = async (m) => { const l = (await m.log()).leituras; return { dia: l.filter((x) => x.path === 'daycare/dashboard/' + DIA).length, sn: l.filter((x) => x.path === 'daycare/snoopy/' + DIA).length }; };
 const espiarDia = (m) => m.zerarLog();
 prova('P12', 'loja: a pendência e o botão «Já lancei no Snoopy» na própria linha; confirmar e desfazer atualizam a linha da tela, sem erro de página (AC6.1, AC6.2, AC6.5, AC6.6)', async () => {
   const m = await mundo({ filhots: [{ n: 'Teste Snoopy', tutor: 'Tutor Snoopy', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] });
   try {
-    await m.tocar('Teste Snoopy', 'verm_p', 'autorizar_loja'); await esperar(300); await m.quieto(200);
-    let t = await snoopyTexto(m, 'Teste Snoopy'); assert.ok(t && /Falta lançar no Snoopy e receber do tutor/.test(t) && /Snoopy: pendente de confirmação humana/.test(t) && /Já lancei no Snoopy/.test(t), t);
+    await m.tocar('Teste Snoopy', 'verm_p', 'autorizar_loja');
+    let t = await esperaSnoopy(m, 'Teste Snoopy', /Já lancei no Snoopy/); assert.ok(t && /Falta lançar no Snoopy e receber do tutor/.test(t) && /Snoopy: pendente de confirmação humana/.test(t) && /Já lancei no Snoopy/.test(t), t);
     await m.page.click(m.sel('Teste Snoopy') + ' button[data-snoopy-item]');
-    await m.modal('Já lancei no Snoopy'); await esperar(400); await m.quieto(200);
-    t = await snoopyTexto(m, 'Teste Snoopy'); assert.ok(/Snoopy: lançado por Amanda em \d\d\/\d\d às \d\d:\d\d/.test(t) && /desfazer/.test(t), 'quem e quando, na própria linha: ' + t);
+    await m.modal('Já lancei no Snoopy');
+    t = await esperaSnoopy(m, 'Teste Snoopy', LANCADO_NO_SNOOPY); assert.ok(LANCADO_NO_SNOOPY.test(t) && /desfazer/.test(t), 'quem e quando, na própria linha: ' + t);
     const ev = await m.ev((dia) => { const d = window.__banco.ler('daycare/snoopy/' + dia); const it = d && d.vermifugo; const id = it && Object.keys(it)[0]; return id ? Object.values(it[id].eventos) : []; }, DIA);
     assert.ok(ev.length === 1 && ev[0].declaracao === 'lancei-no-snoopy' && ev[0].quem === 'Amanda', JSON.stringify(ev));
     await m.page.click(m.sel('Teste Snoopy') + ' button[data-snoopy-item]');
-    await m.page.fill('#zCampoTexto', 'engano ao tocar na linha'); await m.modal('Desfazer confirmação'); await esperar(400); await m.quieto(200);
-    t = await snoopyTexto(m, 'Teste Snoopy'); assert.ok(/Falta lançar no Snoopy e receber do tutor/.test(t) && /Já lancei no Snoopy/.test(t), 'depois de desfazer volta a pendente: ' + t);
+    await m.page.fill('#zCampoTexto', 'engano ao tocar na linha'); await m.modal('Desfazer confirmação');
+    t = await esperaSnoopy(m, 'Teste Snoopy', PENDENTE_NO_SNOOPY); assert.ok(/Falta lançar no Snoopy e receber do tutor/.test(t) && /Já lancei no Snoopy/.test(t), 'depois de desfazer volta a pendente: ' + t);
     assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
   } finally { await m.fechar(); }
 }, 'C');
@@ -765,8 +798,8 @@ prova('P12', 'consultora, supervisão, gestão e diretoria veem o botão do Snoo
   for (const [role, rota] of [['consultora', 'consultoras'], ['supervisor', 'painel-amanda'], ['gestao', 'painel-amanda'], ['diretoria', 'painel-amanda']]) {
     const m = await mundo({ filhots: [{ n: 'Teste Papel', tutor: 'Tutor Papel', tel: '(31) 99999-0001', cuidados: ['verm_p'] }], usuario: { monId: 'p1', pessoa: 'Pessoa ' + role, nome: 'Pessoa ' + role, role: role } }, { abrir: false });
     try {
-      await m.abrirTela(rota); await m.tocar('Teste Papel', 'verm_p', 'autorizar_loja'); await esperar(300); await m.quieto(200);
-      const t = await snoopyTexto(m, 'Teste Papel'); assert.ok(t && /Já lancei no Snoopy/.test(t), role + ': ' + t);
+      await m.abrirTela(rota); await m.tocar('Teste Papel', 'verm_p', 'autorizar_loja');
+      const t = await esperaSnoopy(m, 'Teste Papel', /Já lancei no Snoopy/); assert.ok(t && /Já lancei no Snoopy/.test(t), role + ': ' + t);
       assert.strictEqual(await m.ev(() => dashEditarAtor().valido), true, role + ' pode confirmar o Snoopy');
     } finally { await m.fechar(); }
   }
@@ -779,8 +812,8 @@ prova('P12', 'consultora, supervisão, gestão e diretoria veem o botão do Snoo
 prova('P12', 'vacina na loja: «só depois da vacina aplicada», sem botão antes (AC6.3)', async () => {
   const m = await mundo({ filhots: [{ n: 'Teste Vacina', tutor: 'Tutor Vacina', tel: '(31) 99999-0001', cuidados: ['vac_raiva_p'] }] });
   try {
-    await m.tocar('Teste Vacina', 'vac_raiva_p', 'autorizar_loja'); await esperar(300); await m.quieto(200);
-    const t = await snoopyTexto(m, 'Teste Vacina'); assert.ok(/Snoopy: só depois da vacina aplicada/.test(t) && !/Já lancei no Snoopy/.test(t), t);
+    await m.tocar('Teste Vacina', 'vac_raiva_p', 'autorizar_loja');
+    const t = await esperaSnoopy(m, 'Teste Vacina', /Snoopy: só depois da vacina aplicada/); assert.ok(/Snoopy: só depois da vacina aplicada/.test(t) && !/Já lancei no Snoopy/.test(t), t);
   } finally { await m.fechar(); }
 }, 'C');
 prova('P12', 'o dia carrega sozinho uma vez por abertura, só com resposta «loja» na tela (com «bolsa» lê só o nó da linha), sem trocar o dia dos Lançamentos; se não for hoje, «não consegui conferir» (AC6.4, AC13.3)', async () => {
@@ -941,7 +974,7 @@ prova('P17', 'na tela: antes das 13h30 o grupo diz «Retorno às 13h30»; abrir 
     assert.deepStrictEqual(await grupos(m), ['Hora de retomar o contato', 'Falta responder']); assert.ok(/Retomar o contato: 1/.test(await m.ev(() => document.querySelector('[data-zt694-topo]').textContent)));
     const ordem = await m.ev(() => [...document.querySelectorAll('[data-zt694] [data-zt694-grupo], [data-zt694] [data-zt694-pet]')].map((e) => e.hasAttribute('data-zt694-grupo') ? 'G' : e.querySelector('.zt694-nome').textContent));
     assert.deepStrictEqual(ordem, ['G', 'Teste B', 'G', 'Teste A']);
-    // depois das 12h e das 13h30 a tela lista, aceita respostas e retornos (AC11.3)
+    // depois das 13h e das 13h30 a tela lista, aceita respostas e retornos (AC11.3)
     await m.tocar('Teste A', 'verm_p', 'autorizar_externo'); assert.ok(/Vai fazer em casa · Amanda/.test(await m.texto('Teste A')));
     await m.tocar('Teste B', 'verm_p', 'autorizar_externo'); assert.ok(/Vai fazer em casa · Amanda/.test(await m.texto('Teste B')), 'trocar o retorno depois das 13h30 funciona');
   } finally { await m.fechar(); }
@@ -981,8 +1014,8 @@ prova('P18', 'na tela: depois das 13h30, «Não respondeu» mostra a caixa de co
     assert.deepStrictEqual(c.map((x) => x.txt).sort(), [RETORNO('Tutor Ret', FRASE_VERM, 'Teste Ret'), RETORNO('Tutor Ret', FRASE_ECTO, 'Teste Ret')].sort(), 'o texto publicado, letra por letra, com o coração');
     assert.deepStrictEqual(c.map((x) => x.tit).sort(), ['Retomar o contato, mensagem pronta para enviar: Carrapaticida', 'Retomar o contato, mensagem pronta para enviar: Vermífugo']);
     assert.strictEqual(await m.ev((s) => !!document.querySelector(s + ' [data-zt694-acao="whats-vazio"]'), m.sel('Teste Ret')), false, 'a caixa traz o WhatsApp com o texto; não sobra o botão vazio');
-    await m.page.click(m.sel('Teste Ret') + ' [data-zt694-copia="0"] [data-zt694-acao="whats-texto"]');
-    assert.deepStrictEqual((await m.ev(() => window.__ab.zWhats)).pop(), { tel: '+5531999990001', texto: c[0].txt }, 'abre a conversa do tutor com o texto da caixa (número da ficha)');
+    await m.page.click(m.sel('Teste Ret') + ' [data-zt694-copia="0"] [data-zt694-acao="whats-texto"]'); await ate(async () => (await janelasDoZap(m)).some((j) => j.numero));   // a janela abre no toque; a presença é conferida e só então ela vai ao link (M1, N3)
+    assert.deepStrictEqual((await janelasDoZap(m)).pop(), { numero: '5531999990001', texto: c[0].txt, fechada: false }, 'abre a conversa do tutor com o texto da caixa (número da ficha)');
     await m.tocar('Teste Um', 'verm_p', 'aguardar'); c = await pegarCaixas(m, 'Teste Um'); assert.strictEqual(c.length, 1); assert.strictEqual(c[0].txt, RETORNO('Tutor Um', FRASE_VERM, 'Teste Um'));
     assert.ok(!/Teste Saiu|Tutor Saiu/.test(await m.telaTexto()), 'nenhum texto para quem já saiu'); assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
   } finally { await m.fechar(); }
@@ -1041,7 +1074,7 @@ prova('P20', 'bolsa → casa: abre o cartaz «Anular» com a lista do que sai; c
 prova('P20', 'loja → casa e bolsa → não respondeu: tiram a linha; a pendência do Snoopy sai junto; nada fica órfão (AC9.2)', async () => {
   const m = await mundo({ filhots: [{ n: 'Teste Loja', tutor: 'Tutor Loja', tel: '(31) 99999-0001', cuidados: ['verm_p'] }, { n: 'Teste Bolsa', tutor: 'Tutor Bolsa', tel: '(31) 99999-0002', cuidados: ['verm_p'] }] });
   try {
-    await m.tocar('Teste Loja', 'verm_p', 'autorizar_loja'); await m.tocar('Teste Bolsa', 'verm_p', 'autorizar_bolsa'); await esperar(300); await m.quieto(200);
+    await m.tocar('Teste Loja', 'verm_p', 'autorizar_loja'); await m.tocar('Teste Bolsa', 'verm_p', 'autorizar_bolsa'); await esperaSnoopy(m, 'Teste Loja', /Já lancei no Snoopy/);
     assert.strictEqual(Object.keys(await linhasDoDia(m, 'vermifugo')).length, 2);
     await m.page.click(m.botao('Teste Loja', 'verm_p', 'autorizar_externo'));
     const tela = await cartaz(m); assert.ok(/A pendência do Snoopy sai junto\./.test(tela), tela.slice(-700));
@@ -1057,11 +1090,11 @@ prova('P20', 'bolsa ↔ loja: a MESMA linha segue (muda a origem e a pendência 
   const m = await mundo({ filhots: [{ n: 'Teste Vai', tutor: 'Tutor Vai', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] });
   try {
     await m.tocar('Teste Vai', 'verm_p', 'autorizar_bolsa'); const id1 = Object.keys(await linhasDoDia(m, 'vermifugo'));
-    await m.tocar('Teste Vai', 'verm_p', 'autorizar_loja'); await esperar(300); await m.quieto(200);
+    await m.tocar('Teste Vai', 'verm_p', 'autorizar_loja'); await esperaSnoopy(m, 'Teste Vai', PENDENTE_NO_SNOOPY);
     assert.ok(!(await m.ev(() => !!document.querySelector('#corrMotivo'))), 'sem cartaz');
     const l = await linhasDoDia(m, 'vermifugo'); assert.deepStrictEqual(Object.keys(l), id1, 'a mesma linha'); assert.strictEqual(l[id1[0]].origemVencimento.origemResposta, 'loja'); assert.strictEqual(l[id1[0]].origemVencimento.revisao, 1);
     assert.ok(/Falta lançar no Snoopy/.test(await snoopyTexto(m, 'Teste Vai')));
-    await m.tocar('Teste Vai', 'verm_p', 'autorizar_bolsa'); await esperar(200);
+    await m.tocar('Teste Vai', 'verm_p', 'autorizar_bolsa'); await ate(async () => !(await snoopyTexto(m, 'Teste Vai')));
     const l2 = await linhasDoDia(m, 'vermifugo'); assert.deepStrictEqual(Object.keys(l2), id1); assert.strictEqual(l2[id1[0]].origemVencimento.origemResposta, 'bolsa');
     assert.ok(!(await snoopyTexto(m, 'Teste Vai')), 'sem a pendência do Snoopy na bolsa');
     assert.strictEqual((await tarefaDe(m, 'Teste Vai', 'verm_p')).estado, 'criada');
@@ -1070,11 +1103,11 @@ prova('P20', 'bolsa ↔ loja: a MESMA linha segue (muda a origem e a pendência 
 prova('P20', 'bolsa → loja → «Já lancei no Snoopy»: a linha lida antes não fica velha; a confirmação vale e a linha da tela mostra quem e quando (AC6.1, AC6.6, AC9.3)', async () => {
   const m = await mundo({ filhots: [{ n: 'Teste Muda', tutor: 'Tutor Muda', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] });
   try {
-    await m.tocar('Teste Muda', 'verm_p', 'autorizar_bolsa'); await esperar(300); await m.quieto(200);
-    await m.tocar('Teste Muda', 'verm_p', 'autorizar_loja'); await esperar(300); await m.quieto(200);
-    assert.ok(/Falta lançar no Snoopy/.test(await snoopyTexto(m, 'Teste Muda')) && /Já lancei no Snoopy/.test(await snoopyTexto(m, 'Teste Muda')), await snoopyTexto(m, 'Teste Muda'));
-    await m.page.click(m.sel('Teste Muda') + ' button[data-snoopy-item]'); await m.modal('Já lancei no Snoopy'); await esperar(400); await m.quieto(200);
-    assert.ok(/lançado por Amanda/.test(await snoopyTexto(m, 'Teste Muda')), await snoopyTexto(m, 'Teste Muda'));
+    await m.tocar('Teste Muda', 'verm_p', 'autorizar_bolsa');
+    await m.tocar('Teste Muda', 'verm_p', 'autorizar_loja');
+    { const t = await esperaSnoopy(m, 'Teste Muda', /Já lancei no Snoopy/); assert.ok(/Falta lançar no Snoopy/.test(t) && /Já lancei no Snoopy/.test(t), t); }
+    await m.page.click(m.sel('Teste Muda') + ' button[data-snoopy-item]'); await m.modal('Já lancei no Snoopy');
+    { const t = await esperaSnoopy(m, 'Teste Muda', /lançado por Amanda/); assert.ok(/lançado por Amanda/.test(t), t); }
     assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
   } finally { await m.fechar(); }
 }, 'C');
@@ -1082,8 +1115,8 @@ prova('P20', 'loja com o Snoopy já confirmado: trocar para casa passa pelo cart
   const m = await mundo({ filhots: [{ n: 'Teste Conf', tutor: 'Tutor Conf', tel: '(31) 99999-0001', cuidados: ['verm_p'] }, { n: 'Teste Conf2', tutor: 'Tutor Conf2', tel: '(31) 99999-0002', cuidados: ['verm_p'] }] });
   try {
     for (const n of ['Teste Conf', 'Teste Conf2']) await m.tocar(n, 'verm_p', 'autorizar_loja');
-    await esperar(300); await m.quieto(200);
-    for (const n of ['Teste Conf', 'Teste Conf2']) { await m.page.click(m.sel(n) + ' button[data-snoopy-item]'); await m.modal('Já lancei no Snoopy'); await esperar(400); await m.quieto(200); assert.ok(/lançado por Amanda/.test(await snoopyTexto(m, n))); }
+    for (const n of ['Teste Conf', 'Teste Conf2']) await esperaSnoopy(m, n, /Já lancei no Snoopy/);
+    for (const n of ['Teste Conf', 'Teste Conf2']) { await m.page.click(m.sel(n) + ' button[data-snoopy-item]'); await m.modal('Já lancei no Snoopy'); assert.ok(/lançado por Amanda/.test(await esperaSnoopy(m, n, /lançado por Amanda/))); }
     await m.zerarLog(); await m.page.click(m.botao('Teste Conf2', 'verm_p', 'autorizar_bolsa')); await m.quieto();
     assert.ok(/Esta linha já foi lançada no Snoopy; para mudar, desfaça antes a confirmação do Snoopy\./.test(await m.texto('Teste Conf2')), await m.texto('Teste Conf2'));
     assert.deepStrictEqual((await m.log()).gravacoes, [], 'barrado: nada gravado');
@@ -1192,7 +1225,7 @@ prova('P23', 'conflito: outra pessoa respondeu no meio → «{nome} respondeu ag
 }, 'C');
 
 // ================================================================= P19 — 13h30 e atualização geral com a tela aberta (AC8.5, AC10.4)
-const espiarNucleo = (m) => m.ev(() => { window.__api = { listar: 0, um: 0 }; const c0 = ZelozinhaContatosHoje89.criar; ZelozinhaContatosHoje89.criar = function () { const a = c0.apply(this, arguments), l = a.listar, u = a.atualizarUm; a.listar = function () { window.__api.listar++; return l.apply(this, arguments); }; a.atualizarUm = function () { window.__api.um++; return u.apply(this, arguments); }; return a; }; });
+const espiarNucleo = (m) => m.ev(() => { window.__api = { listar: 0, um: 0, pres: {} }; const c0 = ZelozinhaContatosHoje89.criar; ZelozinhaContatosHoje89.criar = function () { const a = c0.apply(this, arguments), l = a.listar, u = a.atualizarUm, pu = a.presencaUm; a.listar = function () { window.__api.listar++; return l.apply(this, arguments); }; a.atualizarUm = function () { window.__api.um++; return u.apply(this, arguments); }; if (pu) a.presencaUm = function (dc) { window.__api.pres[dc] = (window.__api.pres[dc] || 0) + 1; return pu.apply(this, arguments); }; return a; }; });
 const amostrador = (m) => m.ev(() => { window.__q = { flash: false, hmin: 1e9, quadros: 0 }; const f = () => { const e = document.querySelector('[data-z89-contatos]'); if (e && /Conferindo/.test(e.textContent)) window.__q.flash = true; window.__q.hmin = Math.min(window.__q.hmin, document.documentElement.scrollHeight); window.__q.quadros++; window.__q.id = requestAnimationFrame(f); }; f(); });
 const irPara = async (m, nome, folga) => { const y = await m.ev(([s, f]) => { const e = document.querySelector(s), de = document.documentElement, sb = de.style.scrollBehavior; de.style.scrollBehavior = 'auto'; try { window.scrollTo(0, e.getBoundingClientRect().top + window.pageYOffset - (f || 150)); } finally { de.style.scrollBehavior = sb; } return window.pageYOffset; }, [m.sel(nome), folga]); await esperar(60); return y; };
 const espiarAtualizacoes = (m) => m.ev(() => { window.__t = { atual: 0, acomp: 0, desp: 0 }; const a = window.zPainel44Atualizar, b = window.zPainel44AtualizarAcompanhamento, c = window.zPainel44AtualizarDespacho80; window.zPainel44Atualizar = function () { window.__t.atual++; return a.apply(this, arguments); }; window.zPainel44AtualizarAcompanhamento = function () { window.__t.acomp++; return b.apply(this, arguments); }; window.zPainel44AtualizarDespacho80 = function () { window.__t.desp++; return c.apply(this, arguments); }; });
@@ -1213,7 +1246,10 @@ prova('P19', 'às 13h30 com a tela aberta o retorno aparece sem reler a lista e 
     assert.ok(/Hora de retomar o contato \(retorno humano das 13h30\)/.test(await m.texto(nomeTeste(2))));
     assert.deepStrictEqual(await m.ev((s) => [...document.querySelectorAll(s + ' [data-zt694-texto]')].map((e) => e.textContent), m.sel(nomeTeste(2))), [RETORNO('Tutor ' + nomeTeste(2), FRASE_VERM, nomeTeste(2))], 'às 13h30 a caixa com o texto do retorno entra na linha, sem reler nada');
     assert.ok(Math.abs(depois.y - antes.y) <= 2, 'a rolagem não mudou: ' + antes.y + ' → ' + depois.y); assert.ok(Math.abs((await topo8()) - vista0) <= 2, 'o FILHOt que a pessoa estava vendo ficou no mesmo lugar da tela'); assert.ok(depois.h >= antes.h - 8, 'a página não encolheu: ' + antes.h + ' → ' + depois.h);
-    assert.strictEqual(await m.ev(() => window.__api.listar), api0, 'a lista não foi relida'); { const novas = (await m.log()).leituras.slice(lidas0).filter((x) => /^(piloto59|daycare\/(cadastro|checkin-corpo|checkout-corpo|vencimentos|zelozinha-operacao|dashboard|snoopy|banho-falta))/.test(x.path)); assert.deepStrictEqual(novas, [], 'nenhuma leitura da lista nem do painel (os relógios do almoço e da auditoria do app não contam): ' + JSON.stringify(porNo(novas))); }
+    assert.strictEqual(await m.ev(() => window.__api.listar), api0, 'a lista não foi relida'); { const dk = m.dcDe(nomeTeste(2)), noPet = ['daycare/checkin-corpo/' + DIA + '/' + dk, 'daycare/checkout-corpo/' + DIA + '/' + dk];
+      const novas = (await m.log()).leituras.slice(lidas0).filter((x) => /^(piloto59|daycare\/(cadastro|checkin-corpo|checkout-corpo|vencimentos|zelozinha-operacao|dashboard|snoopy|banho-falta))/.test(x.path));
+      assert.deepStrictEqual(novas.filter((x) => noPet.indexOf(x.path) < 0), [], 'nenhuma leitura da lista nem do painel (os relógios do almoço e da auditoria do app não contam): ' + JSON.stringify(porNo(novas)));
+      assert.deepStrictEqual(novas.map((x) => x.path).sort(), noPet, 'só a presença do FILHOt em «Não respondeu», conferida antes de o texto entrar: o check-in e o check-out dele, uma leitura de cada (M1)'); }
     assert.ok(!q.flash && q.quadros > 5, 'nenhum quadro com «Conferindo…»: ' + JSON.stringify(q));
     assert.deepStrictEqual(await m.ev(() => window.__t), { atual: 0, acomp: 1, desp: 0 }, 'às 13h30 com a tela aberta o temporizador do app atualiza só o acompanhamento (sem leitura), não o painel dos envios');
     assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
@@ -1246,12 +1282,12 @@ prova('P19', 'a atualização geral (projeção do serviço, «Atualizar envios�
     let d = await alturaY(m); assert.ok(Math.abs(d.y - antes.y) <= 2 && Math.abs(d.h - antes.h) <= 8, 'tela refeita pelo painel: ' + JSON.stringify([antes, d]));
     assert.strictEqual(await aberta(), true, 'a linha aberta continua aberta'); assert.strictEqual(await lidoCom(), l0, 'sem leitura quando nada mudou');
     // 2) o serviço publica outra projeção: a lista é relida, e o que a pessoa via fica onde estava
-    await m.ev(() => { Z44_DISPATCH80.dados.atualizadoEm = new Date(Date.now() + 5000).toISOString(); zPainel44Atualizar(); }); await m.quieto(500);
+    await m.ev(() => { Z44_DISPATCH80.dados.atualizadoEm = new Date(Date.now() + 5000).toISOString(); zPainel44Atualizar(); }); await ate(async () => (await lidoCom()) >= l0 + 1); await m.quieto(500);
     d = await alturaY(m); assert.ok(Math.abs(d.y - antes.y) <= 2, 'projeção nova: a rolagem fica (' + antes.y + ' → ' + d.y + ')'); assert.strictEqual(await aberta(), true);
     assert.strictEqual(await lidoCom(), l0 + 1, 'projeção nova: uma releitura');
     // 3) «Atualizar envios»
-    await m.page.click('[data-z44-reler]'); await m.quieto(500); d = await alturaY(m);
-    assert.ok(Math.abs(d.y - antes.y) <= 2 && (await aberta()), 'Atualizar envios: ' + JSON.stringify(d)); assert.strictEqual(await lidoCom(), l0 + 2);
+    await m.ev(() => { document.querySelector('[data-z44-reler]').click(); }); await ate(async () => (await lidoCom()) >= l0 + 2); await m.quieto(500); d = await alturaY(m);   // toque no DOM: o clique do Playwright rolaria a página até o botão e a prova mediria a rolagem dele, não a do app
+    assert.ok(Math.abs(d.y - antes.y) <= 2 && (await aberta()), 'Atualizar envios: ' + JSON.stringify(d) + ' (antes ' + JSON.stringify(antes) + ')'); assert.strictEqual(await lidoCom(), l0 + 2);
     const q = await m.ev(() => window.__q); assert.ok(!q.flash, 'nenhum quadro com «Conferindo…»: ' + JSON.stringify(q)); assert.ok(q.hmin >= antes.h - 8, 'a página não encolheu em nenhum quadro: ' + q.hmin + ' vs ' + antes.h);
     assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
   } finally { await m.fechar(); }
@@ -1405,8 +1441,8 @@ prova('P26', 'vacina: a linha diz se a veterinária confirmou a presença; a exe
   m = await mundo({ filhots: filhots, vetConfirmada: true });
   try { igual(await vetTxt(m), ['Veterinária: confirmada hoje']); } finally { await m.fechar(); }
 }, 'C');
-prova('P26', 'depois das 12h e depois das 13h30 a tela lista e grava as quatro respostas, sem bloqueio novo por hora (AC11.3)', async () => {
-  for (const relogio of ['2026-10-20T12:30:00-03:00', '2026-10-20T15:00:00-03:00', '2026-10-20T21:45:00-03:00']) {
+prova('P26', 'depois das 13h (o fim da janela de envio) e depois das 13h30 a tela lista e grava as quatro respostas, sem bloqueio novo por hora (AC11.3)', async () => {
+  for (const relogio of ['2026-10-20T13:15:00-03:00', '2026-10-20T15:00:00-03:00', '2026-10-20T21:45:00-03:00']) {
     const m = await mundo({ filhots: [0, 1, 2, 3].map((i) => ({ n: nomeTeste(i), tutor: 'Tutor ' + i, tel: '(31) 99999-000' + i, cuidados: ['verm_p'] })) }, { relogio: relogio });
     try {
       assert.strictEqual(await m.ev(() => document.querySelectorAll('[data-zt694-pet]').length), 4, relogio + ': a tela lista');
@@ -1431,7 +1467,7 @@ prova('P26', 'o serviço fica fora: nenhuma gravação em `piloto59/` nem em `da
     const g = (await m.log()).gravacoes.map((x) => x.path);
     assert.ok(g.length > 5, 'houve gravações: ' + g.length);
     assert.deepStrictEqual(g.filter((p) => /^(piloto59|daycare\/zelozinha-operacao)\//.test(p)), [], 'nenhuma gravação nos nós do serviço');
-    const fora = g.filter((p) => !/^daycare\/(vencimentos|dashboard|auditoria)\//.test(p) && !/^daycare\/(fotos-corpo|limpeza-fotos)\//.test(p));  // a limpeza de fotos é o relógio do próprio app, não da tela
+    const fora = g.filter((p) => !/^daycare\/(vencimentos|dashboard|auditoria)\//.test(p) && !/^daycare\/(fotos-corpo|limpeza-fotos|aniversario-enviado)\//.test(p));  // a limpeza de fotos e o aviso de aniversário são relógios do próprio app (com banco lento caem no meio da prova), não da tela
     assert.deepStrictEqual(fora, [], 'só grava onde está escrito: ' + JSON.stringify([...new Set(g.map((p) => p.replace(/\d{4}-\d{2}-\d{2}/, 'DIA').replace(/teste-\d+__tutor-\d+/, 'PET').replace(/\/(r57_|[A-Za-z0-9_-]{12,}).*$/, '/…')))]));
     assert.strictEqual(await m.ev(() => window.__antiga), 0, 'a via antiga não é chamada');
     assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
@@ -1463,7 +1499,7 @@ prova('P27', 'consultora, supervisão, gestão e diretoria veem a tela; monitor,
   }
   for (const role of naoVeem) for (const rota of ['painel-amanda', 'consultoras']) {
     const m = await mundo({ filhots: [{ n: nomeTeste(0), tutor: 'Tutor 0', tel: '(31) 99999-0000', cuidados: ['verm_p'] }], usuario: { monId: 'p1', pessoa: 'P ' + role, nome: 'P ' + role, role: role } }, { abrir: false });
-    try { await m.ev((r) => { abrirItemDoMenu(r); }, rota); await esperar(1200); assert.strictEqual(await m.ev(() => document.querySelectorAll('[data-zt694],[data-z89-contatos]').length), 0, role + ' não vê a tela em ' + rota); assert.strictEqual(await m.ev(() => zPainel44Despacho80Acesso()), false, role + ' não tem o acesso ao painel'); } finally { await m.fechar(); }
+    try { await m.ev((r) => { abrirItemDoMenu(r); }, rota); await m.assentou(); assert.strictEqual(await m.ev(() => document.querySelectorAll('[data-zt694],[data-z89-contatos]').length), 0, role + ' não vê a tela em ' + rota); assert.strictEqual(await m.ev(() => zPainel44Despacho80Acesso()), false, role + ' não tem o acesso ao painel'); } finally { await m.fechar(); }
   }
 }, 'C');
 
@@ -1533,18 +1569,20 @@ prova('P29', 'só mudam as funções da lista: `zPainel44Atualizar` (dividida), 
 }, 'L');
 
 // ================================================================= P32 — guarda da assinatura (AC4.8)
+/* o que a ESCOLHA poderia gravar: a linha do Day Care, o Snoopy e o registro da resposta. Os relógios do próprio app (limpeza de fotos, auditoria, aniversário) gravam por conta própria, com banco lento no meio da prova, e não contam */
+const gravouNaLinha = (log) => log.gravacoes.filter((x) => /^daycare\/(dashboard|snoopy|vencimentos)\//.test(x.path)).map((x) => x.path);
 const FRASES_GUARDA = { snoopy: /Esta linha já foi lançada no Snoopy; para mudar, desfaça antes a confirmação do Snoopy\./, aplicado: /Este cuidado já está sendo aplicado ou foi aplicado; a correção é feita na ficha de Prevenção do FILHOt\./ };
-const abrirEscolhas = async (m, nome, k) => { const c = m.cuidadoSel(nome, k || 'verm_p'); if (!(await m.ev((s) => document.querySelector(s + ' [data-zt694-esc]').open, c))) await m.page.click(c + ' [data-zt694-esc] > summary'); return c; };
+const abrirEscolhas = async (m, nome, k) => { const c = m.cuidadoSel(nome, k || 'verm_p'); await ate(() => m.ev((s) => !!document.querySelector(s + ' [data-zt694-esc]'), c), 15000); if (!(await m.ev((s) => document.querySelector(s + ' [data-zt694-esc]').open, c))) await m.page.click(c + ' [data-zt694-esc] > summary'); return c; };
 const escolher = async (m, nome, campo, valor, k) => { const c = await abrirEscolhas(m, nome, k); await m.page.click(c + ' [data-zt694-acao="esc"][data-zt694-campo="' + campo + '"][data-zt694-valor="' + valor + '"]'); await m.quieto(300); };
 prova('P32', 'com o Snoopy já confirmado, escolher não grava nada e a tela diz para desfazer antes a confirmação (AC4.8a)', async () => {
   const m = await mundo({ filhots: [{ n: 'Teste Guarda', tutor: 'Tutor Guarda', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] });
   try {
-    await m.tocar('Teste Guarda', 'verm_p', 'autorizar_loja'); await esperar(300); await m.quieto(200);
-    await m.page.click(m.sel('Teste Guarda') + ' button[data-snoopy-item]'); await m.modal('Já lancei no Snoopy'); await esperar(400); await m.quieto(200);
-    assert.ok(/Snoopy: lançado por Amanda/.test(await snoopyTexto(m, 'Teste Guarda')));
+    await m.tocar('Teste Guarda', 'verm_p', 'autorizar_loja'); await esperaSnoopy(m, 'Teste Guarda', /Já lancei no Snoopy/);
+    await m.page.click(m.sel('Teste Guarda') + ' button[data-snoopy-item]'); await m.modal('Já lancei no Snoopy');
+    assert.ok(/Snoopy: lançado por Amanda/.test(await esperaSnoopy(m, 'Teste Guarda', /Snoopy: lançado por Amanda/))); await m.quieto(200);
     const antes = await m.ler('daycare/dashboard/' + DIA + '/vermifugo'); await m.zerarLog();
     await escolher(m, 'Teste Guarda', 'onde', 'BANHO');
-    assert.strictEqual((await m.log()).gravacoes.length, 0, 'nada gravado'); assert.ok(FRASES_GUARDA.snoopy.test(await m.texto('Teste Guarda')), await m.texto('Teste Guarda'));
+    assert.deepStrictEqual(gravouNaLinha(await m.log()), [], 'nada gravado na linha, no Snoopy nem no registro'); assert.ok(FRASES_GUARDA.snoopy.test(await m.texto('Teste Guarda')), await m.texto('Teste Guarda'));
     igual(await m.ler('daycare/dashboard/' + DIA + '/vermifugo'), antes, 'a linha ficou como estava');
     assert.ok(/Snoopy: lançado por Amanda/.test(await snoopyTexto(m, 'Teste Guarda')), 'e a confirmação do Snoopy continua valendo, não vira «revisar»');
   } finally { await m.fechar(); }
@@ -1554,7 +1592,7 @@ prova('P32', 'com a tarefa em execução ou realizada, escolher não grava nada 
     const m = await mundo({ filhots: [{ n: 'Teste Guarda', tutor: 'Tutor Guarda', tel: '(31) 99999-0001', cuidados: ['verm_p'] }], respostas: [{ pet: 0, k: 'verm_p', valor: 'autorizar_bolsa', tarefa: estado }] });
     try {
       await m.zerarLog(); await escolher(m, 'Teste Guarda', 'onde', 'BANHO');
-      assert.strictEqual((await m.log()).gravacoes.length, 0, estado + ': nada gravado'); assert.ok(FRASES_GUARDA.aplicado.test(await m.texto('Teste Guarda')), estado + ': ' + await m.texto('Teste Guarda'));
+      assert.deepStrictEqual(gravouNaLinha(await m.log()), [], estado + ': nada gravado na linha, no Snoopy nem no registro'); assert.ok(FRASES_GUARDA.aplicado.test(await m.texto('Teste Guarda')), estado + ': ' + await m.texto('Teste Guarda'));
     } finally { await m.fechar(); }
   }
 }, 'C');
@@ -1565,19 +1603,19 @@ prova('P32', 'escolha igual à já gravada não escreve nada (a assinatura não 
     const sel = m.cuidadoSel('Teste Guarda', 'ecto_p'); await escolher(m, 'Teste Guarda', 'onde', 'BANHO', 'ecto_p');
     const linha = await linhasDoDia(m, 'carrapaticida'), det = Object.values(linha)[0].det; assert.strictEqual(det.onde, 'BANHO', 'a escolha foi gravada');
     await m.zerarLog(); await escolher(m, 'Teste Guarda', 'onde', 'BANHO', 'ecto_p');
-    assert.strictEqual((await m.log()).gravacoes.length, 0, 'a mesma escolha de novo não escreve');
+    assert.deepStrictEqual(gravouNaLinha(await m.log()), [], 'a mesma escolha de novo não escreve na linha');
   } finally { await m.fechar(); }
 }, 'C');
 prova('P32', 'escolher antes do Snoopy confirmar deixa o Snoopy «pendente»; a confirmação feita depois da escolha continua válida (AC4.8c)', async () => {
   const m = await mundo({ filhots: [{ n: 'Teste Guarda', tutor: 'Tutor Guarda', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] });
   try {
-    await m.tocar('Teste Guarda', 'verm_p', 'autorizar_loja'); await esperar(300); await m.quieto(200);
+    await m.tocar('Teste Guarda', 'verm_p', 'autorizar_loja'); await esperaSnoopy(m, 'Teste Guarda', /Já lancei no Snoopy/);
     await escolher(m, 'Teste Guarda', 'onde', 'BANHO');
     const det = Object.values(await linhasDoDia(m, 'vermifugo'))[0].det; assert.strictEqual(det.onde, 'BANHO', 'a escolha gravou'); assert.strictEqual(det.cuidado57_estado, 'conferir-orientacao', 'o estado do cuidado não mudou');
     let t = await snoopyTexto(m, 'Teste Guarda'); assert.ok(/Falta lançar no Snoopy e receber do tutor/.test(t) && /Snoopy: pendente de confirmação humana/.test(t) && !/revisar|alterado/i.test(t), 'continua pendente: ' + t);
-    await m.page.click(m.sel('Teste Guarda') + ' button[data-snoopy-item]'); await m.modal('Já lancei no Snoopy'); await esperar(400); await m.quieto(200);
-    t = await snoopyTexto(m, 'Teste Guarda'); assert.ok(/Snoopy: lançado por Amanda/.test(t) && !/revisar|alterado/i.test(t), 'a confirmação feita depois da escolha vale: ' + t);
-    await m.recarregar(); t = await snoopyTexto(m, 'Teste Guarda'); assert.ok(/Snoopy: lançado por Amanda/.test(t) && !/revisar|alterado/i.test(t), 'e vale depois de reabrir a tela: ' + t);
+    await m.page.click(m.sel('Teste Guarda') + ' button[data-snoopy-item]'); await m.modal('Já lancei no Snoopy');
+    t = await esperaSnoopy(m, 'Teste Guarda', /Snoopy: lançado por Amanda/); assert.ok(/Snoopy: lançado por Amanda/.test(t) && !/revisar|alterado/i.test(t), 'a confirmação feita depois da escolha vale: ' + t);
+    await m.recarregar(); t = await esperaSnoopy(m, 'Teste Guarda', /Snoopy: lançado por Amanda/); assert.ok(/Snoopy: lançado por Amanda/.test(t) && !/revisar|alterado/i.test(t), 'e vale depois de reabrir a tela: ' + t);
     assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
   } finally { await m.fechar(); }
 }, 'C');
@@ -1628,6 +1666,333 @@ prova('P34', 'na tela, «Não respondeu» salva sem erro com o banco que descart
     reg = await regDo(m, 'Teste Nulo'); assert.strictEqual(reg.historicoRespostas49.length, 1, 'tocar de novo não duplica a resposta'); assert.strictEqual(Object.values(reg.respostasEscopo49.porCiclo)[0].revisao, 0);
     assert.strictEqual(await m.ev(() => [...document.querySelectorAll('[data-zt694-pet] [data-zt694-acao="resp"][aria-pressed="true"]')].length), 1, 'o botão marcado é um só');
     await m.recarregar(); assert.deepStrictEqual(await m.ev(() => [...document.querySelectorAll('[data-zt694-grupo]')].map((e) => e.textContent)), ['Falta responder', 'Retorno às 13h30'], 'depois de atualizar, o FILHOt está no grupo das 13h30');
+    assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
+  } finally { await m.fechar(); }
+}, 'C');
+
+// ================================================================= P35 — o texto das 13h30 só vale com o FILHOt na casa (correção do QA, M1)
+/* O texto das 13h30 diz «enquanto está com a gente» e vai a um tutor. A lista só relê quando a projeção do serviço muda; o FILHOt que sai depois da leitura continuava com o texto na tela.
+   Agora a presença daquele FILHOt (check-in e check-out do dia, uma leitura de cada) é conferida: antes de a caixa aparecer, no toque em «Copiar mensagem» e «Abrir no WhatsApp» e ao reabrir o tema com a conferência velha. */
+const saidaDe = (hhmm) => ({ tipo: 'saida', quem: 'Zeloso Teste', hora: hhmm, fim: Date.parse(DIA + 'T' + hhmm + ':00-03:00') });
+const darSaida = (m, nome, hhmm) => m.ev(([dia, dk, reg]) => { window.__banco.poe('daycare/checkout-corpo/' + dia + '/' + dk, reg); }, [DIA, m.dcDe(nome), saidaDe(hhmm)]);
+const caixasDoFilhot = (m, nome) => m.ev((s) => [...document.querySelectorAll(s + ' [data-zt694-copia]')].map((e) => ({ tipo: e.getAttribute('data-zt694-tipo'), txt: e.querySelector('[data-zt694-texto]').textContent })), m.sel(nome));
+const temNaLinha = (m, nome, seletor) => m.ev(([s, q]) => !!document.querySelector(s + ' ' + q), [m.sel(nome), seletor]);
+const textoDaLinha = (m, nome, seletor) => m.ev(([s, q]) => { const e = document.querySelector(s + ' ' + q); return e ? e.textContent : null; }, [m.sel(nome), seletor]);
+/* as leituras do check-in e do check-out DAQUELE FILHOt (só os caminhos dele; os mapas do dia inteiro, que o app lê por conta própria, não entram) */
+const leiturasDePresenca = async (m, nome) => { const dk = m.dcDe(nome); return (await m.log()).leituras.filter((x) => x.path === 'daycare/checkin-corpo/' + DIA + '/' + dk || x.path === 'daycare/checkout-corpo/' + DIA + '/' + dk).map((x) => x.path.split('/')[1]).sort(); };
+/* as janelas que o «Abrir no WhatsApp» do texto das 13h30 abriu: para onde foram (o número e o texto do link, decodificado) e se foram fechadas */
+const janelasDoZap = (m) => m.ev(() => window.__ab.janelas.map((j) => { const x = /^https:\/\/wa\.me\/(\d*)\?text=([\s\S]*)$/.exec(j.href); return { numero: x ? x[1] : null, texto: x ? decodeURIComponent(x[2]) : null, fechada: j.fechada }; }));
+const FRASE_SAIU = (nome, hora) => nome + ' já saiu da casa às ' + hora + '. O texto das 13h30 não aparece mais.';
+prova('P35', 'funções puras: a hora da saída (instante em número, em texto de data, só dígitos, ou o `hora` do registro) e o início do texto das 13h30 (M1)', async () => {
+  const T = noTodo().ctx.ZelozinhaTela94;
+  assert.strictEqual(T.horaDaSaida({ fim: Date.parse('2026-10-20T15:42:00-03:00') }), '15:42');
+  assert.strictEqual(T.horaDaSaida({ fim: '2026-10-20T15:42:00-03:00' }), '15:42');
+  assert.strictEqual(T.horaDaSaida({ fim: '2026-10-20T18:42:00Z' }), '15:42', 'a mesma hora em UTC e em São Paulo');
+  assert.strictEqual(T.horaDaSaida({ fim: String(Date.parse('2026-10-20T15:42:00-03:00')) }), '15:42', 'só dígitos');
+  assert.strictEqual(T.horaDaSaida({ hora: '15:42' }), '15:42', 'na falta do instante, o `hora` do registro');
+  assert.strictEqual(T.horaDaSaida({ fim: 'lixo', hora: '25:99' }), '', 'hora inválida não vira hora');
+  assert.strictEqual(T.horaDaSaida({}), ''); assert.strictEqual(T.horaDaSaida(null), ''); assert.strictEqual(T.horaDaSaida('x'), '');
+  assert.strictEqual(T.inicio1330(DIA), Date.parse('2026-10-20T16:30:00Z'), '13h30 de São Paulo = 16h30 em UTC'); assert.ok(Number.isNaN(T.inicio1330('')));
+});
+prova('P35', 'núcleo: `presencaUm` lê só o check-in e o check-out daquele FILHOt, separa presente, saiu (qualquer registro de saída) e sem entrada, e não grava (M1)', async () => {
+  const { ZelozinhaContatosHoje89: N } = noTodo().ctx, arv = {}; let lidos = [], permitido = true;
+  const db = { ref: (p) => ({ once: () => { lidos.push(p); const v = arv[p]; return Promise.resolve({ val: () => (v === undefined ? null : JSON.parse(JSON.stringify(v))) }); }, set() { throw new Error('não grava'); }, update() { throw new Error('não grava'); }, transaction() { throw new Error('não grava'); } }) };
+  const f = () => {}, api = N.criar({ db, dia: () => DIA, linhasHoje: () => [], pelKey: f, dcKey: f, pelExtra: f, vencItensDe: f, tipoCuidado: f, autor: f, permissao: () => permitido, serverTimestamp: f, painel: f, lerPainel: f, resolverEnvio: f });
+  const cin = 'daycare/checkin-corpo/' + DIA + '/pet', cout = 'daycare/checkout-corpo/' + DIA + '/pet', entrada = { tipo: 'entrada', quem: 'Zeloso Teste', fim: 1760000000000 };
+  arv[cin] = entrada;
+  igual(await api.presencaUm('pet'), { dia: DIA, dcKey: 'pet', saiu: false, presente: true, saida: null }, 'presente'); igual(lidos.slice().sort(), [cin, cout].sort(), 'duas leituras, uma de cada');
+  arv[cout] = { tipo: 'saida', quem: 'Zeloso Teste', fim: 1760000100000, hora: '15:42' };
+  const s = await api.presencaUm('pet'); assert.ok(s.saiu === true && s.presente === false && s.saida.hora === '15:42', JSON.stringify(s));
+  arv[cout] = { hora: '15:42' }; assert.strictEqual((await api.presencaUm('pet')).saiu, true, 'qualquer registro de saída conta, como no `resolver`');
+  delete arv[cout]; delete arv[cin]; const sem = await api.presencaUm('pet'); assert.ok(sem.saiu === false && sem.presente === false, 'sem entrada confirmada: nem presente nem saiu');
+  arv[cin] = { tipo: 'entrada', quem: '', fim: 1760000000000 }; assert.strictEqual((await api.presencaUm('pet')).presente, false, 'entrada sem quem não vale');
+  permitido = false; await assert.rejects(() => api.presencaUm('pet'), /Acesso indisponível/); permitido = true; await assert.rejects(() => api.presencaUm(''), /FILHOt indisponível/);
+});
+prova('P35', 'FILHOt que saiu depois da leitura da lista: «Copiar mensagem» e «Abrir no WhatsApp» da caixa das 13h30 conferem a presença (uma leitura de cada) e, se ele saiu, nada é copiado nem aberto, a caixa some e a linha diz que saiu, com a hora (M1)', async () => {
+  const nomes = ['Teste Saiu', 'Teste Zap', 'Teste Fica'], m = await mundo({ filhots: nomes.map((n, i) => ({ n: n, tutor: 'Tutor ' + n.slice(6), tel: '(31) 99999-000' + (i + 1), cuidados: ['verm_p'] })), respostas: nomes.map((_, i) => ({ pet: i, k: 'verm_p', valor: 'aguardar' })) }, { relogio: '2026-10-20T14:00:00-03:00', abrir: false });
+  try {
+    await espiarNucleo(m); await m.abrirTela(); await m.quieto(300); const lista0 = await m.ev(() => window.__api.listar);
+    for (const n of nomes) { const c = await caixasDoFilhot(m, n); assert.deepStrictEqual(c.map((y) => y.txt), [RETORNO('Tutor ' + n.slice(6), FRASE_VERM, n)], n + ': a caixa do texto das 13h30 já está na linha'); assert.deepStrictEqual(c.map((y) => y.tipo), ['retorno'], n + ': a caixa é a do retorno das 13h30'); }
+    await darSaida(m, 'Teste Saiu', '13:50'); await darSaida(m, 'Teste Zap', '13:55');
+    await m.ev(() => navigator.clipboard.writeText('antes')); await m.zerarLog();
+    await m.page.click(m.sel('Teste Saiu') + ' [data-zt694-copia="0"] [data-zt694-acao="copiar"]');
+    assert.ok(await ate(() => temNaLinha(m, 'Teste Saiu', '[data-zt694-saiu]')), 'a linha diz que saiu: ' + await m.texto('Teste Saiu'));
+    assert.strictEqual(await textoDaLinha(m, 'Teste Saiu', '[data-zt694-saiu]'), FRASE_SAIU('Teste Saiu', '13:50'));
+    assert.deepStrictEqual(await caixasDoFilhot(m, 'Teste Saiu'), [], 'a caixa sumiu'); assert.strictEqual(await m.ev(() => navigator.clipboard.readText()), 'antes', 'nada foi copiado');
+    assert.deepStrictEqual(await leiturasDePresenca(m, 'Teste Saiu'), ['checkin-corpo', 'checkout-corpo'], 'uma leitura do check-in e uma do check-out daquele FILHOt');
+    assert.ok(await temNaLinha(m, 'Teste Saiu', '[data-zt694-acao="whats-vazio"]') && !(await temNaLinha(m, 'Teste Saiu', '[data-zt694-acao="whats-texto"]')), 'o retorno vira só o «Abrir WhatsApp» vazio');
+    assert.ok(!/Podemos fazer|enquanto está com a gente/.test(await m.texto('Teste Saiu')), 'e o texto não está mais na linha');
+    await m.page.click(m.sel('Teste Zap') + ' [data-zt694-copia="0"] [data-zt694-acao="whats-texto"]');
+    assert.ok(await ate(() => temNaLinha(m, 'Teste Zap', '[data-zt694-saiu]')), 'Teste Zap: a linha diz que saiu'); assert.strictEqual(await textoDaLinha(m, 'Teste Zap', '[data-zt694-saiu]'), FRASE_SAIU('Teste Zap', '13:55'));
+    assert.ok(await ate(async () => (await m.ev(() => window.__ab.janelas)).every((j) => j.fechada), 15000), 'a janela do WhatsApp de quem saiu foi fechada');
+    assert.deepStrictEqual((await janelasDoZap(m)).map((j) => [j.numero, j.fechada]), [[null, true]], 'o WhatsApp não foi aberto com o texto de quem saiu (a janela abriu em branco no toque e fechou)');
+    // quem continua na casa: os dois botões funcionam
+    await m.page.click(m.sel('Teste Fica') + ' [data-zt694-copia="0"] [data-zt694-acao="copiar"]');
+    await ate(async () => (await m.ev(() => navigator.clipboard.readText())) !== 'antes'); assert.strictEqual(await m.ev(() => navigator.clipboard.readText()), RETORNO('Tutor Fica', FRASE_VERM, 'Teste Fica'), 'Teste Fica: copiou');
+    await m.ev(() => { window.__ab.janelas.length = 0; });
+    await m.page.click(m.sel('Teste Fica') + ' [data-zt694-copia="0"] [data-zt694-acao="whats-texto"]'); await ate(async () => (await janelasDoZap(m)).some((j) => j.numero));
+    assert.deepStrictEqual(await janelasDoZap(m), [{ numero: '5531999990003', texto: RETORNO('Tutor Fica', FRASE_VERM, 'Teste Fica'), fechada: false }], 'Teste Fica: abriu a conversa dele com o texto');
+    assert.ok(!(await temNaLinha(m, 'Teste Fica', '[data-zt694-saiu]')) && (await caixasDoFilhot(m, 'Teste Fica')).length === 1, 'quem ficou continua com a caixa');
+    assert.strictEqual(await m.ev(() => window.__api.listar), lista0, 'a lista inteira não foi relida'); assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
+  } finally { await m.fechar(); }
+}, 'C');
+prova('P35', 'se a presença não puder ser conferida, nada é copiado: a caixa some e a linha diz que não deu para confirmar (M1)', async () => {
+  const m = await mundo({ filhots: [{ n: 'Teste Falha', tutor: 'Tutor Falha', tel: '(31) 99999-0001', cuidados: ['verm_p'] }], respostas: [{ pet: 0, k: 'verm_p', valor: 'aguardar' }] }, { relogio: '2026-10-20T14:00:00-03:00' });
+  try {
+    assert.strictEqual((await caixasDoFilhot(m, 'Teste Falha')).length, 1);
+    await m.ev(() => { window.__banco.falhar(['daycare/checkout-corpo/']); navigator.clipboard.writeText('antes'); });
+    await m.page.click(m.sel('Teste Falha') + ' [data-zt694-copia="0"] [data-zt694-acao="copiar"]');
+    assert.ok(await ate(() => temNaLinha(m, 'Teste Falha', '[data-zt694-presenca-incerta]')), await m.texto('Teste Falha'));
+    assert.ok(/Não consegui confirmar que Teste Falha está na casa agora\./.test(await m.texto('Teste Falha'))); assert.strictEqual((await caixasDoFilhot(m, 'Teste Falha')).length, 0);
+    assert.strictEqual(await m.ev(() => navigator.clipboard.readText()), 'antes', 'nada foi copiado');
+  } finally { await m.fechar(); }
+}, 'C');
+prova('P35', 'às 13h30 com a tela aberta, a caixa só entra depois de conferir cada FILHOt em «Não respondeu»: quem saiu antes não ganha o texto, quem ficou ganha; a lista não é relida e só o check-in e o check-out deles são lidos (M1, AC8.5)', async () => {
+  const m = await mundo({ filhots: ['Teste Saiu', 'Teste Fica'].map((n, i) => ({ n: n, tutor: 'Tutor ' + n.slice(6), tel: '(31) 99999-000' + (i + 1), cuidados: ['verm_p'] })), respostas: [{ pet: 0, k: 'verm_p', valor: 'aguardar' }, { pet: 1, k: 'verm_p', valor: 'aguardar' }] }, { relogio: '2026-10-20T13:29:59-03:00', abrir: false });
+  try {
+    await espiarNucleo(m); await m.abrirTela(); await m.quieto(300); const lista0 = await m.ev(() => window.__api.listar);
+    for (const n of ['Teste Saiu', 'Teste Fica']) assert.ok((await caixasDoFilhot(m, n)).length === 0 && !(await temNaLinha(m, n, '[data-zt694-conferindo]')), n + ': antes das 13h30 não há caixa nem «conferindo»');
+    await darSaida(m, 'Teste Saiu', '13:20'); await m.zerarLog();
+    await m.ev((s) => { window.__viuTexto = 0; new MutationObserver(() => { const e = document.querySelector(s + ' [data-zt694-texto]'); if (e && /Podemos fazer/.test(e.textContent)) window.__viuTexto++; }).observe(document.body, { childList: true, subtree: true, characterData: true }); }, m.sel('Teste Saiu'));
+    await m.ev(() => { zPainel44ProgramarRetorno(); }); await m.page.clock.setFixedTime('2026-10-20T13:30:00-03:00');
+    assert.ok(await ate(async () => (await caixasDoFilhot(m, 'Teste Fica')).length === 1 && await temNaLinha(m, 'Teste Saiu', '[data-zt694-saiu]'), 15000), 'às 13h30: ' + await m.telaTexto());
+    assert.strictEqual(await textoDaLinha(m, 'Teste Saiu', '[data-zt694-saiu]'), FRASE_SAIU('Teste Saiu', '13:20')); assert.deepStrictEqual(await caixasDoFilhot(m, 'Teste Saiu'), []);
+    assert.strictEqual(await m.ev(() => window.__viuTexto), 0, 'o texto das 13h30 não apareceu na tela de quem saiu nem por um quadro (a caixa só entra depois de conferir)');
+    assert.deepStrictEqual(await caixasDoFilhot(m, 'Teste Fica'), [{ tipo: 'retorno', txt: RETORNO('Tutor Fica', FRASE_VERM, 'Teste Fica') }]);
+    assert.ok(await temNaLinha(m, 'Teste Saiu', '[data-zt694-acao="whats-vazio"]'), 'quem saiu fica só com o «Abrir WhatsApp» vazio');
+    await m.quieto(200);
+    assert.deepStrictEqual(await m.ev(() => window.__api.pres), { [m.dcDe('Teste Saiu')]: 1, [m.dcDe('Teste Fica')]: 1 }, 'cada FILHOt em «Não respondeu» foi conferido uma vez só (o check-in e o check-out dele)');
+    assert.strictEqual(await m.ev(() => window.__api.listar), lista0, 'a lista inteira não foi relida'); assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
+  } finally { await m.fechar(); }
+}, 'C');
+prova('P35', 'ao tocar «Não respondeu» de quem acabou de sair: a resposta é salva, mas o texto das 13h30 não aparece e a linha diz que saiu; quem ficou ganha a caixa (M1)', async () => {
+  const m = await mundo({ filhots: ['Teste Saiu', 'Teste Fica'].map((n, i) => ({ n: n, tutor: 'Tutor ' + n.slice(6), tel: '(31) 99999-000' + (i + 1), cuidados: ['verm_p'] })) }, { relogio: '2026-10-20T14:00:00-03:00' });
+  try {
+    await darSaida(m, 'Teste Saiu', '13:40');
+    await m.tocar('Teste Saiu', 'verm_p', 'aguardar'); assert.ok(await ate(() => temNaLinha(m, 'Teste Saiu', '[data-zt694-saiu]')), await m.texto('Teste Saiu'));
+    assert.strictEqual(await textoDaLinha(m, 'Teste Saiu', '[data-zt694-saiu]'), FRASE_SAIU('Teste Saiu', '13:40')); assert.deepStrictEqual(await caixasDoFilhot(m, 'Teste Saiu'), []);
+    assert.strictEqual(Object.values((await regDo(m, 'Teste Saiu')).respostasEscopo49.porCiclo)[0].decisao, 'aguardar', 'a resposta ficou gravada');
+    assert.ok(await temNaLinha(m, 'Teste Saiu', '[data-zt694-acao="whats-vazio"]'));
+    await m.tocar('Teste Fica', 'verm_p', 'aguardar'); assert.deepStrictEqual(await caixasDoFilhot(m, 'Teste Fica'), [{ tipo: 'retorno', txt: RETORNO('Tutor Fica', FRASE_VERM, 'Teste Fica') }]);
+    assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
+  } finally { await m.fechar(); }
+}, 'C');
+prova('P35', 'ao reabrir o tema: a conferência de poucos minutos vale (nenhuma leitura nova); com mais de 5 minutos, o check-in e o check-out são lidos de novo e quem saiu perde o texto (M1)', async () => {
+  const m = await mundo({ filhots: ['Teste Saiu', 'Teste Fica'].map((n, i) => ({ n: n, tutor: 'Tutor ' + n.slice(6), tel: '(31) 99999-000' + (i + 1), cuidados: ['verm_p'] })), respostas: [{ pet: 0, k: 'verm_p', valor: 'aguardar' }, { pet: 1, k: 'verm_p', valor: 'aguardar' }] }, { relogio: '2026-10-20T14:00:00-03:00', abrir: false });
+  try {
+    const refazerTema = async () => { await m.ev(() => { zPainel44AtualizarDespacho80(); }); await m.quieto(300); }, pres = () => m.ev(() => window.__api.pres);
+    await espiarNucleo(m); await m.abrirTela(); await m.quieto(300);
+    await darSaida(m, 'Teste Saiu', '14:01');
+    await m.page.clock.setFixedTime('2026-10-20T14:02:00-03:00'); await refazerTema();
+    assert.strictEqual((await caixasDoFilhot(m, 'Teste Saiu')).length, 1, 'com a conferência de 2 minutos, a caixa continua'); assert.deepStrictEqual(await pres(), {}, 'e ninguém é conferido de novo');
+    await m.page.clock.setFixedTime('2026-10-20T14:06:00-03:00'); await refazerTema();
+    assert.ok(await ate(() => temNaLinha(m, 'Teste Saiu', '[data-zt694-saiu]')), 'com a conferência de 6 minutos: ' + await m.texto('Teste Saiu')); assert.strictEqual(await textoDaLinha(m, 'Teste Saiu', '[data-zt694-saiu]'), FRASE_SAIU('Teste Saiu', '14:01'));
+    assert.deepStrictEqual(await pres(), { [m.dcDe('Teste Saiu')]: 1, [m.dcDe('Teste Fica')]: 1 }, 'os dois foram conferidos de novo, uma vez cada');
+    assert.strictEqual((await caixasDoFilhot(m, 'Teste Fica')).length, 1, 'quem ficou continua com a caixa');
+    await refazerTema(); assert.deepStrictEqual(await pres(), { [m.dcDe('Teste Saiu')]: 1, [m.dcDe('Teste Fica')]: 1 }, 'conferido há pouco: nada é lido de novo (e quem saiu nunca é relido)');
+    assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
+  } finally { await m.fechar(); }
+}, 'C');
+
+// ================================================================= P36 — toque duplo na troca (correção do QA, B1)
+/* `responder` esperava a leitura do Snoopy antes de marcar «salvando»: o segundo toque passava a guarda. Agora a guarda fecha antes do primeiro `await`. */
+prova('P36', 'toque duplo na troca de «Autorizou pegar na loja» para «Mandou na bolsa»: uma chamada ao `registrar`, uma troca, uma auditoria, as mesmas gravações de um toque só, e nenhuma frase falsa de tarefa não criada (B1)', async () => {
+  async function rodar(duplo) {
+    const m = await mundo({ filhots: [{ n: 'Teste Duplo', tutor: 'Tutor Duplo', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] });
+    try {
+      await m.tocar('Teste Duplo', 'verm_p', 'autorizar_loja'); await esperaSnoopy(m, 'Teste Duplo', PENDENTE_NO_SNOOPY);
+      await m.ev(() => { window.__reg = 0; const o = ZeluzRespostaApp88.registrar; ZeluzRespostaApp88.registrar = function () { window.__reg++; return o.apply(this, arguments); }; });
+      await m.zerarLog();
+      await m.ev(([s, d]) => { const b = document.querySelector(s); b.click(); if (d) b.click(); }, [m.botao('Teste Duplo', 'verm_p', 'autorizar_bolsa'), duplo]);
+      await ate(async () => /Trocada de Autorizou pegar na loja para Mandou na bolsa por Amanda/.test(await m.texto('Teste Duplo')), 15000); await m.quieto(400);
+      const reg = await regDo(m, 'Teste Duplo'), l = await linhasDoDia(m, 'vermifugo'), id = Object.keys(l)[0], g = (await m.log()).gravacoes;
+      const aud = await m.ev((dia) => Object.values(window.__banco.ler('daycare/auditoria/' + dia) || {}).map((x) => x.detalhe).filter((x) => /Teste Duplo/.test(x)).sort(), DIA);
+      return { texto: await m.texto('Teste Duplo'), reg: await m.ev(() => window.__reg), historico: reg.historicoRespostas49.length, revisao: Object.values(reg.respostasEscopo49.porCiclo)[0].revisao, linhas: Object.keys(l).length, origem: l[id].origemVencimento.origemResposta,
+        gravacoesNaLinha: g.filter((x) => x.path === 'daycare/dashboard/' + DIA + '/vermifugo/' + id).length, trocasNaAuditoria: aud.filter((x) => /de «Autorizou pegar na loja» para «Mandou na bolsa»/.test(x)).length, auditoria: aud, erros: m.erros.slice() };
+    } finally { await m.fechar(); }
+  }
+  const um = await rodar(false), dois = await rodar(true);
+  assert.strictEqual(um.reg, 1); assert.strictEqual(um.trocasNaAuditoria, 1); assert.deepStrictEqual(um.erros, []);
+  assert.strictEqual(dois.reg, 1, 'o toque duplo chama o `registrar` uma vez só'); assert.strictEqual(dois.trocasNaAuditoria, 1, 'e a troca vai para a auditoria uma vez só');
+  assert.strictEqual(dois.gravacoesNaLinha, um.gravacoesNaLinha, 'e a linha do Day Care recebe as mesmas gravações de um toque só'); assert.deepStrictEqual(dois.auditoria, um.auditoria, 'a auditoria do dia é a mesma de um toque só');
+  assert.ok(!/Resposta salva, mas a tarefa do Day Care ainda não foi criada/.test(dois.texto), 'sem a frase falsa: ' + dois.texto); assert.ok(/Trocada de Autorizou pegar na loja para Mandou na bolsa por Amanda/.test(dois.texto));
+  assert.deepStrictEqual([dois.historico, dois.revisao, dois.linhas, dois.origem], [um.historico, um.revisao, um.linhas, um.origem], 'o banco fica como num toque só'); assert.deepStrictEqual([um.historico, um.revisao, um.linhas, um.origem], [2, 1, 1, 'bolsa']); assert.deepStrictEqual(dois.erros, []);
+}, 'C');
+prova('P36', 'depois de uma troca barrada, de um cartaz cancelado e de um erro a linha volta a ficar tocável (a guarda de «salvando» é solta) (B1)', async () => {
+  const m = await mundo({ filhots: [{ n: 'Teste Solta', tutor: 'Tutor Solta', tel: '(31) 99999-0001', cuidados: ['verm_p'] }], respostas: [{ pet: 0, k: 'verm_p', valor: 'autorizar_bolsa', tarefa: 'emexecucao' }] });
+  try {
+    const habilitados = () => m.ev((s) => [...document.querySelectorAll(s + ' [data-zt694-acao="resp"]')].map((b) => !b.disabled), m.sel('Teste Solta'));
+    await m.page.click(m.botao('Teste Solta', 'verm_p', 'autorizar_externo')); await m.quieto();
+    assert.ok(/Este cuidado já foi aplicado\. A correção é feita na ficha de Prevenção do FILHOt\./.test(await m.texto('Teste Solta')), 'troca barrada: a frase'); assert.deepStrictEqual(await habilitados(), [true, true, true, true], 'e os quatro botões voltam a ficar ligados');
+  } finally { await m.fechar(); }
+  const n = await mundo({ filhots: [{ n: 'Teste Cartaz', tutor: 'Tutor Cartaz', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] });
+  try {
+    await n.tocar('Teste Cartaz', 'verm_p', 'autorizar_bolsa'); await n.page.click(n.botao('Teste Cartaz', 'verm_p', 'autorizar_externo')); await cartaz(n, { cancelar: true });
+    assert.ok(await ate(async () => (await n.ev((s) => [...document.querySelectorAll(s + ' [data-zt694-acao="resp"]')].map((b) => !b.disabled), n.sel('Teste Cartaz'))).every(Boolean)), 'cartaz cancelado: os botões voltam a ficar ligados');
+    await n.page.click(n.botao('Teste Cartaz', 'verm_p', 'autorizar_loja')); await esperaSnoopy(n, 'Teste Cartaz', /Já lancei no Snoopy/); assert.strictEqual(n.erros.length, 0, n.erros.join(' | '));
+  } finally { await n.fechar(); }
+}, 'C');
+
+// ================================================================= P37 — frases da tela e o WhatsApp da caixa (correção do QA, B2, B3 e B4)
+prova('P37', 'a frase da lista vazia usa «FILHOt» (nada de «animal»), em toda a tela nova (B2)', async () => {
+  const ui = HTML.slice(HTML.indexOf('<script id="zelozinha-contatos89-ui">'), HTML.indexOf('</script>', HTML.indexOf('<script id="zelozinha-contatos89-ui">')));
+  assert.ok(!/\b(animal|animais|bicho|bichos|cachorro|cachorros|cão|cães|dono|donos|proprietário|funcionário|funcionários)\b/i.test(ui), 'palavra proibida na tela nova: ' + (ui.match(/\b(animal|animais|bicho|bichos|cachorro|cachorros|cão|cães|dono|donos|proprietário|funcionário|funcionários)\b/i) || [])[0]);
+  assert.strictEqual(ui.split('Nenhum cuidado de FILHOt presente foi confirmado nesta leitura.').length - 1, 1);
+  const m = await mundo({ filhots: [{ n: 'Teste Vazio', tutor: 'Tutor Vazio', tel: '(31) 99999-0001', cuidados: [] }] }, { abrir: false });
+  try {
+    await m.ev(() => { abrirItemDoMenu('painel-amanda'); });
+    const t = await ate(async () => { const x = await m.telaTexto(); return /Nenhum cuidado de/.test(x) ? x : ''; }, 15000);
+    assert.ok(/Nenhum cuidado de FILHOt presente foi confirmado nesta leitura\./.test(t) && !/animal/i.test(t), t); assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
+  } finally { await m.fechar(); }
+}, 'C');
+prova('P37', 'o aviso das escolhas é uma frase inteira: «As escolhas de produto e lugar ficam registradas aqui. O Encãotador ainda vê só “conferir orientação”.» (B3)', async () => {
+  const m = await mundo({ filhots: [{ n: 'Teste Aviso', tutor: 'Tutor Aviso', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] });
+  try {
+    assert.strictEqual(await m.ev(() => document.querySelectorAll('.zt694-nota').length), 0, 'sem escolhas na tela, sem aviso');
+    await m.tocar('Teste Aviso', 'verm_p', 'autorizar_bolsa');
+    await m.recarregar();   // o aviso é desenhado com a tela inteira: repintar só ele empurraria as linhas na hora do toque (AC10.1, P24); a prova pede a repintura em vez de esperar o relógio do app, que com o banco lento (30 ms por operação) vem antes de a resposta terminar de gravar (N2)
+    await ate(() => m.ev(() => document.querySelectorAll('.zt694-nota').length === 1));
+    assert.strictEqual(await m.ev(() => document.querySelector('.zt694-nota').textContent), 'As escolhas de produto e lugar ficam registradas aqui. O Encãotador ainda vê só “conferir orientação”.');
+  } finally { await m.fechar(); }
+}, 'C');
+prova('P37', 'ficha «só humano» com caixa de texto (as 13h30 ou «Vai fazer em casa») mostra um «WhatsApp» só, o da caixa; sem caixa, o vazio de sempre (B4)', async () => {
+  const filhots = [{ n: 'Nina Teste', tutor: 'Tutor Nina', tel: '(31) 99999-0003', modo: 'humano', cuidados: ['verm_p'] }, { n: 'Buh Teste', tutor: 'Tutor Buh', tel: '(31) 99999-0004', modo: 'humano', cuidados: ['verm_p'] }, { n: 'Cris Teste', tutor: 'Tutor Cris', tel: '(31) 99999-0005', modo: 'humano', cuidados: ['verm_p'] }];
+  const botoes = (m, n) => m.ev((s) => ({ vazio: document.querySelectorAll(s + ' [data-zt694-acao="whats-vazio"]').length, comTexto: document.querySelectorAll(s + ' [data-zt694-acao="whats-texto"]').length, mandou: /A Zelozinha não mandou: Contato humano conforme configuração da ficha\./.test(document.querySelector(s).innerText) }), m.sel(n));
+  const m = await mundo({ filhots: filhots }, { relogio: '2026-10-20T14:00:00-03:00' });
+  try {
+    assert.deepStrictEqual(await botoes(m, 'Nina Teste'), { vazio: 1, comTexto: 0, mandou: true }, 'sem resposta: o «Abrir WhatsApp» vazio');
+    await m.tocar('Nina Teste', 'verm_p', 'aguardar'); assert.deepStrictEqual(await botoes(m, 'Nina Teste'), { vazio: 0, comTexto: 1, mandou: true }, 'depois das 13h30, «Não respondeu»: só o botão da caixa');
+    await m.tocar('Buh Teste', 'verm_p', 'autorizar_externo'); assert.deepStrictEqual(await botoes(m, 'Buh Teste'), { vazio: 0, comTexto: 1, mandou: true }, '«Vai fazer em casa»: só o botão da caixa');
+    await m.tocar('Cris Teste', 'verm_p', 'autorizar_bolsa'); assert.deepStrictEqual(await botoes(m, 'Cris Teste'), { vazio: 1, comTexto: 0, mandou: true }, 'sem caixa de texto (bolsa), o vazio continua');
+    await m.page.click(m.botao('Cris Teste', 'verm_p', 'autorizar_externo')); await cartaz(m); await fecharCartaz(m);   // de «bolsa» para «em casa» passa pelo cartaz «Anular»
+    assert.ok(await ate(async () => (await botoes(m, 'Cris Teste')).comTexto === 1), 'a caixa chegou'); assert.deepStrictEqual(await botoes(m, 'Cris Teste'), { vazio: 0, comTexto: 1, mandou: true }, 'e o vazio some quando a caixa chega');
+    assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
+  } finally { await m.fechar(); }
+}, 'C');
+
+// ================================================================= P38 — voltar a «bolsa» depois do «Anular» (correção do QA, B6)
+prova('P38', 'bolsa → loja → casa (cartaz «Anular») → bolsa: a linha do Day Care volta, a tarefa volta a «criada», as escolhas recomeçam do zero e o Snoopy sai; sem atraso e com 30 ms em cada operação do banco (B6)', async () => {
+  for (const atraso of [0, 30]) {
+    const m = await mundo({ filhots: [{ n: 'Teste Volta', tutor: 'Tutor Volta', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] }, { latencia: atraso });
+    try {
+      const rot = 'atraso ' + atraso + ' ms: ';
+      await m.tocar('Teste Volta', 'verm_p', 'autorizar_bolsa'); await ate(async () => Object.keys(await linhasDoDia(m, 'vermifugo')).length === 1);
+      await escolher(m, 'Teste Volta', 'qtd', '1 COMPRIMIDO'); assert.strictEqual((await linhaDo(m, 'Teste Volta', 'verm_p')).det.qtd, '1 COMPRIMIDO');
+      await m.tocar('Teste Volta', 'verm_p', 'autorizar_loja'); await esperaSnoopy(m, 'Teste Volta', /Já lancei no Snoopy/);
+      await m.page.click(m.botao('Teste Volta', 'verm_p', 'autorizar_externo')); await cartaz(m); await fecharCartaz(m);
+      assert.ok(await ate(async () => Object.keys(await linhasDoDia(m, 'vermifugo')).length === 0 && (await tarefaDe(m, 'Teste Volta', 'verm_p')).estado === 'invalida'), rot + 'a linha saiu e a tarefa deixou de valer');
+      assert.ok(await ate(async () => /Vai fazer em casa · Amanda/.test(await m.texto('Teste Volta'))) && !/a troca não terminou|Tirar da lista do Day Care/.test(await m.texto('Teste Volta')), rot + 'depois do «Anular» nada fica pela metade: ' + await m.texto('Teste Volta'));
+      await m.tocar('Teste Volta', 'verm_p', 'autorizar_bolsa');
+      assert.ok(await ate(async () => Object.keys(await linhasDoDia(m, 'vermifugo')).length === 1 && (await tarefaDe(m, 'Teste Volta', 'verm_p')).estado === 'criada' && /Foi para a lista do Day Care: Vermífugo — falta aplicar e conferir\./.test(await m.texto('Teste Volta'))), rot + 'a linha voltou: ' + await m.texto('Teste Volta'));
+      const l = await linhaDo(m, 'Teste Volta', 'verm_p'); assert.ok(l && l.origemVencimento.origemResposta === 'bolsa' && l.origemVencimento.revisao === 3, rot + JSON.stringify(l && l.origemVencimento)); assert.ok(!('qtd' in l.det), rot + 'a escolha de antes não voltou junto: ' + JSON.stringify(l.det));
+      assert.ok(await ate(async () => /falta escolher: quanto/.test(await m.ev((s) => { const e = document.querySelector(s + ' .zt694-esc > summary'); return e ? e.textContent : ''; }, m.sel('Teste Volta')))), rot + 'as escolhas recomeçam: ' + await m.texto('Teste Volta'));
+      assert.ok(await ate(async () => !(await snoopyTexto(m, 'Teste Volta'))), rot + 'a pendência do Snoopy da loja não voltou');
+      assert.ok(!/a troca não terminou|Tirar da lista do Day Care/.test(await m.texto('Teste Volta')), rot + 'e de volta à bolsa também não: ' + await m.texto('Teste Volta'));
+      const reg = await regDo(m, 'Teste Volta'); assert.deepStrictEqual([reg.historicoRespostas49.length, Object.values(reg.respostasEscopo49.porCiclo)[0].revisao], [4, 3], rot + 'quatro respostas, nenhuma apagada');
+      assert.ok(/Trocada de Vai fazer em casa para Mandou na bolsa por Amanda/.test(await m.texto('Teste Volta')), rot + await m.texto('Teste Volta')); assert.strictEqual(m.erros.length, 0, rot + m.erros.join(' | '));
+    } finally { await m.fechar(); }
+  }
+}, 'C');
+
+// ================================================================= P39 — o gesto do toque (Safari do iPhone) nas duas saídas do texto das 13h30 (correção do QA, N3)
+/* No Safari do iPhone o gesto do toque se perde depois de um `await`: a janela do WhatsApp pode ser bloqueada e o «Copiar mensagem» cai em «Selecione o texto para copiar.». Com a presença lida ANTES (M1), as duas saídas começavam depois da leitura.
+   Agora a janela abre e a escrita na área de transferência começa NO TOQUE; a leitura vem depois e decide: quem saiu (ou não deu para conferir) fecha a janela e rejeita a escrita; quem está leva a janela ao link e entrega o texto.
+   `ordem` (no mundo de teste) conta o que aconteceu primeiro: a janela e a escrita têm de vir ANTES de `leitura-volta`, seja qual for o atraso do banco. */
+const espiarOrdem = async (m) => {
+  /* antes de zerar a ordem, espera o banco ficar parado: uma leitura do toque anterior que ainda volta (a leitura que falha rejeita na hora e a outra, do par, volta 200 ms depois) não entra na conta do toque seguinte */
+  await m.ev(() => new Promise((r) => { const t = () => (window.__banco.pendentes() === 0 ? setTimeout(r, 30) : setTimeout(t, 20)); t(); }));
+  return m.ev(() => {
+  window.__ab.ordem.length = 0; window.__ab.janelas.length = 0;
+  if (window.__ordemPronta) return;
+  window.__ordemPronta = true;
+  const ref0 = window.__banco.ref;
+  window.__banco.ref = function (p) {
+    const r = ref0.apply(this, arguments);
+    if (/^daycare\/check(in|out)-corpo\/[^/]+\/[^/]+$/.test(String(p).replace(/^\/+/, ''))) { const o = r.once; r.once = function () { window.__ab.ordem.push('leitura-vai'); const volta = () => { window.__ab.ordem.push('leitura-volta'); }; const pr = o.apply(this, arguments); pr.then(volta, volta); return pr; }; }
+    return r;
+  };
+  const w0 = navigator.clipboard.write.bind(navigator.clipboard);
+  navigator.clipboard.write = function (itens) { window.__ab.ordem.push('escrita-no-toque'); const r = window.__ab.negarEscrita ? Promise.reject(new Error('gesto negado')) : w0(itens); r.then(() => window.__ab.ordem.push('escrita-feita'), () => window.__ab.ordem.push('escrita-rejeitada')); return r; };   /* negarEscrita: o navegador nega a escrita logo no toque, antes de a leitura da presença voltar */
+  const ec0 = document.execCommand.bind(document);
+  document.execCommand = function (c) { if (c === 'copy') window.__ab.ordem.push('copia-por-selecao'); return ec0.apply(document, arguments); };
+  });
+};
+const ordemDe = (m) => m.ev(() => window.__ab.ordem.slice());
+const antesDaLeitura = (ordem, marca) => ordem.indexOf(marca) >= 0 && ordem.indexOf('leitura-volta') > ordem.indexOf(marca);
+const botaoDaCaixa = (m, n, acao) => m.sel(n) + ' [data-zt694-copia="0"] [data-zt694-acao="' + acao + '"]';
+prova('P39', 'o gesto do toque: «Abrir no WhatsApp» abre a janela e «Copiar mensagem» começa a escrita ANTES de a leitura da presença voltar; quem saiu (ou não deu para conferir) fecha a janela e deixa a área de transferência como estava; quem está leva a janela ao link com o texto das 13h30, letra por letra; janela bloqueada mantém o aviso; sem ClipboardItem copia depois da leitura (N3)', async () => {
+  const nomes = ['Teste Saiu', 'Teste Zap', 'Teste Fica', 'Teste Falha', 'Teste Falha Zap', 'Teste Nega'];
+  const m = await mundo({ filhots: nomes.map((n, i) => ({ n: n, tutor: 'Tutor ' + n.slice(6), tel: '(31) 99999-000' + (i + 1), cuidados: ['verm_p'] })), respostas: nomes.map((_, i) => ({ pet: i, k: 'verm_p', valor: 'aguardar' })) }, { relogio: '2026-10-20T14:00:00-03:00', latencia: 200, abrir: false });
+  const dialogos = []; m.page.on('dialog', async (d) => { dialogos.push(d.message()); try { await d.dismiss(); } catch (_) { /* silencioso de propósito: o aviso já foi dispensado */ } });
+  const TEXTO = (n) => RETORNO('Tutor ' + n.slice(6), FRASE_VERM, n), lerArea = () => m.ev(() => navigator.clipboard.readText());
+  try {
+    await m.abrirTela();
+    for (const n of nomes) assert.ok(await ate(async () => (await caixasDoFilhot(m, n)).length === 1, 15000), n + ': a caixa do texto das 13h30 está na linha');
+    await darSaida(m, 'Teste Saiu', '13:50'); await darSaida(m, 'Teste Zap', '13:55'); await darSaida(m, 'Teste Nega', '13:58');
+    // ---- Copiar mensagem de quem saiu: a escrita começa no toque, a leitura a rejeita, nada fica na área de transferência
+    await m.ev(() => navigator.clipboard.writeText('antes')); await espiarOrdem(m);
+    await m.page.click(botaoDaCaixa(m, 'Teste Saiu', 'copiar'));
+    assert.ok(await ate(() => temNaLinha(m, 'Teste Saiu', '[data-zt694-saiu]'), 15000), 'a linha diz que saiu: ' + await m.texto('Teste Saiu'));
+    assert.ok(await ate(async () => (await ordemDe(m)).indexOf('escrita-rejeitada') >= 0, 15000), 'a escrita foi rejeitada: ' + (await ordemDe(m)).join(' > '));
+    let ordem = await ordemDe(m);
+    assert.ok(antesDaLeitura(ordem, 'escrita-no-toque'), 'a escrita na área de transferência começou no toque, antes de a leitura voltar: ' + ordem.join(' > '));
+    assert.ok(ordem.indexOf('escrita-feita') < 0 && (await lerArea()) === 'antes', 'quem saiu: nada ficou na área de transferência');
+    assert.strictEqual(await textoDaLinha(m, 'Teste Saiu', '[data-zt694-saiu]'), FRASE_SAIU('Teste Saiu', '13:50')); assert.deepStrictEqual(await caixasDoFilhot(m, 'Teste Saiu'), []);
+    assert.ok(!/Selecione o texto para copiar/.test(await m.texto('Teste Saiu')), 'quem saiu não ganha nem a seleção do texto');
+    // ---- Abrir no WhatsApp de quem saiu: a janela abre no toque, a leitura a fecha, ela nunca vai ao link
+    await espiarOrdem(m);
+    await m.page.click(botaoDaCaixa(m, 'Teste Zap', 'whats-texto'));
+    assert.ok(await ate(async () => (await janelasDoZap(m)).every((j) => j.fechada) && (await ordemDe(m)).indexOf('janela-fechada') >= 0, 15000), 'a janela foi fechada: ' + (await ordemDe(m)).join(' > '));
+    ordem = await ordemDe(m);
+    assert.ok(antesDaLeitura(ordem, 'janela-aberta'), 'a janela abriu no toque, antes de a leitura voltar: ' + ordem.join(' > '));
+    assert.ok(ordem.indexOf('janela-no-link') < 0, 'quem saiu: a janela nunca vai ao link: ' + ordem.join(' > ')); assert.deepStrictEqual(await janelasDoZap(m), [{ numero: null, texto: null, fechada: true }]);
+    assert.ok(await ate(() => temNaLinha(m, 'Teste Zap', '[data-zt694-saiu]')), 'a linha de quem saiu diz a hora'); assert.strictEqual(await textoDaLinha(m, 'Teste Zap', '[data-zt694-saiu]'), FRASE_SAIU('Teste Zap', '13:55'));
+    // ---- quem está na casa: copiar entrega o texto das 13h30 e o WhatsApp leva a janela ao link
+    await m.ev(() => navigator.clipboard.writeText('antes')); await espiarOrdem(m);
+    await m.page.click(botaoDaCaixa(m, 'Teste Fica', 'copiar'));
+    assert.ok(await ate(async () => (await ordemDe(m)).indexOf('escrita-feita') >= 0, 15000), 'a escrita terminou: ' + (await ordemDe(m)).join(' > '));
+    ordem = await ordemDe(m); assert.ok(antesDaLeitura(ordem, 'escrita-no-toque'), 'a escrita começou no toque, antes de a leitura voltar: ' + ordem.join(' > '));
+    assert.strictEqual(await lerArea(), TEXTO('Teste Fica'), 'o texto das 13h30, letra por letra'); assert.ok(await ate(async () => /Mensagem copiada\./.test(await m.texto('Teste Fica'))), await m.texto('Teste Fica'));
+    await espiarOrdem(m);
+    await m.page.click(botaoDaCaixa(m, 'Teste Fica', 'whats-texto'));
+    assert.ok(await ate(async () => (await ordemDe(m)).indexOf('janela-no-link') >= 0, 15000), 'a janela foi ao link: ' + (await ordemDe(m)).join(' > '));
+    ordem = await ordemDe(m); assert.ok(antesDaLeitura(ordem, 'janela-aberta'), 'a janela abriu no toque, antes de a leitura voltar: ' + ordem.join(' > '));
+    assert.ok(ordem.indexOf('janela-no-link') > ordem.indexOf('leitura-volta') && ordem.indexOf('janela-fechada') < 0, 'e só foi ao link depois da leitura: ' + ordem.join(' > '));
+    assert.deepStrictEqual(await janelasDoZap(m), [{ numero: '5531999990003', texto: TEXTO('Teste Fica'), fechada: false }], 'o número da ficha e o texto das 13h30, letra por letra');
+    assert.deepStrictEqual(await m.ev(() => window.__ab.zWhats), [], 'o texto das 13h30 não passa mais pelo `zWhatsAbrir` (que abre depois de uma espera)');
+    // ---- janela bloqueada pelo navegador: o aviso de sempre, nenhuma leitura, nada marcado
+    await espiarOrdem(m); await m.ev(() => { window.__ab.bloquearJanela = true; }); dialogos.length = 0;
+    await m.page.click(botaoDaCaixa(m, 'Teste Fica', 'whats-texto'));
+    assert.ok(await ate(() => dialogos.length > 0, 15000), 'o aviso apareceu'); assert.ok(/O navegador não abriu o WhatsApp \(janela bloqueada\)\. Nada foi marcado como mandado\. Use o Copiar e mande por fora\./.test(dialogos[0]), dialogos[0]);
+    ordem = await ordemDe(m); assert.ok(ordem.indexOf('leitura-vai') < 0 && ordem.indexOf('janela-no-link') < 0, 'bloqueada: nada é lido nem aberto: ' + ordem.join(' > ')); await m.ev(() => { window.__ab.bloquearJanela = false; });
+    // ---- o navegador nega a escrita logo no toque: a seleção do texto («Selecione o texto…») só vem DEPOIS de a presença ser confirmada; quem saiu não ganha nem a seleção
+    await m.ev(async () => { await navigator.clipboard.writeText('antes'); window.__ab.negarEscrita = true; }); await espiarOrdem(m);
+    await m.page.click(botaoDaCaixa(m, 'Teste Nega', 'copiar'));
+    assert.ok(await ate(() => temNaLinha(m, 'Teste Nega', '[data-zt694-saiu]'), 15000), 'a linha de quem saiu diz a hora: ' + await m.texto('Teste Nega'));
+    assert.ok(await ate(async () => (await ordemDe(m)).indexOf('escrita-rejeitada') >= 0, 15000), 'a escrita negada: ' + (await ordemDe(m)).join(' > ')); await esperar(400); ordem = await ordemDe(m);
+    assert.ok(ordem.indexOf('copia-por-selecao') < 0 && (await lerArea()) === 'antes', 'quem saiu não ganha a seleção do texto, mesmo com a escrita negada: ' + ordem.join(' > '));
+    await espiarOrdem(m);
+    await m.page.click(botaoDaCaixa(m, 'Teste Fica', 'copiar'));
+    assert.ok(await ate(async () => (await ordemDe(m)).indexOf('copia-por-selecao') >= 0, 15000), 'quem está na casa ganha a seleção: ' + (await ordemDe(m)).join(' > ')); ordem = await ordemDe(m);
+    assert.ok(ordem.indexOf('escrita-rejeitada') >= 0 && ordem.indexOf('leitura-volta') >= 0 && ordem.indexOf('copia-por-selecao') > ordem.indexOf('leitura-volta'), 'a seleção só vem depois da leitura da presença: ' + ordem.join(' > '));
+    assert.ok(await ate(async () => /Mensagem copiada\.|Selecione o texto para copiar\./.test(await m.texto('Teste Fica')), 15000), await m.texto('Teste Fica')); await m.ev(() => { window.__ab.negarEscrita = false; });
+    // ---- sem `ClipboardItem` (navegador antigo): o caminho de antes, depois da leitura
+    await m.ev(async () => { await navigator.clipboard.writeText('antes'); window.__ClipboardItem0 = window.ClipboardItem; window.ClipboardItem = undefined; }); await espiarOrdem(m);
+    await m.page.click(botaoDaCaixa(m, 'Teste Fica', 'copiar'));
+    assert.ok(await ate(async () => (await lerArea()) !== 'antes', 15000), 'copiou depois da leitura'); ordem = await ordemDe(m);
+    assert.ok(ordem.indexOf('escrita-no-toque') < 0 && ordem.indexOf('leitura-volta') >= 0, 'sem ClipboardItem não há escrita no toque: ' + ordem.join(' > ')); assert.strictEqual(await lerArea(), TEXTO('Teste Fica'));
+    await m.ev(() => { window.ClipboardItem = window.__ClipboardItem0; });
+    // ---- a leitura da presença falha: nada é copiado nem aberto, a janela fecha e a linha diz que não deu para confirmar
+    await m.ev(async () => { window.__banco.falhar(['daycare/checkout-corpo/']); await navigator.clipboard.writeText('antes'); }); await espiarOrdem(m);
+    await m.page.click(botaoDaCaixa(m, 'Teste Falha', 'copiar'));
+    assert.ok(await ate(() => temNaLinha(m, 'Teste Falha', '[data-zt694-presenca-incerta]'), 15000), await m.texto('Teste Falha'));
+    assert.ok(await ate(async () => (await ordemDe(m)).indexOf('escrita-rejeitada') >= 0, 15000), 'a escrita foi rejeitada: ' + (await ordemDe(m)).join(' > ')); ordem = await ordemDe(m);
+    assert.ok(antesDaLeitura(ordem, 'escrita-no-toque') && (await lerArea()) === 'antes', 'sem conferência, nada foi copiado: ' + ordem.join(' > '));
+    await espiarOrdem(m);
+    await m.page.click(botaoDaCaixa(m, 'Teste Falha Zap', 'whats-texto'));
+    assert.ok(await ate(() => temNaLinha(m, 'Teste Falha Zap', '[data-zt694-presenca-incerta]'), 15000), await m.texto('Teste Falha Zap'));
+    assert.ok(await ate(async () => (await ordemDe(m)).indexOf('janela-fechada') >= 0, 15000), 'a janela foi fechada: ' + (await ordemDe(m)).join(' > ')); ordem = await ordemDe(m);
+    assert.ok(antesDaLeitura(ordem, 'janela-aberta') && ordem.indexOf('janela-no-link') < 0, 'sem conferência, a janela abriu no toque e fechou: ' + ordem.join(' > '));
     assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
   } finally { await m.fechar(); }
 }, 'C');
