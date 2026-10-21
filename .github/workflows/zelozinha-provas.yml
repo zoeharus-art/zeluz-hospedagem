@@ -1,0 +1,120 @@
+# Provas do projeto da Zelozinha (Story 6.112, AC7).
+#
+# Roda em todo pull request e, depois do Merge, sobre o commit exato que entrou no master.
+# Vermelho quer dizer "não dar o Merge" (o GitHub sozinho não impede; a regra está no AGENTS.md).
+#
+# Regras deste arquivo, que a varredura e o @qa conferem:
+#   - nenhum segredo do GitHub: o arquivo não lê segredo nenhum; o token automático só lê (contents: read);
+#   - só os gatilhos `pull_request` e `push`, e só em máquina do GitHub (nunca runner próprio);
+#   - ações só as oficiais do GitHub, fixadas pelo hash do commit (o número da versão fica no comentário);
+#   - nenhum endereço, domínio nem porta da VPS aqui dentro (a varredura confere);
+#   - o que muda de um pull request para outro (commits de partida e de chegada) entra por `env:`,
+#     nunca escrito dentro de `run:`.
+#
+# Funciona com a pasta zelozinha/ sem o código da Codex (Fase 2A) e continua valendo quando ele entrar.
+# Ainda não existem, e entram na task 12 (Fase 2B): `node zelozinha/testes/rodar.js` e a conferência do
+# instantâneo de texto com a linha "Texto aprovado pela Adriana em..." (esta vai precisar do tipo `edited`
+# no gatilho do pull request, porque lê a descrição).
+
+name: Provas da Zelozinha
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zelozinha-provas-${{ github.event.pull_request.number || github.sha }}
+  # Num pull request, a rodada nova substitui a velha. No Merge, cada commit é provado até o fim.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  provas:
+    name: Provas da Zelozinha
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Baixar o projeto com todo o histórico
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Node 22 é provisório (o que rodou estas provas). Trocar pelo Node da VPS quando a Codex responder C1.
+      - name: Preparar o Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      - name: Descobrir de que commit a que commit vai a mudança
+        id: intervalo
+        env:
+          EVENTO: ${{ github.event_name }}
+          BASE_DO_PULL_REQUEST: ${{ github.event.pull_request.base.sha }}
+          FINAL_DO_PULL_REQUEST: ${{ github.event.pull_request.head.sha }}
+          ANTES_DO_PUSH: ${{ github.event.before }}
+          FINAL_DO_PUSH: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENTO" = "pull_request" ]; then
+            base="$BASE_DO_PULL_REQUEST"
+            final="$FINAL_DO_PULL_REQUEST"
+          else
+            base="$ANTES_DO_PUSH"
+            final="$FINAL_DO_PUSH"
+          fi
+
+          eh_commit() {
+            [[ "$1" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "$1^{commit}" 2>/dev/null
+          }
+
+          if ! eh_commit "$final"; then
+            echo "ERRO: o commit final da rodada não está no histórico baixado. As provas não rodaram sobre ele." >&2
+            exit 1
+          fi
+
+          if ! eh_commit "$base"; then
+            if [ "$EVENTO" = "pull_request" ]; then
+              echo "ERRO: o commit de partida do pull request não está no histórico baixado. Rode as provas de novo." >&2
+              exit 1
+            fi
+            # Primeiro envio de um ramo (o "antes" vem só com zeros) ou envio forçado (o "antes" sumiu do histórico):
+            # confere o último commit contra o pai dele. Sem pai, não há contra o que comparar, e isso não passa batido.
+            base="$(git rev-parse --verify --quiet "$final^1" || true)"
+            if ! eh_commit "$base"; then
+              echo "ERRO: não há commit de partida para comparar com o commit final. As varreduras e a regra do número da versão não rodaram." >&2
+              exit 1
+            fi
+            echo "Aviso: o commit anterior do envio não está no histórico; a conferência vale só para o último commit."
+          fi
+
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "final=$final" >> "$GITHUB_OUTPUT"
+          echo "Conferindo de ${base:0:8} até ${final:0:8}."
+
+      - name: Provas do projeto (cada arquivo de prova, sem rede e sem dado de verdade)
+        if: ${{ !cancelled() }}
+        run: node zelozinha/provas/rodar-todas.js
+
+      - name: Varredura de segredo, dado pessoal e endereço da VPS em todos os commits
+        if: ${{ !cancelled() && steps.intervalo.outcome == 'success' }}
+        env:
+          COMMIT_BASE: ${{ steps.intervalo.outputs.base }}
+          COMMIT_FINAL: ${{ steps.intervalo.outputs.final }}
+        run: node zelozinha/provas/varredura.js --commits "$COMMIT_BASE..$COMMIT_FINAL"
+
+      - name: Regra do número da versão (o código mudou, o número muda)
+        if: ${{ !cancelled() && steps.intervalo.outcome == 'success' }}
+        env:
+          COMMIT_BASE: ${{ steps.intervalo.outputs.base }}
+          COMMIT_FINAL: ${{ steps.intervalo.outputs.final }}
+        run: node zelozinha/provas/regra-versao.js --base "$COMMIT_BASE" --head "$COMMIT_FINAL"
