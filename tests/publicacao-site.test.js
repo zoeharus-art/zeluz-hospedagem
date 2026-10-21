@@ -247,6 +247,7 @@ controle('C5', 'os falsos positivos que enganaram o primeiro rascunho passam', f
     'var a2=`<i style="background:url(\'${foto}\')"></i>`;',
     "var a3='<svg><rect fill=\"url(#kfG)\"/></svg>';",
     "var a4=new URL('https://exemplo.invalid/a.png'); var a5='data:image/png;base64,AAAA';",
+    'var l1=meuurl(abc); var l2=obj.url(def); var l3=$url(ghi);',   // «url(» colado em nome de função ou de campo não é pedido
     '</script>'
   ].join('\n'), true);
   c.indexar();
@@ -753,6 +754,33 @@ extra('X17', 'AC13.4: o montador só lê as entradas e o que elas carregam (nada
   });
   const entradas = lida.itens.filter(function (i) { return i.tipo === 'entrada'; }).map(function (i) { return i.caminho; });
   entradas.forEach(function (e) { assert.ok(lidos.indexOf(e) !== -1, 'a entrada ' + e + ' não foi lida'); });
+});
+
+extra('X18', 'lista vazia ou sem nenhuma «entrada» bloqueia (nunca publica um site vazio)', function () {
+  // Só comentários e uma linha «nao-e-arquivo»: nada seria publicado.
+  const vazia = cenario();
+  vazia.escreverLista('# lista sem nenhuma linha útil\n\nnao-e-arquivo auaulandia/foto-do-corpo.jpg\n');
+  exigirBloqueio(vazia, vazia.rodar(), ['a lista não tem nenhuma linha "entrada"']);
+  // Todos os arquivos comuns, mas nenhuma «entrada»: a frase tem de dizer o que falta.
+  const semEntrada = cenario();
+  semEntrada.escreverLista(semEntrada.lista().split('\n').map(function (l) { return l.replace(/^entrada[ \t]+/, ''); }).join('\n'));
+  exigirBloqueio(semEntrada, semEntrada.rodar(), ['a lista não tem nenhuma linha "entrada"']);
+});
+
+extra('X19', 'link simbólico: o modo do índice e o exame do disco bloqueiam, cada um sozinho', function () {
+  const frase = ['logo.png: não é arquivo comum (link simbólico ou submódulo).'];
+  // A: o índice diz «arquivo comum» (100644), mas o disco tem um link (só o exame do disco pega).
+  const a = cenario();
+  const blobA = git(a.dir, ['rev-parse', ':logo.png']).trim();
+  fs.rmSync(a.p('logo.png'));
+  fs.symlinkSync('.github/site-permitidos.txt', a.p('logo.png'));
+  git(a.dir, ['update-index', '--cacheinfo', '100644,' + blobA + ',logo.png']);
+  exigirBloqueio(a, a.rodar(), frase);
+  // B: o índice diz «link» (120000), mas o disco tem um arquivo comum (só o modo do índice pega).
+  const b = cenario();
+  const blobB = git(b.dir, ['rev-parse', ':logo.png']).trim();
+  git(b.dir, ['update-index', '--cacheinfo', '120000,' + blobB + ',logo.png']);
+  exigirBloqueio(b, b.rodar(), frase);
 });
 
 // ------------------------------------------------------------ a forma do fluxo
