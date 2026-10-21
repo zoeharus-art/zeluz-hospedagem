@@ -1,0 +1,11 @@
+# Nomes de servidor que NÃO podem aparecer em nenhum arquivo da superfície do projeto novo
+# (AGENTS.md, CLAUDE.md, .github/, zelozinha/, regras-banco/). Story 6.112, AC12.4.
+#
+# Cada linha é a impressão digital SHA-256 do nome em minúsculas (o nome nunca é escrito aqui, para este arquivo
+# não ser, ele mesmo, um lugar onde o nome aparece), seguida de um rótulo que não revela o nome.
+# A varredura confere o nome e os nomes-pai dele: a impressão de "a.exemplo.com" também pega "painel.a.exemplo.com".
+#
+# Para acrescentar um nome (por exemplo, depois que a Codex responder a pergunta C7), em um terminal:
+#   printf '%s' 'nome.do.servidor.com.br' | sha256sum
+# e cole o resultado, mais um rótulo. O comando acima não deixa o nome em nenhum arquivo.
+8c8bea2b30cb40db085143452a8720b8862fbbed716285278f4e033a81da11f7  nome candidato da VPS (pergunta C7 da story 6.112; sair ou ficar depende da resposta da Codex)

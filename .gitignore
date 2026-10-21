@@ -36,3 +36,12 @@ tests/.retrato/
 servidor-senha/node_modules/
 conta-servico*.json
 senhas-fixas.json
+
+# === A Zelozinha dentro do projeto (Story 6.112, 21/out/2026) ===
+# A configuração real do serviço tem segredos e mora SÓ na VPS. No projeto entra apenas o modelo sem
+# valores (automatico80.modelo.json), que não casa com estas linhas. Nenhuma exceção por pasta: se um
+# arquivo legítimo do runtime tiver nome parecido com segredo, a exceção é pelo nome exato do arquivo.
+automatico80.json
+automatico80.json.*
+# As dependências se instalam na VPS pelo lockfile; nunca entram no projeto.
+zelozinha/**/node_modules/
