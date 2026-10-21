@@ -30034,7 +30034,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-20-04';
+  const APP_VERSAO='2026-10-20-05';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -96209,6 +96209,10 @@ function zPainel44Atualizar(){
   // A projeção dos envios tem fonte e permissão próprias; não pode esperar a leitura
   // ampla de prevenção, orçamento ou presença para mostrar mensagens já registradas.
   zPainel44AtualizarDespacho80();
+  zPainel44AtualizarAcompanhamento();
+}
+// A segunda metade da atualização, sem ler nada do banco (6.94): o temporizador das 13h30 usa só esta quando a tela de respostas está aberta.
+function zPainel44AtualizarAcompanhamento(){
   if(!window.ZeluzAcompanhamento44||!zPrev27Permite()){
     document.querySelectorAll('[data-z44-acompanhamento]').forEach(function(el){
       el.innerHTML='<p class="pm-sub">O acompanhamento complementar ainda está carregando. As mensagens e respostas aparecem separadamente acima.</p>';
@@ -96444,7 +96448,7 @@ function zPainel44AtualizarDespacho80(){
   if(st.erro){exibir('<p class="pm-sub">'+esc(st.erro)+'</p>');return;}
   if(st.carregando||!st.dados){exibir('<p class="pm-sub">Conferindo a projeção autorizada de envios…</p>');return;}
   var proj=zPainel44Projecao80Atual();if(!proj||proj.dia!==zPainel44Dia()||!Array.isArray(proj.grupos)){exibir('<p class="pm-sub">A projeção não corresponde ao dia e às fontes esperadas. Confira antes de agir.</p>');return;}
-  var nomes={enviado_confirmado:'Entrega confirmada',entrega_pendente:'Entrega ainda sem confirmação automática',incerto_conciliacao:'Envio incerto · conciliação necessária · envios suspensos',em_preparacao:'Em preparação ou revisão · ainda não enviado'},html='<h3 class="pm-tit">Contatos e respostas de hoje</h3><p class="pm-sub">Abra o peludinho e marque a resposta da família. Os envios anteriores ficam no histórico.</p><button type="button" class="btn btn-ghost" data-z44-reler>Atualizar envios</button>';
+  var nomes={enviado_confirmado:'Entrega confirmada',entrega_pendente:'Entrega ainda sem confirmação automática',incerto_conciliacao:'Envio incerto · conciliação necessária · envios suspensos',em_preparacao:'Em preparação ou revisão · ainda não enviado'},html='<button type="button" class="btn btn-ghost" data-z44-reler>Atualizar envios</button>';
   var cobertura=zPainel94CoberturaHTML(proj);exibir(html+cobertura+'<p class="pm-sub" data-z94-validando>Validando o conteúdo histórico das mensagens…</p>');
   var preparados=proj.grupos.map(function(g){var id=proj.identidadesPets[g.petId]||{},ledger=proj.estadoRecibos43.groups[g.groupKey]||{},enriquecido=[86,89,92,104].indexOf(proj.detalhesEnvioVersao)>=0;return {g:Object.assign({},g,{dia:proj.dia,textoDisponivel:enriquecido&&g.textoDisponivel===true}),dcKey:id.dcKeyAtual||'',tutor:g.nomeTutor||ledger.nomeTutor||'',pet:g.nomePeludo||ledger.nomePeludo||'',autoria:g.autoria&&g.autoria.nome||'Zelozinha'};});
   var verificacoesTexto=preparados.map(function(x){return window.ZeluzEnvios86&&window.ZeluzEnvios86.elegivel(x.g)?window.ZeluzEnvios86.textoHashConfere(x.g,window.crypto,window.TextEncoder):Promise.resolve(false);});
@@ -96491,7 +96495,15 @@ function zPainel44Despacho80Importar(){
 function zPainel44ProgramarRetorno(){
   if(Z44_TIMER) clearTimeout(Z44_TIMER);
   var hoje=zPainel44Dia(),agora=Date.now(),t=new Date(hoje+'T13:30:00-03:00').getTime()-agora,p=hoje.split('-').map(Number),prox=new Date(Date.UTC(p[0],p[1]-1,p[2]+1)).toISOString().slice(0,10),virada=new Date(prox+'T00:00:00-03:00').getTime()-agora,espera=t>0?Math.min(t,virada):virada;
-  if(espera>0) Z44_TIMER=setTimeout(function(){Z44_TIMER=null;zPainel44Atualizar();zPainel44ProgramarRetorno();},espera+50);
+  if(espera>0){
+    var ehTreze30=t>0&&t<virada;
+    Z44_TIMER=setTimeout(function(){
+      Z44_TIMER=null;
+      // Às 13h30, com a tela «Contatos e respostas de hoje» aberta, ela muda o rótulo no lugar (6.94): o painel dos envios não é refeito inteiro, que relia todos os presentes e mexia na rolagem.
+      if(ehTreze30&&document.querySelector('[data-zt694-ok="1"]')) zPainel44AtualizarAcompanhamento(); else zPainel44Atualizar();
+      zPainel44ProgramarRetorno();
+    },espera+50);
+  }
 }
 async function zPainel44AbrirContato(ref){
   if(!zPrev27Permite()||!ref||!ref.dcKey||!ref.dia) return false;
@@ -97853,7 +97865,8 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   var ORIGENS={loja:true,bolsa:true,externo:true},DECISOES={autorizar:true,recusar:true,aguardar:true},HEX=/^[a-f0-9]{64}$/i;
   function obj(v){return !!v&&typeof v==='object'&&!Array.isArray(v);}function texto(v){return typeof v==='string'?v.trim():'';}
   function copia(v){return JSON.parse(JSON.stringify(v));}function falha(m){return{ok:false,status:'revisao',alterou:false,intencoes:[],motivo:m};}
-  function canon(v){if(Array.isArray(v))return '['+v.map(canon).join(',')+']';if(obj(v))return '{'+Object.keys(v).sort().map(function(k){return JSON.stringify(k)+':'+canon(v[k]);}).join(',')+'}';return JSON.stringify(v);}
+  /* O Realtime Database elimina o filho nulo ao gravar (a releitura de `recusar` e `aguardar` volta sem `origem`): para comparar a resposta lida com a pedida, chave nula ou indefinida e chave ausente são a mesma coisa (6.97, AC1; o núcleo 49 já fazia isso em `canonResposta`). */
+  function canon(v){if(Array.isArray(v))return '['+v.map(canon).join(',')+']';if(obj(v))return '{'+Object.keys(v).sort().filter(function(k){return v[k]!==null&&v[k]!==undefined;}).map(function(k){return JSON.stringify(k)+':'+canon(v[k]);}).join(',')+'}';return JSON.stringify(v);}
   function chave(v){var s=String(v),b64;if(typeof Buffer!=='undefined')b64=Buffer.from(s,'utf8').toString('base64');else b64=btoa(unescape(encodeURIComponent(s)));return'v1_'+b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'');}
   function grupoPainel(painel,groupKey){var grupos=painel&&painel.grupos;if(!Array.isArray(grupos))return null;var a=grupos.filter(function(g){return g&&g.groupKey===groupKey;});return a.length===1?a[0]:null;}
   function canonEstavel(c){var b=c&&c.baseOperacional88||{};return{groupKey:c&&c.groupKey,dia:c&&c.dia,dcKey:c&&c.dcKey,humano:c&&c.humano,itens:c&&c.itens,fonte:{tipo:b.tipo,groupKey:b.groupKey,textoSha:b.textoSha||null,messageId:b.messageId||null,contatoId:b.contatoId||null,escopoSha:b.escopoSha||null}};}
@@ -98142,7 +98155,7 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   function resultadosIntencoes(resultado){return resultado&&Array.isArray(resultado.intencoes)?resultado.intencoes:[];}
   function decisaoDe(v){return v==='autorizar_loja'?['autorizar','loja']:v==='autorizar_bolsa'?['autorizar','bolsa']:v==='autorizar_externo'?['autorizar','externo']:v==='recusar'?['recusar',null]:['aguardar',null];}
   async function idResposta(groupKey,itens,contatoId,petId){var s=sessao(),canon=JSON.stringify([88,groupKey,t(contatoId),t(petId),s.id,itens.slice().sort(function(a,b){return(a.cycleKey+'|'+a.itemK).localeCompare(b.cycleKey+'|'+b.itemK);})]);return'r88_'+(await sha(canon)).slice(0,40);}
-  async function registrar(groupKey,itens,op){op=op||{};var fonte=op.fonteContato||null,contatoId=t(op.contatoId||(fonte&&fonte.contatoId)),petId=t(op.petId),rid=await idResposta(groupKey,itens,contatoId,petId),entrada={groupKey:groupKey,petId:petId,resposta:{id:rid,itens:itens}};if(contatoId){entrada.contatoId=contatoId;entrada.fonteContato=fonte;}var r=await repo().decidir(entrada);if(!r||!r.ok)return r||{ok:false,motivo:'resposta não registrada'};var d=contatoId?await resolverContatoHumano(fonte,entrada):(estado.cache&&estado.cache[groupKey]);if(r.registro&&d&&d.dia&&d.dcKey&&typeof VENC_PEND!=='undefined'){VENC_PEND[d.dia]=VENC_PEND[d.dia]||{};VENC_PEND[d.dia][d.dcKey]=cp(r.registro);}var tarefa=await materializar(r,entrada);if(d&&d.dia&&d.dcKey&&typeof VENC_PEND!=='undefined')try{var sn=await DB.ref('daycare/vencimentos/'+d.dia+'/'+d.dcKey).once('value'),fresco=snap(sn);if(fresco){VENC_PEND[d.dia]=VENC_PEND[d.dia]||{};VENC_PEND[d.dia][d.dcKey]=cp(fresco);}}catch(_){}if(typeof zPainel44AtualizarDespacho80==='function')try{zPainel44AtualizarDespacho80();}catch(_){}return Object.assign({},r,{tarefa:tarefa,aviso:tarefa&&tarefa.ok?(tarefa.aviso||r.aviso||'Resposta registrada.'):(tarefa&&tarefa.aviso)||'Resposta registrada; a tarefa ficou pendente de recuperação.'});}
+  async function registrar(groupKey,itens,op){op=op||{};var fonte=op.fonteContato||null,contatoId=t(op.contatoId||(fonte&&fonte.contatoId)),petId=t(op.petId),rid=await idResposta(groupKey,itens,contatoId,petId),entrada={groupKey:groupKey,petId:petId,resposta:{id:rid,itens:itens}};if(contatoId){entrada.contatoId=contatoId;entrada.fonteContato=fonte;}var r=await repo().decidir(entrada);if(!r||!r.ok)return r||{ok:false,motivo:'resposta não registrada'};var d=contatoId?await resolverContatoHumano(fonte,entrada):(estado.cache&&estado.cache[groupKey]);if(r.registro&&d&&d.dia&&d.dcKey&&typeof VENC_PEND!=='undefined'){VENC_PEND[d.dia]=VENC_PEND[d.dia]||{};VENC_PEND[d.dia][d.dcKey]=cp(r.registro);}var tarefa=await materializar(r,entrada);if(d&&d.dia&&d.dcKey&&typeof VENC_PEND!=='undefined')try{var sn=await DB.ref('daycare/vencimentos/'+d.dia+'/'+d.dcKey).once('value'),fresco=snap(sn);if(fresco){VENC_PEND[d.dia]=VENC_PEND[d.dia]||{};VENC_PEND[d.dia][d.dcKey]=cp(fresco);}}catch(_){}if(op.semAtualizarPainel!==true&&typeof zPainel44AtualizarDespacho80==='function')try{zPainel44AtualizarDespacho80();}catch(_){}return Object.assign({},r,{tarefa:tarefa,aviso:tarefa&&tarefa.ok?(tarefa.aviso||r.aviso||'Resposta registrada.'):(tarefa&&tarefa.aviso)||'Resposta registrada; a tarefa ficou pendente de recuperação.'});}
   function no(tag,cls,txt){var e=root.document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
   function retornoDas1330(dia){
     try{var p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),x={};p.forEach(function(v){x[v.type]=v.value;});var hoje=x.year+'-'+x.month+'-'+x.day;return dia<hoje||(dia===hoje&&Number(x.hour)*60+Number(x.minute)>=810);}catch(_){return false;}
@@ -98151,13 +98164,23 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
     k=t(k);var m={col_p:'a troca da coleira repelente',verm_p:'a aplicação do vermífugo',verm_dose2_p:'a aplicação da segunda dose do vermífugo',ecto_p:'a aplicação da proteção contra pulgas e carrapatos',escova_p:'a troca da escova de dentes',vac_mult_p:'a vacinação múltipla',vac_gripe_p:'a vacinação contra gripe',vac_raiva_p:'a vacinação antirrábica'};
     return m[k]||'esse cuidado';
   }
+  /* «Vai fazer em casa» (Story 6.94): o texto ao tutor. É o ÚNICO lugar onde ele existe — a janela «Abrir resposta» e a tela «Contatos e respostas de hoje»
+     chamam `textoEmCasa`. A redação é a que já estava publicada (b044ecd) e que a Adriana autorizou em 20/out/2026 (H94-1), com o coração: para trocá-la, mude só aqui.
+     Duas variantes: vacina (pede a foto do cartão) e as demais (data e produto). */
+  var TEXTO_EM_CASA={
+    vacina:function(tutor){return'Combinado, '+tutor+'! 💛 Depois da vacinação, você nos envia uma foto do cartão com a data, a assinatura e o carimbo do veterinário? Assim, mantemos a ficha atualizada e cuidamos, juntos, da segurança e do bem-estar de todos os nossos Aulunos.';},
+    geral:function(tutor){return'Combinado, '+tutor+'! 💛 Depois desse cuidado, você nos informa a data e o produto usado? Assim, mantemos a ficha atualizada e cuidamos, juntos, da segurança e do bem-estar de todos os nossos Aulunos.';}
+  };
+  /* O texto de UM cuidado (`itemK`) para o tutor. Sem o nome do tutor na ficha não há texto (como já era). */
+  function textoEmCasa(info,itemK){
+    var tutor=t(info&&info.tutor),k=t(itemK);
+    if(!tutor||!k)return'';
+    return /^vac_/.test(k)?TEXTO_EM_CASA.vacina(tutor):TEXTO_EM_CASA.geral(tutor);
+  }
   function mensagemAprovada(cardInfo,ciclo,atual,destino){
     if(!atual)return'';
     var tutor=t(cardInfo&&cardInfo.nomeTutor),pet=t(cardInfo&&cardInfo.nomePeludo);
-    if(atual.decisao==='autorizar'&&atual.origem==='externo'&&tutor){
-      if(/^vac_/.test(t(ciclo.itemK)))return'Combinado, '+tutor+'! 💛 Depois da vacinação, você nos envia uma foto do cartão com a data, a assinatura e o carimbo do veterinário? Assim, mantemos a ficha atualizada e cuidamos, juntos, da segurança e do bem-estar de todos os nossos Aulunos.';
-      return'Combinado, '+tutor+'! 💛 Depois desse cuidado, você nos informa a data e o produto usado? Assim, mantemos a ficha atualizada e cuidamos, juntos, da segurança e do bem-estar de todos os nossos Aulunos.';
-    }
+    if(atual.decisao==='autorizar'&&atual.origem==='externo'&&tutor)return textoEmCasa({tutor:tutor},ciclo.itemK);
     if(atual.decisao==='aguardar'&&destino&&destino.presencaCorporal===true&&destino.checkout!==true&&retornoDas1330(destino.dia)&&tutor&&pet)return'Olá, '+tutor+'! Podemos fazer '+cuidadoNaFrase(ciclo.itemK)+' de '+pet+' hoje, enquanto está com a gente? Assim, vocês já resolvem esse cuidado sem precisar organizar outra visita e, juntos, cuidamos da segurança e do bem-estar de todos os nossos Aulunos. 💛';
     return'';
   }
@@ -98265,7 +98288,7 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   function preservarNormalizadorPainel(){var original=root.zPainel44ValidarFonte80;if(typeof original!=='function'||original.__resposta88Detalhes)return;var envolvido=function(v){var p=original(v),det=v&&Number(v.detalhesEnvioVersao);if(!p||[86,89,92,104].indexOf(det)<0||!t(v&&v.assinaturaConteudo))return null;p.detalhesEnvioVersao=det;p.assinaturaConteudo=t(v.assinaturaConteudo);return p;};envolvido.__resposta88Detalhes=true;root.zPainel44ValidarFonte80=envolvido;}
   function instalar(){if(estado.instalado||!root.document)return false;if(!root.ZeluzResposta88||!root.ZeluzResposta88RTDB||!root.ZeluzRespostaUI88)return false;estado.instalado=true;instalarPonte57();if(typeof root.zPainel44Atualizar==='function'){estado.atualizarOriginal=root.zPainel44Atualizar;root.zPainel44Atualizar=function(){var r=estado.atualizarOriginal.apply(this,arguments);programar(true);return r;};}root.document.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('[data-z44-reler]'))setTimeout(function(){carregar(true);},0);});programar(false);return true;}
   preservarNormalizadorPainel();
-  root.ZeluzRespostaApp88={instalar:instalar,carregar:carregar,painel:lerPainel,abrir:abrir,abrirContatoHumano:abrirContatoHumano,registrar:registrar,resolverGrupo:resolverGrupo,resolverContatoHumano:resolverContatoHumano,resolverCuidado57:resolverCuidado57,sessao:sessao};
+  root.ZeluzRespostaApp88={instalar:instalar,carregar:carregar,painel:lerPainel,abrir:abrir,abrirContatoHumano:abrirContatoHumano,registrar:registrar,resolverGrupo:resolverGrupo,resolverContatoHumano:resolverContatoHumano,resolverCuidado57:resolverCuidado57,sessao:sessao,textoEmCasa:textoEmCasa,mensagemAprovada:mensagemAprovada};
   if(root.document){if(root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',instalar,{once:true});else instalar();}
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
@@ -99280,60 +99303,878 @@ renderAtual=function(){
       var ref=portas.db.ref('daycare/vencimentos/'+dia+'/'+atual.dcKey+'/contatosHumanos89/'+atual.key),result=await ref.transaction(function(old){if(old!==null&&old!==undefined){if(old.versao===89&&old.tipo==='retorno_humano'&&old.status==='retorno_pendente'&&old.escopoSha===atual.escopoSha)return old;return;}return registro;});
       if(!result||result.committed!==true)throw Error('Este acompanhamento já mudou ou precisa ser conferido.');cache={dia:'',em:0,promise:null};return{ok:true,registro:result.snapshot&&result.snapshot.val?result.snapshot.val():registro};
     }
-    return{listar:listar,marcar:marcar,marcarRetorno:marcarRetorno,invalidate:function(){cache={dia:'',em:0,promise:null};}};
+    /* Story 6.94 (AC10): refaz UMA linha, sem reler os outros presentes. `painel` (opcional) é a projeção que a tela já tem; sem ela, lê uma vez. */
+    async function atualizarUm(dcKey,painel){
+      authorize();var dia=txt(portas.dia());if(!dia)throw Error('Dia atual indisponível.');
+      var rows=portas.linhasHoje();if(!Array.isArray(rows))throw Error('Presenças do dia indisponíveis.');
+      var row=rows.filter(function(x){return x&&x.chave===dcKey;})[0];if(!row)return null;
+      var fonte=obj(painel)?painel:await portas.lerPainel(),c=await resolver(row,dia,fonte);
+      cache={dia:'',em:0,promise:null};
+      return ['pendente','feito','retorno_pendente','envio_aceito','envios_indisponiveis','revisao_identidade'].indexOf(c.estado)>=0?c:null;
+    }
+    return{listar:listar,atualizarUm:atualizarUm,marcar:marcar,marcarRetorno:marcarRetorno,invalidate:function(){cache={dia:'',em:0,promise:null};}};
   }
   return{criar:criar,modoHumano:modoHumano,entradaConfirmada:entradaConfirmada,ciclo:ciclo,sha:sha,codificarChave:b64key};
 });
-</script><script id="zelozinha-contatos89-ui">'use strict';
+</script>
+<script id="zelozinha-tela94-puro">'use strict';
+/* Story 6.94 — «Contatos e respostas de hoje» em um toque. Funções PURAS (sem tela, sem banco, sem relógio do aparelho):
+   a linha de cada FILHOt, o resumo e os grupos, o telefone mascarado, a hora, as 13h30 e a regra de gravar a escolha na linha do Day Care.
+   Nada aqui lê ou grava em lugar nenhum; a tela (zelozinha-contatos89-ui) é quem chama. */
+(function(root,factory){
+  var api=factory();
+  if(typeof module==='object'&&module.exports)module.exports=api;
+  else root.ZelozinhaTela94=api;
+})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  function txt(v){return typeof v==='string'?v.trim():'';}
+  function obj(v){return !!v&&typeof v==='object'&&!Array.isArray(v);}
+  function copia(v){return v==null?v:JSON.parse(JSON.stringify(v));}
+  var RESPOSTAS=[['autorizar_bolsa','Mandou na bolsa'],['autorizar_loja','Autorizou pegar na loja'],['autorizar_externo','Vai fazer em casa'],['aguardar','Não respondeu']];
+  var FRASE_JA_NO_SNOOPY='Esta linha já foi lançada no Snoopy; para mudar, desfaça antes a confirmação do Snoopy.';
+  var FRASE_JA_APLICADO='Este cuidado já está sendo aplicado ou foi aplicado; a correção é feita na ficha de Prevenção do FILHOt.';
+  var FRASE_TROCA_APLICADO='Este cuidado já foi aplicado. A correção é feita na ficha de Prevenção do FILHOt.';
+  function rotuloResposta(valor){var r=RESPOSTAS.filter(function(x){return x[0]===valor;})[0];return r?r[1]:'';}
+  /* O telefone chega já normalizado por poTelDoTutor («+5531988881234»): só o DDD e os 4 últimos dígitos aparecem. */
+  function mascara(tel){
+    var d=String(tel==null?'':tel).replace(/\D/g,'');
+    if(d.length>=12&&d.length<=13&&d.indexOf('55')===0)d=d.slice(2);
+    if(d.length<10||d.length>11)return '';
+    return '('+d.slice(0,2)+') *****-'+d.slice(-4);
+  }
+  function partesSP(ms){
+    try{
+      var p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(ms)),x={};
+      p.forEach(function(v){x[v.type]=v.value;});
+      return{ano:x.year,mes:x.month,dia:x.day,hora:Number(x.hour),min:Number(x.minute),hh:x.hour,mm:x.minute};
+    }catch(_){return null;}
+  }
+  /* «hh:mm» de São Paulo; vazio quando o instante não existe. Nunca usa a hora do aparelho como se fosse a do envio. */
+  function hora(valor){
+    var n=typeof valor==='number'?valor:Date.parse(String(valor==null?'':valor));
+    if(!Number.isFinite(n))return '';
+    var p=partesSP(n);return p?(p.hh+':'+p.mm):'';
+  }
+  /* AC1.3: `verificadoEm` do grupo é a hora em que a entrega foi verificada (não a do envio): o rótulo diz isso. */
+  function quandoEnviado(grupo){
+    if(!obj(grupo))return '';
+    if(grupo.statusPainel==='enviado_confirmado'){var h=hora(grupo.verificadoEm);return h?('entrega confirmada às '+h):'hora não registrada';}
+    if(grupo.statusPainel==='entrega_pendente')return 'envio registrado, entrega ainda sem confirmação';
+    return '';
+  }
+  /* AC8.2: depois das 13h30 de São Paulo (ou em dia que já passou). O serviço publica `13:30`; o painel não aceita outro valor. */
+  function retornoDepois(agoraMs,dia){
+    var p=partesSP(agoraMs);if(!p)return false;
+    var hoje=p.ano+'-'+p.mes+'-'+p.dia;
+    return String(dia)<hoje||(String(dia)===hoje&&p.hora*60+p.min>=810);
+  }
+  function msAte1330(agoraMs,dia){var alvo=Date.parse(String(dia)+'T13:30:00-03:00');return Number.isFinite(alvo)?alvo-agoraMs:NaN;}
+  /* Grupo do FILHOt (AC2.2). `p.cuidados`: [{pode:boolean, resp:'' | valor da resposta}] */
+  function grupoDoPet(p){
+    var libs=(p&&p.cuidados||[]).filter(function(c){return c&&c.pode===true;});
+    if(!libs.length)return 'conferir';
+    if(libs.some(function(c){return !c.resp;}))return 'falta';
+    if(libs.some(function(c){return c.resp==='aguardar';}))return 'retorno';
+    return 'respondidos';
+  }
+  function resumo(pets){
+    var r={falta:0,petsFalta:0,retorno:0,conferir:0,total:0};
+    (pets||[]).forEach(function(p){
+      var f=0,bloq=false;r.total++;
+      (p.cuidados||[]).forEach(function(c){if(!c||c.pode!==true){bloq=true;return;}if(!c.resp)f++;});
+      if(!(p.cuidados||[]).length)bloq=true;
+      r.falta+=f;if(f)r.petsFalta++;
+      if(grupoDoPet(p)==='retorno')r.retorno++;
+      if(bloq)r.conferir++;
+    });
+    return r;
+  }
+  function plural(n,um,varios){return n+' '+(n===1?um:varios);}
+  function rotuloGrupo(id,depois1330){
+    return id==='falta'?'Falta responder':id==='retorno'?(depois1330?'Hora de retomar o contato':'Retorno às 13h30'):id==='respondidos'?'Respondidos':'Para conferir';
+  }
+  /* AC2.1: a frase do topo. */
+  function topo(res,depois1330){
+    if(!res||!res.total)return '';
+    var partes=[res.falta>0?('Falta responder: '+plural(res.falta,'cuidado','cuidados')+' em '+plural(res.petsFalta,'FILHOt','FILHOts')):'Todos respondidos'];
+    if(res.retorno>0)partes.push((depois1330?'Retomar o contato: ':'Retorno às 13h30: ')+res.retorno);
+    if(res.conferir>0)partes.push('Para conferir: '+res.conferir+' (atualize envios)');
+    return partes.join(' · ');
+  }
+  function porNome(a,b){return String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR');}
+  /* Os grupos, na ordem do AC2.2 (depois das 13h30 o retorno vem primeiro, AC8.2); dentro de cada um, por nome. `pets[i].grupo` já vem decidido. */
+  function ordenar(pets,depois1330){
+    var ordem=depois1330?['retorno','falta','respondidos','conferir']:['falta','retorno','respondidos','conferir'];
+    return ordem.map(function(id){return{id:id,pets:(pets||[]).filter(function(p){return p.grupo===id;}).sort(porNome)};}).filter(function(g){return g.pets.length>0;});
+  }
+  /* Qual cuidado pede escolha de produto/lugar (AC4.1, AC4.2, AC4.5): vermífugo e 2ª dose, carrapaticida. Coleira, escova e vacina não. */
+  function camposDoCuidado(itemK){
+    var k=txt(itemK);
+    if(k==='verm_p'||k==='verm_dose2_p')return['qtd','onde'];
+    if(k==='ecto_p')return['prod','qtd','onde'];
+    return[];
+  }
+  function ondePadrao(valor){return valor==='autorizar_loja'?'LOJA':valor==='autorizar_bolsa'?'NA BOLSA':'';}
+  /* O que ainda falta escolher (AC4.3): só produto e quanto — o «onde» já vem marcado pela resposta. */
+  function faltaEscolher(itemK,det,preMarcaQtd){
+    var d=obj(det)?det:{},falta=[];
+    camposDoCuidado(itemK).forEach(function(c){
+      if(c==='prod'&&!txt(d.prod))falta.push('produto');
+      if(c==='qtd'&&!txt(d.qtd)&&!txt(preMarcaQtd))falta.push('quanto');
+    });
+    return falta;
+  }
+  /* AC4.8 (a): a escolha não grava com o Snoopy já confirmado nem com a tarefa em execução ou realizada. */
+  function podeEscolher(ctx){
+    ctx=ctx||{};
+    if(ctx.snoopyConfirmado===true)return{ok:false,motivo:'ja-no-snoopy',frase:FRASE_JA_NO_SNOOPY};
+    if(ctx.tarefaEstado==='emexecucao'||ctx.tarefaEstado==='realizado'||ctx.estadoLinha==='realizado-conferido')return{ok:false,motivo:'ja-aplicado',frase:FRASE_JA_APLICADO};
+    return{ok:true};
+  }
+  /* AC4.4 + AC4.8: aplica UMA escolha no `det` da linha do Day Care. Só a linha da MESMA resposta e revisão; `valor` (a célula),
+     `cuidado57_estado` e `origemVencimento` ficam como estão. `escolha`: {campo:'qtd'|'prod'|'onde', valor, padrao?}.
+     Para o «onde», tocar no que a resposta já diz (o padrão) tira a marca: o que a resposta diz continua valendo e a linha da loja não perde a pendência do Snoopy. */
+  function mesclarEscolha(linha,esperado,escolha){
+    if(!obj(linha))return{ok:false,motivo:'linha-ausente'};
+    var o=obj(linha.origemVencimento)?linha.origemVencimento:{},e=esperado||{};
+    if(o.protocolo!=='cuidado57'||txt(o.linhaId)!==txt(e.linhaId)||txt(o.respostaId)!==txt(e.respostaId)||Number(o.revisao)!==Number(e.revisao))return{ok:false,motivo:'linha-de-outra-resposta'};
+    var det=obj(linha.det)?copia(linha.det):{};
+    if(txt(det.cuidado57_estado)!=='conferir-orientacao')return{ok:false,motivo:'ja-aplicado',frase:FRASE_JA_APLICADO};
+    var campo=txt(escolha&&escolha.campo),valor=typeof (escolha&&escolha.valor)==='string'?escolha.valor:null;
+    if(['qtd','prod','onde'].indexOf(campo)<0||valor===null||valor.length>80||/[\u0000-\u001f]/.test(valor))return{ok:false,motivo:'escolha-invalida'};
+    var antes=JSON.stringify(det);
+    if(campo==='onde'&&valor===txt(escolha.padrao)&&valor!=='')delete det.onde;
+    else if(campo!=='onde'&&valor==='')delete det[campo];
+    else det[campo]=valor;
+    var novo=copia(linha);novo.det=det;
+    return{ok:true,mudou:JSON.stringify(det)!==antes,linha:novo};
+  }
+  /* AC9: o que a troca de resposta pede. tarefa: '' | reservada | criada | emexecucao | realizado | invalida. */
+  function decidirTroca(ctx){
+    ctx=ctx||{};var antes=txt(ctx.antes),depois=txt(ctx.depois),t=txt(ctx.tarefa);
+    var daLinha=function(v){return v==='autorizar_bolsa'||v==='autorizar_loja';};
+    var criou=daLinha(antes)&&(t==='criada'||t==='reservada');
+    if(t==='emexecucao'||t==='realizado')return{tipo:'barrar',motivo:'ja-aplicado',frase:FRASE_TROCA_APLICADO};
+    /* resposta que não é bolsa nem loja, mas a linha do Day Care ficou (a troca anterior parou no meio): completa tirando a linha */
+    if(antes&&!daLinha(antes)&&(t==='criada'||t==='reservada')&&!daLinha(depois))return{tipo:'completar'};
+    if(!antes||antes===depois)return{tipo:'simples'};
+    if(criou&&!daLinha(depois))return{tipo:'anular'};
+    if(criou&&daLinha(depois)){
+      if(ctx.snoopyConfirmado===true)return{tipo:'barrar',motivo:'ja-no-snoopy',frase:FRASE_JA_NO_SNOOPY};
+      return{tipo:'mesma-linha'};
+    }
+    return{tipo:'simples'};
+  }
+  /* AC5.2: onde está a tarefa do Day Care. */
+  function estadoDaTarefa(tarefa,resposta){
+    var v=tarefa&&tarefa.versao,atual=!!(tarefa&&['criada','emexecucao','realizado'].indexOf(tarefa.estado)>=0&&v&&resposta&&v.respostaId===resposta.respostaId&&Number(v.revisao)===Number(resposta.revisao));
+    if(!atual)return{id:'nao-criada',texto:'a tarefa ainda não foi criada'};
+    if(tarefa.estado==='emexecucao')return{id:'emexecucao',texto:'sendo aplicado'};
+    if(tarefa.estado==='realizado')return{id:'realizado',texto:'aplicado e conferido'};
+    return{id:'criada',texto:'falta aplicar e conferir'};
+  }
+  return{RESPOSTAS:RESPOSTAS,FRASE_JA_NO_SNOOPY:FRASE_JA_NO_SNOOPY,FRASE_JA_APLICADO:FRASE_JA_APLICADO,FRASE_TROCA_APLICADO:FRASE_TROCA_APLICADO,
+    rotuloResposta:rotuloResposta,mascara:mascara,hora:hora,quandoEnviado:quandoEnviado,retornoDepois:retornoDepois,msAte1330:msAte1330,
+    grupoDoPet:grupoDoPet,resumo:resumo,rotuloGrupo:rotuloGrupo,topo:topo,ordenar:ordenar,camposDoCuidado:camposDoCuidado,ondePadrao:ondePadrao,faltaEscolher:faltaEscolher,
+    podeEscolher:podeEscolher,mesclarEscolha:mesclarEscolha,decidirTroca:decidirTroca,estadoDaTarefa:estadoDaTarefa};
+});
+</script>
+<script id="zelozinha-contatos89-ui">'use strict';
+/* «Contatos e respostas de hoje» — a tela da Zelozinha (Story 6.94: as quatro respostas em um toque, o que cada uma faz à vista, sem salto de tela).
+   Só grava pelas portas que já existem: ZeluzRespostaApp88.registrar (a resposta), estado.api.marcar/marcarRetorno (o contato humano), o `det` da linha do Day Care
+   (a escolha de produto e lugar) e, na troca que tira algo já criado, o cartaz «Anular» da 6.57. As funções puras moram em ZelozinhaTela94. */
 (function(){
   if(window.__zelozinhaContatos89Instalado)return;window.__zelozinhaContatos89Instalado=true;
-  var estado={api:null,alvos:[],seq:0,itens:{},inFlight:null,renderedTargets:[],projecao:null,abertos:{}};
-  function instalarEstilo(){if(!document||!document.createElement||!document.head||document.getElementById&&document.getElementById('zelozinha-contatos89-style'))return;var st=document.createElement('style');st.id='zelozinha-contatos89-style';st.textContent='.z89-contatos>[data-z89-contatos],[data-z94-cobertura]>[data-z89-contatos]{display:grid;gap:10px;margin-top:12px}.z89-card{margin:0}.z89-card>summary{cursor:pointer;list-style-position:outside;padding:14px 16px}.z104-resumo{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}.z104-tutor{display:block;white-space:normal}.z104-conteudo{padding:0 16px 16px}.z104-care{margin:10px 0;padding:12px}.z104-care legend{padding:0 6px}.z104-status{margin:4px 0 10px}.z104-opcoes{display:flex;flex-wrap:wrap;gap:6px}.z89-status{display:block;min-height:1.2em;margin:8px 0;font-weight:700;font-size:13px}.z89-card button{margin:0}';document.head.appendChild(st);}
+  var T=window.ZelozinhaTela94;
+  var estado={linhas:{},api:null,alvos:[],seq:0,itens:{},grupos:[],ordemDepois:false,inFlight:null,projecao:null,resultado:null,dia:'',vet:null,sujo:true,projEm:'',salvando:{},avisos:{},msgs:{},copiaSt:{},agora94:{},abertos:{},diaCarregado:'',diaLendo:null,snoopyEstado:'novo',recarregarDia:true,obs:null,anexando:false,timer:null,scrollY:null,erro:''};
+  function instalarEstilo(){
+    if(!document||!document.createElement||!document.head||document.getElementById&&document.getElementById('zelozinha-contatos89-style'))return;
+    var st=document.createElement('style');st.id='zelozinha-contatos89-style';
+    st.textContent=[
+      '@media (max-width:480px){.zt694{margin:0 -18px}}',
+      '.zt694-topo{margin:0 0 4px;font-size:13px;font-weight:700;line-height:1.35;min-height:2.7em;color:var(--z-blue,#234d67)}',
+      '.zt694-nota{margin:0 0 6px;font-size:12px;line-height:1.35;color:var(--muted,#7c8a93)}',
+      '.zt694-grupo{margin:10px 0 6px;font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--z-blue,#234d67)}',
+      '.zt694-grupo[data-zt694-retomar]{color:#a57a00}',
+      '.zt694-pet{position:relative;margin:0 0 6px;padding:5px 5px;background:#fff;border:1px solid var(--p44-line,#e7e0d2);border-radius:14px}',
+      '.zt694-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}',
+      '.zt694-id{flex:1 1 auto;min-width:0}',
+      '.zt694-nome{display:block;font-size:15px;line-height:1.2}',
+      '.zt694-quem,.zt694-quando{display:block;font-size:12.5px;line-height:1.3;color:var(--muted,#7c8a93);overflow-wrap:anywhere}',
+      '.zt694-quando{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}',
+      '.zt694-msg{display:block}',
+      '.zt694-msg>summary{position:absolute;top:5px;right:8px;cursor:pointer;color:var(--z-blue,#234d67);font-weight:700;font-size:12.5px;line-height:1.3}',
+      '.zt694-msg-texto{margin:4px 0 2px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12.5px;line-height:1.4}',
+      '.zt694-care{margin:4px 0 0;padding:0}',
+      '.zt694-leg{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:0 6px;margin:0 0 2px;font-size:12.5px;font-weight:800;line-height:1.25;color:var(--z-blue,#234d67)}',
+      '.zt694-leg small{font-weight:600;color:var(--muted,#7c8a93);font-size:11.5px}',
+      '.zt694 .zt694-btns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}',
+      '.zt694 .zt694-btn{min-height:44px;margin:0;padding:2px 0;border:1px solid var(--p44-line,#e7e0d2);border-radius:10px;background:var(--p44-cream,#fffdf6);color:var(--p44-blue,#234d67);font:inherit;font-size:11px;font-weight:500;letter-spacing:-.1px;line-height:1.2;white-space:normal;overflow-wrap:anywhere;word-break:normal;cursor:pointer}',
+      '.zt694 .zt694-btn[aria-pressed="true"]{background:var(--p44-blue,#234d67);color:var(--p44-cream,#fffdf6);border-color:var(--p44-blue,#234d67)}',
+      '.zt694 .zt694-btn:disabled{opacity:.58;cursor:wait}',
+      '.zt694-todos{margin:4px 0 0}',
+      '.zt694-sub{margin:3px 0 0;font-size:12.5px;line-height:1.35;color:var(--muted,#7c8a93)}',
+      '.zt694-aviso{margin:3px 0 0;font-size:12.5px;line-height:1.35;font-weight:700;color:var(--z-blue,#234d67)}',
+      '.zt694-status{display:block;min-height:1.2em;margin:4px 0 0;font-size:12.5px;font-weight:700;line-height:1.3}',
+      '.zt694-pos{margin:5px 0 0;padding:6px 8px;border-radius:10px;background:var(--p44-warm,#faf5e9)}',
+      '.zt694-esc>summary{cursor:pointer;min-height:24px;font-size:12.5px;font-weight:700;color:var(--z-blue,#234d67)}',
+      '.zt694 .zt694-chips{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}',
+      '.zt694 .zt694-chips>.zt694-ql{flex:1 0 100%;font-size:12px;font-weight:800;color:var(--muted,#7c8a93)}',
+      '.zt694 .zt694-chip{min-height:44px;margin:0;padding:4px 10px;border:1.5px solid var(--p44-line,#e7e0d2);border-radius:999px;background:#fff;color:var(--p44-blue,#234d67);font:inherit;font-size:12.5px;font-weight:700;line-height:1.2;white-space:normal;cursor:pointer}',
+      '.zt694 .zt694-chip[aria-pressed="true"]{background:var(--p44-blue,#234d67);color:var(--p44-cream,#fffdf6);border-color:var(--p44-blue,#234d67)}',
+      '.zt694 .zt694-chip:disabled{opacity:.58;cursor:wait}',
+      '.zt694 .zt694-acao{min-height:44px;margin:4px 0 0;padding:6px 12px;border:1.5px solid var(--p44-blue,#234d67);border-radius:10px;background:#fff;color:var(--p44-blue,#234d67);font:inherit;font-size:13px;font-weight:800;line-height:1.2;cursor:pointer}',
+      '.zt694 .zt694-acao:disabled{opacity:.58;cursor:not-allowed}',
+      '.zt694-sem{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:2px 0 0}',
+      '.zt694-sem .zt694-quando{flex:1 1 auto;min-width:0}',
+      '.zt694-sem .zt694-acao{flex:0 0 auto;max-width:44%;margin:0}',
+      '.zt694-copia{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:var(--p44-warm,#faf5e9)}',
+      '.zt694-copia-tit{margin:0 0 4px;font-size:12.5px;font-weight:800;color:var(--z-blue,#234d67)}',
+      '.zt694-texto{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13.5px;line-height:1.45;padding:8px 10px;border-radius:10px;background:#fff;border:1px solid var(--p44-line,#e7e0d2);user-select:text}',
+      '.zt694-copia-bt{display:flex;flex-wrap:wrap;gap:6px}',
+      '.zt694-snoopy{margin:5px 0 0;font-size:12.5px}',
+      '.zt694-snoopy p{margin:0 0 3px;font-weight:700}',
+      '.zt694-snoopy button[data-snoopy-item]{min-height:44px;padding:8px 12px!important;font-size:13.5px!important}',
+      '.zt694-erro{margin:4px 0;font-size:13px;font-weight:700}'
+    ].join('');
+    document.head.appendChild(st);
+  }
   function txt(v){return typeof v==='string'?v.trim():'';}
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);});}
+  function agora(){return Date.now();}
+  function diaAtual(){try{return typeof zPainel44Dia==='function'?txt(zPainel44Dia()):'';}catch(_){return '';}}
   function itemNome(c){if(txt(c&&c.nome))return txt(c.nome);var k=txt(c&&c.itemK),care=txt(c&&c.care);if(k==='vac_mult_p')return 'Vacina Múltipla';if(k==='vac_gripe_p')return 'Vacina de Gripe';if(k==='vac_raiva_p')return 'Vacina Antirrábica';if(k==='col_p')return 'Coleira';if(care==='vermifugo')return 'Vermífugo';if(care==='ecto')return 'Proteção contra pulgas e carrapatos';if(care==='vacina')return 'Vacina';if(care==='escova')return 'Escova dental';return 'Cuidado preventivo';}
   function dataBR(v){var s=txt(v);return /^\d{4}-\d{2}-\d{2}$/.test(s)?s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4):'';}
   function cuidadoNome(c){var nome=itemNome(c),data=dataBR(c&&c.dueDate);return nome+(data?' · '+data:'');}
-  function nomeTutor(c){return txt(c.cadastro&&c.cadastro.tutor)||txt(c.row&&c.row.p&&c.row.p.tutor)||'Família a conferir';}
+  function tutorNome(c){return txt(c.cadastro&&c.cadastro.tutor)||txt(c.row&&c.row.p&&c.row.p.tutor);}
   function nomePet(c){return txt(c.row&&c.row.p&&c.row.p.n)||'Peludinho';}
-  function respostaAtual(c,cy){var reg=null,rv=null;try{reg=VENC_PEND&&VENC_PEND[c.dia]&&VENC_PEND[c.dia][c.dcKey];rv=reg&&reg.respostasEscopo49&&reg.respostasEscopo49.porCiclo&&reg.respostasEscopo49.porCiclo[window.ZeluzResposta88.codificarChave(cy.cycleKey)];}catch(_){}return rv&&rv.cycleKey===cy.cycleKey&&rv.itemK===cy.itemK?rv:null;}
+  function telDe(c){try{return typeof window.poTelDoTutor==='function'?txt(window.poTelDoTutor(c.row&&c.row.p)):'';}catch(_){return '';}}
+  function codificar(cy){return window.ZeluzResposta88.codificarChave(cy.cycleKey);}
+  function registroDe(c){try{return VENC_PEND&&VENC_PEND[c.dia]&&VENC_PEND[c.dia][c.dcKey]||null;}catch(_){return null;}}
+  function respostaAtual(c,cy){var reg=registroDe(c),rv=null;try{rv=reg&&reg.respostasEscopo49&&reg.respostasEscopo49.porCiclo&&reg.respostasEscopo49.porCiclo[codificar(cy)];}catch(_){rv=null;}return rv&&rv.cycleKey===cy.cycleKey&&rv.itemK===cy.itemK?rv:null;}
+  function tarefaDe(c,cy){var reg=registroDe(c),tv=null;try{tv=reg&&reg.respostasEscopo49&&reg.respostasEscopo49.tarefas57&&reg.respostasEscopo49.tarefas57[codificar(cy)];}catch(_){tv=null;}return tv&&typeof tv==='object'?tv:null;}
   function valorAtual(rv){if(!rv)return'';if(rv.decisao==='aguardar')return'aguardar';if(rv.decisao==='autorizar'&&rv.origem==='bolsa')return'autorizar_bolsa';if(rv.decisao==='autorizar'&&rv.origem==='loja')return'autorizar_loja';if(rv.decisao==='autorizar'&&rv.origem==='externo')return'autorizar_externo';return'';}
+  function daLinha(valor){return valor==='autorizar_bolsa'||valor==='autorizar_loja';}
+  function mapaDe(valor){return valor==='autorizar_loja'?['autorizar','loja']:valor==='autorizar_bolsa'?['autorizar','bolsa']:valor==='autorizar_externo'?['autorizar','externo']:valor==='aguardar'?['aguardar',null]:null;}
+  function nomeDe(rv){return txt(rv&&rv.humanoNome)||txt(rv&&rv.humanoId)||'equipe';}
   function cuidadoProjetado(c,cy){var itens=estado.projecao&&estado.projecao.cuidadosDia&&estado.projecao.cuidadosDia.itens||{},achados=[];Object.keys(itens).forEach(function(k){var x=itens[k];if(x&&x.cycleKey===cy.cycleKey&&x.petId===c.petId&&x.tutorId===c.tutorId&&x.itemK===cy.itemK)achados.push(x);});return achados.length===1?achados[0]:null;}
   function statusCuidado(p){if(p&&p.statusPainel==='envio_registrado_entrega_pendente')return{enviada:true,categoria:'enviada',rotulo:'ENVIADA',motivo:'Envio aceito no canal. A entrega é confirmada separadamente.'};if(p&&p.statusPainel==='entrega_confirmada')return{enviada:true,categoria:'enviada',rotulo:'ENVIADA',motivo:'Entrega confirmada.'};if(p&&p.statusPainel==='acompanhamento_humano')return{enviada:false,categoria:'humano',rotulo:'AINDA NÃO ENVIADA',motivo:txt(p.motivo)||'Contato humano em acompanhamento.'};if(p&&['reservado','tentativa_iniciada','incerto_conciliacao'].indexOf(p.statusPainel)>=0)return{enviada:false,categoria:'pendente',rotulo:'AINDA NÃO ENVIADA',motivo:txt(p.motivo)||'Pendente conferir.'};return{enviada:false,categoria:'a-enviar',rotulo:'AINDA NÃO ENVIADA',motivo:txt(p&&p.motivo)||'Motivo ainda não confirmado.'};}
-  function mensagemAprovada(c,cy,atual){if(!atual||atual.decisao!=='autorizar'||atual.origem!=='externo')return'';var tutor=nomeTutor(c);if(!tutor||tutor==='Família a conferir')return'';if(/^vac_/.test(txt(cy.itemK)))return'Combinado, '+tutor+'! 💛 Depois da vacinação, você nos envia uma foto do cartão com a data, a assinatura e o carimbo do veterinário? Assim, mantemos a ficha atualizada e cuidamos, juntos, da segurança e do bem-estar de todos os nossos Aulunos.';return'Combinado, '+tutor+'! 💛 Depois desse cuidado, você nos informa a data e o produto usado? Assim, mantemos a ficha atualizada e cuidamos, juntos, da segurança e do bem-estar de todos os nossos Aulunos.';}
-  function posEscolha(c,cy,atual){if(!atual)return'';var msg=mensagemAprovada(c,cy,atual);if(msg)return'<div class="r88-copia" data-z104-copy><textarea class="cad-in" rows="5" readonly>'+esc(msg)+'</textarea><button type="button" class="btn btn-ghost" data-z104-copiar>Copiar mensagem</button><span class="pm-sub" aria-live="polite"></span></div>';if(atual.decisao==='aguardar')return'<p class="pm-sub" data-z104-retorno>Retorno humano às 13h30.</p>';return'';}
-  function resumoDoPet(c){var n={enviada:0,'a-enviar':0,pendente:0,humano:0},total=0;(c.ciclos||[]).forEach(function(cy){var p=cuidadoProjetado(c,cy);if(!p)return;var s=statusCuidado(p);n[s.categoria]++;total++;});if(total!==(c.ciclos||[]).length)return(c.ciclos||[]).length+' cuidado'+((c.ciclos||[]).length===1?'':'s');var partes=[];if(n.enviada)partes.push(n.enviada+' cuidado'+(n.enviada===1?'':'s')+' com aviso enviado');if(n['a-enviar'])partes.push(n['a-enviar']+' cuidado'+(n['a-enviar']===1?'':'s')+' a contatar');if(n.pendente)partes.push(n.pendente+' cuidado'+(n.pendente===1?' pendente':'s pendentes')+' de conferir');if(n.humano)partes.push(n.humano+' cuidado'+(n.humano===1?'':'s')+' em contato humano');return partes.join(' · ');}
-  function totaisReais(it){var n={enviada:0,'a-enviar':0,pendente:0,humano:0},total=0,esperado=0;(it||[]).forEach(function(c){(c.ciclos||[]).forEach(function(cy){esperado++;var p=cuidadoProjetado(c,cy);if(!p)return;var s=statusCuidado(p);n[s.categoria]++;total++;});});if(!esperado||total!==esperado)return'';var partes=['Cuidados com aviso enviado: '+n.enviada,'Cuidados a contatar: '+n['a-enviar'],'Cuidados em contato humano: '+n.humano];if(n.pendente)partes.push('Cuidados pendentes de conferir: '+n.pendente);return'<p class="pm-sub" data-z104-totais>'+partes.join(' · ')+'</p>';}
   function envioDoCiclo(c,cy){var encontrados=[];(c.envios||[]).forEach(function(x){var g=x&&x.grupo||x;if(!g||!txt(g.groupKey)||x&&x.relacao&&x.relacao!=='mesmo_cuidado')return;var pares=[];if(Array.isArray(g.membros)&&g.membros.length)g.membros.forEach(function(m){var ks=Array.isArray(m&&m.cycleKeys)?m.cycleKeys:[],is=Array.isArray(m&&m.itemKs)?m.itemKs:[];ks.forEach(function(k,i){pares.push([k,is[i]]);});});else{var ks=Array.isArray(g.cycleKeys)?g.cycleKeys:[],is=Array.isArray(g.itemKs)?g.itemKs:[];ks.forEach(function(k,i){pares.push([k,is[i]]);});}if(pares.some(function(p){return p[0]===cy.cycleKey&&p[1]===cy.itemK;}))encontrados.push(g);});return encontrados.length===1?encontrados[0]:null;}
   function grupoDoCiclo(c,cy){var g=envioDoCiclo(c,cy);return g&&txt(g.groupKey)||'';}
-  function mensagemEnviada(c,cy,status){var g=status.enviada&&envioDoCiclo(c,cy),texto=txt(g&&g.textoEnviado);return texto?'<details data-z104-mensagem-enviada><summary>Ver mensagem</summary><div class="z86-texto">'+esc(texto)+'</div></details>':'';}
-  function escolhas(c,id){var vals=[['autorizar_bolsa','Mandou na bolsa'],['autorizar_loja','Autorizou pegar na loja'],['autorizar_externo','Vai fazer em casa'],['aguardar','Não respondeu']];return(c.ciclos||[]).map(function(cy,i){var atual=respostaAtual(c,cy),selecionada=valorAtual(atual),proj=cuidadoProjetado(c,cy),status=statusCuidado(proj),grupo=status.enviada?grupoDoCiclo(c,cy):'',bloqueado=!proj||(status.enviada&&!grupo),botoes=vals.map(function(v){var aria=v[1]+' para '+cuidadoNome(cy);return'<button type="button" class="r88-opcao'+(selecionada===v[0]?' on':'')+'" value="'+v[0]+'" data-z89-escolha="'+esc(id)+'" data-z89-ciclo="'+i+'" aria-label="'+esc(aria)+'" aria-pressed="'+(selecionada===v[0]?'true':'false')+'"'+(bloqueado?' disabled':'')+'>'+esc(v[1])+'</button>';}).join(''),autoria=atual?'<p class="pm-sub">Resposta salva por '+esc(txt(atual.humanoNome)||txt(atual.humanoId)||'equipe')+'.</p>':'',aviso=bloqueado?'<p class="pm-sub">Atualize para confirmar o vínculo deste cuidado antes de registrar.</p>':'';return'<fieldset class="r88-opcoes mag-origem z104-care" data-z89-resposta data-z104-care="'+esc(encodeURIComponent(cy.cycleKey))+'"><legend>'+esc(cuidadoNome(cy))+'</legend><p class="pm-sub z104-status"><strong data-z104-status="'+(status.enviada?'enviada':'nao-enviada')+'">'+status.rotulo+'</strong> · '+esc(status.motivo)+'</p>'+mensagemEnviada(c,cy,status)+'<div class="z104-opcoes">'+botoes+'</div>'+autoria+posEscolha(c,cy,atual)+aviso+'</fieldset>';}).join('');}
-  function card(c,id){var nome=esc(nomePet(c)),tutor=esc(nomeTutor(c)),aberto=estado.abertos[c.dcKey]===true?' open':'';var html='<details class="pm-card z89-card" data-z104-pet="'+esc(c.petId||c.dcKey||id)+'" data-z89-dc="'+esc(encodeURIComponent(c.dcKey||''))+'"'+aberto+'><summary><span class="z104-resumo"><span><strong>'+nome+'</strong><span class="pm-sub z104-tutor">Família: '+tutor+'</span></span><span class="pm-sub" data-z104-resumo-status>'+esc(resumoDoPet(c))+'</span></span></summary><div class="z104-conteudo"><span class="z89-status" aria-live="polite"></span>';
-    if(c.estado==='revisao_identidade')html+='<p class="pm-sub"><strong>AINDA NÃO ENVIADA</strong> · Não foi possível confirmar o vínculo desta ficha. Nenhuma resposta foi registrada.</p>';
-    else if(c.estado==='envios_indisponiveis')html+='<p class="pm-sub"><strong>AINDA NÃO ENVIADA</strong> · As fontes de hoje ainda não foram confirmadas. Atualize antes de registrar.</p>';
-    else html+=escolhas(c,id);
-    return html+'</div></details>';}
-  function renderMarkup(result){var it=result&&result.itens||[];estado.itens={};if(!it.length)return'<p class="pm-sub">Nenhum cuidado de animal presente foi confirmado nesta leitura.</p>';return totaisReais(it)+it.map(function(c,i){var id='c89_'+i+'_'+c.contatoId;estado.itens[id]=c;return card(c,id);}).join('');}
-  function mesmosAlvos(a,b){return a.length===b.length&&a.every(function(x,i){return x===b[i];});}
+  function vmCuidado(c,cy){
+    var proj=cuidadoProjetado(c,cy),st=statusCuidado(proj),grupo=st.enviada?grupoDoCiclo(c,cy):txt(c.groupKey),atual=respostaAtual(c,cy),tarefa=tarefaDe(c,cy);
+    return{cy:cy,proj:proj,st:st,grupo:grupo,bloqueado:!proj||!grupo,atual:atual,valor:valorAtual(atual),tarefa:tarefa,tstate:T.estadoDaTarefa(tarefa,atual)};
+  }
+  function bloqueadoTotal(c){return c.estado==='revisao_identidade'||c.estado==='envios_indisponiveis';}
+  function vmsDe(c){return bloqueadoTotal(c)?[]:(c.ciclos||[]).map(function(cy){return vmCuidado(c,cy);});}
+  function descPet(c){return{dcKey:c.dcKey,nome:nomePet(c),cuidados:vmsDe(c).map(function(v){return{pode:!v.bloqueado,resp:v.valor};})};}
+  function depois1330(){return T.retornoDepois(agora(),estado.dia||diaAtual());}
+  function avisoRetorno(dep){return dep?'Hora de retomar o contato (retorno humano das 13h30).':'Retorno humano às 13h30.';}
+  function horaDe(rv){var h=T.hora(Number(rv&&rv.ts));return h||'hora não registrada';}
+  /* ---------- as peças que a linha desenha ---------- */
+  function vetTexto(c){var v=estado.vet;return v&&v.ok===true&&v.dia===c.dia&&v.confirmada===true&&v.tipo==='confirmada'?'Veterinária: confirmada hoje':'Falta a veterinária confirmar a presença hoje';}
+  function linhaPronta(dia){try{return typeof DASH_DADOS_DE!=='undefined'&&!!DASH_DADOS_DE&&DASH_DADOS_DE.ok===true&&DASH_DADOS_DE.dia===dia&&DASH_DADOS_DE.obj===DASH_DADOS;}catch(_){return false;}}
+  /* A linha do Day Care vem de duas fontes: a que esta tela leu sozinha (só o nó daquele cuidado, `estado.linhas`) e, quando os Lançamentos do dia já foram lidos, a memória deles (`DASH_DADOS`). */
+  function chaveLinha(dia,item,id){return dia+'|'+item+'|'+id;}
+  function linhaDoDia(c,item,id){
+    var l=estado.linhas[chaveLinha(c.dia,item,id)]||null;
+    if(!l&&linhaPronta(c.dia)){try{l=DASH_DADOS&&DASH_DADOS[item]&&DASH_DADOS[item][id];}catch(_){l=null;}}
+    return l&&typeof l==='object'?l:null;
+  }
+  function achar(lista,v){var r=(lista||[]).filter(function(x){return x&&x.v===v;})[0];return r?r.t:'';}
+  function listaQtd(itemK){try{return itemK==='ecto_p'?DASH_QTD_PIP:DASH_QTD;}catch(_){return[];}}
+  function listaOnde(){try{return DASH_ONDE;}catch(_){return[];}}
+  function listaProd(){try{return DASH_ECTO_PROD;}catch(_){return[];}}
+  function preMarcaQtd(c,cy){
+    if(cy.itemK!=='verm_p'&&cy.itemK!=='verm_dose2_p')return '';
+    try{var a=typeof vermAvaliarFicha==='function'?vermAvaliarFicha(c.row&&c.row.p):null;if(!a||a.pesar||!a.dose||!a.dose.rot)return '';var rot=String(a.dose.rot);return achar(listaQtd(cy.itemK),rot)?rot:'';}catch(_){return '';}
+  }
+  function escolhasResumo(c,v,det){
+    var cy=v.cy,partes=[],campos=T.camposDoCuidado(cy.itemK),falta=T.faltaEscolher(cy.itemK,det,preMarcaQtd(c,cy));
+    if(campos.indexOf('prod')>=0&&txt(det.prod))partes.push(achar(listaProd(),det.prod)||det.prod);
+    var q=txt(det.qtd)||preMarcaQtd(c,cy);if(q)partes.push(achar(listaQtd(cy.itemK),q)||q);
+    var padrao=T.ondePadrao(v.valor),ondeV=('onde' in det)?String(det.onde):padrao;
+    partes.push(ondeV===''?'Nada a observar':(achar(listaOnde(),ondeV)||ondeV));
+    if(falta.length)partes.push('falta escolher: '+falta.join(' e '));
+    return itemNome(cy)+': '+partes.join(' · ');
+  }
+  function chipsHTML(rotulo,campo,lista,atualV,ck,travado){
+    return '<div class="zt694-chips" role="group" aria-label="'+esc(rotulo)+'"><span class="zt694-ql">'+esc(rotulo)+'</span>'+(lista||[]).map(function(o){var on=atualV===o.v;return '<button type="button" class="zt694-chip" data-zt694-acao="esc" data-zt694-campo="'+campo+'" data-zt694-valor="'+esc(o.v)+'" aria-pressed="'+(on?'true':'false')+'"'+(travado?' disabled':'')+'>'+esc(o.t)+'</button>';}).join('')+'</div>';
+  }
+  function escolhasHTML(c,v,i){
+    var cy=v.cy,campos=T.camposDoCuidado(cy.itemK),l=v.tarefa&&v.tarefa.linha;
+    if(!campos.length||!daLinha(v.valor)||v.tstate.id==='nao-criada'||!l||!l.id)return '';
+    var linha=linhaDoDia(c,l.item,l.id),ck=encodeURIComponent(cy.cycleKey),chave='esc|'+ck;
+    if(!linha)return '<p class="zt694-sub" data-zt694-escolhas>Conferindo as escolhas deste cuidado…</p>';
+    var det=linha.det&&typeof linha.det==='object'?linha.det:{},falta=T.faltaEscolher(cy.itemK,det,preMarcaQtd(c,cy)),travado=!!estado.salvando[c.dcKey];
+    var aberto=(chave in estado.abertos)?estado.abertos[chave]===true:falta.length>0;
+    var padrao=T.ondePadrao(v.valor),qtdAtual=txt(det.qtd)||preMarcaQtd(c,cy),ondeAtual=('onde' in det)?String(det.onde):padrao;
+    var corpo=(campos.indexOf('prod')>=0?chipsHTML('Produto','prod',listaProd(),txt(det.prod),ck,travado):'')+chipsHTML('Quanto foi dado','qtd',listaQtd(cy.itemK),qtdAtual,ck,travado)+chipsHTML('Onde está','onde',listaOnde(),ondeAtual,ck,travado);
+    return '<details class="zt694-esc" data-zt694-esc data-zt694-aberto="'+esc(chave)+'" data-zt694-ciclo="'+i+'"'+(aberto?' open':'')+'><summary>'+esc(escolhasResumo(c,v,det))+'</summary>'+corpo+'</details>';
+  }
+  function snoopyHTML(c,v){
+    var l=v.tarefa&&v.tarefa.linha;if(!l||!l.id||!l.item)return '';
+    var ehLoja=v.valor==='autorizar_loja',linha=linhaDoDia(c,l.item,l.id),comp='',topo='';
+    if(estado.snoopyEstado==='pronto'&&linha&&typeof window.dashSnoopy33LinhaHTML==='function'){try{comp=window.dashSnoopy33LinhaHTML(l.item,l.id,linha)||'';}catch(_){comp='';}}
+    if(!ehLoja&&!comp)return '';
+    var marca=' data-zt694-snoopy="'+esc(l.item+'|'+l.id)+'"';
+    if(estado.snoopyEstado==='falhou'||estado.snoopyEstado==='fora-do-dia')return '<div class="zt694-snoopy"'+marca+'><p>não consegui conferir o Snoopy</p><button type="button" class="zt694-acao" data-zt694-acao="snoopy-tentar">Tentar de novo</button></div>';
+    if(estado.snoopyEstado!=='pronto'||!linha)return '<div class="zt694-snoopy"'+marca+'><p>conferindo o Snoopy…</p></div>';
+    if(/Já lancei no Snoopy/.test(comp))topo='Falta lançar no Snoopy e receber do tutor';
+    else if(!comp&&l.item==='vet')topo='Snoopy: só depois da vacina aplicada';
+    return '<div class="zt694-snoopy"'+marca+'>'+(topo?'<p>'+esc(topo)+'</p>':'')+'<div data-zt694-snoopy-componente>'+comp+'</div></div>';
+  }
+  function posHTML(c,v,i){
+    var cy=v.cy,html='';
+    if(daLinha(v.valor)){
+      var e=v.tstate,dc='Foi para a lista do Day Care: '+itemNome(cy)+' — '+e.texto+'.';
+      if(e.id==='nao-criada')html+='<p class="zt694-aviso" data-zt694-dc="nao-criada">Resposta salva, mas a tarefa do Day Care ainda não foi criada.</p><button type="button" class="zt694-acao" data-zt694-acao="tarefa-tentar">Tentar de novo</button>';
+      else html+='<p class="zt694-aviso" data-zt694-dc="'+e.id+'">'+esc(dc)+'</p>';
+      if(e.id!=='nao-criada')html+=snoopyHTML(c,v)+escolhasHTML(c,v,i);
+    }else if(v.valor&&v.tarefa&&(v.tarefa.estado==='criada'||v.tarefa.estado==='reservada')){
+      html+='<p class="zt694-aviso" data-zt694-orfa>O cuidado ainda está na lista do Day Care: a troca não terminou.</p><button type="button" class="zt694-acao" data-zt694-acao="completar">Tirar da lista do Day Care</button>';
+    }
+    if(v.valor==='aguardar')html+='<p class="zt694-aviso" data-z104-retorno>'+avisoRetorno(depois1330())+'</p>';
+    return html?('<div class="zt694-pos">'+html+'</div>'):'';
+  }
+  function careHTML(c,v,i){
+    var cy=v.cy,rv=v.atual,ck=encodeURIComponent(cy.cycleKey),travado=v.bloqueado||!!estado.salvando[c.dcKey];
+    var tag=estado.agora94[c.dcKey+'|'+i]?' · respondido agora':'';
+    var st=rv?(T.rotuloResposta(v.valor)||'Resposta registrada')+' · '+nomeDe(rv)+' · '+horaDe(rv)+tag:'sem resposta';
+    var legenda='<p class="zt694-leg"><span>'+esc(cuidadoNome(cy))+'</span><small>'+esc(st)+'</small></p>';
+    var botoes=T.RESPOSTAS.map(function(r){var aria=r[1]+' para '+cuidadoNome(cy),on=v.valor===r[0];return '<button type="button" class="zt694-btn" data-zt694-acao="resp" data-zt694-valor="'+r[0]+'" data-zt694-ciclo="'+i+'" aria-label="'+esc(aria)+'" aria-pressed="'+(on?'true':'false')+'"'+(travado?' disabled':'')+'>'+esc(r[1])+'</button>';}).join('');
+    var aviso=estado.avisos[c.dcKey+'|'+i]?'<p class="zt694-aviso" data-zt694-aviso>'+esc(estado.avisos[c.dcKey+'|'+i])+'</p>':'';
+    var bloq=v.bloqueado?'<p class="zt694-sub">Atualize para confirmar o vínculo deste cuidado antes de registrar.</p>':'';
+    var vet=/^vac_/.test(txt(cy.itemK))?'<p class="zt694-sub" data-zt694-vet>'+esc(vetTexto(c))+'</p>':'';
+    return '<div class="zt694-care" role="group" data-z89-resposta data-z104-care="'+ck+'" data-zt694-care="'+i+'" aria-label="'+esc(cuidadoNome(cy))+'">'+legenda+'<div class="zt694-btns">'+botoes+'</div>'+aviso+bloq+vet+posHTML(c,v,i)+'</div>';
+  }
+  function todosHTML(c,vms){
+    var sem=vms.filter(function(v){return !v.valor;});
+    if(sem.length<2||vms.some(function(v){return v.bloqueado;}))return '';
+    var travado=!!estado.salvando[c.dcKey];
+    return '<div class="zt694-todos" data-zt694-todos><div class="zt694-btns">'+T.RESPOSTAS.map(function(r){return '<button type="button" class="zt694-btn" data-zt694-acao="todos" data-zt694-valor="'+r[0]+'" aria-label="Todos: '+esc(r[1])+' para os '+sem.length+' cuidados sem resposta"'+(travado?' disabled':'')+'>Todos: '+esc(r[1])+'</button>';}).join('')+'</div></div>';
+  }
+  /* Os textos «Vai fazer em casa» da linha: o da casa é o publicado e mora numa função só (`ZeluzRespostaApp88.textoEmCasa`, que a janela «Abrir resposta» também usa).
+     Há duas variantes (vacina e demais cuidados) e o texto não cita o cuidado: dois cuidados com o mesmo texto dão uma caixa só. Sem o nome do tutor na ficha não há texto (e a linha daquele FILHOt nem chega a esta tela). */
+  function textosEmCasaDe(c,vms){
+    var b=window.ZeluzRespostaApp88,tutor=tutorNome(c),out=[],vistos={};
+    if(!b||typeof b.textoEmCasa!=='function'||!tutor)return out;
+    vms.forEach(function(v){
+      if(v.valor!=='autorizar_externo')return;
+      var x=b.textoEmCasa({tutor:tutor},v.cy.itemK);
+      if(x&&!vistos[x]){vistos[x]=true;out.push({texto:x,vacina:/^vac_/.test(txt(v.cy.itemK))});}
+    });
+    return out;
+  }
+  /* o aviso de «Mensagem copiada» vive no estado da tela: quando o app refaz o painel por conta própria (ele faz isso de tempos em tempos), a frase volta no mesmo lugar */
+  function copiaMsg(c,i,texto){var s=estado.copiaSt[c.dcKey+'|'+i];return s&&s.texto===texto?s.msg:'';}
+  /* O texto do retorno das 13h30 (H94-3: a Adriana escolheu em 20/out/2026 o texto que já estava publicado na `mensagemAprovada`). Vem da MESMA função, com as condições dela: presença do corpo,
+     sem check-out, depois das 13h30 (hora de São Paulo), nome do tutor e do peludinho. A lista desta tela só traz quem está presente e sem check-out na última leitura (o `resolver` descarta o resto).
+     O texto muda com o cuidado: dois cuidados em «Não respondeu» dão dois textos. */
+  function textosRetornoDe(c,vms){
+    var b=window.ZeluzRespostaApp88,tutor=tutorNome(c),pet=txt(c.row&&c.row.p&&c.row.p.n),out=[],vistos={};
+    if(!b||typeof b.mensagemAprovada!=='function'||!tutor||!pet)return out;
+    vms.forEach(function(v){
+      if(v.valor!=='aguardar'||!v.atual)return;
+      var x=b.mensagemAprovada({nomeTutor:tutor,nomePeludo:pet},{itemK:v.cy.itemK},v.atual,{presencaCorporal:true,checkout:false,dia:c.dia});
+      if(x&&!vistos[x]){vistos[x]=true;out.push({texto:x,titulo:'Retomar o contato, mensagem pronta para enviar: '+itemNome(v.cy)});}
+    });
+    return out;
+  }
+  function caixasDe(c,vms){
+    var casa=textosEmCasaDe(c,vms),ret=textosRetornoDe(c,vms),out=[];
+    casa.forEach(function(x){out.push({texto:x.texto,titulo:'Mensagem para o tutor, pronta para enviar'+(casa.length>1?(x.vacina?': vacina':': demais cuidados'):'')});});
+    ret.forEach(function(x){out.push(x);});
+    return out;
+  }
+  function copiaHTML(c,vms){
+    var textos=caixasDe(c,vms),semTel=!telDe(c);
+    if(!textos.length)return '';
+    var caixas=textos.map(function(x,i){
+      return '<div class="zt694-copia" data-zt694-copia="'+i+'"><p class="zt694-copia-tit">'+esc(x.titulo)+'</p><div class="zt694-texto" data-zt694-texto tabindex="0">'+esc(x.texto)+'</div><div class="zt694-copia-bt"><button type="button" class="zt694-acao" data-zt694-acao="copiar">Copiar mensagem</button><button type="button" class="zt694-acao" data-zt694-acao="whats-texto"'+(semTel?' disabled':'')+'>Abrir no WhatsApp</button></div><span class="zt694-sub" aria-live="polite" data-zt694-copia-st>'+esc(copiaMsg(c,i,x.texto))+'</span></div>';
+    }).join('');
+    return caixas+'<p class="zt694-sub">'+(semTel?'Sem telefone na ficha: use Copiar. ':'')+'Nenhuma aplicação ou cobrança foi criada.</p>';
+  }
+  function petHTML(c){
+    var dc=c.dcKey,id=encodeURIComponent(dc),tutor=tutorNome(c),mask=T.mascara(telDe(c)),bt=bloqueadoTotal(c),vms=vmsDe(c);
+    var quem=esc(tutor||'tutor não informado')+' · '+esc(mask||'sem telefone na ficha');
+    var enviado=vms.filter(function(v){return v.st.enviada&&v.grupo;})[0],quando='',precisaWhats=false,msg='';
+    if(bt){
+      quando='<span class="zt694-quando"><span><strong>AINDA NÃO ENVIADA</strong> · '+(c.estado==='revisao_identidade'?'Não foi possível confirmar o vínculo desta ficha. Nenhuma resposta foi registrada.':'As fontes de hoje ainda não foram confirmadas. Atualize antes de registrar.')+'</span></span>';
+    }else if(enviado){
+      var g=envioDoCiclo(c,enviado.cy),textos=[],vistos={};
+      vms.forEach(function(v){var gg=v.st.enviada&&envioDoCiclo(c,v.cy),t=txt(gg&&gg.textoEnviado);if(t&&!vistos[t]){vistos[t]=true;textos.push(t);}});
+      msg=textos.length?'<details class="zt694-msg" data-zt694-aberto="msg|'+esc(id)+'"'+('msg|'+id in estado.abertos&&estado.abertos['msg|'+id]?' open':'')+'><summary>Ver mensagem</summary>'+textos.map(function(t){return '<div class="zt694-msg-texto z86-texto">'+esc(t)+'</div>';}).join('')+'</details>':'';
+      quando='<span class="zt694-quando"><span>'+esc(T.quandoEnviado(g)||'hora não registrada')+'</span></span>';
+    }else if(vms.length){
+      var motivo=txt(vms[0].st.motivo).replace(/\.$/,'');
+      quando='<span class="zt694-quando"><span>A Zelozinha não mandou: '+esc(motivo)+'.</span></span>';precisaWhats=true;
+    }
+    if(vms.some(function(v){return v.valor==='aguardar';})&&!textosRetornoDe(c,vms).length)precisaWhats=true;
+    var whats=precisaWhats?'<button type="button" class="zt694-acao" data-zt694-acao="whats-vazio"'+(telDe(c)?'':' disabled')+' aria-label="Abrir WhatsApp de '+esc(tutor||'tutor')+'">Abrir WhatsApp</button>':'';
+    var cab='<header class="zt694-cab"><div class="zt694-id"><strong class="zt694-nome">'+esc(nomePet(c))+'</strong><span class="zt694-quem">'+quem+'</span>'+(whats?'':quando)+msg+'</div></header>'+(whats?'<div class="zt694-sem">'+quando+whats+'</div>':'');
+    var corpo=vms.map(function(v,i){return careHTML(c,v,i);}).join('');
+    return '<article class="zt694-pet" data-zt694-pet="'+esc(id)+'" data-z104-pet="'+esc(c.petId||c.dcKey||'')+'" data-z89-dc="'+esc(id)+'">'+cab+todosHTML(c,vms)+corpo+copiaHTML(c,vms)+'<span class="zt694-status" aria-live="polite" data-zt694-status>'+esc(estado.msgs[dc]||'')+'</span></article>';
+  }
+  function algumaEscolha(){return Object.keys(estado.itens).some(function(dc){var c=estado.itens[dc];return vmsDe(c).some(function(v){return daLinha(v.valor)&&T.camposDoCuidado(v.cy.itemK).length&&v.tstate.id!=='nao-criada';});});}
+  function descs(){return (estado.resultado&&estado.resultado.itens||[]).map(function(c){return descPet(estado.itens[c.dcKey]||c);});}
+  function topoTexto(){return T.topo(T.resumo(descs()),depois1330());}
+  function montarMarkup(){
+    var r=estado.resultado;
+    if(estado.erro)return '<p class="pm-sub">'+esc(estado.erro)+'</p><button type="button" class="zt694-acao" data-zt694-acao="ler-de-novo">Tentar de novo</button>';
+    if(!r)return '<p class="pm-sub">Conferindo presenças e cuidados de hoje…</p>';
+    if(!(r.itens||[]).length)return '<p class="pm-sub">Nenhum cuidado de animal presente foi confirmado nesta leitura.</p>';
+    var nota=algumaEscolha()?'<p class="zt694-nota">As escolhas de produto e lugar. Fica registrado aqui. O Encãotador ainda vê só “conferir orientação”.</p>':'';
+    return '<div class="zt694" data-zt694><p class="zt694-topo" aria-live="polite" data-zt694-topo>'+esc(topoTexto())+'</p>'+nota+estado.grupos.map(function(g){
+      return '<h4 class="zt694-grupo" data-zt694-grupo="'+g.id+'"'+(g.id==='retorno'&&depois1330()?' data-zt694-retomar':'')+'>'+esc(T.rotuloGrupo(g.id,depois1330()))+'</h4>'+g.pets.map(function(p){var c=estado.itens[p.dcKey];return c?petHTML(c):'';}).join('');
+    }).join('')+'</div>';
+  }
+  /* ---------- escrever na página sem pular ---------- */
+  function alvosAtuais(){return Array.prototype.slice.call(document.querySelectorAll('[data-z89-contatos]'));}
+  function guardarAncora(){
+    var rows=document.querySelectorAll('[data-zt694-pet]'),r=null;
+    for(var i=0;i<rows.length;i++){var b=rows[i].getBoundingClientRect();if(b.bottom>0){r={dc:rows[i].getAttribute('data-zt694-pet'),top:b.top};break;}}
+    return{linha:r,y:window.pageYOffset};
+  }
+  /* o tema da casa rola devagar (`scroll-behavior:smooth`); a correção de rolagem tem de ser de uma vez, senão a tela desliza em vez de ficar parada */
+  function rolarSemAnimar(y){
+    var de=document.documentElement,sb=de.style.scrollBehavior;
+    de.style.scrollBehavior='auto';
+    try{window.scrollTo(0,y);}finally{de.style.scrollBehavior=sb;}
+  }
+  function voltarAncora(a){
+    if(!a)return;var el=a.linha?document.querySelector('[data-zt694-pet="'+a.linha.dc+'"]'):null;
+    if(el){var dy=el.getBoundingClientRect().top-a.linha.top;if(Math.abs(dy)>0.5)rolarSemAnimar(window.pageYOffset+dy);}
+    else if(Math.abs(window.pageYOffset-a.y)>0.5)rolarSemAnimar(a.y);
+  }
+  function lembrarAbertos(raiz){Array.prototype.forEach.call(raiz.querySelectorAll('details[data-zt694-aberto]'),function(d){estado.abertos[d.getAttribute('data-zt694-aberto')]=d.open;});}
+  function aplicarAbertos(raiz){Array.prototype.forEach.call(raiz.querySelectorAll('details[data-zt694-aberto]'),function(d){var k=d.getAttribute('data-zt694-aberto');if(k in estado.abertos)d.open=estado.abertos[k]===true;});}
+  /* a última vista da pessoa (o primeiro FILHOt que aparece na tela e onde ele está), guardada a cada rolagem: quando o app apaga o conteúdo desta tela (ele refaz o painel às 13h30 e a cada atualização geral) e a tela volta, o mesmo FILHOt volta ao mesmo lugar */
+  function anotarVista(){var a=guardarAncora();if(a.linha)estado.vista=a;}
+  function pintar(alvos,preservar){
+    var ancora=preservar?guardarAncora():null,html=montarMarkup();
+    alvos.forEach(function(el){if(preservar)lembrarAbertos(el);el.innerHTML=html;el.setAttribute('data-zt694-ok','1');aplicarAbertos(el);});
+    if(ancora)voltarAncora(ancora);
+    anotarVista();
+  }
+  function anexar(novos){
+    var a=estado.vista,y=estado.scrollY;
+    novos.forEach(function(el){el.innerHTML=montarMarkup();el.setAttribute('data-zt694-ok','1');aplicarAbertos(el);});
+    if(a&&a.linha&&document.querySelector('[data-zt694-pet="'+a.linha.dc+'"]'))voltarAncora(a);
+    else if(y!=null&&Math.abs(window.pageYOffset-y)>2)rolarSemAnimar(y);
+    anotarVista();
+  }
+  function redesenharLinha(dc,semTopo){
+    var id=encodeURIComponent(dc),c=estado.itens[dc];if(!c)return;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-zt694-pet="'+id+'"]'),function(el){
+      lembrarAbertos(el);var tmp=document.createElement('div');tmp.innerHTML=petHTML(c);var novo=tmp.firstElementChild;if(!novo)return;
+      el.replaceWith(novo);aplicarAbertos(novo);
+    });
+    if(!semTopo)atualizarTopo();
+  }
+  function atualizarTopo(){
+    var t=topoTexto(),dep=depois1330(),ancora=guardarAncora();
+    Array.prototype.forEach.call(document.querySelectorAll('[data-zt694-topo]'),function(el){el.textContent=t;});
+    Array.prototype.forEach.call(document.querySelectorAll('[data-zt694-grupo="retorno"]'),function(el){el.textContent=T.rotuloGrupo('retorno',dep);if(dep)el.setAttribute('data-zt694-retomar','');else el.removeAttribute('data-zt694-retomar');});
+    Array.prototype.forEach.call(document.querySelectorAll('[data-zt694-pet] [data-z104-retorno]'),function(el){el.textContent=avisoRetorno(dep);});
+    voltarAncora(ancora);anotarVista();
+  }
+  /* às 13h30, com a tela aberta: o rótulo vira «Hora de retomar o contato» e a caixa do texto do retorno entra nas linhas em «Não respondeu», sem reler nada e sem mudar o que a pessoa está vendo */
+  function atualizarRetornos(){
+    var ancora=guardarAncora();
+    Object.keys(estado.itens).forEach(function(dc){if(vmsDe(estado.itens[dc]).some(function(v){return v.valor==='aguardar';}))redesenharLinha(dc,true);});
+    atualizarTopo();voltarAncora(ancora);
+  }
+  function dizerNaLinha(dc,texto){estado.msgs[dc]=texto||'';Array.prototype.forEach.call(document.querySelectorAll('[data-zt694-pet="'+encodeURIComponent(dc)+'"] [data-zt694-status]'),function(el){el.textContent=texto||'';});}
+  /* ---------- as leituras ---------- */
   async function lerProjecao(){var b=window.ZeluzRespostaApp88;if(!b||typeof b.painel!=='function')return null;try{return await b.painel();}catch(_){return null;}}
-  async function render(forcar){
-    var alvos=Array.prototype.slice.call(document.querySelectorAll('[data-z89-contatos]'));estado.alvos=alvos;if(!alvos.length)return;
-    document.querySelectorAll('details.z89-card[data-z89-dc]').forEach(function(d){var k='';try{k=decodeURIComponent(d.getAttribute('data-z89-dc')||'');}catch(_){}if(k)estado.abertos[k]=d.open;});
-    if(estado.inFlight){await estado.inFlight;var atuais=Array.prototype.slice.call(document.querySelectorAll('[data-z89-contatos]'));if(forcar||!mesmosAlvos(atuais,estado.renderedTargets))return render(!!forcar);return;}
-    if(!forcar&&mesmosAlvos(alvos,estado.renderedTargets))return;
-    var req=++estado.seq;alvos.forEach(function(el){el.innerHTML='<p class="pm-sub">Conferindo presenças e cuidados de hoje…</p>';});
+  async function lerVeterinaria(){try{var api=window.zelozinha47Veterinaria;if(!api||typeof api.ler!=='function')return null;return await api.ler();}catch(_){return null;}}
+  function projEmAtual(){try{return typeof Z44_DISPATCH80!=='undefined'&&Z44_DISPATCH80&&Z44_DISPATCH80.dados&&Z44_DISPATCH80.dados.atualizadoEm||'';}catch(_){return '';}}
+  function criarApi(){
+    estado.api=ZelozinhaContatosHoje89.criar({db:DB,dia:zPainel44Dia,linhasHoje:hojeLista,pelKey:pelKey,dcKey:dcKey,pelExtra:pelExtra,vencItensDe:vencItensDe,tipoCuidado:function(item){var fontes=window.ZeluzPrevencaoFontes;return fontes&&typeof fontes.tipoCuidado==='function'?fontes.tipoCuidado(item):'';},autor:function(){var u=usuarioAtual()||{};return{id:String(u.monId||u.id||u.uid||'').trim(),nome:String(u.pessoa||u.nome||'').trim(),role:String(u.role||u.papel||'').trim()};},permissao:function(){return typeof zPainel44Despacho80Acesso==='function'&&zPainel44Despacho80Acesso()===true;},serverTimestamp:function(){return window.firebase&&firebase.database&&firebase.database.ServerValue&&firebase.database.ServerValue.TIMESTAMP;},painel:function(){var b=window.ZeluzRespostaApp88;return b&&typeof b.painel==='function'?b.painel():null;},lerPainel:lerProjecao,resolverEnvio:function(groupKey){var b=window.ZeluzRespostaApp88;if(!b||typeof b.resolverGrupo!=='function')return Promise.resolve(null);return b.resolverGrupo({groupKey:groupKey});}});
+  }
+  function publicarHumanos(){
+    var r=estado.resultado;
+    window.Z94_CONTATOS_HUMANOS={dia:r&&r.dia||'',itens:(r&&r.itens||[]).map(function(x){var c=estado.itens[x.dcKey]||x;return{dcKey:c.dcKey||'',pelKey:c.pelKey||'',petId:c.petId||'',tutorId:c.tutorId||'',estado:c.estado||'',groupKey:c.groupKey||'',contatoId:c.contatoId||'',cycleKeys:Array.isArray(c.cycleKeys)?c.cycleKeys.slice():[],itemKs:Array.isArray(c.itemKs)?c.itemKs.slice():[],escopoSha:c.escopoSha||'',humanoNome:c.existente&&c.existente.humano&&c.existente.humano.nome||'',motivoContato:c.motivoContato||''};})};
+  }
+  /* as linhas sem vínculo (`revisao_identidade`, `envios_indisponiveis`) chegam do núcleo só com a presença: a chave e o dia vêm dela */
+  function normalizar(c){if(c&&typeof c==='object'){if(!txt(c.dcKey))c.dcKey=txt(c.row&&c.row.chave);if(!txt(c.dia))c.dia=estado.dia||diaAtual();}return c;}
+  function indexar(result){
+    (result&&result.itens||[]).forEach(normalizar);estado.itens={};(result&&result.itens||[]).forEach(function(c){estado.itens[c.dcKey]=c;});
+    var pets=(result&&result.itens||[]).map(function(c){var d=descPet(c);d.grupo=T.grupoDoPet(d);return d;});
+    estado.ordemDepois=depois1330();estado.grupos=T.ordenar(pets,estado.ordemDepois);
+  }
+  function precisaLer(){var pe=projEmAtual();return !estado.resultado||estado.sujo||estado.dia!==diaAtual()||(!!pe&&pe!==estado.projEm);}
+  async function lerTudo(){
+    if(estado.inFlight)return estado.inFlight;
+    var req=++estado.seq,alvos=alvosAtuais(),pe=projEmAtual();
+    if(!estado.resultado)alvos.forEach(function(el){el.innerHTML=montarMarkup();el.setAttribute('data-zt694-ok','1');});
     estado.inFlight=(async function(){try{
-      if(!estado.api)estado.api=ZelozinhaContatosHoje89.criar({db:DB,dia:zPainel44Dia,linhasHoje:hojeLista,pelKey:pelKey,dcKey:dcKey,pelExtra:pelExtra,vencItensDe:vencItensDe,tipoCuidado:function(item){var fontes=window.ZeluzPrevencaoFontes;return fontes&&typeof fontes.tipoCuidado==='function'?fontes.tipoCuidado(item):'';},autor:function(){var u=usuarioAtual()||{};return{id:String(u.monId||u.id||u.uid||'').trim(),nome:String(u.pessoa||u.nome||'').trim(),role:String(u.role||u.papel||'').trim()};},permissao:function(){return typeof zPainel44Despacho80Acesso==='function'&&zPainel44Despacho80Acesso()===true;},serverTimestamp:function(){return window.firebase&&firebase.database&&firebase.database.ServerValue&&firebase.database.ServerValue.TIMESTAMP;},painel:function(){var b=window.ZeluzRespostaApp88;return b&&typeof b.painel==='function'?b.painel():null;},lerPainel:lerProjecao,resolverEnvio:function(groupKey){var b=window.ZeluzRespostaApp88;if(!b||typeof b.resolverGrupo!=='function')return Promise.resolve(null);return b.resolverGrupo({groupKey:groupKey});}});
-      var dados=await Promise.all([estado.api.listar(true),lerProjecao()]),result=dados[0];estado.projecao=dados[1];if(req!==estado.seq)return;
-      window.Z94_CONTATOS_HUMANOS={dia:result&&result.dia||'',itens:(result&&result.itens||[]).map(function(c){return{dcKey:c.dcKey||'',pelKey:c.pelKey||'',petId:c.petId||'',tutorId:c.tutorId||'',estado:c.estado||'',groupKey:c.groupKey||'',contatoId:c.contatoId||'',cycleKeys:Array.isArray(c.cycleKeys)?c.cycleKeys.slice():[],itemKs:Array.isArray(c.itemKs)?c.itemKs.slice():[],escopoSha:c.escopoSha||'',humanoNome:c.existente&&c.existente.humano&&c.existente.humano.nome||'',motivoContato:c.motivoContato||''};})};
-      var html=renderMarkup(result);alvos.forEach(function(el){el.innerHTML=html;});
-    }catch(e){if(req!==estado.seq)return;alvos.forEach(function(el){el.innerHTML='<p class="pm-sub">Não foi possível confirmar as fontes de hoje. Nenhuma ação foi registrada.</p>';});}finally{if(req===estado.seq)estado.renderedTargets=Array.prototype.slice.call(document.querySelectorAll('[data-z89-contatos]'));estado.inFlight=null;}})();await estado.inFlight;
+      if(!estado.api)criarApi();
+      var dados=await Promise.all([estado.api.listar(true),lerProjecao(),lerVeterinaria()]),result=dados[0];
+      if(req!==estado.seq)return;
+      estado.erro='';estado.linhas={};estado.resultado=result;estado.projecao=dados[1];estado.vet=dados[2];estado.dia=result&&result.dia||diaAtual();estado.projEm=pe;estado.sujo=false;estado.avisos={};estado.msgs={};estado.copiaSt={};estado.agora94={};
+      indexar(result);publicarHumanos();
+      pintar(alvosAtuais(),true);programarRelogio();
+      garantirDia(estado.recarregarDia,false);
+    }catch(e){
+      if(req!==estado.seq)return;
+      estado.erro='Não foi possível confirmar as fontes de hoje. Nenhuma ação foi registrada.';estado.resultado=null;
+      alvosAtuais().forEach(function(el){el.innerHTML=montarMarkup();el.setAttribute('data-zt694-ok','1');});
+    }finally{estado.inFlight=null;}})();
+    return estado.inFlight;
+  }
+  async function render(forcar){
+    var alvos=alvosAtuais();estado.alvos=alvos;if(!alvos.length)return;
+    var novos=alvos.filter(function(el){return el.getAttribute('data-zt694-ok')!=='1';});
+    if(forcar===true){estado.sujo=true;if(estado.inFlight){await estado.inFlight;}return lerTudo();}
+    if(novos.length)anexar(novos);
+    if(precisaLer())return lerTudo();
+  }
+  /* `esperado`: {cycleKey: valor da resposta} — se o registro em memória ainda não mostra a resposta nova (o `registrar` só o refaz quando conhece o destino), lê só o registro deste FILHOt. */
+  async function atualizarLinha(dc,esperado){
+    var c0=estado.itens[dc];if(!c0)return null;
+    var novo=null;
+    try{novo=await estado.api.atualizarUm(dc,estado.projecao);}catch(_){novo=undefined;}
+    if(novo){normalizar(novo);estado.itens[dc]=novo;var arr=estado.resultado&&estado.resultado.itens||[];for(var k=0;k<arr.length;k++){if(arr[k].dcKey===dc){arr[k]=novo;break;}}}
+    var c=estado.itens[dc];
+    if(esperado&&c){
+      var ok=(c.ciclos||[]).every(function(cy){return !(cy.cycleKey in esperado)||valorAtual(respostaAtual(c,cy))===esperado[cy.cycleKey];});
+      if(!ok)await lerRegistro(c);
+    }
+    await trazerLinhasFaltando(estado.itens[dc]);
+    publicarHumanos();redesenharLinha(dc);
+    return novo;
+  }
+  async function lerRegistro(c){
+    try{var s=await DB.ref('daycare/vencimentos/'+c.dia+'/'+c.dcKey).once('value'),v=s&&typeof s.val==='function'?s.val():null;if(v&&typeof v==='object'){VENC_PEND[c.dia]=VENC_PEND[c.dia]||{};VENC_PEND[c.dia][c.dcKey]=JSON.parse(JSON.stringify(v));}return v;}catch(_){return null;}
+  }
+  /* A tela só LÊ os Lançamentos do dia e o Snoopy (uma vez por abertura ou por «Atualizar envios»); nunca troca o dia escolhido lá. */
+  function algumaLinhaDoDayCare(){return Object.keys(estado.itens).some(function(dc){return vmsDe(estado.itens[dc]).some(function(v){return daLinha(v.valor)&&v.tarefa&&v.tarefa.linha;});});}
+  function algumaLoja(){return Object.keys(estado.itens).some(function(dc){return vmsDe(estado.itens[dc]).some(function(v){return v.valor==='autorizar_loja'&&v.tarefa&&v.tarefa.linha;});});}
+  function repintarCuidadosDoDayCare(){Object.keys(estado.itens).forEach(function(dc){if(vmsDe(estado.itens[dc]).some(function(v){return daLinha(v.valor);}))redesenharLinha(dc);});}
+  /* Lê o Snoopy do dia e só diz «pronto» se o componente do Snoopy também está pronto: o resultado da leitura diz «pronto» mesmo quando o contexto dele mudou no meio
+     (os Lançamentos do dia foram relidos por outra tela) e ele recomeçou do zero; nesse caso lê de novo, sem forçar, até 3 vezes. */
+  async function snoopyPronto(forcar){
+    var leitura=forcar&&typeof dashSnoopy33Atualizar==='function'?dashSnoopy33Atualizar:dashSnoopy33Carregar;
+    for(var k=0;k<3;k++){
+      var r=typeof leitura==='function'?await leitura():null;
+      if(!r||r.estado!=='pronto')return false;
+      var inst=typeof dashSnoopy33Instancia==='function'?dashSnoopy33Instancia():null,st=inst&&typeof inst.estado==='function'?inst.estado():null;
+      if(!st||st.situacao==='pronto')return true;
+      leitura=dashSnoopy33Carregar;
+    }
+    return false;
+  }
+  /* O dia inteiro dos Lançamentos só é lido quando há resposta «loja» na tela (o Snoopy exige, AC6.4), uma vez por abertura; com «bolsa» e sem «loja» a tela lê só o nó de cada linha que mostra.
+     `noToque`: chamado pelo fim de um toque; o toque nunca relê o dia que já foi lido nesta abertura, porque cada leitura do dia faz o app refazer as próprias telas (`hojeRedesenhar`), e isso relê todos os presentes. */
+  function garantirDia(forcar,noToque){
+    if(estado.diaLendo)return estado.diaLendo;
+    if(!algumaLinhaDoDayCare())return Promise.resolve();
+    var hoje=estado.dia,precisaSn=algumaLoja();
+    if(!precisaSn){
+      if(noToque)return Promise.resolve();
+      estado.diaLendo=(async function(){
+        try{await Promise.all(Object.keys(estado.itens).map(function(dc){return trazerLinhasFaltando(estado.itens[dc]);}));}
+        catch(_){/* silencioso de propósito: sem a linha a tela diz «Conferindo as escolhas…» e «Atualizar envios» tenta de novo */}
+        finally{estado.diaLendo=null;repintarCuidadosDoDayCare();}
+      })();
+      return estado.diaLendo;
+    }
+    if(!forcar&&estado.diaCarregado===hoje&&(estado.snoopyEstado==='pronto'||!precisaSn))return Promise.resolve();
+    var diaJaLido=!forcar&&estado.diaCarregado===hoje&&linhaPronta(hoje);
+    estado.recarregarDia=false;
+    estado.diaLendo=(async function(){
+      try{
+        if(typeof dashDia!=='function'||typeof dashCarregar!=='function'){estado.snoopyEstado='falhou';return;}
+        if(dashDia()!==hoje){estado.snoopyEstado='fora-do-dia';return;}
+        if(precisaSn){estado.snoopyEstado='carregando';repintarCuidadosDoDayCare();}
+        if(!diaJaLido)await dashCarregar();
+        if(dashDia()!==hoje){estado.snoopyEstado='fora-do-dia';return;}
+        estado.diaCarregado=hoje;
+        if(precisaSn)estado.snoopyEstado=(await snoopyPronto(forcar))?'pronto':'falhou';
+        else if(estado.snoopyEstado==='novo'||estado.snoopyEstado==='carregando')estado.snoopyEstado='novo';
+      }catch(_){estado.snoopyEstado='falhou';}
+      finally{estado.diaLendo=null;repintarCuidadosDoDayCare();}
+    })();
+    return estado.diaLendo;
+  }
+  /* ---------- as 13h30 e a virada do dia: relabel no lugar, sem reler e sem mudar a rolagem ---------- */
+  function programarRelogio(){
+    if(estado.timer)clearTimeout(estado.timer);estado.timer=null;
+    var dia=estado.dia||diaAtual();if(!dia)return;
+    var t=T.msAte1330(agora(),dia),p=dia.split('-').map(Number),prox=new Date(Date.UTC(p[0],p[1]-1,p[2]+1)).toISOString().slice(0,10),virada=Date.parse(prox+'T00:00:00-03:00')-agora();
+    var espera=t>0?Math.min(t,virada):virada;
+    if(!(espera>0))return;
+    estado.timer=setTimeout(function(){estado.timer=null;if(agora()>=Date.parse(prox+'T00:00:00-03:00')){estado.sujo=true;render(false);}else atualizarRetornos();programarRelogio();},espera+50);
+  }
+  /* ---------- as ações ---------- */
+  function avisoLinha(dc,i,texto){estado.avisos[dc+'|'+i]=texto||'';}
+  async function snoopyConfirmadoDe(c,item,id){
+    try{
+      var s=await DB.ref('daycare/snoopy/'+c.dia+'/'+item+'/'+id).once('value'),reg=s&&typeof s.val==='function'?s.val():null,ev=reg&&reg.eventos&&typeof reg.eventos==='object'?reg.eventos:{},anuladas={};
+      Object.keys(ev).forEach(function(k){var e=ev[k];if(e&&e.tipo==='desfazer-confirmacao'&&e.alvoOperacaoId)anuladas[e.alvoOperacaoId]=true;});
+      return Object.keys(ev).some(function(k){var e=ev[k];return !!e&&(e.tipo==='confirmacao'||!e.tipo)&&!anuladas[k];});
+    }catch(_){return null;}
+  }
+  async function registrarGrupo(c,lista,valor,mapa){
+    var bridge=window.ZeluzRespostaApp88;if(!bridge||typeof bridge.registrar!=='function')throw Error('a resposta não está disponível agora');
+    var enviada=lista[0].st.enviada,gk=lista[0].grupo;
+    if(!enviada){
+      if(mapa[0]==='aguardar'&&c.estado!=='feito'){if(!estado.api||typeof estado.api.marcarRetorno!=='function')throw Error('acompanhamento humano indisponível');await estado.api.marcarRetorno(c);c.estado='retorno_pendente';}
+      else if(mapa[0]!=='aguardar'&&c.estado!=='feito'){await estado.api.marcar(c);c.estado='feito';}
+    }
+    var itens=lista.map(function(v){return{cycleKey:v.cy.cycleKey,itemK:v.cy.itemK,decisao:mapa[0],origem:mapa[1],onde:'',baseRevision:v.atual&&Number.isInteger(v.atual.revisao)?v.atual.revisao:-1};});
+    var op=enviada?{petId:c.petId}:{petId:c.petId,contatoId:c.contatoId,fonteContato:c};op.semAtualizarPainel=true;
+    var r=await bridge.registrar(gk,itens,op);
+    if(!r||!r.ok)throw Error(r&&r.motivo||'fontes não confirmadas');
+    return r;
+  }
+  function marcarSalvando(c,idxs,btn){
+    estado.salvando[c.dcKey]=true;
+    var art=document.querySelector('[data-zt694-pet="'+encodeURIComponent(c.dcKey)+'"]');
+    if(art)Array.prototype.forEach.call(art.querySelectorAll('[data-zt694-acao="resp"],[data-zt694-acao="todos"],[data-zt694-acao="esc"]'),function(b){b.disabled=true;});
+    if(btn)btn.textContent='Salvando…';
+    dizerNaLinha(c.dcKey,'Salvando a resposta…');
+  }
+  async function responder(c,idxs,valor,btn){
+    var dc=c.dcKey;if(estado.salvando[dc])return;
+    var mapa=mapaDe(valor);if(!mapa)return;
+    var vms=idxs.map(function(i){return vmCuidado(c,c.ciclos[i]);});
+    if(vms.some(function(v){return v.bloqueado;})){dizerNaLinha(dc,'A resposta não está disponível agora. Atualize e confira.');return;}
+    if(!window.ZeluzRespostaApp88||typeof window.ZeluzRespostaApp88.registrar!=='function'){dizerNaLinha(dc,'A resposta não está disponível agora. Atualize e confira.');return;}
+    var troca=null;
+    if(idxs.length===1){
+      var v0=vms[0],l0=v0.tarefa&&v0.tarefa.linha,sn=null;
+      if(v0.valor==='autorizar_loja'&&l0&&l0.id){sn=await snoopyConfirmadoDe(c,l0.item,l0.id);if(sn===null){dizerNaLinha(dc,'Não consegui conferir o Snoopy. Nada foi trocado.');return;}}
+      troca=T.decidirTroca({antes:v0.valor,depois:valor,tarefa:txt(v0.tarefa&&v0.tarefa.estado),snoopyConfirmado:sn===true});
+      if(troca.tipo==='barrar'){avisoLinha(dc,idxs[0],'');dizerNaLinha(dc,troca.frase);redesenharLinha(dc);return;}
+      if(troca.tipo==='anular'||troca.tipo==='completar')return trocarComAnulacao(c,v0,idxs[0],valor,{soCompletar:troca.tipo==='completar'});
+    }
+    return gravarRespostas(c,idxs,vms,valor,mapa,btn);
+  }
+  async function gravarRespostas(c,idxs,vms,valor,mapa,btn){
+    var dc=c.dcKey,antes=vms.map(function(v){return T.rotuloResposta(v.valor);}),porGrupo={},ordem=[],salvos=[],falhos=[],tarefaFalhou=false;
+    vms.forEach(function(v){if(!porGrupo[v.grupo]){porGrupo[v.grupo]=[];ordem.push(v.grupo);}porGrupo[v.grupo].push(v);});
+    marcarSalvando(c,idxs,btn);
+    for(var g=0;g<ordem.length;g++){
+      var lista=porGrupo[ordem[g]];
+      try{var r=await registrarGrupo(c,lista,valor,mapa);salvos=salvos.concat(lista);if(daLinha(valor)&&r.tarefa&&r.tarefa.ok===false)tarefaFalhou=true;}
+      catch(e){falhos.push({lista:lista,erro:e});}
+    }
+    var esperado={};salvos.forEach(function(v){esperado[v.cy.cycleKey]=valor;var lv=v.tarefa&&v.tarefa.linha;if(lv&&lv.id&&lv.item)delete estado.linhas[chaveLinha(c.dia,lv.item,lv.id)];});/* a resposta pode ter mudado a origem da linha (de bolsa para loja e o contrário): a cópia lida antes ficou velha e é lida de novo */
+    await atualizarLinha(dc,esperado);
+    delete estado.salvando[dc];
+    var depoisRot=T.rotuloResposta(valor),c2=estado.itens[dc]||c;
+    salvos.forEach(function(v){
+      var i=c.ciclos.indexOf(v.cy),rv=respostaAtual(c2,v.cy),nome=nomeDe(rv),h=T.hora(Number(rv&&rv.ts));
+      estado.agora94[dc+'|'+i]=true;
+      var a=antes[vms.indexOf(v)];
+      var texto=a&&a!==depoisRot?('Trocada de '+a+' para '+depoisRot+' por '+nome+(h?' às '+h:'')+'.'):('Resposta salva por '+nome+(h?' às '+h:'')+'.');
+      avisoLinha(dc,i,texto);
+      if(a&&a!==depoisRot){try{if(typeof audit==='function')audit('resposta-zelozinha',nomePet(c)+' — '+itemNome(v.cy)+': de «'+a+'» para «'+depoisRot+'»',{pet:nomePet(c)});}catch(_){/* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */}}
+    });
+    if(falhos.length){
+      var quais=falhos.map(function(f){return f.lista.map(function(v){return itemNome(v.cy);}).join(', ');}).join('; ');
+      var motivo=falhos[0].erro&&falhos[0].erro.message||'fontes não confirmadas';
+      var ok=salvos.length?(salvos.map(function(v){return itemNome(v.cy);}).join(', ')+' salvou. '):'';
+      var conflito=/conflito/i.test(motivo);
+      if(conflito){await lerRegistro(c2);await atualizarLinha(dc);var rvx=respostaAtual(estado.itens[dc]||c2,falhos[0].lista[0].cy);dizerNaLinha(dc,nomeDe(rvx)+' respondeu agora: '+(T.rotuloResposta(valorAtual(rvx))||'outra resposta')+'. Nada foi trocado.');}
+      else dizerNaLinha(dc,ok+'Não foi possível salvar: '+quais+' ('+motivo+'). A escolha continua aqui para tentar novamente.');
+    }else{
+      dizerNaLinha(dc,tarefaFalhou?'Resposta salva, mas a tarefa do Day Care ainda não foi criada.':'');
+    }
+    redesenharLinha(dc);
+    garantirDia(false,true);
+    for(var s=0;s<salvos.length;s++){var vv=salvos[s];if(!falhos.length&&daLinha(valor)&&!tarefaFalhou)await preMarcar(estado.itens[dc]||c,vv.cy);}
+  }
+  async function preMarcar(c,cy){
+    var q=preMarcaQtd(c,cy);if(!q)return;
+    var v=vmCuidado(c,cy),l=v.tarefa&&v.tarefa.linha;if(!l||!l.id)return;
+    try{await gravarEscolha(c,cy,'qtd',q,{silencioso:true});}catch(_){/* silencioso de propósito: a dose pré-marcada é ajuda; a pessoa ainda escolhe com um toque */}
+  }
+  /* A escolha de produto e lugar completa o `det` da MESMA linha do Day Care, só a da mesma resposta e revisão; nunca a célula (`valor`). */
+  async function gravarEscolha(c,cy,campo,valor,op){
+    op=op||{};var dc=c.dcKey,i=c.ciclos.indexOf(cy),v0=vmCuidado(c,cy),l=v0.tarefa&&v0.tarefa.linha;
+    function nao(frase){if(!op.silencioso){avisoLinha(dc,i,frase);redesenharLinha(dc);}return false;}
+    if(!l||!l.id||!l.item)return nao('A linha do Day Care ainda não existe para este cuidado.');
+    var sem=estado.salvando[dc];if(sem&&!op.silencioso)return false;
+    await lerRegistro(c);
+    var rv=respostaAtual(c,cy),tarefa=tarefaDe(c,cy),vv=valorAtual(rv);
+    if(!rv||!daLinha(vv))return nao('A resposta mudou; atualize e confira.');
+    var cobravel=vv==='autorizar_loja'||valor==='LOJA'||(function(){var ln=linhaDoDia(c,l.item,l.id);return !ln||String(ln.det&&ln.det.onde||'').toUpperCase()==='LOJA';})(),sn=false;
+    if(cobravel){sn=await snoopyConfirmadoDe(c,l.item,l.id);if(sn===null)return nao('Não consegui conferir o Snoopy. Nada foi gravado.');}
+    var pode=T.podeEscolher({tarefaEstado:txt(tarefa&&tarefa.estado),snoopyConfirmado:sn===true});
+    if(!pode.ok)return nao(pode.frase);
+    var padrao=campo==='onde'?T.ondePadrao(vv):'',esperado={linhaId:l.id,respostaId:rv.respostaId,revisao:rv.revisao};
+    var ref=DB.ref('daycare/dashboard/'+c.dia+'/'+l.item+'/'+l.id),res=null;
+    var warm=await ref.once('value');if(!(warm&&typeof warm.val==='function'&&warm.val()&&typeof warm.val()==='object'))return nao('A linha do Day Care não foi encontrada. Atualize e confira.');
+    var tx=await ref.transaction(function(atual){res=T.mesclarEscolha(atual,esperado,{campo:campo,valor:valor,padrao:padrao});if(!res.ok||!res.mudou)return;return res.linha;},undefined,false);
+    if(res&&!res.ok)return nao(res.frase||'A linha mudou; atualize e confira.');
+    if(tx&&tx.committed&&res&&res.ok){
+      var nova=tx.snapshot&&typeof tx.snapshot.val==='function'?tx.snapshot.val():res.linha;
+      estado.linhas[chaveLinha(c.dia,l.item,l.id)]=nova;
+      try{if(linhaPronta(c.dia)){DASH_DADOS[l.item]=DASH_DADOS[l.item]||{};DASH_DADOS[l.item][l.id]=nova;}}catch(_){/* silencioso de propósito: o desenho lê o que está na memória; o banco já tem a escolha */}
+    }else if(!(res&&res.ok&&!res.mudou))return nao('Não foi possível gravar a escolha agora. Tente de novo.');
+    avisoLinha(dc,i,'');redesenharLinha(dc);return true;
+  }
+  function capacidadeCartaz(){try{if(typeof podePapel!=='function')return '';if(podePapel('painel-consultoras'))return 'painel-consultoras';if(podePapel('painel-amanda'))return 'painel-amanda';}catch(_){return '';}return '';}
+  async function lerLinha(dia,item,id){try{var s=await DB.ref('daycare/dashboard/'+dia+'/'+item+'/'+id).once('value');return s&&typeof s.val==='function'?s.val():null;}catch(_){return undefined;}}
+  /* Lê o nó de UM cuidado (o do FILHOt tocado) e o guarda; se os Lançamentos do dia já estão na memória e ainda não têm esta linha, ela entra lá também (o Snoopy a procura ali). */
+  async function trazerLinha(c,l){
+    var v=await lerLinha(c.dia,l.item,l.id);
+    if(v&&typeof v==='object'){
+      estado.linhas[chaveLinha(c.dia,l.item,l.id)]=v;
+      try{if(linhaPronta(c.dia)){DASH_DADOS[l.item]=DASH_DADOS[l.item]||{};DASH_DADOS[l.item][l.id]=JSON.parse(JSON.stringify(v));}}catch(_){/* silencioso de propósito: o desenho já tem a linha em `estado.linhas`; a memória dos Lançamentos se acerta na próxima leitura do dia */}
+    }
+    return v;
+  }
+  async function trazerLinhasFaltando(c){
+    if(!c)return;
+    var faltam=vmsDe(c).filter(function(v){return daLinha(v.valor)&&v.tarefa&&v.tarefa.linha&&v.tarefa.linha.id&&v.tarefa.linha.item&&!linhaDoDia(c,v.tarefa.linha.item,v.tarefa.linha.id);}).map(function(v){return v.tarefa.linha;});
+    await Promise.all(faltam.map(function(l){return trazerLinha(c,l);}));
+  }
+  /* AC9.2: trocar a resposta quando a anterior criou a linha do Day Care e a nova não é bolsa nem loja: o cartaz «Anular» da 6.57. */
+  async function trocarComAnulacao(c,v,i,valor,op){
+    op=op||{};var dc=c.dcKey,l=v.tarefa&&v.tarefa.linha,cap=capacidadeCartaz();
+    function parar(frase){dizerNaLinha(dc,frase);redesenharLinha(dc);return false;}
+    if(!cap||typeof window.corrAbrir!=='function')return parar('Para tirar este cuidado da lista do Day Care é preciso a senha de quem tem acesso a este painel. Nada foi trocado.');
+    if(!l||!l.id||!l.item)return parar(T.FRASE_TROCA_APLICADO);
+    if(typeof dashDia==='function'&&dashDia()!==c.dia)return parar('Os Lançamentos do dia estão abertos em outro dia. Abra o dia de hoje e tente de novo. Nada foi trocado.');
+    var linha=await lerLinha(c.dia,l.item,l.id);
+    if(linha===undefined)return parar('Não consegui conferir a linha do Day Care. Nada foi trocado.');
+    if(linha&&linha.edicao_pendente)return parar('Conclua ou reenvie a alteração de hora antes de tirar este lançamento. Nada foi trocado.');
+    if(linha&&txt(linha.det&&linha.det.cuidado57_estado)==='realizado-conferido')return parar(T.FRASE_TROCA_APLICADO);
+    var sn=v.valor==='autorizar_loja'?await snoopyConfirmadoDe(c,l.item,l.id):false;
+    if(sn===null)return parar('Não consegui conferir o Snoopy. Nada foi trocado.');
+    var pend=null;try{if(linha&&typeof pendItemConta==='function'&&pendItemConta(l.item)&&typeof pendLigadaDoLancamento==='function')pend=await pendLigadaDoLancamento(l.item,l.id,linha,c.dia);}catch(_){pend=null;}
+    var antesRot=T.rotuloResposta(v.valor),depoisRot=T.rotuloResposta(valor),cuidado=itemNome(v.cy);
+    var cascata=['A linha «'+cuidado+'» de '+nomePet(c)+' sai da lista do Day Care de hoje, do cartão do Encãotador e da TV.','A tarefa do Day Care deixa de valer.'];
+    if(v.valor==='autorizar_loja')cascata.push(sn?'A confirmação do Snoopy continua no histórico do Snoopy, mas a linha sai.':'A pendência do Snoopy sai junto.');
+    if(pend&&typeof pendLigFrase==='function')cascata.push(pendLigFrase(pend));
+    dizerNaLinha(dc,'');
+    var res=await window.corrAbrir({acao:'anular',nivel:'propria',capacidade:cap,titulo:op.soCompletar?'Tirar o cuidado da lista do Day Care':'Trocar a resposta e tirar o cuidado da lista do Day Care',
+      oque:'o cuidado «'+cuidado+'» de '+nomePet(c)+' na lista do Day Care',tela:'Contatos e respostas de hoje',original:{caminho:'daycare/dashboard/'+c.dia+'/'+l.item+'/'+l.id,id:l.id},estado:'na lista do Day Care',cascata:cascata,
+      botao:op.soCompletar?'Tirar da lista':'Trocar e tirar da lista',
+      gravar:function(reg){return gravarTroca(c,v,i,valor,l,reg,op,pend);}});
+    var ok=!!(res&&res.ok);
+    await atualizarLinha(dc,null);
+    var c2=estado.itens[dc]||c,rv=respostaAtual(c2,v.cy);
+    if(ok){var nome=nomeDe(rv),h=T.hora(Number(rv&&rv.ts));avisoLinha(dc,i,(op.soCompletar?'Tirada da lista do Day Care por ':'Trocada de '+antesRot+' para '+depoisRot+' por ')+nome+(h?' às '+h:'')+'.');estado.agora94[dc+'|'+i]=true;}
+    else if(res&&res.erro&&!res.cancelado)dizerNaLinha(dc,String(res.erro&&res.erro.message||res.erro));
+    redesenharLinha(dc);
+    return ok;
+  }
+  async function gravarTroca(c,v,i,valor,l,reg,op,pend){
+    var dc=c.dcKey,mapa=mapaDe(valor),depoisRot=T.rotuloResposta(valor),antesRot=T.rotuloResposta(v.valor),feitos=[];
+    if(!op.soCompletar){
+      try{
+        var v1=vmCuidado(estado.itens[dc]||c,v.cy);
+        await registrarGrupo(estado.itens[dc]||c,[v1],valor,mapa);feitos.push('A resposta foi trocada para «'+depoisRot+'».');
+        await lerRegistro(estado.itens[dc]||c);
+      }catch(e){return{ok:false,erro:/conflito/i.test(String(e&&e.message))?'Outra pessoa respondeu agora. Nada foi trocado nem tirado da lista.':'A resposta não foi trocada ('+(e&&e.message||'fontes não confirmadas')+'). Nada foi tirado da lista.'};}
+    }
+    var refLinha=DB.ref('daycare/dashboard/'+c.dia+'/'+l.item+'/'+l.id),removida=null;
+    try{
+      var lido=await refLinha.once('value'),atual=lido&&typeof lido.val==='function'?lido.val():null;removida=atual;
+      if(atual){
+        var tx=await refLinha.transaction(function(x){if(x===null||x===undefined)return;var o=x.origemVencimento||{};if(o.protocolo!=='cuidado57'||String(o.linhaId||'')!==String(l.id))return;if(x.det&&x.det.cuidado57_estado==='realizado-conferido')return;if(x.edicao_pendente)return;return null;},undefined,false);
+        if(!tx||tx.committed!==true)throw Error('a linha mudou ou já foi aplicada');
+      }
+      delete estado.linhas[chaveLinha(c.dia,l.item,l.id)];
+      try{if(typeof DASH_DADOS!=='undefined'&&DASH_DADOS&&DASH_DADOS[l.item])delete DASH_DADOS[l.item][l.id];}catch(_){/* silencioso de propósito: o banco já tirou a linha; a memória se acerta na próxima leitura */}
+      feitos.push('A linha saiu da lista do Day Care.');
+    }catch(e){return{ok:false,erro:(feitos.join(' ')+' Mas a linha do Day Care ainda não saiu ('+(e&&e.message||'sem resposta')+'). Toque em «Tirar da lista do Day Care» para completar.').trim()};}
+    try{
+      var refReg=DB.ref('daycare/vencimentos/'+c.dia+'/'+c.dcKey),ck=codificar(v.cy);
+      await refReg.once('value');
+      var tx2=await refReg.transaction(function(reg0){
+        if(!reg0||!reg0.respostasEscopo49||!reg0.respostasEscopo49.tarefas57)return;
+        var t0=reg0.respostasEscopo49.tarefas57[ck];if(!t0||t0.estado==='realizado'||t0.estado==='emexecucao')return;
+        var atualR=reg0.respostasEscopo49.porCiclo&&reg0.respostasEscopo49.porCiclo[ck];
+        if(atualR&&(atualR.decisao==='autorizar'&&(atualR.origem==='bolsa'||atualR.origem==='loja')))return;
+        var n=JSON.parse(JSON.stringify(reg0)),t1=n.respostasEscopo49.tarefas57[ck];t1.estado='invalida';t1.invalidadaEm=new Date().toISOString();delete t1.revisaoPendente;if(atualR)t1.ultimaVersao={respostaId:atualR.respostaId,revisao:atualR.revisao};
+        return n;
+      },undefined,false);
+      if(!tx2||tx2.committed!==true){var rg=tx2&&tx2.snapshot&&typeof tx2.snapshot.val==='function'?tx2.snapshot.val():null,t9=rg&&rg.respostasEscopo49&&rg.respostasEscopo49.tarefas57&&rg.respostasEscopo49.tarefas57[ck];if(!(t9&&t9.estado==='invalida'))throw Error('a tarefa mudou');}
+      await lerRegistro(c);
+      feitos.push('A tarefa do Day Care deixou de valer.');
+    }catch(e){return{ok:false,erro:(feitos.join(' ')+' Mas a tarefa ainda não foi marcada como sem efeito ('+(e&&e.message||'sem resposta')+'). Toque em «Tirar da lista do Day Care» para completar.').trim()};}
+    try{if(typeof audit==='function')audit('resposta-zelozinha',nomePet(c)+' — '+itemNome(v.cy)+(op.soCompletar?': tirado da lista do Day Care ('+reg.motivo+')':': de «'+antesRot+'» para «'+depoisRot+'»; saiu da lista do Day Care ('+reg.motivo+')'),{pet:nomePet(c)});}catch(_){/* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */}
+    try{
+      if(removida&&typeof dashRemoverDaPlanilha==='function')Promise.resolve(dashRemoverDaPlanilha(l.item,l.id,removida)).catch(function(){/* silencioso de propósito: a falha de TV já deixa rastro no próprio dashEspelhar */});
+      if(pend&&typeof pendReabrirPeloTirar==='function')pendReabrirPeloTirar(pend,{dia:c.dia,item:l.item,id:l.id,copia:removida});
+    }catch(_){/* silencioso de propósito: a TV e a pendência ligada se acertam sozinhas; o rastro ficou no audit */}
+    return{ok:true};
+  }
+  function caixaDoBotao(el){return el.closest('[data-zt694-copia]');}
+  function copiarTexto(el){
+    var box=caixaDoBotao(el),node=box&&box.querySelector('[data-zt694-texto]'),st=box&&box.querySelector('[data-zt694-copia-st]'),art=el.closest('[data-zt694-pet]');if(!node||!art)return;
+    var texto=node.textContent,idx=box.getAttribute('data-zt694-copia')||'0',dc='';try{dc=decodeURIComponent(art.getAttribute('data-zt694-pet')||'');}catch(_){dc='';}
+    function vivo(sel,velho){var x=document.querySelector('[data-zt694-pet="'+encodeURIComponent(dc)+'"] [data-zt694-copia="'+idx+'"] '+sel);return x||velho;}
+    function dizer(m){estado.copiaSt[dc+'|'+idx]={texto:texto,msg:m};var e=vivo('[data-zt694-copia-st]',st);if(e)e.textContent=m;}
+    var pronto=function(){dizer('Mensagem copiada.');};
+    function selecionar(){try{var r=document.createRange();r.selectNodeContents(vivo('[data-zt694-texto]',node));var s=window.getSelection();s.removeAllRanges();s.addRange(r);var ok=false;try{ok=document.execCommand('copy');}catch(_){ok=false;}if(ok){pronto();return;}}catch(_){/* silencioso de propósito: sem seleção o aviso abaixo diz o que fazer */}dizer('Selecione o texto para copiar.');}
+    try{if(navigator&&navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){navigator.clipboard.writeText(texto).then(pronto,selecionar);return;}}catch(_){/* silencioso de propósito: cai na seleção do texto */}
+    selecionar();
+  }
+  function abrirWhats(c,texto){var tel=telDe(c);if(!tel||typeof window.zWhatsAbrir!=='function')return false;return window.zWhatsAbrir(tel,texto||'');}
+  function tratarSnoopy(btn){
+    var m=/^\s*(\w+)\(this\)\s*$/.exec(btn.getAttribute('onclick')||''),f=m&&window[m[1]],caixa=btn.closest('[data-zt694-snoopy]'),art=btn.closest('[data-zt694-pet]');
+    if(typeof f!=='function'||!art)return;
+    var dc=decodeURIComponent(art.getAttribute('data-zt694-pet')),refazer=function(){refazerSnoopy(dc);};
+    try{Promise.resolve(f(btn)).then(refazer,refazer);}catch(_){refazer();}
+    if(caixa)caixa.setAttribute('aria-busy','true');
+  }
+  function refazerSnoopy(dc){
+    var c=estado.itens[dc];if(!c)return;
+    vmsDe(c).forEach(function(v){var l=v.tarefa&&v.tarefa.linha;if(!l||!l.id)return;
+      Array.prototype.forEach.call(document.querySelectorAll('[data-zt694-pet="'+encodeURIComponent(dc)+'"] [data-zt694-snoopy="'+esc(l.item+'|'+l.id)+'"]'),function(el){var tmp=document.createElement('div');tmp.innerHTML=snoopyHTML(c,v);var novo=tmp.firstElementChild;if(novo)el.replaceWith(novo);});});
+  }
+  function itemDoClique(el){
+    var art=el.closest('[data-zt694-pet]');if(!art)return null;
+    var dc='';try{dc=decodeURIComponent(art.getAttribute('data-zt694-pet')||'');}catch(_){dc='';}
+    var c=estado.itens[dc];return c?{c:c,art:art}:null;
+  }
+  function aoClicar(ev){
+    var t=ev.target&&ev.target.closest?ev.target:null;if(!t)return;
+    var reler=t.closest('[data-z44-reler]');if(reler){estado.sujo=true;estado.recarregarDia=true;estado.snoopyEstado='novo';return;}
+    var sn=t.closest('.zt694 [data-snoopy-item]');if(sn){ev.preventDefault();ev.stopPropagation();tratarSnoopy(sn);return;}
+    var el=t.closest('[data-zt694-acao]');if(!el)return;
+    var acao=el.getAttribute('data-zt694-acao');
+    if(acao==='ler-de-novo'){ev.preventDefault();estado.erro='';estado.sujo=true;lerTudo();return;}
+    if(acao==='snoopy-tentar'){ev.preventDefault();estado.snoopyEstado='novo';garantirDia(true,false);return;}
+    var d=itemDoClique(el);if(!d)return;ev.preventDefault();
+    var c=d.c,i=Number(el.getAttribute('data-zt694-ciclo')||0),cy=c.ciclos&&c.ciclos[i],valor=el.getAttribute('data-zt694-valor')||'';
+    if(el.disabled)return;
+    if(acao==='resp'){if(cy)responder(c,[i],valor,el);return;}
+    if(acao==='todos'){var vms=vmsDe(c),idxs=[];vms.forEach(function(v,k){if(!v.valor)idxs.push(k);});if(idxs.length>=2)responder(c,idxs,valor,el);return;}
+    var care=el.closest('[data-zt694-care]');var ic=care?Number(care.getAttribute('data-zt694-care')):i;cy=c.ciclos&&c.ciclos[ic];
+    if(acao==='esc'){if(cy)gravarEscolha(c,cy,el.getAttribute('data-zt694-campo')||'',valor,{});return;}
+    if(acao==='tarefa-tentar'){if(cy){var v=vmCuidado(c,cy);responder(c,[ic],v.valor,el);}return;}
+    if(acao==='completar'){if(cy){var v2=vmCuidado(c,cy);trocarComAnulacao(c,v2,ic,v2.valor,{soCompletar:true});}return;}
+    if(acao==='copiar'){copiarTexto(el);return;}
+    if(acao==='whats-texto'){var tx=el.closest('[data-zt694-copia]').querySelector('[data-zt694-texto]');abrirWhats(c,tx?tx.textContent:'');return;}
+    if(acao==='whats-vazio'){abrirWhats(c,'');return;}
+  }
+  /* A tela inteira pode ser refeita pelo painel (a projeção do serviço mudou, a hora virou, «Atualizar envios»): o que a pessoa via volta já no mesmo quadro. */
+  function instalarObservador(){
+    if(estado.obs||typeof MutationObserver!=='function'||!document.body)return;
+    estado.obs=new MutationObserver(function(){
+      if(estado.anexando)return;
+      var novos=alvosAtuais().filter(function(el){return el.getAttribute('data-zt694-ok')!=='1';});
+      if(!novos.length)return;
+      estado.anexando=true;try{anexar(novos);}finally{estado.anexando=false;}
+    });
+    estado.obs.observe(document.body,{childList:true,subtree:true});
   }
   var baseAtualizar=window.zPainel44Atualizar;if(typeof baseAtualizar==='function')window.zPainel44Atualizar=function(){var r=baseAtualizar.apply(this,arguments);Promise.resolve(r).then(function(){render(false);});return r;};
-  document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.matches&&d.matches('details.z89-card[data-z89-dc]')){var k='';try{k=decodeURIComponent(d.getAttribute('data-z89-dc')||'');}catch(_){}if(k)estado.abertos[k]=d.open;}},true);
-  document.addEventListener('click',function(ev){var bt=ev.target&&ev.target.closest?ev.target.closest('[data-z104-copiar]'):null;if(!bt)return;ev.preventDefault();var box=bt.closest('[data-z104-copy]'),ta=box&&box.querySelector('textarea'),av=box&&box.querySelector('[aria-live]');if(!ta)return;var pronto=function(){if(av)av.textContent='Mensagem copiada.';};try{if(navigator&&navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){navigator.clipboard.writeText(ta.value).then(pronto,function(){ta.focus();ta.select();});return;}}catch(_){}try{ta.focus();ta.select();document.execCommand('copy');pronto();}catch(_){if(av)av.textContent='Selecione o texto para copiar.';}},true);
-  document.addEventListener('click',function(ev){var b=ev.target&&ev.target.closest?ev.target.closest('[data-z89-escolha]'):null;if(!b)return;ev.preventDefault();if(b.disabled)return;var alvo=estado.itens[b.getAttribute('data-z89-escolha')],indice=Number(b.getAttribute('data-z89-ciclo')),cy=alvo&&alvo.ciclos&&alvo.ciclos[indice],bridge=window.ZeluzRespostaApp88,caixa=b.closest('[data-z89-resposta]'),cartao=b.closest('.z89-card'),status=cartao&&cartao.querySelector('.z89-status'),proj=alvo&&cy&&cuidadoProjetado(alvo,cy),situacao=statusCuidado(proj),grupo=situacao.enviada?grupoDoCiclo(alvo,cy):alvo&&alvo.groupKey;if(!alvo||!cy||!proj||!grupo||!bridge||typeof bridge.registrar!=='function'||!caixa){if(status)status.textContent='A resposta não está disponível agora. Atualize e confira.';return;}var mapa=b.value==='autorizar_loja'?['autorizar','loja']:b.value==='autorizar_bolsa'?['autorizar','bolsa']:b.value==='autorizar_externo'?['autorizar','externo']:['aguardar',null],atual=respostaAtual(alvo,cy),item={cycleKey:cy.cycleKey,itemK:cy.itemK,decisao:mapa[0],origem:mapa[1],onde:'',baseRevision:atual&&Number.isInteger(atual.revisao)?atual.revisao:-1};caixa.setAttribute('data-r88-salvando','1');Array.prototype.forEach.call(caixa.querySelectorAll('[data-z89-escolha]'),function(x){x.disabled=true;});if(status)status.textContent='Salvando a resposta deste cuidado…';Promise.resolve().then(async function(){if(!situacao.enviada){if(mapa[0]==='aguardar'&&alvo.estado!=='feito'){if(!estado.api||typeof estado.api.marcarRetorno!=='function')throw Error('acompanhamento humano indisponível');await estado.api.marcarRetorno(alvo);alvo.estado='retorno_pendente';}else if(mapa[0]!=='aguardar'&&alvo.estado!=='feito'){await estado.api.marcar(alvo);alvo.estado='feito';}}var op=situacao.enviada?{petId:alvo.petId}:{petId:alvo.petId,contatoId:alvo.contatoId,fonteContato:alvo};var r=await bridge.registrar(grupo,[item],op);if(!r||!r.ok)throw Error(r&&r.motivo||'fontes não confirmadas');if(status)status.textContent=r.aviso||'Resposta salva para este cuidado.';await render(true);}).catch(function(e){if(status)status.textContent='Não foi possível salvar: '+(e&&e.message||'fontes não confirmadas')+'. A escolha continua aqui para tentar novamente.';caixa.removeAttribute('data-r88-salvando');Array.prototype.forEach.call(caixa.querySelectorAll('[data-z89-escolha]'),function(x){x.disabled=false;});});
-  });
-  instalarEstilo();window.z89Render104=render;setTimeout(function(){render(false);},0);
+  document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.matches&&d.matches('details[data-zt694-aberto]'))estado.abertos[d.getAttribute('data-zt694-aberto')]=d.open;},true);
+  document.addEventListener('click',aoClicar,true);
+  window.addEventListener('scroll',function(){
+    if(!document.querySelector('[data-zt694-ok]'))return;
+    estado.scrollY=window.pageYOffset;
+    if(!estado.vistaAgendada){estado.vistaAgendada=true;(window.requestAnimationFrame||setTimeout)(function(){estado.vistaAgendada=false;anotarVista();});}
+  },{passive:true});
+  instalarEstilo();instalarObservador();window.z89Render104=render;setTimeout(function(){render(false);},0);
 })();</script>
 </html>
