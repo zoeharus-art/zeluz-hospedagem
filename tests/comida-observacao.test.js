@@ -951,7 +951,8 @@ prova('R', 'AC14.1 — área protegida: as funções ck*/ckt*/pt* e pendAvisarCh
   const daycare = (html) => { const L = html.split('\n'); const i = L.findIndex((l) => l.indexOf('<section class="view" id="v-daycare">') >= 0); let j = i + 1; while (j < L.length && L[j].indexOf('<section class="view"') < 0) j++; return L.slice(i, j).join('\n'); };
   igual(h16(daycare(ARQ.html)), h16(daycare(arqBase().html)), '#v-daycare');
   const ver = (h) => (/const APP_VERSAO='([^']+)';/.exec(h) || [])[1];
-  igual(ver(ARQ.html), ver(arqBase().html), 'APP_VERSAO não muda');
+  // A versão só muda no commit de versão do pull request: igual à base ou maior, nunca menor.
+  assert.ok(ver(ARQ.html) && ver(ARQ.html) >= ver(arqBase().html), 'APP_VERSAO igual ou maior que a da base: ' + ver(ARQ.html) + ' × ' + ver(arqBase().html));
 });
 prova('R', 'AC14.2 — o módulo mudou, então o ?v= da linha dele trocou (2026-10-22-01); os outros ?v= iguais à base', () => {
   const v = (h, f) => (new RegExp('<script src="' + f.replace(/\./g, '\\.') + '\\?v=([^"]+)"></script>').exec(h) || [])[1];
