@@ -1359,7 +1359,7 @@ async function main() {
       pelExtra: ctx.pelExtra, audit: ctx.audit, zAlertao: ctx.zAlertao,
       setTimeout: ctx.setTimeout, EMP_TG: ctx.EMP_TG, EMP_AVISOS: ctx.EMP_AVISOS,
       EMP_ATRASO: ctx.EMP_ATRASO, a1: ctx.__empAlm1, a2: ctx.__empAlm2,
-      geb: ctx.document.getElementById,
+      geb: ctx.document.getElementById, almTgDiaDaSemana: ctx.almTgDiaDaSemana,
     };
     ctx.__bkpTg = {};
     vm.runInContext('__bkpTg.DB = DB;', ctx);
@@ -1392,6 +1392,9 @@ async function main() {
       ctx.turmaDoDia = () => [{ p: { n: 'Camus', tutor: 'Sophia', raca: 'Maltês' } }];
       ctx.pessoaDoTurno = () => 'Octávio';
       ctx.horaAgora = () => '15:33';
+      // 6.117 (AC8.2): a guarda do prazo olha a hora E o dia da semana — uma quarta, para a prova
+      // dar o mesmo resultado em qualquer dia em que a rodada rode (no domingo nada vai ao grupo).
+      ctx.almTgDiaDaSemana = () => 3;
       ctx.quemSou = () => 'Octávio';
       ctx.pelExtra = () => ({ sexo: 'M' });
       ctx.audit = function (a, d) { auditados.push({ acao: String(a || ''), detalhe: String(d == null ? '' : d) }); };
@@ -1481,8 +1484,10 @@ async function main() {
         /Promise\.race/.test(String(ctx.avisarGrupoComida || '')));
       check('avisarGrupoComida grava o rastro tentando',
         /tentando/.test(String(ctx.avisarGrupoComida || '')));
-      check('empAvisarAtrasoNoTelegram registra as falhas do envio',
-        /falhas/.test(String(ctx.empAvisarAtrasoNoTelegram || '')));
+      // 6.117: o lembrete do dia seguinte (empAvisarAtrasoNoTelegram) saiu — à meia-noite ele mandava
+      // ao grupo o almoço de ontem. Prova do contrário: a função não existe mais.
+      check('6.117: o lembrete do dia seguinte não existe mais (nada do almoço de ontem vai ao grupo)',
+        typeof ctx.empAvisarAtrasoNoTelegram === 'undefined' && typeof ctx.empChecarAtrasoDiario === 'undefined');
     } finally {
       vm.runInContext('DB = __bkpTg.DB;', ctx);
       ctx.TG_CFG = bkp.TG_CFG; ctx.tgAvisar = bkp.tgAvisar; ctx.turmaDoDia = bkp.turmaDoDia;
@@ -1490,7 +1495,7 @@ async function main() {
       ctx.pelExtra = bkp.pelExtra; ctx.audit = bkp.audit; ctx.zAlertao = bkp.zAlertao;
       ctx.setTimeout = bkp.setTimeout; ctx.EMP_TG = bkp.EMP_TG; ctx.EMP_AVISOS = bkp.EMP_AVISOS;
       ctx.EMP_ATRASO = bkp.EMP_ATRASO; ctx.__empAlm1 = bkp.a1; ctx.__empAlm2 = bkp.a2;
-      ctx.document.getElementById = bkp.geb;
+      ctx.document.getElementById = bkp.geb; ctx.almTgDiaDaSemana = bkp.almTgDiaDaSemana;
       try { ctx.COMIDA_AVISO_OK.clear(); } catch (e) {}
     }
   }
@@ -7215,9 +7220,11 @@ async function main() {
 
   console.log('Aviso de almoco: sai sozinho, separa o urgente e nada some no 8o dia (28/ago):');
   {
-    check('o envio nao depende mais de abrir a tela do Emporio',
-      /function empChecarAtrasoDiario\(\)/.test(html) &&
-      /try\{ empChecarAtrasoDiario\(\); \}catch\(e\)\{\}/.test(html) && /\}, 6000\); \}catch\(e\)\{\}/.test(html));
+    // 6.117: o lembrete do dia seguinte saiu da entrada no app — à meia-noite, a recarga da virada
+    // o mandava ao grupo sobre o almoço de ontem. Prova do contrário; o resto do bloco de 6 s fica.
+    check('6.117: a entrada no app não manda mais o lembrete do almoço de ontem (o bloco de 6 s continua)',
+      !/empChecarAtrasoDiario/.test(html) &&
+      /try\{ empVigiaAlmoco2\(\); \}catch\(e\)\{\}/.test(html) && /\}, 6000\); \}catch\(e\)\{\}/.test(html));
     check('quem entra dispara, seja qual for o papel (so o tutor fica de fora)',
       (html.match(/if\(r==='tutor'\) return/g) || []).length >= 1 &&
       !/\['consultora','gestao','supervisor','diretoria'\]\.indexOf\(r\)<0\) return;/.test(html));
@@ -7246,19 +7253,19 @@ async function main() {
       /var ninguem=!Object\.keys\(a2\)\.some\(function\(k\)\{ return a2\[k\]==='nao'; \}\);/.test(html));
     check('o fechamento tambem solta a trava se o Telegram falhar',
       (html.match(/cobranca-almoco2\/'\+dia\)\.remove\(\)/g) || []).length >= 2);
-    check('duas pessoas entrando juntas nao mandam a mensagem em dobro',
-      /avisos-telegram-atraso\/'\+hoje\)\.transaction\(function\(atual\)\{/.test(html) &&
-      /if\(!res \|\| !res\.committed\) return;/.test(html));
+    // 6.117: a trava do lembrete (avisos-telegram-atraso) saiu com ele: o lembrete não existe.
+    check('6.117: o lembrete do dia seguinte não existe mais (nem a trava avisos-telegram-atraso)',
+      !/function empAvisarAtrasoNoTelegram\(/.test(html) && !/avisos-telegram-atraso\/'\+hoje/.test(html));
     check('a leitura antiga (once + set) saiu do caminho do envio',
       !/avisos-telegram-atraso\/'\+hoje\)\.once\('value'\)/.test(html));
     check('o grupo recebe 2 dias; a tela enxerga 21',
       /var EMP_DIAS_GRUPO=2, EMP_DIAS_TELA=21;/.test(html));
     check('o que passou de anteontem nao vai para o grupo',
       /EMP_ANTIGO=todos\.filter\(function\(g\)\{ return recentes\.indexOf\(g\.dia\)<0; \}\)/.test(html));
-    check('mas conta no rodape da mensagem, para ninguem achar que acabou',
-      // 04/set/2026: a conta do rodapé passou a somar também quem ficou de FORA do Telegram
-      // por idade (>12h, ver EMP_DOZE_HORAS_MS) — não só o que já era "mais velho que 2 dias".
-      /Há ainda '\+nVelhoTotal\+' esperando decisão na tela "Quem não comeu hoje" \(mais de 12h\)/.test(html));
+    // 6.117: o rodapé «Há ainda … esperando decisão» era da mensagem do lembrete, que saiu; quem
+    // ficou para trás continua na tela, com nome e decisão (a prova de baixo).
+    check('6.117: o lembrete não existe, e o que ficou para trás segue na tela «Quem não comeu hoje»',
+      !/esperando decisão na tela "Quem não comeu hoje"/.test(html) && /Ficou para trás \('\+nAnt\+'\)/.test(html));
     check('o que ficou para tras aparece na tela com decisao de gente',
       /Ficou para trás \('\+nAnt\+'\)/.test(html) && /function empDispensarDia\(dia,k\)/.test(html));
     check('"deixa para la" grava QUEM decidiu (nada some por decurso de prazo)',
@@ -11065,21 +11072,12 @@ async function main() {
   function getDB() { vm.runInContext('__getDBtmp = DB;', ctx); return ctx.__getDBtmp; }
 
   // ---- Almoço: idade > 12h não vai mais pro Telegram (Adriana, 04/set/2026) ----------------
-  console.log('Almoço — idade do aviso (empEhFresco / empPendentesDoDia / empHorasDoDia):');
-  if (typeof ctx.empEhFresco === 'function') {
-    var AGORA = new Date('2026-09-04T06:00:00-03:00').getTime();
-    var ONTEM_15H20 = new Date('2026-09-03T15:20:00-03:00').getTime();
-    var HOJE_03H = new Date('2026-09-04T03:00:00-03:00').getTime();
-    check('mordida — item de ontem 15:20, visto hoje 06:00 (14h40 de idade): NÃO é fresco',
-      ctx.empEhFresco({ ts: ONTEM_15H20 }, AGORA) === false);
-    check('item de 3h atrás (dentro da janela de 12h): É fresco — o filtro não trava tudo',
-      ctx.empEhFresco({ ts: HOJE_03H }, AGORA) === true);
-    check('mordida — sem ts nenhum (idade desconhecida): trata como velho, nunca finge frescor',
-      ctx.empEhFresco({ ts: null }, AGORA) === false && ctx.empEhFresco({}, AGORA) === false);
-    check('EMP_DOZE_HORAS_MS é exatamente 12h em ms', ctx.EMP_DOZE_HORAS_MS === 12 * 60 * 60 * 1000);
-  } else {
-    check('empEhFresco existe', false, 'função não encontrada — filtro de 12h não pode ser provado');
-  }
+  // 6.117 (22/out/2026): nada de dia passado vai mais ao grupo — o lembrete do dia seguinte saiu
+  // do Telegram, e com ele o filtro de 12 h (empEhFresco, EMP_DOZE_HORAS_MS) e a auditoria que
+  // dava a idade (empHorasDoDia). Provas do contrário; a conta do empPendentesDoDia segue igual.
+  console.log('Almoço — idade do aviso (6.117: o filtro de 12 h saiu com o lembrete; empPendentesDoDia):');
+  check('6.117: o filtro de 12 h não existe mais (empEhFresco e EMP_DOZE_HORAS_MS)',
+    typeof ctx.empEhFresco === 'undefined' && typeof ctx.EMP_DOZE_HORAS_MS === 'undefined');
   if (typeof ctx.empPendentesDoDia === 'function') {
     var a1 = {}, a2 = { 'camus__sophia-joao': 'nao' };
     var audMap = { 'camus__sophia-joao': 123456 };
@@ -11092,23 +11090,9 @@ async function main() {
   } else {
     check('empPendentesDoDia existe', false, 'função não encontrada');
   }
-  if (typeof ctx.empHorasDoDia === 'function') {
-    var bkpDB0 = getDB();
-    setDB(criarDBFake({ daycare: { auditoria: { '2026-09-03': {
-      a1: { acao: 'almoco_grade', alvo: 'camus__sophia-joao', ts: 1000 },
-      a2: { acao: 'almoco2', alvo: 'camus__sophia-joao', ts: 2000 }, // mais recente — é este que vale
-      a3: { acao: 'chamada', alvo: 'outro-filhote__x', ts: 9999 },   // ação que NÃO é do almoço: ignora
-    } } } }));
-    try {
-      var mapa = await ctx.empHorasDoDia('2026-09-03');
-      check('mordida — empHorasDoDia pega o MAIS RECENTE entre almoco_grade e almoco2 do mesmo k (2000, não 1000)',
-        mapa['camus__sophia-joao'] === 2000, JSON.stringify(mapa));
-      check('ações de outra natureza (ex.: chamada) não entram no mapa de horas do almoço',
-        mapa['outro-filhote__x'] === undefined);
-    } finally { setDB(bkpDB0); }
-  } else {
-    check('empHorasDoDia existe', false, 'função não encontrada');
-  }
+  check('6.117: a tela não lê mais a auditoria do dia (sem empHorasDoDia; três nós pequenos por dia)',
+    typeof ctx.empHorasDoDia === 'undefined' && !/auditoria/.test(String(ctx.empCarregarDias || '')) &&
+    /avisos-comida/.test(String(ctx.empCarregarDias || '')));
   console.log('');
 
   // ---- Almoço: reenvio automático de curto prazo (avisarGrupoComida) -----------------------
@@ -11118,8 +11102,12 @@ async function main() {
     // vazava para o resto da rodada e os checks de "lançamento sem cadastro" quebravam em
     // qualquer dia que não fosse 04/09 (mina achada em 05/set/2026).
     var bkpDB1 = getDB(), bkpAviso = ctx.avisarGrupoComida, bkpRole = ctx.__ROLE__.role, bkpDia1 = ctx.dcDataKey;
+    var bkpHora1 = ctx.horaAgora, bkpSemana1 = ctx.almTgDiaDaSemana;
     var chamadas = [];
     ctx.__ROLE__.role = 'recepcao';
+    // 6.117 (AC8.2): o reenvio só roda dentro do prazo do almoço — uma sexta às 15:50, para a prova
+    // dar o mesmo resultado em qualquer hora e dia em que a rodada rode (fora do prazo nem lê o nó).
+    ctx.horaAgora = () => '15:50'; ctx.almTgDiaDaSemana = () => 5;
     vm.runInContext('avisarGrupoComida = function(k, opts){ __chamadas.push({k:k, opts:opts}); };', Object.assign(ctx, { __chamadas: chamadas }));
     var DIA = '2026-09-04';
     var seedFila = { daycare: { 'avisos-telegram-comida': {} } };
@@ -11172,7 +11160,7 @@ async function main() {
       await drenar();
       check('o papel "tutor" nunca dispara o reenvio automático', chamadas.length === 0);
     } finally {
-      setDB(bkpDB1); ctx.__ROLE__.role = bkpRole;
+      setDB(bkpDB1); ctx.__ROLE__.role = bkpRole; ctx.horaAgora = bkpHora1; ctx.almTgDiaDaSemana = bkpSemana1;
       vm.runInContext('avisarGrupoComida = __bkpAviso; dcDataKey = __bkpDia1;',
         Object.assign(ctx, { __bkpAviso: bkpAviso, __bkpDia1: bkpDia1 }));
     }

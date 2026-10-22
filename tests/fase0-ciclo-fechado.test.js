@@ -26950,7 +26950,7 @@ const SEGUNDA648 = { mesaAtencaoTratei: 1, hospResponderMesmo: 1, salvarFoto: 1,
   ciSalvar: 2, ciSubstituirExistente: 2, __ciGravar: 3, ciFichaAoTelegram: 3, ciFichaObrigatoria: 4, ciFichaLinhasFalha: 1,
   ciBaixarFichaPdf: 1, reemitirFichaPdf: 1, hospConfirmarAntecipada: 1, hospConfirmarBaixa: 1, hospSalvarDatas: 1, _hospGravarNova: 1,
   hospTrocarGravar: 6, hospExcluirGravar: 6, hospCorrContar: 1, hospCorrHtml: 1, cfConfirmarRacao: 1, cfConfirmarComida: 1,
-  cfAddOcorrencia: 1, cfFecharConferencia: 1, empAvisarAtrasoNoTelegram: 1, empStatusGrupo: 1, empReenviarGrupo: 1,
+  cfAddOcorrencia: 1, cfFecharConferencia: 1, empStatusGrupo: 1, empReenviarGrupo: 1,   // 6.117: o empAvisarAtrasoNoTelegram saiu (o lembrete do dia seguinte)
   empAvisar: 1, empAvisarDia: 1, empDispensarDia: 1, coFecharEtapa1: 1, coFinalizar: 1, coGerarPDF: 1,
   lpGravar: 1, lpEstornar: 1, pmCardAvisos: 1, pdSalvarEscala: 1, pdSalvarPlano: 1, pdEscolherPlano: 1,
   poProblemasDoDia: 1,
@@ -26976,7 +26976,7 @@ const DADO648 = { repExtratoRotulo: 2, repConferirHTML: 1, repExtratoDesmarcada:
   eaColunaHTML: 1, eaHistDetalheHTML: 1, resumoDiaMontar: 1, vermBlocoPainelHTML: 1, vermLinhaVencHTML: 1, vencBlocoLancHTML: 1,
   contatoEventoHTML: 2, turmaListaDoDia: 1, turmaRender: 1, turmaTabelaHTML: 1, pernAvisarPlantao: 1, pernAnterioresHTML: 1,
   pernCartaoHojeHTML: 1, blocoUrgenteHTML: 1, __ciGravar: 1, hospRastro: 1, hospCorrHtml: 1, hospCorrLinha: 1,
-  cfResolvidosHTML: 1, empAvisarAtrasoNoTelegram: 1, renderEmporio: 3, lpCobrancaHTML: 1, pmCardPlano: 1, pmCardAvisos: 1,
+  cfResolvidosHTML: 1, renderEmporio: 3, lpCobrancaHTML: 1, pmCardPlano: 1, pmCardAvisos: 1,   // 6.117: o empAvisarAtrasoNoTelegram saiu
   pdRender: 2, pcQuadroAlmoco: 1, poVet: 1, poCardFaltas: 1, poCardComida: 1, poCardPernoites: 2,
   poCardEA: 1, paLinhas: 2, recListaHTML: 1, recBaixarExcel: 1,
   // 6.54 (o Palito): o motivo que a pessoa escreveu, lido no histórico, no PDF e na tela de conferir
