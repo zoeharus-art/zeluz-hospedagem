@@ -23,6 +23,8 @@
  *       AC11, AC13, AC14, AC15, AC17)
  *   N — Chromium a 375 px (Playwright), com o CSS real das tags <style> e o HTML das funções reais (AC1.4, AC9.2). Sem o
  *       Playwright, diz PULADO e não conta.
+ *   As sondas do QA independente que pegavam defeitos plantados (rodada 1: Q4 a Q7 e Q9; rodada 2: R2-Q3, R2-Q4, R2-Q5 e R2-Q7)
+ *   viraram prova nos grupos A e B; o título de cada uma diz «sonda … do QA».
  *
  * Uso:  node tests/comida-observacao.test.js
  *       TZ=America/Sao_Paulo node tests/comida-observacao.test.js
@@ -320,6 +322,20 @@ prova('A', 'AC2.2 — mudar só a observação é mudança: mcrTemMudanca verdad
   assert.ok(p.some((f) => /4 palavras/.test(f)), 'o motivo de 4 palavras: ' + p.join(' | '));
   assert.ok(p.some((f) => /seu nome/i.test(f)), 'o nome de quem muda: ' + p.join(' | '));
 });
+// Sonda R2-Q4 do QA independente, rodada 2 (defeito QA2-r1: mcrDiffComida comparava a observação sem acento e sem maiúscula, com
+// jsNorm; corrigir só um acento ou uma maiúscula virava «Nada mudou» e não deixava salvar, justamente o erro que a tela corrige).
+prova('A', 'AC2.1 e AC2.2 (sonda R2-Q4 do QA) — corrigir só um acento ou uma maiúscula na observação é mudança: a frase «de → para», mcrTemMudanca verdadeiro, sem «Nada mudou», e a gravação leva o texto novo', () => {
+  const pares = [['racao do teste 01 fica no armario', OBS_CERTA], ['Ração da teste 01 fica no armário', 'Ração da Teste 01 fica no armário']];
+  for (const [ANT, NOVA] of pares) {
+    const e = EST(); e.ficha.alim.obs = ANT;
+    tela(S, { est: JSON.parse(JSON.stringify(e)) }); CTX(S, { est: JSON.parse(JSON.stringify(e)) });
+    S.run(`__M.comida.obs=${JSON.stringify(NOVA)};`);
+    igual(S.J('mcrDiffComida(__M.comidaAntes, __M.comida)'), ['Observação da alimentação: ' + ANT + ' → ' + NOVA], ANT);
+    igual(S.J('mcrTemMudanca(__M)'), true, ANT);
+    igual(S.J('mcrValidar(__M, 480)'), [], ANT + ': com motivo e nome, pronto para conferir (nada de «Nada mudou»)');
+    igual(S.J('mcrMontar(__M, __Ci).up')[P1 + 'ficha/alim/obs'], NOVA, ANT + ': gravado');
+  }
+});
 prova('A', 'AC2.3 — «Sair sem salvar?» pergunta quando só a observação foi mexida', async () => {
   tela(S);
   S.run(`__bkZ6121={p:zPergunta, f:mcrFechar}; __perg=[]; __fechou=0; zPergunta=function(t){ __perg.push(t); return Promise.resolve(false); }; mcrFechar=function(){ __fechou++; }; MCR=__M;`);
@@ -518,6 +534,33 @@ prova('A', 'AC6 — nenhuma permissão nova: «mudar-comida-remedio» é a mesma
   igual(S.J('Object.keys(PERM).length'), 45);
   igual(h16(S.run('JSON.stringify(PERM)')), h16(SBx.run('JSON.stringify(PERM)')));
   ['mcrPode', 'mcrBotaoHospedesHTML', 'mcrBotaoCheckinHTML', 'mcrBotaoPlantaoHTML', 'mcrAbrirDoPlantao', 'mcrAbrirEstadia'].forEach((f) => igual(h16(S.run('String(' + f + ')')), h16(SBx.run('String(' + f + ')')), f));
+});
+// Sonda R2-Q3 do QA independente, rodada 2 (defeito QA2-r4: o campo só aparecia com «Guardar também na ficha» ligado, M.ficha; sumia
+// para a Veterinária, que pode mudar a comida mas não a ficha, e para o hóspede sem ficha-mestre ligada, o caso do QA M1).
+prova('A', 'AC6 e AC1.2 (sonda R2-Q3 do QA) — papel por papel, num banco que conta: Encãotador(a), Plantão, Plantonista e Recepção não abrem (0 leituras, 0 gravações); Consultora, Veterinária, Gestão, Supervisão e Diretoria abrem e veem o campo, também sem poder mudar a ficha e sem ficha-mestre ligada', async () => {
+  const campos = (h) => (h.match(/<textarea[^>]*mcrSetComidaTx\('obs'/g) || []).length;
+  const res = {};
+  for (const papel of ['monitor', 'plantao', 'plantonista', 'recepcao', 'consultora', 'vet', 'gestao', 'supervisor', 'diretoria']) {
+    const B = criarBanco({ auaulandia: { estadias: { e1: EST() } } });
+    S.ctx.__B = B; S.ctx.document.body.dataset.role = papel;
+    S.run(`__bkPA6121={db:DB, za:zAlertao}; DB=__B; PELUDINHOS=[]; __alertas=[]; zAlertao=function(t){ __alertas.push(t); return Promise.resolve(); }; MCR=null;`);
+    try {
+      S.run(`mcrAbrirEstadia('e1', 'hospedes');`); await volta();
+      const aberto = S.run('!!MCR');
+      res[papel] = { alertas: S.J('__alertas'), aberto, leituras: B.n.once, gravacoes: B.n.update + B.n.set + B.n.transaction + B.n.push + B.n.remove,
+        campo: aberto ? campos(S.run('mcrComidaHTML(MCR)')) : 0, podeFicha: aberto ? S.J('MCR.podeFicha') : null, ficha: aberto ? S.J('MCR.ficha') : null };
+    } finally { S.run('DB=__bkPA6121.db; zAlertao=__bkPA6121.za; MCR=null;'); S.ctx.document.body.dataset.role = 'gestao'; }
+  }
+  console.log('      ' + JSON.stringify(res));
+  ['monitor', 'plantao', 'plantonista', 'recepcao'].forEach((p) => igual([res[p].alertas, res[p].aberto, res[p].leituras, res[p].gravacoes], [['SEM PERMISSÃO PARA MUDAR'], false, 0, 0], p));
+  // na turma de mentira não há ficha-mestre (PELUDINHOS vazio): M.ficha é falso para todos, que é o caso do hóspede do QA M1
+  ['consultora', 'vet', 'gestao', 'supervisor', 'diretoria'].forEach((p) => igual([res[p].aberto, res[p].campo, res[p].ficha, res[p].gravacoes], [true, 1, false, 0], p + ': abre, vê o campo uma vez, sem ficha-mestre ligada, sem gravar'));
+  igual(res.vet.podeFicha, false, 'a Veterinária não muda a ficha (o campo não pode depender disso)');
+  // a mesma regra no estado puro da tela: com a ficha-mestre (controle), sem poder mudar a ficha, sem ficha-mestre e com o interruptor desligado
+  tela(S); igual([S.J('__M.ficha'), campos(S.run('mcrComidaHTML(__M)'))], [true, 1], 'controle: ficha-mestre ligada');
+  S.run('__M.ficha=false;'); igual(campos(S.run('mcrComidaHTML(__M)')), 1, '«Guardar também na ficha» desligado');
+  tela(S, { podeFicha: false }); igual([S.J('__M.ficha'), campos(S.run('mcrComidaHTML(__M)'))], [false, 1], 'sem poder mudar a ficha (Veterinária)');
+  tela(S, { mestre: null }); igual([S.J('__M.ficha'), campos(S.run('mcrComidaHTML(__M)'))], [false, 1], 'sem ficha-mestre ligada');
 });
 
 // ================================================================== B — a observação sai do vermelho (pergunta 73)
@@ -800,6 +843,31 @@ prova('B', 'M1 e AC15 — abrir o Almoço (carregarAlmoco) e o Café (cafeCarreg
   igual(n.almocoLog.concat(n.cafeLog).filter((x) => /daycare\/cadastro/.test(x[1])), [], 'nenhuma leitura da ficha no banco');
   igual(vermelhos(cartao(n.grid, 'Teste 01')), [RF], 'o Almoço aberto mostra a ficha em vermelho');
   igual(vermelhos(n.cafeGrid), [RF], 'o Café aberto mostra a ficha em vermelho');
+});
+// Sonda R2-Q5 do QA independente, rodada 2 (defeito QA2-r2: a ficha entrava só no cartão do check-in confirmado; na conferência de
+// identidade, com duas estadias ativas do mesmo hóspede sem entrada no Day Care, a alergia e a restrição da ficha sumiam do vermelho).
+prova('B', 'M1 (sonda R2-Q5 do QA) — conferência de identidade (duas estadias ativas do hóspede sem entrada no Day Care): a restrição e a alergia da ficha continuam em vermelho; nenhuma das duas observações vira faixa', () => {
+  fichaDoHospede(S, 'frango', 'corante');
+  try {
+    const e1 = EST(), e2 = EST({ _ts: 200 }); e2.ficha.alim.obs = 'Ração da outra estadia';
+    const c = cartao(almoco(S, { estadias: { a1: e1, b1: e2 } }).grid, 'Teste 01');
+    assert.ok(c.indexOf('<div class="alm-restr">Confirme a refeição e a quantidade antes de servir.</div>') >= 0, 'o cartão está na conferência de identidade');
+    igual(vermelhos(c).filter((v) => /frango|corante/.test(v)), [RF], 'a ficha em vermelho, uma vez');
+    igual(faixas(c), [], 'nenhuma observação de uma das duas estadias');
+  } finally { semFicha(S); }
+});
+// Sonda R2-Q7 do QA independente, rodada 2 (defeito QA2-r3: no Café, o vermelho, que agora traz a ficha, saía sem escAttr; uma
+// restrição escrita com «<», como «não dar <sem> petisco», virava tag e o texto sumia do vermelho).
+prova('B', 'M1 (sonda R2-Q7 do QA) — a restrição da ficha com <, & e aspas sai escapada no vermelho do Almoço e do Café: nada vira tag, nada some', () => {
+  fichaDoHospede(S, 'não dar <sem> petisco & "osso"', 'corante');
+  try {
+    const exp = ['<div class="alm-restr">&#9888; RESTRIÇÃO: não dar &lt;sem> petisco &amp; &quot;osso&quot; · corante</div>'];
+    const c = cartao(almoco(S, { estadias: { e1: EST() } }).grid, 'Teste 01');
+    igual(vermelhos(c), exp, 'Almoço');
+    const g = cafe(S, { e1: EST() });
+    igual(vermelhos(g), exp, 'Café');
+    assert.ok(c.indexOf('<sem>') < 0 && g.indexOf('<sem>') < 0, 'nada vira tag');
+  } finally { semFicha(S); }
 });
 
 // ================================================================== C — os textos do Almoço com acento
