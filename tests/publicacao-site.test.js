@@ -981,12 +981,18 @@ extra('X27', 'B3: --saida fora da cópia é recusada (a pasta existente não é 
 extra('X28', 'B3: pasta que já existe e que o montador não criou não é apagada', function () {
   const c = cenario();
   pastaComArquivo(c.p('minha-pasta'), 'importante.txt');
-  exigirRecusaDeSaida(c.rodarComSaida('minha-pasta'), 'já existe e não foi criada por este montador');
+  const outra = c.rodarComSaida('minha-pasta');
+  exigirRecusaDeSaida(outra, 'já existe e não foi criada por este montador');
+  assert.ok(outra.saida.indexOf('escolha outra (por exemplo _site)') !== -1, 'a recusa de uma pasta que não é o _site tem de sugerir o _site');
   assert.ok(fs.existsSync(c.p('minha-pasta/importante.txt')), 'o montador apagou uma pasta que não era dele');
   // o _site feito à mão também não: é a mesma regra, sem exceção para o nome
   pastaComArquivo(c.p('_site'), 'feito-a-mao.txt');
-  exigirRecusaDeSaida(c.rodar(), 'já existe e não foi criada por este montador');
+  const site = c.rodar();
+  exigirRecusaDeSaida(site, 'já existe e não foi criada por este montador');
   assert.ok(fs.existsSync(c.p('_site/feito-a-mao.txt')), 'o montador apagou um _site que não era dele');
+  // N2: a pasta recusada é o próprio _site, então a frase não pode mandar escolher o _site de novo
+  assert.ok(site.saida.indexOf('por exemplo _site') === -1, 'a recusa do próprio _site manda escolher o _site de novo.\n' + resumo(site.saida));
+  assert.ok(site.saida.indexOf('apague a pasta _site você mesmo') !== -1 && site.saida.indexOf('rode de novo') !== -1, 'a recusa do próprio _site tem de mandar apagar a pasta e rodar de novo.\n' + resumo(site.saida));
   // o _site que o montador apagou ao bloquear deixa de ser «dele»: um _site novo, feito à mão, também é recusado
   const e = cenario();
   exigirAprovado(e, e.rodar());
@@ -995,6 +1001,15 @@ extra('X28', 'B3: pasta que já existe e que o montador não criou não é apaga
   pastaComArquivo(e.p('_site'), 'feito-a-mao.txt');
   exigirRecusaDeSaida(e.rodar(), 'já existe e não foi criada por este montador');
   assert.ok(fs.existsSync(e.p('_site/feito-a-mao.txt')), 'o montador apagou um _site feito à mão depois de uma montagem bloqueada');
+  // N1: a marca do _site vale só para o nome inteiro «_site», nunca para um nome que apenas COMEÇA com _site
+  const f = cenario();
+  exigirAprovado(f, f.rodar());                                   // _site montado pelo montador (fica marcado como dele)
+  ['_site-copia', '_site2'].forEach(function (nome) {
+    pastaComArquivo(f.p(nome), 'importante.txt');                 // pasta feita à mão, com o nome começando por _site
+    exigirRecusaDeSaida(f.rodarComSaida(nome), 'já existe e não foi criada por este montador');
+    assert.ok(fs.existsSync(f.p(nome + '/importante.txt')), 'o montador apagou a pasta "' + nome + '", feita à mão: a marca do _site valeu por prefixo');
+  });
+  assert.ok(f.existeSite(), 'o _site do montador sumiu quando ele recusou outra pasta');
 });
 
 extra('X29', 'B3: pasta com .git dentro não é apagada, nem que o nome já tenha sido montado antes', function () {
@@ -1018,8 +1033,12 @@ extra('X30', 'q01: pasta com arquivo versionado não é apagada, nem a que o mon
   exigirAprovado(d, d.rodar());
   pastaComArquivo(d.p('_site'), 'versionado.txt');
   git(d.dir, ['add', '-f', '_site/versionado.txt']);
-  exigirRecusaDeSaida(d.rodar(), 'tem arquivo versionado');
+  const versionado = d.rodar();
+  exigirRecusaDeSaida(versionado, 'tem arquivo versionado');
   assert.ok(fs.existsSync(d.p('_site/versionado.txt')), 'o montador apagou um _site que tem arquivo versionado');
+  // N2: a pasta recusada é o próprio _site, então a frase não pode mandar escolher o _site de novo
+  assert.ok(versionado.saida.indexOf('por exemplo _site') === -1, 'a recusa do próprio _site manda escolher o _site de novo.\n' + resumo(versionado.saida));
+  assert.ok(versionado.saida.indexOf('git rm -r --cached _site') !== -1, 'a recusa do _site versionado tem de dizer como tirar o _site do git.\n' + resumo(versionado.saida));
 });
 
 /** Valor de um campo do bloco `concurrency` do topo do fluxo, avaliado como o GitHub avalia (só as contas do fluxo). */

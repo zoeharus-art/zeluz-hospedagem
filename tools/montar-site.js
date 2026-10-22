@@ -537,14 +537,20 @@ function segurancaDaSaida(saidaAbs, raiz, indice) {
   }
   // dentro do repositório: não pode ter arquivo versionado embaixo (seria apagado)
   if (indice.has(relPosix) || temArquivoSob(indice, relPosix)) {
-    throw new ErroDeUso('a pasta de saída "' + relPosix + '" tem arquivo versionado; escolha outra (por exemplo _site)');
+    // se a pasta recusada já é o _site, não adianta mandar escolher o _site de novo
+    throw new ErroDeUso('a pasta de saída "' + relPosix + '" tem arquivo versionado; ' + (relPosix === '_site'
+      ? 'tire o _site do git (git rm -r --cached _site) e rode de novo'
+      : 'escolha outra (por exemplo _site)'));
   }
   if (!existeNoDisco(saidaAbs)) return relPosix;
   if (existeNoDisco(path.join(saidaAbs, '.git'))) {
     throw new ErroDeUso('a pasta de saída "' + relPosix + '" tem um .git dentro; ela não é saída do montador e não será apagada');
   }
   if (!lerMarcas(raiz).has(relPosix)) {
-    throw new ErroDeUso('a pasta de saída "' + relPosix + '" já existe e não foi criada por este montador, então ele não a apaga; apague-a você mesmo se não houver nada a perder nela, ou escolha outra (por exemplo _site)');
+    // se a pasta recusada já é o _site, não adianta mandar escolher o _site de novo: manda apagar e rodar outra vez
+    throw new ErroDeUso('a pasta de saída "' + relPosix + '" já existe e não foi criada por este montador, então ele não a apaga; ' + (relPosix === '_site'
+      ? 'apague a pasta _site você mesmo (se não houver nada a perder nela) e rode de novo'
+      : 'apague-a você mesmo se não houver nada a perder nela, ou escolha outra (por exemplo _site)'));
   }
   return relPosix;
 }
