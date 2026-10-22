@@ -184,6 +184,44 @@ prova('2028 (ano bissexto) e 2030 têm os feriados móveis certos', () => {
   igual(J("[orcEhFeriado('2028-11-03'), orcEhFeriado(''), orcEhFeriado('lixo')]"), ['', '', '']);
 });
 
+prova('a Páscoa dos anos raros do algoritmo (1954, 1981, 2049, 2076) também acerta', () => {
+  igual(J("[orcPascoa(1954), orcPascoa(1981), orcPascoa(2049), orcPascoa(2076)]"), ['1954-04-18', '1981-04-19', '2049-04-18', '2076-04-19']);
+});
+prova('a conta do 1º mês da matrícula pula o feriado mesmo fora da lista da Gestão (02/11/2028, quinta)', () => {
+  run("orcFeriadosCfg={'2026-12-24':'recesso da Zêluz'};");
+  const r = J("mmDiariasRestantes('2028-11-01', ['qui'], mmFeriadosDoMes('2028-11-01'))");
+  igual(r.datas, ['2028-11-09', '2028-11-16', '2028-11-23', '2028-11-30'], 'quatro quintas; 02/11 (Finados) fica de fora');
+  igual(J("mmFeriadosDoMes('2026-12-01')['2026-12-24']"), 'recesso da Zêluz', 'a lista da Gestão continua valendo');
+  run('orcFeriadosCfg=null;');
+});
+prova('noite do feriado paga com reposição: a frase do feriado não aparece (a noite é pernoite)', () => {
+  telaDoOrcamento('2026-10-31', '2026-11-04');
+  run('orcFeriadosCfg=null; ORC_SEL=[' + ROCK({ dias: ['seg'] }) + ']; ORC_REP={}; __bkRep={s:orcSaldoRep, u:orcRepUsadas}; orcSaldoRep=function(){ return 4; }; orcRepUsadas=function(){ return 4; }; orcCalcular(); orcRenderResultado();');
+  const C = J('ORC_CALC');
+  igual(C.pets[0].noites.map((n) => n.pernoite), [true, true, true, true]);
+  assert.ok(els.orcResultado.innerHTML.indexOf('feriado não tem Day Care') < 0, 'sem frase contraditória');
+  run('orcSaldoRep=__bkRep.s; orcRepUsadas=__bkRep.u;');
+});
+prova('duas noites de feriado: a frase concorda («as noites contam como diárias»)', () => {
+  orcar('2026-11-13', '2026-11-22', ROCK({ dias: ['dom', 'sex'] }));
+  run('orcRenderResultado()');
+  const h = els.orcResultado.innerHTML;
+  assert.ok(h.indexOf('15/11 é Proclamação da República · 20/11 é Consciência Negra: feriado não tem Day Care, então as noites contam como diárias de hotel.') >= 0, h);
+});
+prova('Configurações: feriado nacional ou de BH não tem «tirar»; o recesso da Gestão tem', () => {
+  run("orcFeriadosCfg=Object.assign({}, ORC_FERIADOS_PADRAO, {'2026-12-24':'recesso da Zêluz'}); __alertasCfg=[]; alert=function(t){ __alertasCfg.push(String(t)); };");
+  els.orcConfig = { innerHTML: '' };
+  run('orcRenderConfig()');
+  const h = els.orcConfig.innerHTML;
+  assert.ok(/02\/11\/2026 — Finados<\/span><span class="val"[^>]*>sempre fechado</.test(h), 'Finados sem tirar');
+  assert.ok(/24\/12\/2026 — recesso da Zêluz<\/span><span class="val"><button[^>]*orcDelFeriado\('2026-12-24'\)">tirar</.test(h), 'recesso com tirar');
+  run("DB=null; orcRenderConfig=function(){}; orcDelFeriado('2026-11-02');");
+  igual(J("[orcFeriadosCfg['2026-11-02'], __alertasCfg.length]"), ['Finados', 1]);
+  run("orcDelFeriado('2026-12-24');");
+  igual(J("orcFeriadosCfg['2026-12-24']||''"), '');
+  run('orcFeriadosCfg=null;');
+});
+
 console.log('\nA reserva já salva do Rock pode ser corrigida em «Mudar as datas»');
 async function salvarEdicao(totalAntes) {
   orcar('2026-10-30', '2026-11-04');

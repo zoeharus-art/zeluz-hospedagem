@@ -10395,7 +10395,9 @@ provaAsync('6.30 Q15 — orçamento: a troca pedida (segunda → terça) vale pa
     orcRenderResultado=function(){}; orcRenderMsg=function(){}; orcRenderSel=function(){}; orcNovoComecou=function(){};
     orcAdd(pelKey(pelAtual)); ORC_SEL[0].trocas={seg:'ter'}; orcCalcular();
     __log630q.out=ORC_CALC.pets[0].noites.map(function(n){ return n.iso.slice(5)+(n.pernoite?'P':'D'); });`);
-  assert.ok(L.out.indexOf('12-07D') >= 0 && L.out.indexOf('12-08P') >= 0 && L.out.indexOf('12-09P') >= 0, L.out.join(','));
+  // a terça 01/12 (Mês 2, segunda trocada por terça) é pernoite; a terça 08/12 é Imaculada Conceição, feriado em BH,
+  // e desde a 6.120 (feriado não tem Day Care) é diária
+  assert.ok(L.out.indexOf('12-01P') >= 0 && L.out.indexOf('12-07D') >= 0 && L.out.indexOf('12-08D') >= 0 && L.out.indexOf('12-09P') >= 0, L.out.join(','));
 });
 provaAsync('6.30 Q16 — banho fixo na quarta durante o plano anterior (renovação antecipada): "só depois do plano (a partir de 01/01/2027)"', async () => {
   const B = { plano: 'Gold', aulas: 2, ordemPet: 1, inicio: '2026-12-21', vig_inicio: '2027-01-01', fim: '2027-03-31', dias_mes_anterior: [{ n: 3, de: '2026-12-05', ate: '2026-12-31', dias: ['seg'] }] };
@@ -12305,7 +12307,7 @@ provaAsync('6.43 QA (B5, B9, Q2, Q3, Q16) — enquanto a lista não chega o lan�
     run('repFeriadosBuscar(function(){}); repFeriadosBuscar(function(){});');
     run('__st643[__st643.length-2][0]();'); igual(run('REP_FER_LENDO'), true);
     run('__res643[__res643.length-1]();'); await espera639(); igual(run('REP_FER_LENDO'), false);
-    // a janela aberta: quando a lista (com o recesso da Gestão) chega, "Alguns dias" e o dia de repor são refeitos
+    // a janela aberta (6.120: 19 a 21/10, sem feriado nacional; 12/10 é Nossa Senhora Aparecida e agora conta mesmo com a lista vazia): quando a lista (com o recesso da Gestão) chega, "Alguns dias" e o dia de repor são refeitos
     run(`['repPelBusca','repPelResults','repEscolhido','repFormulario'].forEach(function(k){ __el639[k]={value:'', innerHTML:'', style:{}, textContent:''}; });
       ['repBlocoDia','repBlocoPeriodo','repBlocoAlguns'].forEach(function(k){ __el639[k]={style:{display:''}}; });
       __bk643.qsa=document.querySelectorAll; document.querySelectorAll=function(){ return []; };
@@ -12313,14 +12315,14 @@ provaAsync('6.43 QA (B5, B9, Q2, Q3, Q16) — enquanto a lista não chega o lan�
     stubsTroca630();
     try {
       run('repAbrirLancar(PELUDINHOS[0])');
-      run("repModoAtual='alguns'; repAlgunsDatas=['2026-10-12','2026-10-13']; __el639.repVolta.value='2026-10-14'; repPreverAlguns(); repVoltaPintar();");
+      run("repModoAtual='alguns'; repAlgunsDatas=['2026-10-19','2026-10-20']; __el639.repVolta.value='2026-10-21'; repPreverAlguns(); repVoltaPintar();");
       assert.ok(/viria em <b>2 dias<\/b>/.test(run('__el639.repPreviaAlguns.innerHTML')) && run('__el639.repVagasBox.innerHTML').indexOf('feriado') < 0, 'antes da lista');
-      run("orcFeriadosCfg={'2026-10-12':'Recesso da Zêluz', '2026-10-14':'Recesso da Zêluz'}; orcEhFeriado=__bk643.fe;");
+      run("orcFeriadosCfg={'2026-10-19':'Recesso da Zêluz', '2026-10-21':'Recesso da Zêluz'}; orcEhFeriado=__bk643.fe;");
       run('__res643[__res643.length-1]();'); await espera639();
       assert.ok(/viria em <b>1 dia<\/b>/.test(run('__el639.repPreviaAlguns.innerHTML')) && run('__el639.repPreviaAlguns.innerHTML').indexOf('é feriado (Recesso da Zêluz)') >= 0, run('__el639.repPreviaAlguns.innerHTML'));
-      assert.ok(run('__el639.repVagasBox.innerHTML').indexOf('14/10/2026 é feriado (Recesso da Zêluz): a Zêluz não abre. Escolha outro dia.') >= 0, run('__el639.repVagasBox.innerHTML'));
+      assert.ok(run('__el639.repVagasBox.innerHTML').indexOf('21/10/2026 é feriado (Recesso da Zêluz): a Zêluz não abre. Escolha outro dia.') >= 0, run('__el639.repVagasBox.innerHTML'));
       // B9: no meio de um lançamento, a lista que chega não repinta o botão
-      run("repAbrirLancar(PELUDINHOS[0]); REP_LANCANDO=true; __btn639.disabled=true; __btn639.textContent='Lançando…'; __el639.repVolta.value='2026-10-20';");
+      run("repAbrirLancar(PELUDINHOS[0]); REP_LANCANDO=true; __btn639.disabled=true; __btn639.textContent='Lançando…'; __el639.repVolta.value='2026-10-27';");
       run('__res643[__res643.length-1]();'); await espera639();
       igual([run('__btn639.disabled'), run('__btn639.textContent')], [true, 'Lançando…']);
       run('REP_LANCANDO=false;');

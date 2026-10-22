@@ -24088,12 +24088,13 @@ return { criar };
               +(n.porReposicao?' style="outline:2px solid var(--z-gold-deep);outline-offset:-2px"':'')
               +'>'+orcBR(n.iso).slice(0,5)+' '+n.dw+(n.porReposicao?' ↺':'')+'</span>';
           }).join('')+'</div>';
-      var feriadosDele=p.noites.filter(function(n){ return n.feriado; });
+      var feriadosDele=p.noites.filter(function(n){ return n.feriado && !n.porReposicao; });
       h+='<div class="hint" style="margin-top:6px">Dourado = pernoite (dia dele no Day Care) · azul = diária de hotel'
         +(p.repUsa?' · <strong>↺ = pago com reposição</strong>':'')+'.</div>';
       if(feriadosDele.length) h+='<div class="hint" style="margin-top:4px;color:var(--z-blue);font-weight:700">'
         +feriadosDele.map(function(n){ return orcBR(n.iso).slice(0,5)+' é '+escAttr(n.feriado); }).join(' · ')
-        +': feriado não tem Day Care, então a noite conta como diária de hotel.</div>';
+        +(feriadosDele.length===1?': feriado não tem Day Care, então a noite conta como diária de hotel.</div>'
+                                 :': feriado não tem Day Care, então as noites contam como diárias de hotel.</div>');
       h+='</div>';
     });
     h+='<div class="orc-total"><span>Total</span><span>'+fmtCent(C.total)+'</span></div>';
@@ -24362,7 +24363,7 @@ return { criar };
     el.innerHTML='<div style="background:rgba(222,180,40,.20);border-left:4px solid var(--z-gold);border-radius:10px;padding:11px 13px;margin-bottom:12px;font-size:13.5px;color:var(--z-blue);font-weight:700">'
       +'Você está <strong>mudando as datas</strong> da reserva de '+escAttr((a.pets||[]).map(function(p){ return p.nome; }).join(' e '))+'.'
       +'<div style="font-weight:600;margin-top:3px">Era de <strong>'+orcBR(a.entrada||'')+'</strong> a <strong>'+orcBR(a.saida||'')+'</strong>'
-      +(a.total_cent?(' · '+fmtCent(a.total_cent)):'')+'. Troque as datas acima e toque em <strong>Salvar</strong>'
+      +(a.total_cent?(' · '+fmtCent(a.total_cent)):'')+'. Troque as datas acima (ou só confira o valor novo) e toque em <strong>Salvar</strong>'
       // 6.68 (AC4.1): a proposta que aguarda o tutor não vai à planilha; a reserva fechada leva a planilha junto
       +((String(a.status||'aguardando')==='fechado')?' — eu acerto a planilha sozinho.':'. A planilha não muda enquanto a reserva aguarda o tutor.')
       +' Tirou um FILHOt (×)? A reposição dele volta à ficha.</div>'
@@ -24484,7 +24485,7 @@ return { criar };
     if(!DB){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='Sem conexão — a alteração NÃO foi salva.'; } return; }
     // Mesmas datas e valor novo também salva (22/out/2026, caso do Rock): a conta da reserva mudou
     // (o feriado que passou a contar como diária) e a reserva salva precisa do valor certo.
-    if(C.entrada===antes.entrada && C.saida===antes.saida && C.total===(antes.total_cent||0)){
+    if(C.entrada===antes.entrada && C.saida===antes.saida && Number(C.total)===Number(antes.total_cent||0)){
       alert('As datas e o valor continuam os mesmos ('+orcBR(antes.entrada)+' a '+orcBR(antes.saida)+' · '+fmtCent(C.total)+').\n\nMude a entrada ou a saída antes de salvar.');
       return;
     }
@@ -24512,7 +24513,7 @@ return { criar };
       perg.push((sp.nome||'?')+' sai desta reserva'+((n>0 && sp.key && !sp.sem_cadastro)?(': '+n+' dia(s) de reposição voltam à ficha.'):'.')+(fechado?(' A linha de '+(sp.nome||'?')+' sai da planilha.'):''));
     });
     if(!await zPergunta('Mudar a reserva de '+nomes+'?', perg, {sim:'Mudar a reserva', nao:'Manter como está'})) return;
-    var motivo=((await zTexto('Por que as datas mudaram?',
+    var motivo=((await zTexto('Por que a reserva mudou?',
       ['Por exemplo: a tutora antecipou a viagem.'],
       {rotulo:'Motivo da mudança', botao:'Continuar', cor:'#234D67'}))||'').trim();
     // 6.68 (AC4.2): a régua das 4 palavras (a motivoQuatroPalavras, chamada e nunca copiada) — antes era 1 letra
@@ -27296,11 +27297,13 @@ return { criar };
       +'<div class="hint" style="margin-top:4px">Nada é gravado antes deste botão. Os orçamentos já salvos guardam o preço da época — mudar aqui não mexe no passado.</div>'
       +'<div id="orcCfgStatus" class="hint" style="margin-top:6px"></div>'
       +'<div style="margin-top:16px"><div class="ff-tit">Feriados (não entregamos)</div>'
-      +'<div class="hint">Nacionais, de Minas e os dois municipais de BH — 15/08 e 08/12 — já vêm prontos. Acrescente recesso e datas próprias da Zêluz.</div>'
+      +'<div class="hint">Nacionais, de Minas e os dois municipais de BH — 15/08 e 08/12 — já vêm prontos e valem em todo ano: nesses dias não há Day Care. Acrescente recesso e datas próprias da Zêluz.</div>'
       +'<div class="cad-grid2" style="margin-top:8px"><div><label class="cad-lb">Data</label><input class="cad-in" type="date" id="orcFerData" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'
       +'<div><label class="cad-lb">Nome</label><input class="cad-in" id="orcFerNome" placeholder="Ex: recesso da Zêluz"></div></div>'
       +'<button class="btn btn-primary" style="margin-top:8px" onclick="orcAddFeriado()">Acrescentar feriado</button>'
       +'<div style="margin-top:10px">'+(futuros.length?futuros.map(function(d){
+          // 6.120: feriado nacional ou de BH sempre fecha o Day Care; só o recesso da Gestão sai da lista
+          if(orcFeriadoDoCalendario(d)) return '<div class="pair"><span class="k">'+orcBR(d)+' — '+escAttr(F[d])+'</span><span class="val" style="font-size:12px;color:var(--muted);font-weight:700">sempre fechado</span></div>';
           return '<div class="pair"><span class="k">'+orcBR(d)+' — '+escAttr(F[d])+'</span><span class="val"><button class="x" style="background:none;border:none;color:var(--crm-critico);font-weight:800;cursor:pointer" onclick="orcDelFeriado(\''+d+'\')">tirar</button></span></div>';
         }).join(''):'<div class="hint">Nenhum feriado daqui para a frente.</div>')+'</div></div>'
       // Ponte com a planilha de Hospedagem
@@ -27434,6 +27437,7 @@ return { criar };
     DB.ref('auaulandia/config/orcamento/feriados').set(F).then(function(){ orcFeriadosCfg=F; orcRenderConfig(); orcCalcular(); }).catch(function(e){ _logFalhaGrav('auaulandia/config/orcamento/feriados (orcAddFeriado)', e); });
   }
   function orcDelFeriado(d){
+    if(orcFeriadoDoCalendario(d)){ alert(orcBR(d)+' é '+orcFeriadoDoCalendario(d)+': feriado nacional ou de BH não tem Day Care e não sai da lista.'); return; }
     var F=Object.assign({},orcFeriados()); delete F[d];
     if(!DB){ orcFeriadosCfg=F; orcRenderConfig(); orcCalcular(); return; }
     DB.ref('auaulandia/config/orcamento/feriados').set(F).then(function(){ orcFeriadosCfg=F; orcRenderConfig(); orcCalcular(); }).catch(function(e){ _logFalhaGrav('auaulandia/config/orcamento/feriados (orcDelFeriado)', e); });
@@ -35091,9 +35095,16 @@ return { criar };
   }
   // Junta o que a tela precisa: quem está pronto para entrar na conta e quem está faltando
   // dado. Ninguém entra na conta com zero em silêncio — quem falta aparece dizendo o que falta.
+  // 6.120: os feriados que a conta do 1º mês pula — os nacionais e os de BH calculados para o ano
+  // (feriado não tem Day Care em ano nenhum, mesmo fora da lista salva pela Gestão) mais a lista da Gestão.
+  function mmFeriadosDoMes(iniISO){
+    var ano=/^\d{4}-/.test(String(iniISO||''))?+String(iniISO).slice(0,4):0;
+    return Object.assign({}, (ano&&typeof orcFeriadosDoAno==='function')?orcFeriadosDoAno(ano):{},
+      (typeof orcFeriados==='function')?orcFeriados():{});
+  }
   function mmDados(p){
     const ini=mmInicioDaTela();
-    const fer=(typeof orcFeriados==='function')?orcFeriados():{};
+    const fer=mmFeriadosDoMes(ini);
     const over=mmRasc().dias||{};
     const eu=pelKey(p);
     const prontos=[], pendentes=[];
