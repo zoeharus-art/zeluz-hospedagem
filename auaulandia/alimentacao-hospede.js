@@ -40,6 +40,9 @@
         quant:plano.semRacao?'':[porcaoRacao(q.racao),porcaoNatural(q.natural)].filter(Boolean).join(' + '),
         extra:q.extra?('Complemento: '+q.extra):'', lento:!!f.lento,
         restr:restr,nao:plano.estado==='nao-oferecer',semRacao:!!plano.semRacao,
+        // Os dois separados (Story 6.121): a restrição do cadastro e a observação do check-in desta estadia
+        // (como dar, misturas, manias). A tela decide a cor de cada um num ponto só; restr continua juntando.
+        restrCadastro:texto(f.restr),obsCheckin:texto(plano.restricao),
         fonte:'checkin-hotel',conferir:plano.estado.indexOf('conferir-')===0};
     }
     if(!fallback) return null;

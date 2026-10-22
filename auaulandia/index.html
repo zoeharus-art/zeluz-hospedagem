@@ -5210,7 +5210,7 @@
 <script src="autoria-logica.js?v=2026-10-15-02"></script>
 <script src="navegacao-inicio.js?v=2026-10-15-02"></script>
 <script src="hospedes-atividades.js?v=2026-10-16-01"></script>
-<script src="alimentacao-hospede.js?v=2026-10-16-01"></script>
+<script src="alimentacao-hospede.js?v=2026-10-22-01"></script>
 <script src="cafe-operacional.js?v=2026-10-16-02"></script>
 <script src="cafe-aluno-logica.js?v=2026-10-16-06"></script>
 <script src="presenca-logica.js?v=2026-10-16-02"></script>
@@ -17378,6 +17378,33 @@ return { criar };
     var hotel=ZeluzCafeOperacional.criar({pronto:(typeof CF_ESTADIAS_LIDO!=='undefined'&&CF_ESTADIAS_LIDO===true),estadias:(typeof EST_TODAS!=='undefined'&&EST_TODAS)||{},hospedes:function(){return (typeof hospedes!=='undefined'&&hospedes)||[];},hoje:function(){return cafeDataKey();}}).ler();
     var aluno=cafeAlunoDados(); if(aluno.pronto)hotel.participantes=hotel.participantes.concat(aluno.participantes); return hotel;
   }
+  // ===== A OBSERVAÇÃO DO CHECK-IN NOS CARTÕES DO ALMOÇO E DO CAFÉ (Story 6.121, pergunta 73) =====
+  // Adriana, 22/out/2026: procurou na ficha inteira o texto vermelho do cartão do almoço e não o achou. O
+  // vermelho piscando era a «Observação da alimentação (como dar, misturas, manias)» do check-in desta
+  // estadia, pintada como RESTRIÇÃO. Instrução de como servir não é proibição: ela vai numa faixa amarela,
+  // logo acima dos botões, e o vermelho fica só para a alergia e a restrição do cadastro.
+  // UM PONTO SÓ decide a cor e o título: esta constante e esta função, usadas pelos dois cartões.
+  // Se a Adriana responder «não» à pergunta 73, basta virar para false: tudo volta ao vermelho de
+  // antes (cadastro · observação, sem repetir), só com o acento.
+  var ALIM_OBS_CHECKIN_EM_FAIXA=true;
+  function alimObsCheckinCartao(restr, obs){
+    var r=String(restr==null?'':restr).trim(), o=String(obs==null?'':obs).trim();
+    if(!ALIM_OBS_CHECKIN_EM_FAIXA) return {restr:[r,o].filter(Boolean).filter(function(v,i,a){ return a.indexOf(v)===i; }).join(' · '), faixa:''};
+    // Igual a uma das restrições do cadastro (sem maiúsculas, acentos e espaços nas pontas): o vermelho já diz.
+    var repete=!!o && r.split(/\s*·\s*/).some(function(v){ return jsNorm(v)===jsNorm(o); });
+    return {restr:r, faixa:(o&&!repete)?('<div class="alm-info"><div class="janta-box">Observação do check-in: '+escAttr(o)+'</div></div>'):''};
+  }
+  // ===== A RESTRIÇÃO E A ALERGIA DA FICHA DO HÓSPEDE NOS CARTÕES DO ALMOÇO E DO CAFÉ (Story 6.121, QA M1) =====
+  // O vermelho do cartão é para alergia e restrição de verdade, cadastradas na ficha. O hóspede que também é
+  // aluno do Day Care já as tinha no almoço (pelExtra); o hóspede SEM entrada no Day Care e o café nunca as
+  // leram, e a observação do check-in era o único vermelho que eles tinham. Esta é a MESMA leitura da tarja da
+  // ficha do hóspede (extraDoHosp), onde o check-in grava «Tem restrição ou alergia?» → «O que ele NÃO pode?»
+  // (ciSalvarRestricao). Só memória: o retrato vivo de daycare/cadastro (pelCadCache, que o app já mantém
+  // aberto), o que este aparelho guardou e os cadastros já carregados; nenhuma leitura nova do banco.
+  function alimRestricaoDaFicha(h){
+    var ex=(h&&typeof extraDoHosp==='function')?(extraDoHosp(h)||{}):{};
+    return [ex.restricao, ex.alergia].map(function(v){ return String(v==null?'':v).trim(); }).filter(Boolean).filter(function(v,i,a){ return a.indexOf(v)===i; });
+  }
   function renderCafe(){
     var grid=document.getElementById('cafeGrid'); if(!grid) return;
     var barra=document.getElementById('cafeBarraTempo'), leitura=cafeParticipantesAtivos(), guarda=cafePodeOperar();
@@ -17404,7 +17431,7 @@ return { criar };
       +'<div class="dc-stat pend"><b>'+faltam+'</b>faltam</div>'
       +(naochegou?'<div class="dc-stat"><b>'+naochegou+'</b>não chegou ainda</div>':'')+'</div>';
     grid.innerHTML=avisos+itens.map(function(o){
-      var h=o.hospede||{}, plano=o.plano||{}, por=o.porcao||{}, k=cafeKey(h), m=cafeEstado(k), pendente=!!cafeMarcasPendentes[k];
+      var h=o.hospede||{}, plano=o.plano||{}, por=o.porcao||{}, k=cafeKey(h), m=cafeEstado(k), pendente=!!cafeMarcasPendentes[k], rf=h.cafeAluno?'':alimRestricaoDaFicha(h).join(' · '), obsCi=alimObsCheckinCartao(rf, plano.restricao);
       var foto=(typeof fotoDe==='function')?fotoDe(h):'';
       var ph=foto?'<div class="ph" style="background-image:url(\''+foto+'\');background-size:cover;background-position:center"></div>'
                  :'<div class="ph" style="background:'+(h.cor||'#234D67')+'">'+(h.ini||((h.nome||'?')[0]||'?').toUpperCase())+'</div>';
@@ -17418,10 +17445,11 @@ return { criar };
       return '<div class="pet alm-card '+(m||'')+'">'+ph
         +'<div class="nm">'+escAttr(h.nome||'')+'</div>'
         +'<div class="br">'+escAttr(h.raca||(typeof racaDe==='function'?(racaDe(h)||'') :''))+'</div>'
-        +(plano.restricao?'<div class="alm-restr">&#9888; '+escAttr(plano.restricao)+'</div>':'')
+        +(obsCi.restr?'<div class="alm-restr">&#9888; '+escAttr((rf&&!/restri/i.test(obsCi.restr)?'RESTRIÇÃO: ':'')+obsCi.restr)+'</div>':'')
         +linhaCafe
         +(plano.marca?'<div class="alm-info"><div class="alm-line"><span>Ração</span><b>'+escAttr(plano.marca)+'</b></div></div>':'')
         +cafeRegistroVisivel(k)
+        +obsCi.faixa
         +'<div class="alm-actions"><div class="alm-seg">'
         +'<button class="alm-btn tudo '+(m==='tudo'?'on':'')+'" '+(pendente?'disabled aria-disabled="true"':'')+' onclick="marcarCafe('+cafeChaveAcao(k)+','+cafeChaveAcao('tudo')+')">Comeu</button>'
         +'<button class="alm-btn metade '+(m==='metade'?'on':'')+'" '+(pendente?'disabled aria-disabled="true"':'')+' onclick="marcarCafe('+cafeChaveAcao(k)+','+cafeChaveAcao('metade')+')">Metade</button>'
@@ -23589,10 +23617,14 @@ return { criar };
     F[orcMaisDias(p,-2)]='Sexta-feira Santa'; F[orcMaisDias(p,60)]='Corpus Christi';
     return (__orcFeriadosAno[ano]=F);
   }
+  // Rápida de propósito (22/out/2026, lentidão): é chamada em laços de dias, nas telas de reposição,
+  // vencimentos e turma. Sem expressão regular: confere o formato «aaaa-mm-dd» e usa o ano já calculado.
   function orcFeriadoDoCalendario(iso){
-    var s=String(iso||'');
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';
-    return orcFeriadosDoAno(+s.slice(0,4))[s]||'';
+    var s=(typeof iso==='string')?iso:String(iso||'');
+    if(s.length!==10||s.charCodeAt(4)!==45||s.charCodeAt(7)!==45) return '';
+    var F=__orcFeriadosAno[s.slice(0,4)];
+    if(!F){ var ano=+s.slice(0,4); if(!(ano>0)) return ''; F=orcFeriadosDoAno(ano); }
+    return F[s]||'';
   }
   let orcFeriadosCfg=null;
   let orcSheetsCfg=null;   // {url, token} — a ponte com a planilha de Hospedagem
@@ -30080,7 +30112,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-22-02';
+  const APP_VERSAO='2026-10-22-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -74472,6 +74504,8 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     if(!o.hospede||!ehHoje()) return base;
     var restr=[]; if(base&&base.restr)restr.push(base.restr);
     if(typeof o.i==='number'){var ex=pelExtra(p)||{};if(ex.restricao)restr.push(ex.restricao);if(ex.alergia)restr.push(ex.alergia);}
+    // 6.121 (QA M1): sem entrada no Day Care, a restrição e a alergia vêm da ficha do hóspede (a tarja da ficha).
+    else restr=restr.concat(alimRestricaoDaFicha({nome:p.n,tutor:p.tutor,raca:p.raca,refKey:o.refKey}));
     base=Object.assign({},base||{}, {restr:restr.filter(function(v,i,a){return a.indexOf(v)===i;}).join(' · ')});
     var pendente=function(){return {alim:'Alimentação da hospedagem',quant:'',extra:'Confirme a refeição e a quantidade no check-in.',conferir:true,fonte:'sem-registro',lento:!!base.lento,restr:base.restr};};
     if(typeof CF_ESTADIAS_LIDO==='undefined'||CF_ESTADIAS_LIDO!==true||typeof ZeluzAlimentacaoHospede==='undefined') return pendente();
@@ -74496,11 +74530,11 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     const list=ordemAlmoco(turma.filter(o=>!almFaltouAvisada(o)));
     const t=almTurno||{}; const durAlm=diffMin(t.inicio,t.fim);
     document.getElementById('almTurno').innerHTML=`<div class="alm-turno">
-      <div><div class="tb-lab">Almoco - ${DIA_FULL[dcDia]}</div>
-        <div style="font-size:13px;margin-top:3px">Inicio: <strong>${t.inicio||'-'}</strong>${t.quemInicio?' ('+t.quemInicio+')':''} &nbsp;&middot;&nbsp; Fim: <strong>${t.fim||'-'}</strong>${t.quemFim?' ('+t.quemFim+')':''}${durAlm!=null?' &nbsp;&middot;&nbsp; Duração: <strong>'+fmtDur(durAlm)+'</strong>':''}</div>
+      <div><div class="tb-lab">Almoço - ${DIA_FULL[dcDia]}</div>
+        <div style="font-size:13px;margin-top:3px">Início: <strong>${t.inicio||'-'}</strong>${t.quemInicio?' ('+t.quemInicio+')':''} &nbsp;&middot;&nbsp; Fim: <strong>${t.fim||'-'}</strong>${t.quemFim?' ('+t.quemFim+')':''}${durAlm!=null?' &nbsp;&middot;&nbsp; Duração: <strong>'+fmtDur(durAlm)+'</strong>':''}</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">
-        <button class="btn btn-gold" onclick="iniciarAlmoco()">&#9654; Iniciar almoco</button>
+        <button class="btn btn-gold" onclick="iniciarAlmoco()">&#9654; Iniciar almoço</button>
         <button class="btn" style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="encerrarAlmoco()">&#9632; Encerrar</button>
       </div></div>`;
     let tudo=0,metade=0,nao=0,naAp=0; const naoList=[], metList=[], naList=[];
@@ -74510,14 +74544,14 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
       <div class="dc-resumo">
         <div class="dc-stat ok"><b>${tudo}</b>comeram tudo</div>
         <div class="dc-stat pend"><b>${metade}</b>metade</div>
-        <div class="dc-stat bad"><b>${nao}</b>nao comeram</div>
+        <div class="dc-stat bad"><b>${nao}</b>não comeram</div>
         ${naAp?`<div class="dc-stat"><b>${naAp}</b>não se aplica</div>`:''}
       </div>
       ${naList.length?`<div class="alm-fora"><strong>NÃO SE APLICA (${naList.length}):</strong> ${naList.join(', ')} &mdash; hoje não almoçam (comem outra coisa, jejum ou já comeram). Não vão para o 2º horário e não precisa avisar o tutor.</div>`:''}
-      ${naoList.length?`<div class="dc-faltas"><strong>NAO COMERAM - vao para o 2&ordm; horario (${naoList.length}):</strong> ${naoList.join(', ')}</div>`:''}
+      ${naoList.length?`<div class="dc-faltas"><strong>NÃO COMERAM - vão para o 2&ordm; horário (${naoList.length}):</strong> ${naoList.join(', ')}</div>`:''}
       ${metList.length?`<div class="dc-meia"><strong>COMERAM METADE (${metList.length}):</strong> ${metList.join(', ')}</div>`:''}
-      ${faltouList.length?`<div class="alm-fora"><strong>FALTARAM HOJE (${faltouList.length}):</strong> ${faltouList.map(o=>nomeDesamb(o,faltouList)).join(', ')} &mdash; a planilha avisou a falta, entao sairam do almoco.</div>`:''}${typeof ZeluzPresencaExecucao!=='undefined'?ZeluzPresencaExecucao.faltasHTML(presenca)+ZeluzPresencaExecucao.historicoHTML(presenca,{titulo:'Almoço já registrado'}):''}
-      ${foraList.length?`<div class="alm-fora"><strong>NAO ALMOCAM NORMALMENTE (${foraList.length}):</strong> ${foraList.map(o=>nomeDesamb(o,foraList)).join(', ')} &mdash; continuam na lista abaixo. Se hoje nao comerem, toque em <strong>Nao se aplica</strong>; se a tutora pedir para dar comida, marque normalmente.</div>`:''}
+      ${faltouList.length?`<div class="alm-fora"><strong>FALTARAM HOJE (${faltouList.length}):</strong> ${faltouList.map(o=>nomeDesamb(o,faltouList)).join(', ')} &mdash; a planilha avisou a falta, então saíram do almoço.</div>`:''}${typeof ZeluzPresencaExecucao!=='undefined'?ZeluzPresencaExecucao.faltasHTML(presenca)+ZeluzPresencaExecucao.historicoHTML(presenca,{titulo:'Almoço já registrado'}):''}
+      ${foraList.length?`<div class="alm-fora"><strong>NÃO ALMOÇAM NORMALMENTE (${foraList.length}):</strong> ${foraList.map(o=>nomeDesamb(o,foraList)).join(', ')} &mdash; continuam na lista abaixo. Se hoje não comerem, toque em <strong>Não se aplica</strong>; se a tutora pedir para dar comida, marque normalmente.</div>`:''}
       ${!ehHoje()?`<div class="dc-meia"><strong>Você está vendo a turma de ${DIA_FULL[dcDia]}, que não é hoje.</strong> Isto é só planejamento: o almoço se marca no dia em que acontece. Para registrar, volte para ${DIA_FULL[HOJE_DIA]} (hoje).</div>`:''}
       ${almSemRede?`<div class="dc-faltas" style="border-color:#B3261E;color:#B3261E"><strong>SEM CONEXÃO COM O BANCO AGORA.</strong> A lista pode estar desatualizada. <strong>Não remarque nada:</strong> o que você já marcou está guardado e sobe sozinho assim que a internet voltar. Se algum peludinho aparecer em branco, é a internet — não é o seu trabalho.</div>`:''}
       ${avisoPlanilha()}
@@ -74532,20 +74566,22 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
       : `Todos os ${list.length} aulunos foram servidos`;
     document.getElementById('almGrid').innerHTML=filtraLista(list).map(o=>{ const p=o.p; const ex=(typeof o.i==='number')?pelExtra(p):{};
       const a=almDadosHospede29(o,p); const foto=(typeof o.i==='number')?fotoDoPel(p):''; const k=dcKey(p.n,p.tutor); const m=marcaDe(o);
-      const restrRaw=(a&&a.restr)||ex.restricao||ex.alergia||'';
+      // 6.121: com check-in, o cadastro e a observação chegam separados; quem decide a cor é alimObsCheckinCartao.
+      const obsCi=(a&&typeof a.obsCheckin==='string')?alimObsCheckinCartao(a.restrCadastro||ex.restricao||ex.alergia||'', a.obsCheckin):null;
+      const restrRaw=obsCi?obsCi.restr:((a&&a.restr)||ex.restricao||ex.alergia||'');
       const ph=foto?`<div class="ph" style="background-image:url('${foto}');background-size:cover;background-position:center"></div>`:`<div class="ph" style="background:${corPel(typeof o.i==='number'?o.i:0)}">${(p.n[0]||'?')}</div>`;
       let info;
       if(a){ info=`<div class="alm-info">
-          <div class="alm-line"><span>Alimentacao</span><b>${escAttr(a.alim||'-')}</b></div>
+          <div class="alm-line"><span>Alimentação</span><b>${escAttr(a.alim||'-')}</b></div>
           <div class="alm-line"><span>Quantidade</span><b>${escAttr(a.quant||'-')}</b></div>
 ${o.hospede?'<div class="hint">'+escAttr(a.fonte==='checkin-hotel'?'Informado no check-in desta hospedagem':'Informação a conferir na hospedagem')+'</div>':''}
 ${a.conferir?'<div class="alm-restr">Confirme a refeição e a quantidade antes de servir.</div>':''}
 ${a.semRacao?alimSemRacaoHTML(a):''}
-          ${a.lento?'<div class="alm-badge">Comedouro LENTO</div>':''}${a.nao?'<div class="alm-badge" style="background:rgba(35,77,103,.12);color:var(--z-blue)">NAO ALMOCA</div>':''}
+          ${a.lento?'<div class="alm-badge">Comedouro LENTO</div>':''}${a.nao?'<div class="alm-badge" style="background:rgba(35,77,103,.12);color:var(--z-blue)">NÃO ALMOÇA</div>':''}
           ${(function(){ const _o=almObsLimpa(a.extra,restrRaw); return _o?`<div class="alm-extra">${escAttr(_o)}</div>`:''; })()}
         </div>`; }
-      else info=`<div class="alm-info"><div class="alm-extra" style="color:var(--muted)">Almoco nao cadastrado</div></div>`;
-      const neon=restrRaw?`<div class="alm-restr">&#9888; ${escAttr(/restri/i.test(restrRaw)?restrRaw:('RESTRICAO: '+restrRaw))}</div>`:'';
+      else info=`<div class="alm-info"><div class="alm-extra" style="color:var(--muted)">Almoço não cadastrado</div></div>`;
+      const neon=restrRaw?`<div class="alm-restr">&#9888; ${escAttr(/restri/i.test(restrRaw)?restrRaw:('RESTRIÇÃO: '+restrRaw))}</div>`:'';
       // Quem normalmente não almoça fica na grade com aviso — o monitor decide no dia.
       const _naoAlm=(o.hospede&&a)?!!a.nao:(typeof o.i==='number'&&typeof naoAlmoca==='function'&&naoAlmoca(p));
       const avisoNaoAlm=(_naoAlm&&!m)?`<div style="background:rgba(124,139,153,.16);border-radius:8px;padding:6px 9px;margin-top:6px;font-size:11.5px;font-weight:800;color:var(--z-blue)">Normalmente NÃO almoça — toque em "Não se aplica" ou sirva se a tutora pedir</div>`:'';
@@ -74553,7 +74589,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
         <div ${typeof o.i==='number'?`onclick="abrirPeludinhoDay(${o.i})" style="cursor:pointer"`:''}>
           ${ph}<div class="nm">${nomeDesamb(o,list)}</div><div class="br">${p.raca||'-'}</div>
         </div>
-        ${seloBanho(k)}${seloAnsioso(p,temBanho(k))}${o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex))}${neon}${info}${avisoNaoAlm}${almExcecaoHTML(k)}
+        ${seloBanho(k)}${seloAnsioso(p,temBanho(k))}${o.daPlanilha?seloPlanilha(o):(o.foraDia?seloForaDia(o):seloAdapt(ex))}${neon}${info}${avisoNaoAlm}${almExcecaoHTML(k)}${obsCi?obsCi.faixa:''}
         <div class="alm-actions">
           <div class="alm-seg">
             <button class="alm-btn tudo ${m==='tudo'?'on':''}" onclick="marcarAlmoco('${k}','tudo')">Comeu</button>
@@ -81083,7 +81119,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       refs.extras=(Array.isArray(a.refs.extras)?a.refs.extras:[]).map(mcrExtraNorm);
     } else refs=mcrRefsLegado(a);
     return {tipo:String(a.tipo||''), marca:String(a.marca||''), unidade:String(a.unidade||''), refs:refs,
-            semRacao:!!(est&&est.alimentacao&&est.alimentacao.sem_racao)};
+            semRacao:!!(est&&est.alimentacao&&est.alimentacao.sem_racao), obs:String(a.obs==null?'':a.obs)};
   }
   function mcrTemNatural(tipo){ return tipo==='Ração + natural'||tipo==='Comida natural'; }
   // Os campos DERIVADOS que o check-in grava (ciColetarFicha + ciCalcRacao), sem ler a tela:
@@ -81177,9 +81213,10 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       out.push(mcrDiffRef(nome+(xa.nome!==xb.nome?(' (era «'+(xa.nome||'Refeição extra')+'»)'):''), xa, xb, a.unidade, b.unidade));
     }
     if(!!a.semRacao!==!!b.semRacao) out.push('Sem ração — comida úmida da casa: '+(b.semRacao?'ligado (só nesta hospedagem)':'desligado'));
+    if(vz(a.obs)!==vz(b.obs)) out.push('Observação da alimentação: '+(vz(a.obs)||'sem observação')+' → '+(vz(b.obs)||'sem observação'));
     return out;
   }
-  function mcrComidaRastro(c){ c=c||{}; return {tipo:c.tipo||'', marca:c.marca||'', unidade:c.unidade||'', refs:mcrLimpo(c.refs||null), semRacao:!!c.semRacao}; }
+  function mcrComidaRastro(c){ c=c||{}; return {tipo:c.tipo||'', marca:c.marca||'', unidade:c.unidade||'', refs:mcrLimpo(c.refs||null), semRacao:!!c.semRacao, obs:String(c.obs==null?'':c.obs).trim()}; }
 
   // ---- REMÉDIO: a régua da dose de hoje (pura). Na dúvida, AMANHÃ — funciona até com celular sem internet.
   function mcrDadosHoje(item, id, log){ log=log||{}; return (item&&Array.isArray(item.horarios)?item.horarios:[]).filter(function(h){ return !!log[magDoseId(id,h)]; }); }
@@ -81823,19 +81860,24 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     var fichaPlano=null, comidaRastro=null;
     var difC=mcrDiffComida(M.comidaAntes, M.comida);
     if(difC.length){
-      var semA=Object.assign({}, M.comidaAntes, {semRacao:false}), semB=Object.assign({}, M.comida, {semRacao:false});
+      var semA=Object.assign({}, M.comidaAntes, {semRacao:false, obs:''}), semB=Object.assign({}, M.comida, {semRacao:false, obs:''});
+      // 6.121: a observação da alimentação é desta estadia (a ficha do FILHOt nunca a guardou).
+      var obsNova=String(M.comida.obs==null?'':M.comida.obs).trim(), mudouObs=(String(M.comidaAntes.obs==null?'':M.comidaAntes.obs).trim()!==obsNova);
       if(mcrDiffComida(semA, semB).length){
         var refs=JSON.parse(JSON.stringify(M.comida.refs));
         CI_REF_FIXAS.forEach(function(f){ var r=refs.fixas[f.k]; if(r){ r.racao=mcrQtdLimpa(r.racao); r.natural=mcrQtdLimpa(r.natural); } });
         (refs.extras||[]).forEach(function(e){ e.racao=mcrQtdLimpa(e.racao); e.natural=mcrQtdLimpa(e.natural); });
         var base=Object.assign({}, (est.ficha&&est.ficha.alim)||{}, {tipo:M.comida.tipo, marca:String(M.comida.marca||'').trim(), unidade:M.comida.unidade, refs:refs});
+        if(mudouObs) base.obs=obsNova;
         var alim=alimDerivados(base, est.entrada, est.saida);
         alim.confirmacao={estado:'mudou', quem:quem, ts:ts, via:'mudar-comida'};
         up[P+'ficha/alim']=alim;
         if(M.ficha && M.podeFicha && !M.fichaIncerta) fichaPlano={tipo:M.comida.tipo, unidade:M.comida.unidade, marca:String(M.comida.marca||'').trim(), refs:JSON.parse(JSON.stringify(refs)), conf:{estado:'mudou', via:'mudar-comida', quem:quem, ts:ts}};
-      }
+      } else if(mudouObs) up[P+'ficha/alim/obs']=obsNova;   // só a observação: nada de derivados, confirmacao nem refs
       if(!!M.comidaAntes.semRacao!==!!M.comida.semRacao) up[P+'alimentacao']=M.comida.semRacao?{sem_racao:true, comida_umida:true, quem:quem, ts:ts}:null;
       comidaRastro={antes:mcrComidaRastro(M.comidaAntes), depois:mcrComidaRastro(M.comida), ficha:!!fichaPlano};
+      // Só a observação mudou: a ficha nem entra na conta (não é «só desta vez»; a próxima tela não avisa disso).
+      if(mudouObs && !up[P+'ficha/alim'] && !(P+'alimentacao' in up)) delete comidaRastro.ficha;
       frases=frases.concat(difC);
     }
     // --- remédios
@@ -81967,7 +82009,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     Object.keys(up).forEach(function(k){ if(up[k]!==null && typeof up[k]==='object') up[k]=mcrLimpo(up[k]); });
     var estNova=mcrAplicarCaminhos(JSON.parse(JSON.stringify(est)), up, P);
     return {up:up, frases:frases, tg:tg, rastro:rastro, estNova:estNova, fichaPlano:fichaPlano, novosIds:novosIds, reabre:reabre.length>0,
-            avisosTela:avisosTela, temRemedio:ops.length>0, comidaMudou:!!up[P+'ficha/alim']||(P+'alimentacao' in up), recusas:recusas};
+            avisosTela:avisosTela, temRemedio:ops.length>0, comidaMudou:!!up[P+'ficha/alim']||(P+'alimentacao' in up)||(P+'ficha/alim/obs' in up), recusas:recusas};
   }
   // A estadia ganha o carimbo de tempo (que decide qual é "a mais recente" no Plantão), menos quando
   // é uma hospedagem futura de quem ainda está hospedado em outra — senão o card leria a comida dela.
@@ -82208,6 +82250,11 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
         +'<button type="button" class="mcr-q" onclick="mcrPassoTodas('+(-passo)+')">−'+rot+'</button><span class="mcr-todas-v">'+esc(mcrQtdUnid(vals[0], soNat?'gramas':c.unidade).trim())+'</span>'
         +'<button type="button" class="mcr-q" onclick="mcrPassoTodas('+passo+')">+'+rot+'</button></div></div>';
     }
+    // 6.121: a observação do check-in desta estadia, à vista (a Adriana não a achou em lugar nenhum da tela).
+    var rotObs='Observação da alimentação (como dar, misturas, manias)';
+    h+='<div class="mcr-lab">'+rotObs+'</div>'
+      +'<textarea class="mcr-in-tx" rows="2" aria-label="'+rotObs+'" oninput="mcrSetComidaTx(\'obs\',this.value)">'+escAttr(c.obs||'')+'</textarea>'
+      +'<div class="mcr-mut">Vale só para esta estadia; a ficha do FILHOt não guarda esta observação.</div>';
     h+='<button type="button" class="mcr-bt mcr-bt-sec" onclick="mcrToggleTudo()">'+(M.editarTudo?'Fechar «Mudar o que ele come»':'Mudar o que ele come (tipo, marca, patê, refeições)')+'</button>';
     if(M.editarTudo) h+=mcrComidaTudoHTML(M);
     h+=mcrChip(c.semRacao, 'Não trouxe ração — comida úmida da casa', 'mcrToggleSemRacao()', ' style="width:100%;margin-top:8px"');
