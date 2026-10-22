@@ -16,6 +16,11 @@
  *   Sai com código 0 quando aprova e 1 em qualquer falha. Usa só módulos do Node (fs, path,
  *   child_process), roda no Node 18 ou mais novo, sem `npm install` e sem rede.
  *
+ *   A pasta de saída é APAGADA antes de montar, então só vale pasta DENTRO do repositório, sem nome
+ *   oculto (nada de .git), sem arquivo versionado e sem .git dentro. Se ela já existe, só é apagada
+ *   quando foi este montador que a criou (ele a marca dentro do .git ao aprovar); uma pasta que ele
+ *   não criou é recusada com a frase, e quem apaga é a pessoa. No GitHub a pasta não existe e nada disso atrapalha.
+ *
  * REGRA DE QUEM MEXE NO APP
  *   ARQUIVO NOVO DE TELA (script, estilo, imagem ou página que uma tela carrega) = LINHA NOVA em
  *   .github/site-permitidos.txt, NO MESMO COMMIT. Sem a linha, este script bloqueia, o fluxo do
@@ -214,12 +219,15 @@ const EXT_IMAGEM_ETC = 'png|jpe?g|gif|svg|webp|avif|ico|bmp|css|js|mjs|html?|jso
 // Todos os quantificadores têm limite: nenhuma expressão abaixo retrocede de forma catastrófica,
 // mesmo numa linha de 8 MB sem quebra (AC3.6).
 const RE_ATRIBUTO = /(?<![A-Za-z0-9_\-])(src|href|srcset|poster|data|action|formaction|manifest)[ \t]*=[ \t]*\\?(?:"([^"\n]{0,2000})"|'([^'\n]{0,2000})')/gi;
-const RE_URL_CSS = /(?<![A-Za-z0-9_$.\-])url\([ \t]*(?:"([^"\n]{0,2000})"|'([^'\n]{0,2000})'|([^()'"\s]{0,2000}))[ \t]*\)/g;
+// A barra invertida antes da aspa de abrir (url(\'a.png\') dentro de um texto do código) é só o escape da aspa.
+const RE_URL_CSS = /(?<![A-Za-z0-9_$.\-])url\([ \t]*(?:\\(?=["']))?(?:"([^"\n]{0,2000})"|'([^'\n]{0,2000})'|([^()'"\s]{0,2000}))[ \t]*\)/g;
 const RE_IMPORT_CSS = /@import[ \t]+(?:"([^"\n]{0,2000})"|'([^'\n]{0,2000})')/g;
 const CARAC_CAMINHO = '[\\p{L}\\p{M}\\p{N}_\\-.%()@~/]{1,200}';
 const RE_TEXTO_CAMINHO = new RegExp(
   '([\'"`])((?:\\.{0,2}/)?' + CARAC_CAMINHO + '(?: ' + CARAC_CAMINHO + '){0,2}\\.(?:' + EXT_ARQUIVO + '))\\1', 'giu');
-const RE_MONTADO_SUFIXO = new RegExp('\\+[ \\t]*([\'"`])[\\w\\-./ ]{0,60}?\\.(?:' + EXT_IMAGEM_ETC + ')\\1', 'gi');
+// Depois da extensão vale qualquer caractere que não seja letra ou número: a aspa que fecha o texto do código
+// nem sempre é a que abriu (a tela escreve '<img src="a/'+n+'.png">' ou 'url(a/'+n+'.png)').
+const RE_MONTADO_SUFIXO = new RegExp('\\+[ \\t]*[\'"`][\\w\\-./ ]{0,60}?\\.(?:' + EXT_IMAGEM_ETC + ')(?![A-Za-z0-9])', 'gi');
 const RE_MONTADO_MODELO = new RegExp('\\$\\{[^}\\n]{0,200}\\}[\\w\\-./ ]{0,60}?\\.(?:' + EXT_IMAGEM_ETC + ')(?![\\w])', 'gi');
 const RE_GATILHO_PEDIDO = /\bsrc[ \t]*=|\bhref[ \t]*=|\burl\(|<img\b|<script\b|<link\b|\bfetch\(|\bimport\(|\bnew[ \t]+Image\b|setAttribute\([ \t]*['"]src/i;
 const RE_ATRIBUTO_DATA = /data-[\w-]+[ \t]*=[ \t]*\\?$/i;
@@ -254,6 +262,15 @@ function corposDeScript(texto) {
     re.lastIndex = Math.max(re.lastIndex, fim);
   }
   return faixas;
+}
+
+/** Nome do último atributo (ou campo) com «=» antes do fim do texto; vazio se não há. */
+function ultimoAtributo(texto) {
+  const re = /([\w-]+)[ \t]*=(?!=)/g;
+  let nome = '';
+  let m;
+  while ((m = re.exec(texto)) !== null) nome = m[1].toLowerCase();
+  return nome;
 }
 
 /** O valor tem cara de valor montado no código (não é um nome de arquivo)? */
@@ -295,7 +312,8 @@ function extrairPedidos(texto, tipo) {
 
   // url() e @import valem em CSS, em HTML (style="...") e em texto de código.
   juntar(RE_URL_CSS, function (m) {
-    const v = m[1] !== undefined ? m[1] : (m[2] !== undefined ? m[2] : m[3]);
+    let v = m[1] !== undefined ? m[1] : (m[2] !== undefined ? m[2] : m[3]);
+    if (m[3] === undefined) v = v.replace(/\\+$/, '');      // a aspa de fechar escapada (\') não faz parte do nome
     pedidos.push({ bruto: v, pos: m.index, via: 'url()' });
   });
   juntar(RE_IMPORT_CSS, function (m) {
@@ -338,6 +356,7 @@ function extrairPedidos(texto, tipo) {
     if (nl !== -1) janela = janela.slice(nl + 1);
     const g = RE_GATILHO_PEDIDO.exec(janela);
     if (!g) return;                                // nome de download, não pedido ao site
+    if (ultimoAtributo(janela) === 'download') return;   // '<a href="'+u+'" download="foto-'+id+'.png">': o nome é do download
     montados.push({ trecho: (janela.slice(g.index) + m[0]).trim(), pos: m.index });
   }
   juntar(RE_MONTADO_SUFIXO, nomeMontado);
@@ -467,20 +486,67 @@ function provar(itens, raiz, lerTexto) {
 }
 
 // ====================================================================== SAÍDA
+// O montador APAGA a pasta de saída antes de montar. Por isso só apaga o que ele mesmo montou:
+//   - a pasta tem de ficar DENTRO do repositório, sem nome oculto (nada de .git) e sem arquivo versionado;
+//   - se já existe, tem de ter sido criada por este montador: ele a marca no fim de uma montagem aprovada,
+//     numa lista guardada DENTRO do .git (nunca vai para o commit nem para o site), e a tira dessa lista ao apagar;
+//   - pasta com um .git dentro nunca é apagada, nem marcada.
+const ARQUIVO_DAS_MARCAS = 'montar-site-saidas.txt';
+
+function caminhoDasMarcas(raiz) {
+  let dir;
+  try {
+    dir = execFileSync('git', ['-C', raiz, 'rev-parse', '--git-dir'], { stdio: ['ignore', 'pipe', 'pipe'] }).toString('utf8').trim();
+  } catch (e) {
+    throw new Error('não consegui achar a pasta .git de ' + raiz + ' (' + e.message.split('\n')[0] + ')');
+  }
+  return path.join(path.resolve(raiz, dir), ARQUIVO_DAS_MARCAS);
+}
+
+function lerMarcas(raiz) {
+  const arq = caminhoDasMarcas(raiz);
+  let texto = '';
+  try { texto = fs.readFileSync(arq, 'utf8'); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+  return new Set(texto.split('\n').filter(Boolean));
+}
+
+function gravarMarcas(raiz, marcas) {
+  const lista = Array.from(marcas).sort();
+  fs.writeFileSync(caminhoDasMarcas(raiz), lista.join('\n') + (lista.length ? '\n' : ''));
+}
+
+function marcarSaida(raiz, rel) { const m = lerMarcas(raiz); m.add(rel); gravarMarcas(raiz, m); }
+function desmarcarSaida(raiz, rel) { const m = lerMarcas(raiz); if (m.delete(rel)) gravarMarcas(raiz, m); }
+
+function existeNoDisco(caminho) {
+  try { fs.lstatSync(caminho); return true; } catch (e) { return false; }
+}
+
+/** Confere a pasta de saída antes de apagar. Devolve o caminho dela a partir da raiz (com «/»). */
 function segurancaDaSaida(saidaAbs, raiz, indice) {
   const rel = path.relative(raiz, saidaAbs);
   const fora = rel === '..' || rel.indexOf('..' + path.sep) === 0 || path.isAbsolute(rel);
   if (saidaAbs === path.parse(saidaAbs).root) throw new ErroDeUso('a pasta de saída não pode ser a raiz do disco');
   if (rel === '') throw new ErroDeUso('a pasta de saída não pode ser a raiz do repositório');
-  if (!fora) {
-    // dentro do repositório: não pode ter arquivo versionado embaixo (seria apagado)
-    const relPosix = rel.split(path.sep).join('/');
-    if (indice.has(relPosix) || temArquivoSob(indice, relPosix)) {
-      throw new ErroDeUso('a pasta de saída "' + relPosix + '" tem arquivo versionado; escolha outra (por exemplo _site)');
-    }
-  } else if ((raiz + path.sep).indexOf(saidaAbs + path.sep) === 0) {
-    throw new ErroDeUso('a pasta de saída não pode ser uma pasta que contém o repositório');
+  if (fora) {
+    throw new ErroDeUso('a pasta de saída "' + saidaAbs + '" fica fora do repositório; escolha uma pasta dentro dele (por exemplo _site)');
   }
+  const relPosix = rel.split(path.sep).join('/');
+  if (relPosix.split('/').some(function (p) { return p.charAt(0) === '.'; })) {
+    throw new ErroDeUso('a pasta de saída "' + relPosix + '" é oculta ou fica dentro de uma pasta oculta (como o .git); escolha outra (por exemplo _site)');
+  }
+  // dentro do repositório: não pode ter arquivo versionado embaixo (seria apagado)
+  if (indice.has(relPosix) || temArquivoSob(indice, relPosix)) {
+    throw new ErroDeUso('a pasta de saída "' + relPosix + '" tem arquivo versionado; escolha outra (por exemplo _site)');
+  }
+  if (!existeNoDisco(saidaAbs)) return relPosix;
+  if (existeNoDisco(path.join(saidaAbs, '.git'))) {
+    throw new ErroDeUso('a pasta de saída "' + relPosix + '" tem um .git dentro; ela não é saída do montador e não será apagada');
+  }
+  if (!lerMarcas(raiz).has(relPosix)) {
+    throw new ErroDeUso('a pasta de saída "' + relPosix + '" já existe e não foi criada por este montador, então ele não a apaga; apague-a você mesmo se não houver nada a perder nela, ou escolha outra (por exemplo _site)');
+  }
+  return relPosix;
 }
 
 function listarSaida(dir) {
@@ -554,8 +620,9 @@ function principal(argv) {
     return bloquear([nomeLista + ': não consegui ler a lista (' + e.code + ').']);
   }
   const indice = lerIndice(RAIZ);
-  segurancaDaSaida(saidaAbs, RAIZ, indice);
+  const saidaNoRepo = segurancaDaSaida(saidaAbs, RAIZ, indice);
   fs.rmSync(saidaAbs, { recursive: true, force: true });     // sempre começa limpo; nunca sobra saída velha
+  desmarcarSaida(RAIZ, saidaNoRepo);
 
   const lida = lerLista(texto, nomeLista);
   let problemas = lida.erros.slice();
@@ -584,6 +651,7 @@ function principal(argv) {
     fs.rmSync(saidaAbs, { recursive: true, force: true });
     return bloquear(feito.problemas);
   }
+  marcarSaida(RAIZ, saidaNoRepo);                              // da próxima vez, o montador sabe que a pasta é dele
   console.log('APROVADO: ' + feito.total + ' arquivos, ' + formatarNumero(feito.bytes) + ' bytes; ' + prova.pedidos.size + ' arquivos pedidos pelas telas, todos na lista.');
   const relSaida = path.relative(process.cwd(), saidaAbs);
   const mostraSaida = relSaida.indexOf('..') === 0 || path.isAbsolute(relSaida) ? saidaAbs : relSaida;

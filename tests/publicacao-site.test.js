@@ -4,14 +4,15 @@
  *
  * Prova que o montador (tools/montar-site.js), a lista (.github/site-permitidos.txt) e o fluxo
  * (.github/workflows/publicar-site.yml) fazem o que prometem:
- *   - 19 MUTAÇÕES: cada uma estraga uma cópia da árvore de um jeito e o montador TEM de bloquear
+ *   - 23 MUTAÇÕES: cada uma estraga uma cópia da árvore de um jeito e o montador TEM de bloquear
  *     (código 1, com a frase que nomeia o arquivo e, quando há, a linha). M14 é a exceção: a lista
  *     com CRLF e BOM TEM de ser aceita.
  *   - 6 CONTROLES: o que tem de passar (a base, `?v=`, porcentagem, arquivo novo com linha,
  *     os falsos positivos que enganaram o primeiro rascunho, lista com CRLF e BOM).
  *   - EXTRAS: lista hostil, regra fixa por classe, índice do git, link simbólico e submódulo,
  *     tempo da prova, a conferência em shell do fluxo (a MESMA que o GitHub roda, extraída do
- *     YAML) com intrusos, e a forma do fluxo (permissões, ações fixadas, publicar só no master).
+ *     YAML) com intrusos, a forma do fluxo (permissões, ações fixadas, publicar só no master, nenhuma
+ *     publicação cancelada em andamento) e a pasta de saída (o montador só apaga o que ele mesmo montou).
  *
  * NÃO toca na rede, em produção nem em tests/harness.js. Trabalha em CÓPIA TEMPORÁRIA mínima da
  * árvore (as 4 entradas, os arquivos da lista e os intrusos de cada mutação, com `git init`);
@@ -125,9 +126,9 @@ function cenario() {
       c.escrever(rel, t.slice(0, i) + '\n' + texto + '\n' + t.slice(i));
       return t.slice(0, i).split('\n').length + 1;
     },
-    rodar: function (extraEnv) {
+    rodar: function (extraEnv, args) {
       const ini = Date.now();
-      const r = spawnSync(process.execPath, [path.join(dir, 'tools', 'montar-site.js'), '--lista', '.github/site-permitidos.txt', '--saida', '_site'], {
+      const r = spawnSync(process.execPath, [path.join(dir, 'tools', 'montar-site.js')].concat(args || ['--lista', '.github/site-permitidos.txt', '--saida', '_site']), {
         cwd: dir, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
         env: Object.assign({}, process.env, { MOSTRAR_PEDIDOS: '' }, extraEnv || {})
       });
@@ -135,6 +136,7 @@ function cenario() {
       ultimaSaida = saida;
       return { status: r.status, saida: saida, ms: Date.now() - ini };
     },
+    rodarComSaida: function (saida) { return c.rodar(null, ['--lista', '.github/site-permitidos.txt', '--saida', saida]); },
     existeSite: function () { return fs.existsSync(path.join(dir, '_site')); },
     arquivosDoSite: function () { return listarArquivos(path.join(dir, '_site')); }
   };
@@ -164,6 +166,13 @@ function exigirBloqueio(c, r, frases) {
     assert.ok(r.saida.indexOf(f) !== -1, 'faltou a frase: ' + f + '\n--- saída do montador ---\n' + resumo(r.saida));
   });
   assert.ok(!c.existeSite(), 'o _site não pode existir quando o montador bloqueia (nada é publicado)');
+}
+
+/** Recusa da pasta de saída: código 1 e a frase; NÃO olha o _site (a pasta recusada continua como estava). */
+function exigirRecusaDeSaida(r, frase) {
+  assert.strictEqual(r.status, 1, 'tinha de RECUSAR a pasta de saída (código 1) e saiu com ' + r.status + '.\n' + resumo(r.saida));
+  assert.ok(r.saida.indexOf('BLOQUEADO:') !== -1, 'faltou a frase final «BLOQUEADO: ...».\n' + resumo(r.saida));
+  assert.ok(r.saida.indexOf(frase) !== -1, 'faltou a frase: ' + frase + '\n--- saída do montador ---\n' + resumo(r.saida));
 }
 
 function numerosDaSaida(saida) {
@@ -248,6 +257,9 @@ controle('C5', 'os falsos positivos que enganaram o primeiro rascunho passam', f
     "var a3='<svg><rect fill=\"url(#kfG)\"/></svg>';",
     "var a4=new URL('https://exemplo.invalid/a.png'); var a5='data:image/png;base64,AAAA';",
     'var l1=meuurl(abc); var l2=obj.url(def); var l3=$url(ghi);',   // «url(» colado em nome de função ou de campo não é pedido
+    "var e1='background:url(\\'assets/simbolo.png\\')'; var e2=\"background:url(\\\"assets/simbolo.png\\\")\";",   // aspa escapada, arquivo que ESTÁ na lista
+    "var m1='<img src=\"assets/simbolo.png\">'; var m2=\"<img src='assets/simbolo.png'>\"; var m3='url(assets/simbolo.png)';",   // nome inteiro em texto de HTML e de CSS
+    "var d1='<a href=\"#\" download=\"'+nome+'.pdf\">x</a>'; var d2='<a download=\"foto-'+dia+'.jpg\">x</a>';",   // download com nome montado, sem pedido ao site
     '</script>'
   ].join('\n'), true);
   c.indexar();
@@ -338,6 +350,66 @@ mutacao('M8', "img.src='assets/stickers/'+nome+'.png' (nome montado no código)"
   const linha = c.inserirAntes(PAG, '</body>', "<script>\nvar img=new Image(); img.src='assets/stickers/'+nome+'.png';\n</script>", true) + 1;
   c.indexar();
   exigirBloqueio(c, c.rodar(), [PAG + ':' + linha + ': a tela monta o nome do arquivo no código', 'Escreva o nome inteiro, para a prova enxergar.']);
+});
+
+mutacao('M8b', "HTML em texto: '<img src=\"assets/stickers/'+n+'.png\">' (a aspa depois da extensão não é a que abriu)", function () {
+  [
+    ['<img> sozinho', "var h='<img src=\"assets/stickers/'+n+'.png\">';"],
+    ['<img> depois de um download=, na mesma linha (o download só isenta o que é download)', "var h='<a download=\"x.png\"><img src=\"assets/stickers/'+n+'.png\"></a>';"]
+  ].forEach(function (par) {
+    const c = cenario();
+    const linha = c.inserirAntes(PAG, '</body>', '<script>\n' + par[1] + '\n</script>', true) + 1;
+    c.indexar();
+    try {
+      exigirBloqueio(c, c.rodar(), [PAG + ':' + linha + ': a tela monta o nome do arquivo no código', 'Escreva o nome inteiro, para a prova enxergar.']);
+    } catch (e) {
+      e.message = par[0] + ': ' + e.message;
+      throw e;
+    }
+  });
+});
+
+mutacao('M8c', "HTML em texto com as aspas trocadas: \"<img src='assets/stickers/\"+n+\".png'>\"", function () {
+  const c = cenario();
+  const linha = c.inserirAntes(PAG, '</body>', "<script>\nvar h=\"<img src='assets/stickers/\"+n+\".png'>\";\n</script>", true) + 1;
+  c.indexar();
+  exigirBloqueio(c, c.rodar(), [PAG + ':' + linha + ': a tela monta o nome do arquivo no código', 'Escreva o nome inteiro, para a prova enxergar.']);
+});
+
+mutacao('M8d', 'url() montado no código: sem aspas, com aspas dentro de aspas e com aspa escapada', function () {
+  [
+    ['url() sem aspas', "var h='url(assets/stickers/'+n+'.png)';"],
+    ["url('...') dentro de aspas duplas", "var h=\"background:url('assets/stickers/\"+n+\".png')\";"],
+    ['url("...") dentro de aspas simples', "var h='background:url(\"assets/stickers/'+n+'.png\")';"],
+    ["url(\\'...\\') com aspa escapada", "var h='background:url(\\'assets/stickers/'+n+'.png\\')';"]
+  ].forEach(function (par) {
+    const c = cenario();
+    const linha = c.inserirAntes(PAG, '</body>', '<script>\n' + par[1] + '\n</script>', true) + 1;
+    c.indexar();
+    try {
+      exigirBloqueio(c, c.rodar(), [PAG + ':' + linha + ': a tela monta o nome do arquivo no código', 'Escreva o nome inteiro, para a prova enxergar.']);
+    } catch (e) {
+      e.message = par[0] + ': ' + e.message;
+      throw e;
+    }
+  });
+});
+
+mutacao('M8e', 'url() com aspa escapada em texto de código, pedindo arquivo que não está na lista', function () {
+  [
+    ["url(\\'...\\')", "var h='<i style=\"background:url(\\'assets/fora-a.png\\')\"></i>';", 'auaulandia/assets/fora-a.png'],
+    ['url(\\"...\\")', 'var h="background:url(\\"assets/fora-b.png\\")";', 'auaulandia/assets/fora-b.png']
+  ].forEach(function (caso) {
+    const c = cenario();
+    const linha = c.inserirAntes(PAG, '</body>', '<script>\n' + caso[1] + '\n</script>', true) + 1;
+    c.indexar();
+    try {
+      exigirBloqueio(c, c.rodar(), [PAG + ':' + linha + ': a tela pede "' + caso[2] + '", que NÃO está na lista']);
+    } catch (e) {
+      e.message = caso[0] + ': ' + e.message;
+      throw e;
+    }
+  });
 });
 
 mutacao('M9', 'imagem, texto no código, módulo .js, .css e url() de CSS novos sem linha na lista', function () {
@@ -525,6 +597,7 @@ function intrusosNaConferencia() {
     { nome: 'regras do banco (com linha na lista)', frase: 'arquivo proibido em _site', estragar: function (p) { mais(p, 'database.rules.json'); naLista(p, 'database.rules.json'); } },
     { nome: 'ponte integracao-*/ (com linha na lista)', frase: 'arquivo proibido em _site', estragar: function (p) { mais(p, 'integracao-telegram/Codigo.gs'); naLista(p, 'integracao-telegram/Codigo.gs'); } },
     { nome: 'arquivo oculto (com linha na lista)', frase: 'arquivo proibido em _site', estragar: function (p) { mais(p, '.oculto'); naLista(p, '.oculto'); } },
+    { nome: 'instruções AGENTS sem .md (com linha na lista)', frase: 'arquivo proibido em _site', estragar: function (p) { mais(p, 'AGENTS.txt'); naLista(p, 'AGENTS.txt'); } },
     { nome: 'nome com «senhas» (com linha na lista)', frase: 'arquivo proibido em _site', estragar: function (p) { mais(p, 'auaulandia/senhas-fixas.png'); naLista(p, 'auaulandia/senhas-fixas.png'); } },
     { nome: 'link simbólico a mais em _site', frase: 'link simbólico em _site', estragar: function (p) { fs.symlinkSync('../.github/site-permitidos.txt', path.join(p, '_site', 'atalho.png')); } },
     { nome: 'arquivo a mais (fora da lista)', frase: '+extra-fora-da-lista.png', estragar: function (p) { mais(p, 'extra-fora-da-lista.png'); } },
@@ -560,6 +633,7 @@ function registrarListasHostis() {
 const REGRA_FIXA_CASOS = [
   'docs/x.png', 'tests/x.js', 'tools/x.js', 'servidor-senha/x.js', 'zelozinha/x.js', 'node_modules/x.js',
   'integracao-telegram/x.png', 'integracao-daycare/x.png', 'LEIAME.md', 'auaulandia/nota.MD', 'AGENTS.md', 'CLAUDE.md',
+  'AGENTS.txt', 'CLAUDE.txt', 'auaulandia/Claude-notas.png', 'agents/x.png',      // instruções AGENTS/CLAUDE que NÃO terminam em .md
   'database.rules.json', 'database.rules.v2.json', 'firebase.json', '.firebaserc', '.github/x.png', '.oculto/x.png',
   'auaulandia/.oculto.png', 'x.gs', 'x.jsonl', 'package.json', 'package-lock.json', 'x.pem', 'x.key',
   'auaulandia/senhas.png', 'auaulandia/credenciais.png', 'auaulandia/conta-servico.png', 'auaulandia/service-account.png', 'auaulandia/meu-secret.png'
@@ -607,13 +681,15 @@ extra('X6', 'submódulo na lista (modo 160000) bloqueia', function () {
   exigirBloqueio(c, c.rodar(), ['auaulandia/submodulo.js: não é arquivo comum (link simbólico ou submódulo).']);
 });
 
-extra('X7', '_site velho é apagado: ao aprovar e ao bloquear', function () {
+extra('X7', '_site que o próprio montador criou e ficou velho é apagado: ao aprovar e ao bloquear', function () {
   const c = cenario();
+  exigirAprovado(c, c.rodar());                                   // a primeira montagem cria o _site e o marca como dela
   c.escrever('_site/lixo-velho.txt', 'sobra de uma montagem antiga');
   const ok = c.rodar();
   exigirAprovado(c, ok);
   assert.ok(!fs.existsSync(c.p('_site/lixo-velho.txt')), 'o _site tem de começar limpo');
   const d = cenario();
+  exigirAprovado(d, d.rodar());
   d.escrever('_site/lixo-velho.txt', 'sobra de uma montagem antiga');
   d.listaMais('auaulandia/nao-existe.js');
   exigirBloqueio(d, d.rodar(), ['auaulandia/nao-existe.js']);
@@ -870,6 +946,122 @@ extra('X25', 'conferência em shell: o link simbólico é pego sozinho; busca de
   assert.ok(/set -euo pipefail/.test(script), 'a conferência precisa de «set -euo pipefail»');
 });
 
+// ------------------------------------------------------------ a pasta de saída (B3 do QA da 6.114)
+// O montador APAGA a pasta de saída antes de montar. Só pode apagar o que ele mesmo montou.
+function pastaComArquivo(dir, arquivo, conteudo) {
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, arquivo), conteudo || 'não pode ser apagado');
+}
+
+extra('X26', 'B3: --saida .git (e qualquer pasta oculta) é recusada e o .git continua inteiro', function () {
+  const c = cenario();
+  const indiceAntes = git(c.dir, ['ls-files', '-s']);
+  exigirRecusaDeSaida(c.rodarComSaida('.git'), 'é oculta');
+  assert.ok(fs.existsSync(c.p('.git/HEAD')), 'o .git foi apagado pelo montador');
+  assert.strictEqual(git(c.dir, ['ls-files', '-s']), indiceAntes, 'o índice do git mudou: o .git não está inteiro');
+  exigirRecusaDeSaida(c.rodarComSaida('.git/objetos-de-teste'), 'é oculta');
+  // uma pasta oculta que não existe também é recusada (nada é criado)
+  exigirRecusaDeSaida(c.rodarComSaida('.oculta-nova'), 'é oculta');
+  assert.ok(!fs.existsSync(c.p('.oculta-nova')), 'o montador criou a pasta oculta');
+});
+
+extra('X27', 'B3: --saida fora da cópia é recusada (a pasta existente não é apagada, a nova não é criada)', function () {
+  const c = cenario();
+  const existente = path.join(TMP, 'fora-existente-' + contador);
+  pastaComArquivo(existente, 'importante.txt');
+  exigirRecusaDeSaida(c.rodarComSaida(existente), 'fica fora do repositório');
+  assert.ok(fs.existsSync(path.join(existente, 'importante.txt')), 'o montador apagou uma pasta que está fora da cópia');
+  const nova = path.join(TMP, 'fora-nova-' + contador);
+  exigirRecusaDeSaida(c.rodarComSaida(nova), 'fica fora do repositório');
+  assert.ok(!fs.existsSync(nova), 'o montador criou uma pasta fora da cópia');
+  exigirRecusaDeSaida(c.rodarComSaida('../fora-relativa-' + contador), 'fica fora do repositório');
+  assert.ok(!fs.existsSync(path.join(TMP, 'fora-relativa-' + contador)), 'o montador criou uma pasta fora da cópia (caminho relativo)');
+});
+
+extra('X28', 'B3: pasta que já existe e que o montador não criou não é apagada', function () {
+  const c = cenario();
+  pastaComArquivo(c.p('minha-pasta'), 'importante.txt');
+  exigirRecusaDeSaida(c.rodarComSaida('minha-pasta'), 'já existe e não foi criada por este montador');
+  assert.ok(fs.existsSync(c.p('minha-pasta/importante.txt')), 'o montador apagou uma pasta que não era dele');
+  // o _site feito à mão também não: é a mesma regra, sem exceção para o nome
+  pastaComArquivo(c.p('_site'), 'feito-a-mao.txt');
+  exigirRecusaDeSaida(c.rodar(), 'já existe e não foi criada por este montador');
+  assert.ok(fs.existsSync(c.p('_site/feito-a-mao.txt')), 'o montador apagou um _site que não era dele');
+  // o _site que o montador apagou ao bloquear deixa de ser «dele»: um _site novo, feito à mão, também é recusado
+  const e = cenario();
+  exigirAprovado(e, e.rodar());
+  e.listaMais('auaulandia/nao-existe.js');
+  exigirBloqueio(e, e.rodar(), ['auaulandia/nao-existe.js']);   // bloqueou e apagou o _site dele
+  pastaComArquivo(e.p('_site'), 'feito-a-mao.txt');
+  exigirRecusaDeSaida(e.rodar(), 'já existe e não foi criada por este montador');
+  assert.ok(fs.existsSync(e.p('_site/feito-a-mao.txt')), 'o montador apagou um _site feito à mão depois de uma montagem bloqueada');
+});
+
+extra('X29', 'B3: pasta com .git dentro não é apagada, nem que o nome já tenha sido montado antes', function () {
+  const c = cenario();
+  exigirAprovado(c, c.rodar());                                   // _site montado pelo montador (fica marcado como dele)
+  fs.rmSync(c.p('_site'), { recursive: true, force: true });      // alguém apaga e põe outra coisa no mesmo nome: um repositório
+  pastaComArquivo(c.p('_site/.git'), 'HEAD', 'ref: refs/heads/main\n');
+  pastaComArquivo(c.p('_site'), 'codigo.js', 'não pode ser apagado');
+  exigirRecusaDeSaida(c.rodar(), 'tem um .git dentro');
+  assert.ok(fs.existsSync(c.p('_site/.git/HEAD')) && fs.existsSync(c.p('_site/codigo.js')), 'o montador apagou uma pasta com .git dentro');
+});
+
+extra('X30', 'q01: pasta com arquivo versionado não é apagada, nem a que o montador montou antes', function () {
+  const c = cenario();
+  exigirRecusaDeSaida(c.rodarComSaida('auaulandia'), 'tem arquivo versionado');
+  assert.ok(fs.existsSync(c.p('auaulandia/index.html')), 'o montador apagou a pasta auaulandia, que tem arquivo versionado');
+  exigirRecusaDeSaida(c.rodarComSaida('stickers/Osso.png'), 'tem arquivo versionado');
+  assert.ok(fs.existsSync(c.p('stickers/Osso.png')), 'o montador apagou um arquivo versionado');
+  // o _site que o montador montou, mas que alguém passou a versionar: não é mais só saída
+  const d = cenario();
+  exigirAprovado(d, d.rodar());
+  pastaComArquivo(d.p('_site'), 'versionado.txt');
+  git(d.dir, ['add', '-f', '_site/versionado.txt']);
+  exigirRecusaDeSaida(d.rodar(), 'tem arquivo versionado');
+  assert.ok(fs.existsSync(d.p('_site/versionado.txt')), 'o montador apagou um _site que tem arquivo versionado');
+});
+
+/** Valor de um campo do bloco `concurrency` do topo do fluxo, avaliado como o GitHub avalia (só as contas do fluxo). */
+function avaliarConcorrencia(valor, github) {
+  const m = /^\$\{\{\s*(.+?)\s*\}\}$/.exec(valor.trim());
+  if (!m) return valor.trim() === 'true' ? true : (valor.trim() === 'false' ? false : valor.trim());
+  assert.ok(/^[\w\s.'(),{}\-=&|!]+$/.test(m[1]), 'expressão da concorrência com caractere inesperado: ' + m[1]);
+  const nomes = m[1].replace(/'[^']*'/g, "''").match(/[A-Za-z_]\w*/g) || [];
+  nomes.forEach(function (n) { assert.ok(['github', 'event_name', 'ref', 'format'].indexOf(n) !== -1, 'a expressão da concorrência usa «' + n + '», que o teste não sabe avaliar: ' + m[1]); });
+  const format = function (fmt) {
+    const args = Array.prototype.slice.call(arguments, 1);
+    return fmt.replace(/\{(\d+)\}/g, function (_, i) { return args[Number(i)]; });
+  };
+  return new Function('github', 'format', 'return (' + m[1] + ');')(github, format);
+}
+
+extra('X31', 'q02: uma publicação em andamento nunca é cancelada (só o pull request cancela, e só a prova do pull request)', function () {
+  const util = semComentarios(lerFluxo());
+  const blocos = util.match(/^\s*concurrency:/gm) || [];
+  assert.strictEqual(blocos.length, 1, 'o fluxo tem de ter UM bloco «concurrency» (achei ' + blocos.length + '); job com concurrency próprio pode cancelar a publicação');
+  const cancelam = util.match(/^\s*cancel-in-progress:/gm) || [];
+  assert.strictEqual(cancelam.length, 1, 'o fluxo tem de ter UM «cancel-in-progress» (achei ' + cancelam.length + ')');
+  const linhas = util.split('\n');
+  const ini = linhas.findIndex(function (l) { return /^concurrency:\s*$/.test(l); });
+  assert.ok(ini !== -1, 'o bloco «concurrency» tem de ficar no topo do fluxo, fora dos jobs');
+  let fim = linhas.length;
+  for (let i = ini + 1; i < linhas.length; i++) { if (/^\S/.test(linhas[i])) { fim = i; break; } }
+  const bloco = linhas.slice(ini + 1, fim).join('\n');
+  const grupo = /^\s+group:\s*(.+?)\s*$/m.exec(bloco);
+  const cancela = /^\s+cancel-in-progress:\s*(.+?)\s*$/m.exec(bloco);
+  assert.ok(grupo && cancela, 'o bloco «concurrency» precisa de «group» e de «cancel-in-progress»');
+  ['push', 'workflow_dispatch'].forEach(function (evento) {
+    const gh = { event_name: evento, ref: 'refs/heads/master' };
+    assert.strictEqual(avaliarConcorrencia(cancela[1], gh), false, 'em «' + evento + '» o fluxo NÃO pode cancelar a publicação em andamento (cancel-in-progress tem de valer false)');
+    assert.strictEqual(avaliarConcorrencia(grupo[1], gh), 'pages', 'em «' + evento + '» o grupo tem de ser «pages» (uma publicação por vez)');
+  });
+  const pr = { event_name: 'pull_request', ref: 'refs/pull/7/merge' };
+  assert.strictEqual(avaliarConcorrencia(cancela[1], pr), true, 'o pull request cancela a prova velha dele mesmo (cancel-in-progress true só ali)');
+  const grupoPr = String(avaliarConcorrencia(grupo[1], pr));
+  assert.ok(grupoPr !== 'pages' && grupoPr.indexOf(pr.ref) !== -1, 'o grupo do pull request tem de ser só dele (nunca «pages», e com o ramo do pull request): ' + grupoPr);
+});
+
 // ============================================================ EXECUÇÃO
 function dicasDaSaida(saida) {
   const dicas = [];
@@ -906,7 +1098,7 @@ function main() {
   });
   console.log('');
   console.log('Controles: ' + placar.controle[0] + ' de ' + placar.controle[1] + ' passam (esperado 6).');
-  console.log('Mutações:  ' + placar['mutação'][0] + ' de ' + placar['mutação'][1] + ' como esperado (esperado 19: 18 bloqueiam e M14 aceita).');
+  console.log('Mutações:  ' + placar['mutação'][0] + ' de ' + placar['mutação'][1] + ' como esperado (esperado 23: 22 bloqueiam e M14 aceita).');
   console.log('Extras:    ' + placar.extra[0] + ' de ' + placar.extra[1] + '.');
   if (falhas.length) {
     console.log('FALHOU: ' + falhas.join(', '));
