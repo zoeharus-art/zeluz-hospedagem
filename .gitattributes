@@ -4,3 +4,9 @@
 *.md text eol=lf
 *.json text eol=lf
 *.gs text eol=lf
+
+# A Zelozinha dentro do projeto (Story 6.112): o código que roda na VPS entra e sai com os MESMOS bytes.
+# Esta linha vem DEPOIS das de cima de propósito (a última regra vence) e desliga a conversão de fim de linha
+# só dentro de zelozinha/runtime/. Sem ela, um arquivo da Codex com CRLF mudaria no commit e o `sha256sum -c`
+# do manifesto acusaria diferença. Fora do runtime a trava de LF do app continua valendo.
+zelozinha/runtime/** -text

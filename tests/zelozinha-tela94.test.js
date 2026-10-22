@@ -16,6 +16,7 @@
  *       APP94=/caminho/index.html   (outra cópia do app, para os defeitos plantados)
  *       APP94_BASE=/caminho/index.html   (o app da base b044ecd, só para comparar as leituras por toque da P25)
  *       LATENCIA94=15 node tests/zelozinha-tela94.test.js   (cada leitura e gravação do banco de mentira demora 15 ms: nenhuma prova pode depender de tempo fixo; as esperas são por CONDIÇÃO)
+ *       CACHEFRIO94=1 node tests/zelozinha-tela94.test.js   (o banco de mentira faz a transação como o Firebase de verdade em TODAS as provas do navegador: 1ª rodada com null quando o nó não está no aparelho, 6.113)
  */
 const fs = require('fs');
 const path = require('path');
@@ -37,12 +38,19 @@ function quer(id) { return SO.length === 0 || SO.indexOf(id) >= 0; }
 function prova(id, nome, fn, ambiente) { fila.push({ id: id, nome: '6.94 ' + id + ' — ' + nome, fn: fn, ambiente: ambiente || 'L' }); }
 
 // ---------------------------------------------------------------- o banco de mentira (serializado também para dentro da página)
+/* opcoes: {latencia, cacheFrio}
+   `cacheFrio` (6.113): a transação como a do Firebase 10 de verdade. A 1ª rodada roda com o que o APARELHO tem guardado: o valor do servidor só quando há um ouvinte (`on`)
+   ligado no nó ou acima dele que já recebeu o 1º valor; senão, null. Se a 1ª rodada desiste (`undefined`), o Firebase desiste ali mesmo, sem consultar o servidor, e devolve o
+   que o aparelho tinha (null); se ela propõe sobre um retrato diferente do servidor, o servidor recusa e a função roda de novo com o valor dele. É o `bancoFiel` do harness
+   (L11755). Com a opção, o 1º valor de um ouvinte novo só chega depois de uma volta pelo relógio (a latência, ou zero ms: é a ida ao servidor, nunca no mesmo instante),
+   e um ouvinte desligado antes dele não recebe nada.
+   Sem a opção, a 1ª rodada já recebe o valor do servidor (o banco de antes, que escondia o defeito do Boris). */
 function criarBancoFalso(seed, opcoes) {
   opcoes = opcoes || {};
   var arv = seed ? JSON.parse(JSON.stringify(seed)) : {};
-  var log = { leituras: [], gravacoes: [] };
+  var log = { leituras: [], gravacoes: [], transacoes: [] };
   var ouvintes = [];
-  var falhas = [], falhasEscrita = [];
+  var falhas = [], falhasEscrita = [], calados = [];
   var pend = 0;   /* operações do banco ainda em andamento (só existem com latência): as provas só dão o toque por terminado com zero delas */
   var SV = { '.sv': 'timestamp' };
   function clone(x) { return x === undefined ? undefined : JSON.parse(JSON.stringify(x)); }
@@ -89,15 +97,29 @@ function criarBancoFalso(seed, opcoes) {
       child: function (c) { var r = val; partes(c).forEach(function (k) { r = (r && typeof r === 'object') ? r[k] : undefined; }); return snap(r, partes(c).pop()); }
     };
   }
-  function avisar(p) { ouvintes.slice().forEach(function (o) { if (p === o.path || p.indexOf(o.path + '/') === 0 || o.path.indexOf(p + '/') === 0) { Promise.resolve().then(function () { o.fn(snap(pegar(o.path), partes(o.path).pop())); }); } }); }
+  function avisar(p) { ouvintes.slice().forEach(function (o) { if (p === o.path || p.indexOf(o.path + '/') === 0 || o.path.indexOf(p + '/') === 0) { Promise.resolve().then(function () { if (opcoes.cacheFrio && (ouvintes.indexOf(o) < 0 || !o.recebeu)) return; o.fn(snap(pegar(o.path), partes(o.path).pop())); }); } }); }
+  /* o aparelho tem o nó guardado: um ouvinte ligado nele ou acima dele já recebeu o 1º valor (6.113) */
+  function quente(p) { return ouvintes.some(function (o) { return o.recebeu && (o.path === '' || p === o.path || p.indexOf(o.path + '/') === 0); }); }
   function esperar(v) { if (!opcoes.latencia) return Promise.resolve(v); pend++; return new Promise(function (r) { setTimeout(function () { pend--; r(v); }, typeof opcoes.latencia === 'function' ? opcoes.latencia() : opcoes.latencia); }); }
+  /* a ida ao servidor do 1º valor de um ouvinte novo (`cacheFrio`): nunca no mesmo instante, nem com latência zero (no Firebase de verdade é uma volta pela rede);
+     senão, quem roda a transação sem esperar o ouvinte passaria por sorte da ordem das promessas */
+  function idaAoServidor() { pend++; return new Promise(function (r) { setTimeout(function () { pend--; r(); }, opcoes.latencia ? (typeof opcoes.latencia === 'function' ? opcoes.latencia() : opcoes.latencia) : 0); }); }
   function ref(path) {
     path = partes(path).join('/');
     var r = {
       key: partes(path).pop() || null, path: path,
       child: function (c) { return ref(path + '/' + c); },
       once: function () { log.leituras.push({ op: 'once', path: path }); if (falhas.some(function (f) { return path.indexOf(f) === 0; })) return Promise.reject(new Error('falha de teste em ' + path)); return esperar(snap(pegar(path), r.key)); },
-      on: function (ev, fn) { log.leituras.push({ op: 'on', path: path }); ouvintes.push({ path: path, fn: fn }); Promise.resolve().then(function () { fn(snap(pegar(path), r.key)); }); return fn; },
+      on: function (ev, fn, cancelar) {
+        log.leituras.push({ op: 'on', path: path }); var o = { path: path, fn: fn, recebeu: !opcoes.cacheFrio }; ouvintes.push(o);
+        if (!opcoes.cacheFrio) { Promise.resolve().then(function () { fn(snap(pegar(path), r.key)); }); return fn; }
+        /* o 1º valor vem do servidor: chega depois da latência, com o que o servidor tem NAQUELA hora (null vale); quem desligou antes não recebe; um nó «calado» não responde nunca;
+           num nó com `falhar`, o servidor recusa o ouvinte (o Firebase o tira e chama o cancelamento) */
+        if (calados.some(function (c) { return path.indexOf(c) === 0; })) return fn;
+        if (falhas.some(function (f) { return path.indexOf(f) === 0; })) { idaAoServidor().then(function () { var i = ouvintes.indexOf(o); if (i < 0) return; ouvintes.splice(i, 1); if (typeof cancelar === 'function') cancelar(new Error('falha de teste em ' + path)); }); return fn; }
+        idaAoServidor().then(function () { if (ouvintes.indexOf(o) < 0) return; o.recebeu = true; fn(snap(pegar(path), r.key)); });
+        return fn;
+      },
       off: function (ev, fn) { ouvintes = ouvintes.filter(function (o) { return !(o.path === path && (!fn || o.fn === fn)); }); },
       set: function (v) { v = resolverSV(clone(v)); log.gravacoes.push({ op: 'set', path: path, valor: clone(v) }); por(path, v); avisar(path); return esperar(); },
       update: function (obj) {
@@ -110,11 +132,19 @@ function criarBancoFalso(seed, opcoes) {
         var k = '-N' + (++contador) + 'x'; var filho = ref(path + '/' + k);
         var pr = (v === undefined) ? Promise.resolve() : filho.set(v); pr.key = k; return pr;
       },
-      transaction: function (fn) {
+      transaction: function (fn, aoTerminar, aplicarLocal) {
         log.leituras.push({ op: 'transaction', path: path });
+        var frio = !!opcoes.cacheFrio && !quente(path), t = { path: path, nArgs: arguments.length, aplicarLocal: aplicarLocal, frio: frio, rodadas: [] };
+        log.transacoes.push(t);
         if (falhasEscrita.some(function (f) { return path.indexOf(f) === 0; })) return esperar({ committed: false, snapshot: snap(pegar(path), r.key) });
-        var atual = pegar(path), r2 = fn(atual === undefined ? null : clone(atual));
-        if (r2 === undefined) return esperar({ committed: false, snapshot: snap(atual, r.key) });
+        var atual = pegar(path), servidor = atual === undefined ? null : clone(atual), local = frio ? null : servidor;
+        t.rodadas.push(local === null ? 'null' : 'valor');
+        var r2 = fn(clone(local));
+        if (r2 === undefined) { t.desistiu = true; return esperar({ committed: false, snapshot: snap(frio ? undefined : atual, r.key) }); }
+        if (JSON.stringify(local) !== JSON.stringify(servidor)) {   /* o servidor recusa o palpite feito sobre o retrato velho do aparelho e a função roda de novo com o valor dele */
+          t.rodadas.push('valor'); r2 = fn(clone(servidor));
+          if (r2 === undefined) { t.desistiu = true; return esperar({ committed: false, snapshot: snap(atual, r.key) }); }
+        }
         var novo = resolverSV(clone(r2));
         log.gravacoes.push({ op: 'transaction', path: path, valor: clone(novo) });
         por(path, novo); avisar(path);
@@ -154,7 +184,8 @@ function criarBancoFalso(seed, opcoes) {
     return c;
   }
   var contador = 0;
-  return { pendentes: function () { return pend; }, falhar: function (prefixos) { falhas = prefixos || []; }, falharEscrita: function (prefixos) { falhasEscrita = prefixos || []; }, ref: ref, log: log, arvore: function () { return arv; }, ler: function (p) { return clone(pegar(p)); }, poe: function (p, v) { por(p, v); }, SV: SV };
+  return { pendentes: function () { return pend; }, falhar: function (prefixos) { falhas = prefixos || []; }, falharEscrita: function (prefixos) { falhasEscrita = prefixos || []; },
+    calar: function (prefixos) { calados = prefixos || []; }, ouvintesEm: function (prefixo) { return ouvintes.filter(function (o) { return o.path.indexOf(prefixo) === 0; }).length; }, ref: ref, log: log, arvore: function () { return arv; }, ler: function (p) { return clone(pegar(p)); }, poe: function (p, v) { por(p, v); }, SV: SV };
 }
 const BANCO_SRC = criarBancoFalso.toString();
 
@@ -205,7 +236,7 @@ async function montarMundo94(S) {
   /* a faxina de fotos antigas (o app a agenda 4 s depois de abrir o Início, grava `daycare/limpeza-fotos/` e uma linha de auditoria) é um relógio do PRÓPRIO app, não da tela: no mundo de teste ela não roda, para não cair no meio de uma prova de «nada gravado» (N1 do QA). O `m.log()` ainda tira da conta o que ela deixar. */
   window.ckLimparFotosEnviadas = function () { return Promise.resolve(0); };
   var dia = zPainel44Dia();
-  var banco = criarBancoFalso({}, { latencia: S.latencia || 0 });
+  var banco = criarBancoFalso({}, { latencia: S.latencia || 0, cacheFrio: !!S.cacheFrio });
   window.__banco = banco; DB = banco;
   window.firebase = { auth: function () { return { currentUser: { uid: 'uid-teste' }, onAuthStateChanged: function () { return function () {}; } }; }, database: { ServerValue: { TIMESTAMP: banco.SV } } };
   aplicarLogin(S.usuario || { monId: 'amanda', pessoa: 'Amanda', nome: 'Amanda', role: 'supervisor' });
@@ -312,6 +343,7 @@ async function garantirNavegador() {
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 const ENC = encodeURIComponent;
 const LATENCIA_PADRAO = Number(process.env.LATENCIA94 || 0);   /* atraso de cada operação do banco de mentira (ms); 0 = sem atraso */
+const CACHE_FRIO_PADRAO = process.env.CACHEFRIO94 === '1';   /* CACHEFRIO94=1: todas as provas do navegador com a transação do Firebase de verdade (1ª rodada com null fora do cache, 6.113) */
 /* espera, em passos de 80 ms, até `fn()` devolver algo verdadeiro (ou até o prazo); devolve o último valor. As provas esperam pela CONDIÇÃO, não por um tempo fixo: o app refaz o painel sozinho de tempos em tempos e a máquina pode estar ocupada */
 const ate = async (fn, ms) => { const fim = Date.now() + (ms || 8000); let v; for (;;) { v = await fn(); if (v || Date.now() >= fim) return v; await esperar(80); } };
 /* abre o app REAL, com o relógio fixado, e monta o dia de teste. opcoes: {app, relogio, usuario, latencia, abrir:false, largura} */
@@ -334,7 +366,7 @@ async function mundo(S, opcoes) {
   await page.goto('file://' + (opcoes.app || APP));
   /* o app pronto = os scripts rodaram e as portas que o mundo de teste troca existem (nada de tempo fixo) */
   await page.waitForFunction(() => document.readyState === 'complete' && typeof montarMundo94 === 'function' && typeof aplicarLogin === 'function' && typeof zPainel44Dia === 'function' && typeof vencPendCarregar === 'function' && typeof ZeluzRespostaApp88 === 'object' && !!window.__zelozinhaContatos89Instalado, null, { timeout: 20000 });
-  S = Object.assign({ latencia: opcoes.latencia || LATENCIA_PADRAO, usuario: opcoes.usuario }, S);
+  S = Object.assign({ latencia: opcoes.latencia || LATENCIA_PADRAO, usuario: opcoes.usuario, cacheFrio: opcoes.cacheFrio !== undefined ? !!opcoes.cacheFrio : CACHE_FRIO_PADRAO }, S);
   m.info = await page.evaluate((s) => montarMundo94(s), S);
   m.ev = (fn, arg) => page.evaluate(fn, arg);
   m.sel = (n) => '[data-zt694-pet="' + ENC(m.dcDe(n)) + '"]';
@@ -428,8 +460,10 @@ prova('P1', 'a linha mostra FILHOt, tutor, telefone mascarado, cuidados e a hora
 }, 'C');
 
 // ================================================================= P2 — sem mensagem da Zelozinha (AC1.5, AC11.1)
-prova('P2', 'ficha «só contato humano»: nada de mensagem pronta, WhatsApp sem texto, as quatro respostas gravam o contato humano em nome de quem tocou (AC1.5, AC11.1)', async () => {
-  const m = await mundo({ filhots: [{ n: 'Nina Teste', tutor: 'Tutor Nina', tel: '(31) 99999-0003', modo: 'humano', cuidados: ['verm_p'] }, { n: 'Buh Teste', tutor: 'Tutor Buh', tel: '(31) 99999-0004', modo: 'humano', cuidados: ['ecto_p'] }] });
+/* 6.113: com a transação do Firebase de verdade (`cacheFrio`: a 1ª rodada recebe null quando o nó não está no aparelho). Antes, o banco de mentira entregava o valor do servidor
+   já na 1ª rodada, e esta prova passava enquanto a resposta não salvava na produção (o Boris): agora ela confere também a RESPOSTA gravada, não só o contato humano. */
+prova('P2', 'ficha «só contato humano»: nada de mensagem pronta, WhatsApp sem texto, as quatro respostas gravam o contato humano em nome de quem tocou, e a resposta também (AC1.5, AC11.1; 6.113)', async () => {
+  const m = await mundo({ filhots: [{ n: 'Nina Teste', tutor: 'Tutor Nina', tel: '(31) 99999-0003', modo: 'humano', cuidados: ['verm_p'] }, { n: 'Buh Teste', tutor: 'Tutor Buh', tel: '(31) 99999-0004', modo: 'humano', cuidados: ['ecto_p'] }] }, { cacheFrio: true });
   try {
     const t = await m.texto('Nina Teste');
     assert.ok(/A Zelozinha não mandou: Contato humano conforme configuração da ficha\./.test(t), t);
@@ -446,6 +480,11 @@ prova('P2', 'ficha «só contato humano»: nada de mensagem pronta, WhatsApp sem
     const reg2 = await m.ler('daycare/vencimentos/' + DIA + '/' + m.dcDe('Buh Teste'));
     const ch2 = Object.keys(reg2.contatosHumanos89).map((k) => reg2.contatosHumanos89[k])[0];
     assert.ok(ch2.tipo === 'contato_humano' && ch2.status === 'feito' && ch2.humano.nome === 'Amanda', 'a resposta grava o contato humano feito, em nome de quem tocou');
+    // a RESPOSTA também ficou gravada, em nome de quem tocou (era aqui que o Boris falhava: «prova humana89 exata não confirmada»)
+    const r1 = Object.values((reg.respostasEscopo49 || {}).porCiclo || {}), r2 = Object.values(((await m.ler('daycare/vencimentos/' + DIA + '/' + m.dcDe('Buh Teste'))).respostasEscopo49 || {}).porCiclo || {});
+    assert.deepStrictEqual(r1.map((x) => [x.decisao, x.origem || null, x.humanoNome]), [['aguardar', null, 'Amanda']], '«Não respondeu» gravou a resposta: ' + JSON.stringify(reg.respostasEscopo49 || null));
+    assert.deepStrictEqual(r2.map((x) => [x.decisao, x.origem, x.humanoNome]), [['autorizar', 'externo', 'Amanda']], '«Vai fazer em casa» gravou a resposta');
+    for (const n of ['Nina Teste', 'Buh Teste']) assert.ok(!/Não foi possível salvar|prova humana|não confirmad/.test(await m.texto(n)), 'nenhuma frase de erro na linha: ' + await m.texto(n));
     const aut = await m.log();
     assert.ok(!aut.gravacoes.some((g) => /^piloto59\/|zelozinha-operacao/.test(g.path)), 'nada no nó do serviço');
     assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
@@ -1558,10 +1597,14 @@ prova('P29', 'só mudam as funções da lista: `zPainel44Atualizar` (dividida), 
     assert.deepStrictEqual(nb.filter((n) => nn.indexOf(n) < 0), [], 'nenhuma função global saiu');
     assert.deepStrictEqual(mudou.filter((n) => ['zPainel44Atualizar', 'zPainel44AtualizarDespacho80', 'zPainel44ProgramarRetorno'].indexOf(n) < 0), [], 'só mudam as três funções globais da lista: ' + mudou.join(', '));
     assert.deepStrictEqual(nn.filter((n) => nb.indexOf(n) < 0), ['zPainel44AtualizarAcompanhamento'], 'a única função global nova');
-    // scripts: os que mudam são o principal, o `core` da resposta 88 (só o `canon`, que passa a ignorar chave nula: 6.97 AC1), o `app` da resposta (registrar, textoEmCasa, mensagemAprovada), o núcleo e a tela dos contatos; o novo é o puro
+    // scripts: os que mudam são o principal, o `core` da resposta 88 (só o `canon`, que passa a ignorar chave nula: 6.97 AC1), o `repositorio` da resposta 88 (só a transação, que passa a esperar o ouvinte: 6.113, passo 0), o `app` da resposta (registrar, textoEmCasa, mensagemAprovada), o núcleo e a tela dos contatos; o novo é o puro
     const ids = (h) => { const re = /<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/gi; let m; const o = []; while ((m = re.exec(h))) o.push([((m[1].match(/(?:id|data-[a-z0-9]+)="([^"]+)"/) || [])[1] || 'anonimo'), h16(m[2])]); return o; };
     const sb = ids(fs.readFileSync(APP_BASE, 'utf8')), sn = ids(HTML), mudados = []; sn.forEach((x, i) => { if (!sb[i] || sb[i][1] !== x[1]) mudados.push(i + ':' + x[0]); });
-    assert.strictEqual(sn.length, sb.length + 1, 'um script novo'); assert.deepStrictEqual(mudados.map((x) => x.split(':')[1]), ['anonimo', 'core', 'app', 'zelozinha-contatos89-core', 'zelozinha-tela94-puro', 'zelozinha-contatos89-ui'], 'os scripts que mudam: ' + mudados.join(', '));
+    assert.strictEqual(sn.length, sb.length + 1, 'um script novo'); assert.deepStrictEqual(mudados.map((x) => x.split(':')[1]), ['anonimo', 'core', 'repositorio', 'app', 'zelozinha-contatos89-core', 'zelozinha-tela94-puro', 'zelozinha-contatos89-ui'], 'os scripts que mudam: ' + mudados.join(', '));
+    // o `repositorio` da resposta 88 só muda no passo 0 da 6.113: a função nova que espera o ouvinte, a chamada a ela no lugar do `ref.transaction` e a falha do limite de 5 s
+    const repo88 = (h) => /<script data-resposta88="repositorio">([\s\S]*?)<\/script>/.exec(h)[1];
+    const semPasso0 = (x) => x.replace(/  \/\* O Firebase roda a 1ª rodada da transação[\s\S]*?\n  \}\n(?=  function criar\(p\))/, '').replace('return transacaoComOuvinte(ref,function(atual){', 'return ref.transaction(function(atual){').replace("if(tx===SEM_PRIMEIRO_VALOR)return falha('a conexão não respondeu em 5 segundos; nada foi salvo');", '');
+    assert.strictEqual(semPasso0(repo88(HTML)), repo88(fs.readFileSync(APP_BASE, 'utf8')), 'o `repositorio` da resposta 88 só muda no passo 0 (6.113)'); assert.ok(/ref\.transaction\(fn,undefined,false\)/.test(repo88(HTML)) && /ref\.off\('value',ouvir\)/.test(repo88(HTML)), 'a transação sem rascunho na tela e o ouvinte desligado no fim');
     // o `core` da resposta 88 só muda no `canon` (e no comentário dele): o resto do núcleo é idêntico à base
     const core88 = (h) => /<script data-resposta88="core">([\s\S]*?)<\/script>/.exec(h)[1], semCanon = (s) => s.replace(/  \/\* O Realtime Database elimina[^\n]*\n/, '').replace(/  function canon\(v\)\{[^\n]*\n/, '');
     assert.strictEqual(semCanon(core88(HTML)), semCanon(core88(fs.readFileSync(APP_BASE, 'utf8'))), 'o `core` da resposta 88 só muda no `canon`'); assert.ok(/filter\(function\(k\)\{return v\[k\]!==null&&v\[k\]!==undefined;\}\)/.test(core88(HTML)), 'o `canon` ignora a chave nula e a indefinida');
@@ -1798,7 +1841,7 @@ prova('P35', 'ao reabrir o tema: a conferência de poucos minutos vale (nenhuma 
 /* `responder` esperava a leitura do Snoopy antes de marcar «salvando»: o segundo toque passava a guarda. Agora a guarda fecha antes do primeiro `await`. */
 prova('P36', 'toque duplo na troca de «Autorizou pegar na loja» para «Mandou na bolsa»: uma chamada ao `registrar`, uma troca, uma auditoria, as mesmas gravações de um toque só, e nenhuma frase falsa de tarefa não criada (B1)', async () => {
   async function rodar(duplo) {
-    const m = await mundo({ filhots: [{ n: 'Teste Duplo', tutor: 'Tutor Duplo', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] });
+    const m = await mundo({ filhots: [{ n: 'Teste Duplo', tutor: 'Tutor Duplo', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] }, { cacheFrio: true });   /* 6.113: a troca numa linha enviada com a transação do Firebase de verdade (antes: «conflito de resposta concorrente» e «Amanda respondeu agora… Nada foi trocado.») */
     try {
       await m.tocar('Teste Duplo', 'verm_p', 'autorizar_loja'); await esperaSnoopy(m, 'Teste Duplo', PENDENTE_NO_SNOOPY);
       await m.ev(() => { window.__reg = 0; const o = ZeluzRespostaApp88.registrar; ZeluzRespostaApp88.registrar = function () { window.__reg++; return o.apply(this, arguments); }; });
@@ -1812,7 +1855,7 @@ prova('P36', 'toque duplo na troca de «Autorizou pegar na loja» para «Mandou 
     } finally { await m.fechar(); }
   }
   const um = await rodar(false), dois = await rodar(true);
-  assert.strictEqual(um.reg, 1); assert.strictEqual(um.trocasNaAuditoria, 1); assert.deepStrictEqual(um.erros, []);
+  assert.strictEqual(um.reg, 1); assert.strictEqual(um.trocasNaAuditoria, 1, 'a troca foi feita e foi para a auditoria: ' + um.texto); assert.deepStrictEqual(um.erros, []);
   assert.strictEqual(dois.reg, 1, 'o toque duplo chama o `registrar` uma vez só'); assert.strictEqual(dois.trocasNaAuditoria, 1, 'e a troca vai para a auditoria uma vez só');
   assert.strictEqual(dois.gravacoesNaLinha, um.gravacoesNaLinha, 'e a linha do Day Care recebe as mesmas gravações de um toque só'); assert.deepStrictEqual(dois.auditoria, um.auditoria, 'a auditoria do dia é a mesma de um toque só');
   assert.ok(!/Resposta salva, mas a tarefa do Day Care ainda não foi criada/.test(dois.texto), 'sem a frase falsa: ' + dois.texto); assert.ok(/Trocada de Autorizou pegar na loja para Mandou na bolsa por Amanda/.test(dois.texto));
@@ -1996,6 +2039,132 @@ prova('P39', 'o gesto do toque: «Abrir no WhatsApp» abre a janela e «Copiar m
     assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
   } finally { await m.fechar(); }
 }, 'C');
+
+// ================================================================= P40 — o passo 0 da 6.113: a resposta salva quando o nó do registro não está no aparelho (o caso do Boris)
+/* O Firebase roda a 1ª rodada da transação com o que o aparelho tem guardado. Sem ouvinte no nó do registro (`daycare/vencimentos/{dia}/{dcKey}`), isso é null: o núcleo
+   desistia ali mesmo, sem o servidor ser consultado («prova humana89 exata não confirmada» na linha em que a Zelozinha não mandou; «conflito» na troca de uma linha enviada).
+   Agora o repositório da resposta liga o ouvinte, espera o 1º valor (null vale), roda a transação com ele ligado e sem mostrar o rascunho na tela (false), e desliga no fim;
+   sem o 1º valor em 5 s, nada é gravado. As provas C usam o banco com `cacheFrio` (a transação do Firebase de verdade); as L testam o repositório sozinho. */
+const NO_REG = (m, nome) => 'daycare/vencimentos/' + DIA + '/' + m.dcDe(nome);
+const transacoesNoRegistro = (m, nome) => m.ev((p) => window.__banco.log.transacoes.filter((t) => t.path === p), NO_REG(m, nome));
+const contatosDe = (r) => Object.values((r && r.contatosHumanos89) || {}).map((x) => [x.tipo, x.status, x.humano && x.humano.nome]);
+const respostasDe = (r) => Object.values(((r && r.respostasEscopo49) || {}).porCiclo || {}).map((x) => [x.decisao, x.origem || null, x.humanoNome]);
+const FRASE_DE_ERRO = /Não foi possível salvar|prova humana|não confirmad|respondeu agora|conflito/;
+prova('P40', 'caso Boris: a Zelozinha não mandou; a pessoa toca «Mandou na bolsa» e, em outro FILHOt, «Não respondeu»: o contato e a resposta ficam gravados em nome de quem tocou, a tarefa do Day Care nasce, sem frase de erro, e o ouvinte do registro sai no fim; sem atraso e com 30 ms em cada operação do banco (6.113, passo 0)', async () => {
+  for (const atraso of [0, 30]) {
+    const m = await mundo({ filhots: [{ n: 'Boris Teste', tutor: 'Tutor Boris', tel: '(31) 99999-0007', modo: 'humano', cuidados: ['verm_p'] }, { n: 'Teste Quieto', tutor: 'Tutor Quieto', tel: '(31) 99999-0008', modo: 'humano', cuidados: ['verm_p'] }] }, { cacheFrio: true, latencia: atraso });
+    try {
+      const rot = 'atraso ' + atraso + ' ms: ';
+      await m.ev(() => { window.__banco.log.transacoes.length = 0; });
+      await m.tocar('Boris Teste', 'verm_p', 'autorizar_bolsa');
+      await m.tocar('Teste Quieto', 'verm_p', 'aguardar');
+      const boris = await regDo(m, 'Boris Teste'), quieto = await regDo(m, 'Teste Quieto');
+      assert.deepStrictEqual(contatosDe(boris), [['contato_humano', 'feito', 'Amanda']], rot + 'o contato do Boris');
+      assert.deepStrictEqual(contatosDe(quieto), [['retorno_humano', 'retorno_pendente', 'Amanda']], rot + 'o retorno pendente');
+      assert.deepStrictEqual(respostasDe(boris), [['autorizar', 'bolsa', 'Amanda']], rot + '«Mandou na bolsa» gravou a resposta: ' + JSON.stringify((boris && boris.respostasEscopo49) || null));
+      assert.deepStrictEqual(respostasDe(quieto), [['aguardar', null, 'Amanda']], rot + '«Não respondeu» gravou a resposta');
+      assert.ok(await ate(async () => Object.keys(await linhasDoDia(m, 'vermifugo')).length === 1), rot + 'a tarefa do Day Care nasceu (a linha do vermífugo)');
+      for (const n of ['Boris Teste', 'Teste Quieto']) assert.ok(!FRASE_DE_ERRO.test(await m.texto(n)), rot + 'nenhuma frase de erro: ' + await m.texto(n));
+      // a transação do registro rodou com o nó no aparelho (a 1ª rodada já com o valor do servidor), com os três argumentos (fn, undefined, false), e o ouvinte saiu
+      for (const n of ['Boris Teste', 'Teste Quieto']) {
+        const tx = await transacoesNoRegistro(m, n);
+        assert.ok(tx.length >= 1 && tx.every((t) => t.frio === false && t.nArgs === 3 && t.aplicarLocal === false && t.rodadas[0] === 'valor'), rot + n + ': ' + JSON.stringify(tx));
+      }
+      assert.strictEqual(await m.ev(() => window.__banco.ouvintesEm('daycare/vencimentos/')), 0, rot + 'nenhum ouvinte ficou ligado no registro');
+      assert.strictEqual(m.erros.length, 0, rot + m.erros.join(' | '));
+    } finally { await m.fechar(); }
+  }
+}, 'C');
+prova('P40', 'o banco não manda o 1º valor do registro em 5 s: nada da resposta é gravado, a transação nem roda, a linha diz que não salvou e o ouvinte sai; com o banco de volta, tocar de novo completa e o contato que ficou do 1º toque não atrapalha (6.113, passo 0)', async () => {
+  const m = await mundo({ filhots: [{ n: 'Boris Teste', tutor: 'Tutor Boris', tel: '(31) 99999-0007', modo: 'humano', cuidados: ['verm_p'] }] }, { cacheFrio: true });
+  try {
+    await m.ev(() => { window.__banco.calar(['daycare/vencimentos/']); window.__banco.log.transacoes.length = 0; });
+    const t0 = Date.now();
+    await m.page.click(m.botao('Boris Teste', 'verm_p', 'autorizar_bolsa'));
+    assert.ok(await ate(async () => /Não foi possível salvar/.test(await m.texto('Boris Teste')), 15000), 'a linha diz que não salvou: ' + await m.texto('Boris Teste'));
+    const levou = Date.now() - t0; await m.quieto();
+    assert.ok(levou >= 4900 && levou < 12000, 'esperou o limite de 5 s: ' + levou + ' ms');
+    assert.ok(/a conexão não respondeu em 5 segundos; nada foi salvo/.test(await m.texto('Boris Teste')), await m.texto('Boris Teste'));
+    const r1 = await regDo(m, 'Boris Teste');
+    assert.deepStrictEqual(respostasDe(r1), [], 'nada da resposta foi gravado: ' + JSON.stringify((r1 && r1.respostasEscopo49) || null));
+    assert.deepStrictEqual(await transacoesNoRegistro(m, 'Boris Teste'), [], 'a transação do registro nem rodou');
+    assert.strictEqual(await m.ev(() => window.__banco.ouvintesEm('daycare/vencimentos/')), 0, 'o ouvinte saiu depois do limite');
+    assert.deepStrictEqual(contatosDe(r1), [['contato_humano', 'feito', 'Amanda']], 'o contato do toque ficou gravado (o efeito colateral que a investigação descreve)');
+    await m.ev(() => { window.__banco.calar([]); });
+    await m.tocar('Boris Teste', 'verm_p', 'autorizar_bolsa');
+    const r2 = await regDo(m, 'Boris Teste');
+    assert.deepStrictEqual(respostasDe(r2), [['autorizar', 'bolsa', 'Amanda']], 'o segundo toque gravou a resposta');
+    assert.deepStrictEqual(contatosDe(r2), [['contato_humano', 'feito', 'Amanda']], 'e o contato continua um só');
+    assert.ok(!FRASE_DE_ERRO.test(await m.texto('Boris Teste')), await m.texto('Boris Teste'));
+    assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
+  } finally { await m.fechar(); }
+}, 'C');
+
+/* o repositório da resposta 88 SOZINHO, num vm novo, com um núcleo de mentira e um relógio de mentira: os 5 s só «passam» quando a prova manda. O núcleo de mentira faz o que
+   o de verdade faz com a prova do contato: com o registro do servidor (`contato: 'feito'`) decide e grava; com o `{}` do null desiste («prova humana89 exata não confirmada»). */
+const ALVO88 = { confirmado: true, dia: DIA, dcKey: 'dc-boris', pelKey: 'pk-boris', petId: 'pet1', tutorId: 'tut1', escopoHistoricoSha: '', ciclos: [] };
+const SESSAO88 = { confirmada: true, humana: true, id: 'amanda', papel: 'supervisor', assinatura: 'uid-teste|amanda|Amanda|supervisor|' + DIA };
+const NO88 = 'daycare/vencimentos/' + DIA + '/dc-boris';
+function repositorio88(semente, opcoesBanco) {
+  const src = /<script data-resposta88="repositorio">([\s\S]*?)<\/script>/.exec(HTML)[1], relogios = [];
+  const nucleo = { registros: [], aceitaVazio: false, decidir(a) {
+    const reg = a.registro || {}; nucleo.registros.push(JSON.parse(JSON.stringify(reg)));
+    if (reg.resposta === 'gravada') return { ok: true, status: 'ja_registrado', alterou: false, intencoes: [], registro: reg };
+    if (reg.contato === 'feito' || nucleo.aceitaVazio) return { ok: true, status: 'registrado', alterou: true, intencoes: [], registro: Object.assign({}, reg, { resposta: 'gravada' }) };
+    return { ok: false, status: 'revisao', alterou: false, intencoes: [], motivo: 'prova humana89 exata não confirmada' };
+  } };
+  const sb = { Promise, JSON, Object, Array, String, Number, Boolean, Error, TypeError, console, ZeluzResposta88: nucleo,
+    setTimeout: (fn, ms) => { const t = { fn, ms, limpo: false }; relogios.push(t); return t; }, clearTimeout: (t) => { if (t) t.limpo = true; } };
+  vm.runInContext(src, vm.createContext(sb), { filename: 'inline:repositorio' });
+  const banco = criarBancoFalso(semente || {}, Object.assign({ cacheFrio: true }, opcoesBanco || {}));
+  const repo = sb.ZeluzResposta88RTDB.criar({ db: banco, lerPainel: () => Promise.resolve(null), resolverAtual: () => Promise.resolve(ALVO88), sessaoHumana: () => Promise.resolve(SESSAO88), assinarTexto: () => '', agora: () => 0 });
+  const decidir = () => repo.decidir({ groupKey: JSON.stringify(['contato_humano89', 'pet1', 'tut1', DIA]), petId: 'pet1', contatoId: 'c-boris', fonteContato: {}, resposta: { id: 'r88_teste', itens: [] } });
+  return { banco, nucleo, relogios, decidir };
+}
+const COM_CONTATO = () => ({ daycare: { vencimentos: { [DIA]: { 'dc-boris': { contato: 'feito' } } } } });
+/* espera a promessa por no máximo `ms` (relógio de verdade): uma promessa pendurada vira 'pendurou' em vez de travar a rodada */
+const ouPendura = (p, ms) => Promise.race([p, esperar(ms || 1500).then(() => 'pendurou')]);
+prova('P40', 'o repositório sozinho: liga o ouvinte, espera o 1º valor, roda a transação com ele ligado e o nó no aparelho, com (fn, undefined, false), uma rodada só, grava; desliga o ouvinte; o limite de 5 s é armado e desarmado (6.113, passo 0)', async () => {
+  const R = repositorio88(COM_CONTATO());
+  const r = await ouPendura(R.decidir());
+  assert.ok(r && r.ok === true, 'decidiu: ' + JSON.stringify(r));
+  assert.strictEqual(R.banco.ler(NO88).resposta, 'gravada', 'a resposta foi gravada no registro');
+  assert.strictEqual(R.banco.ler(NO88).contato, 'feito', 'sem apagar o que o registro já tinha');
+  assert.deepStrictEqual(R.banco.log.transacoes.map((t) => [t.path, t.nArgs, t.aplicarLocal, t.frio, t.rodadas.join(',')]), [[NO88, 3, false, false, 'valor']], 'uma transação, com o ouvinte ligado e o nó no aparelho');
+  assert.deepStrictEqual(R.nucleo.registros[0], { contato: 'feito' }, 'a 1ª rodada recebeu o registro do servidor, não o {} do null');
+  assert.strictEqual(R.banco.ouvintesEm('daycare/vencimentos/'), 0, 'o ouvinte saiu');
+  assert.deepStrictEqual(R.relogios.map((t) => [t.ms, t.limpo]), [[5000, true]], 'o limite de 5 s foi armado e desarmado quando o 1º valor chegou');
+  assert.strictEqual(R.banco.log.leituras.filter((l) => l.op === 'on' && l.path === NO88).length, 1, 'um ouvinte só, no nó do registro');
+}, 'L');
+prova('P40', 'o repositório sozinho: o nó ainda não existe e o 1º valor do ouvinte é null: isso basta (não espera um objeto, ao contrário do `tx()` da tarefa), a transação roda e grava sem esperar o limite (6.113, passo 0)', async () => {
+  const R = repositorio88({}); R.nucleo.aceitaVazio = true;
+  const r = await ouPendura(R.decidir());
+  assert.ok(r !== 'pendurou' && r.ok === true, 'decidiu sem esperar o limite: ' + JSON.stringify(r));
+  assert.strictEqual(R.banco.ler(NO88).resposta, 'gravada');
+  assert.deepStrictEqual(R.banco.log.transacoes.map((t) => [t.nArgs, t.aplicarLocal, t.frio]), [[3, false, false]]);
+  assert.deepStrictEqual(R.relogios.map((t) => t.limpo), [true], 'o limite foi desarmado pelo null do servidor'); assert.strictEqual(R.banco.ouvintesEm('daycare/vencimentos/'), 0);
+}, 'L');
+prova('P40', 'o repositório sozinho: o ouvinte não responde; antes dos 5 s nada roda; passados os 5 s, devolve «a conexão não respondeu em 5 segundos; nada foi salvo», sem rodar a transação e sem gravar; o ouvinte sai (6.113, passo 0)', async () => {
+  const R = repositorio88(COM_CONTATO()); R.banco.calar([NO88]);
+  let fim = null; const p = R.decidir().then((r) => { fim = r; return r; });
+  await esperar(80);
+  assert.strictEqual(fim, null, 'antes do limite, a resposta espera');
+  assert.deepStrictEqual(R.banco.log.transacoes, [], 'e a transação não roda sem o 1º valor');
+  assert.deepStrictEqual(R.relogios.map((t) => [t.ms, t.limpo]), [[5000, false]], 'um limite só, de 5 s, armado');
+  R.relogios[0].fn();
+  const r = await ouPendura(p);
+  assert.deepStrictEqual(r && [r.ok, r.status, r.alterou, r.motivo], [false, 'revisao', false, 'a conexão não respondeu em 5 segundos; nada foi salvo'], JSON.stringify(r));
+  assert.deepStrictEqual(R.banco.log.transacoes, [], 'nem depois do limite a transação roda'); assert.deepStrictEqual(R.banco.log.gravacoes, [], 'nada gravado');
+  assert.deepStrictEqual(R.banco.ler(NO88), { contato: 'feito' }, 'o registro ficou como estava');
+  assert.strictEqual(R.banco.ouvintesEm('daycare/vencimentos/'), 0, 'o ouvinte saiu');
+}, 'L');
+prova('P40', 'o repositório sozinho: o servidor recusa o ouvinte: devolve falha sem gravar, sem rodar a transação, desarma o limite e o ouvinte sai (6.113, passo 0)', async () => {
+  const R = repositorio88(COM_CONTATO()); R.banco.falhar([NO88]);
+  const r = await ouPendura(R.decidir());
+  assert.ok(r && r.ok === false && r.alterou === false && r.status === 'revisao', JSON.stringify(r));
+  assert.deepStrictEqual(R.banco.log.transacoes, []); assert.deepStrictEqual(R.banco.log.gravacoes, []);
+  assert.deepStrictEqual(R.relogios.map((t) => t.limpo), [true]); assert.strictEqual(R.banco.ouvintesEm('daycare/vencimentos/'), 0);
+}, 'L');
 
 // ---------------------------------------------------------------- a rodada
 (async () => {
