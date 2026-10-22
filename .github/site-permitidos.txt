@@ -1,0 +1,58 @@
+# LISTA DE PERMITIDOS do site (GitHub Pages). Só o que está aqui é publicado.
+# Uma linha = um arquivo, caminho exato a partir da raiz do repositório.
+# Sem pastas, sem curingas, sem "..". Arquivo novo de tela = linha nova aqui, no mesmo commit.
+#
+# "entrada"       = página que alguém abre pelo endereço.
+# (sem prefixo)   = arquivo que alguma tela pede (a prova confere que alguma pede).
+# "nao-e-arquivo" = texto com cara de arquivo que NÃO é pedido ao site (ex.: nome de download).
+#
+# Antes de empurrar, rode:  node tools/montar-site.js --lista .github/site-permitidos.txt --saida _site
+# Com MOSTRAR_PEDIDOS=1 na frente do comando, ele mostra quem pede cada arquivo.
+# Nunca ponha aqui docs/, tests/, tools/, servidor-senha/, integracao-*/ nem zelozinha/.
+
+# --- Painel da Hospedagem (raiz do endereço) ---
+entrada index.html
+entrada checkin.html
+entrada gestao.html
+logo.png
+kairos-lockup.svg
+stickers/Cachorro coração.png
+stickers/Vasilha ração.png
+stickers/Osso.png
+stickers/Pata.png
+
+# --- App AuAulândia (/auaulandia/) ---
+entrada auaulandia/index.html
+auaulandia/assets/tokens-ds-v8.css
+auaulandia/assets/simbolo.png
+auaulandia/assets/logo-wordmark.png
+auaulandia/assets/simbolo-zeluz-39-claro.svg
+auaulandia/assets/stickers/pata.png
+auaulandia/assets/stickers/coracao.png
+auaulandia/assets/stickers/auau.png
+auaulandia/assets/stickers/coleira.png
+auaulandia/assets/painel44/Auau.png
+auaulandia/historico-checkins.css
+auaulandia/prevencao/prevencao-fontes.js
+auaulandia/prevencao/prevencao-runtime.js
+auaulandia/prevencao/painel-prevencao.js
+auaulandia/resposta-tutor.js
+auaulandia/painel-logica.js
+auaulandia/financeiro-logica.js
+auaulandia/autoria-logica.js
+auaulandia/navegacao-inicio.js
+auaulandia/hospedes-atividades.js
+auaulandia/alimentacao-hospede.js
+auaulandia/cafe-operacional.js
+auaulandia/cafe-aluno-logica.js
+auaulandia/presenca-logica.js
+auaulandia/historico-checkins.js
+auaulandia/historico-checkins-pdf.js
+auaulandia/orcamento-acompanhamento.js
+auaulandia/dash-lancamentos-performance.js
+auaulandia/reserva-cadastro.js
+auaulandia/cafe51-core.js
+auaulandia/cafe51-injecao.js
+
+# --- Textos com cara de arquivo que não são pedidos ao site ---
+nao-e-arquivo auaulandia/foto-do-corpo.jpg

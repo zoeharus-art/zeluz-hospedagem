@@ -62,7 +62,7 @@ Cada mudança nasce de uma story, e o commit a cita, no padrão do histórico: `
 
 ## 4. Como publicar e como voltar
 
-**O app.** Publicar é o Merge do pull request no `master`: o GitHub Pages publica sozinho. Depois do Merge, carimbe a versão com `node tools/carimbar-versao.js <versão>`; sem o carimbo o celular da equipe continua abrindo a versão velha (o script precisa de acesso ao banco, então quem tem a credencial roda). Voltar: um pull request que desfaz a mudança, e um novo carimbo.
+**O app.** Publicar é o Merge do pull request no `master`: o GitHub Pages publica sozinho e, desde a Story 6.114, só os arquivos de `.github/site-permitidos.txt`, pelo fluxo «Publicar o site (só as telas)» (arquivo novo de tela precisa de linha nova nessa lista, no mesmo commit; confira antes com `node tools/montar-site.js --lista .github/site-permitidos.txt --saida _site`). Só depois de a publicação ficar verde e de o endereço já servir o `APP_VERSAO` novo, carimbe a versão com `node tools/carimbar-versao.js <versão>` (carimbo antes disso faz o celular recarregar a versão velha); sem o carimbo o celular da equipe continua abrindo a versão velha (o script precisa de acesso ao banco, então quem tem a credencial roda). Voltar: um pull request que desfaz a mudança, e um novo carimbo.
 
 **As regras do banco** não se publicam por pull request: a Adriana as cola no Console do Firebase, mesclando. As regras publicadas para a Zelozinha (namespace `piloto59`) não são as do repositório; o espelho delas chega em `regras-banco/` com o código da Codex.
 

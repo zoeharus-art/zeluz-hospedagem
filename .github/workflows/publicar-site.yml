@@ -1,0 +1,75 @@
+# Publica o site SÓ com as telas: lista de permitidos + prova. Se a prova falha, nada é publicado
+# e o site no ar continua o anterior. Story 6.114.
+#
+# Lista: .github/site-permitidos.txt. Arquivo novo de tela = linha nova na lista, no mesmo commit.
+# Antes de empurrar: node tools/montar-site.js --lista .github/site-permitidos.txt --saida _site
+# Vermelho no pull request quer dizer: não dar o Merge (o GitHub sozinho não impede).
+name: Publicar o site (só as telas)
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+  pull_request:            # só o job «montar» roda; «publicar» nunca (ver o «if» dele)
+
+# Sem permissão por padrão; cada job pede só o que usa.
+permissions: {}
+
+# Uma publicação por vez; a que já está publicando termina.
+concurrency:
+  # o pull request tem grupo próprio (não espera atrás de uma publicação)
+  group: ${{ github.event_name == 'pull_request' && format('prova-{0}', github.ref) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  montar:
+    name: Montar _site pela lista e provar
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Montar _site e provar (falha = nada é publicado)
+        run: node tools/montar-site.js --lista .github/site-permitidos.txt --saida _site
+
+      - name: Conferência independente (_site igual à lista, nada proibido)
+        shell: bash
+        run: |
+          set -euo pipefail
+          export LC_ALL=C
+          if [ -n "$(find _site -type l)" ]; then echo "link simbólico em _site"; exit 1; fi
+          (cd _site && find . -type f | sed 's#^\./##' | sort) > "$RUNNER_TEMP/publicados.txt"
+          if grep -inE '^(docs|tests|tools|servidor-senha|zelozinha|node_modules)/|^integracao-|(^|/)\.|\.(md|gs|jsonl|pem|key)$|(^|/)(agents|claude)|(^|/)database\.rules|(^|/)firebase\.json$|(^|/)package[^/]*\.json$|senhas|credenciais|conta-servico|service-account|secret' "$RUNNER_TEMP/publicados.txt"; then
+            echo "arquivo proibido em _site"; exit 1
+          fi
+          sed -E '1s/^\xEF\xBB\xBF//; s/\r$//; s/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//' .github/site-permitidos.txt \
+            | grep -vE '^(#|$|nao-e-arquivo[[:space:]])' | sed -E 's/^entrada[[:space:]]+//' | sort > "$RUNNER_TEMP/lista.txt"
+          diff -u "$RUNNER_TEMP/lista.txt" "$RUNNER_TEMP/publicados.txt"
+          echo "Publicados: $(wc -l < "$RUNNER_TEMP/publicados.txt") arquivos"; cat "$RUNNER_TEMP/publicados.txt"
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: github.event_name != 'pull_request'   # pull request não gera artefato
+        with:
+          path: _site
+
+  publicar:
+    name: Publicar no GitHub Pages
+    needs: montar
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
