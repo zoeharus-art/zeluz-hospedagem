@@ -10,13 +10,14 @@
  * Este arquivo carrega o auaulandia/index.html REAL (todos os <script> inline, na ordem) num sandbox do Node (vm), com os módulos
  * que a página liga antes deles (alimentacao-hospede.js, cafe-operacional.js e hospedes-atividades.js, lidos da MESMA pasta do
  * index.html), um relógio fixo (quarta, 21/10/2026, 08:00 na hora LOCAL do processo: o resultado é o mesmo em UTC e em
- * America/Sao_Paulo) e um banco de mentira em árvore que CONTA cada leitura e cada gravação. A base (409c385) é lida do git para
- * as provas de «não muda» (hash por função, <style>, área protegida).
+ * America/Sao_Paulo) e um banco de mentira em árvore que CONTA cada leitura e cada gravação. A base (o master fe7ee54, pai deste
+ * trabalho) é lida do git para as provas de «não muda» (hash por função, <style>, área protegida) e para as de «as mesmas leituras».
  * Todo dado é inventado («Teste 01», «Tutor Teste», «Ração do Teste 02 fica no armário»). Nenhum Firebase, nenhuma rede.
  *
  * Grupos (PROVAS=A,B roda só esses):
  *   A — «Comida e remédio» ganha a observação da alimentação (AC1 a AC6, AC15)
- *   B — a observação sai do vermelho: faixa amarela no Almoço e no Café, num ponto só (AC7, AC8, AC10)
+ *   B — a observação sai do vermelho: faixa amarela no Almoço e no Café, num ponto só (AC7, AC8, AC10); e a restrição e a alergia
+ *       da ficha do hóspede em vermelho nos dois cartões, também para quem não tem entrada no Day Care (QA M1)
  *   C — os textos do Almoço com acento, sem mexer nos valores gravados (AC12, AC13)
  *   R — varreduras do arquivo contra a base: <style>, hash por função, área protegida, ?v= do módulo, texto novo (AC9.1, AC10.1,
  *       AC11, AC13, AC14, AC15, AC17)
@@ -28,7 +29,7 @@
  *       PROVAS=A,B node tests/comida-observacao.test.js
  *       APP6121=/caminho/auaulandia/index.html node tests/comida-observacao.test.js   (outra cópia, para os defeitos plantados: os
  *         módulos são lidos da pasta da cópia)
- *       BASE6121=409c385   (o commit da base; padrão 409c385)
+ *       BASE6121=fe7ee54   (o commit da base; padrão fe7ee54, o master em que este trabalho foi refeito)
  *       FOTOS6121=/pasta FOTOS6121_ROTULO=depois   (o grupo N guarda as fotos a 375 px nessa pasta)
  * Sai 0 se tudo passa, 1 se algo falha.
  */
@@ -41,7 +42,7 @@ const { execFileSync } = require('child_process');
 
 const APP = process.env.APP6121 || path.join(__dirname, '..', 'auaulandia', 'index.html');
 const PASTA = path.dirname(APP);
-const BASE = process.env.BASE6121 || '409c385';
+const BASE = process.env.BASE6121 || 'fe7ee54';
 const SO = (process.env.PROVAS || '').split(',').map((x) => x.trim().toUpperCase()).filter(Boolean);
 const FOTOS = process.env.FOTOS6121 || '';
 const ROTULO = process.env.FOTOS6121_ROTULO || 'novo';
@@ -263,6 +264,17 @@ prova('A', 'AC1.1 — digitar no campo não redesenha a tela (só guarda o texto
     S.run(`mcrSetComidaTx('obs', ${JSON.stringify(OBS_CERTA)})`);
     igual(S.J('[MCR.comida.obs, __nRender]'), [OBS_CERTA, 0]);
   } finally { S.run('mcrRender=__bkR6121; MCR=null;'); }
+});
+// Sonda Q4 do QA independente (defeito QA-d3: o campo redesenhado com o texto de ANTES, enquanto o que vai ser salvo é o digitado).
+prova('A', 'AC1.1 (sonda Q4 do QA) — digitar a observação e depois tocar em +5 g do jantar: a tela redesenha com o texto DIGITADO no campo (o que vai ser salvo)', () => {
+  tela(S); S.el('mcrTela').innerHTML = '';
+  S.run(`MCR=__M; mcrSetComidaTx('obs', ${JSON.stringify(OBS_CERTA)}); mcrPassoRef('jantar', 5);`);
+  try {
+    igual(S.J('[MCR.comida.obs, MCR.comida.refs.fixas.jantar.racao]'), [OBS_CERTA, '55'], 'o toque em +5 g mudou o jantar e guardou o texto');
+    const h = S.els.mcrTela.innerHTML;
+    assert.ok(h.indexOf('mcrPassoRef(') >= 0, 'a tela foi redesenhada pelo toque');
+    igual((h.match(/<textarea[^>]*aria-label="Observação da alimentação[^"]*"[^>]*>([\s\S]*?)<\/textarea>/) || [])[1], OBS_CERTA, 'o campo mostra o que será salvo, não o texto de antes');
+  } finally { S.run('MCR=null;'); }
 });
 prova('A', 'AC1.2 — o campo está à vista sem abrir «Mudar o que ele come (tipo, marca, patê, refeições)», e aparece uma vez só com o bloco aberto', () => {
   tela(S);
@@ -664,6 +676,132 @@ prova('B', 'AC10.2 — a constante em false devolve exatamente o cartão da base
   } finally { S.run('ALIM_OBS_CHECKIN_EM_FAIXA=true;'); }
 });
 
+// ---- As sondas Q5 a Q7 do QA independente, viradas prova (defeitos QA-d1, QA-d2 e QA-d4 passavam pelas provas acima)
+prova('B', 'AC8 (sonda Q5 do QA) — café com «Não trouxe ração» e observação: o vermelho «SEM RAÇÃO» e a faixa com a observação, os dois', () => {
+  const e = EST(); e.alimentacao = { sem_racao: true, comida_umida: true };
+  const g = cafe(S, { e1: e });
+  assert.ok(vermelhos(g).some((v) => /SEM RAÇÃO/.test(v)), 'sem ração em vermelho: ' + vermelhos(g).join(' | '));
+  igual(faixas(g), ['<div class="janta-box">Observação do check-in: ' + OBS_ERRADA + '</div>'], 'a observação não some do cartão');
+});
+prova('B', 'AC7.4 (sonda Q6 do QA) — observação que CONTÉM a restrição do cadastro e mais uma instrução: o vermelho do cadastro e a faixa inteira (só a observação IGUAL deixa de repetir)', () => {
+  const p = { n: 'Teste 16', tutor: 'Tutor Teste', raca: 'SRD', dias: ['seg'] };
+  const e = EST({ nome: 'Teste 16', refKey: 'teste 16__tutor teste' }); e.ficha.alim.obs = 'Não pode frango; servir morno, devagar';
+  const c = cartao(almoco(S, { alunos: [{ p }], cad: { 'Teste 16': { restr: 'não pode frango', alim: 'Ração' } }, estadias: { e16: e } }).grid, 'Teste 16');
+  igual(vermelhos(c).filter((v) => /frango/i.test(v)), ['<div class="alm-restr">&#9888; RESTRIÇÃO: não pode frango</div>'], 'o vermelho só com o cadastro');
+  igual(faixas(c), ['<div class="janta-box">Observação do check-in: Não pode frango; servir morno, devagar</div>'], '«servir morno, devagar» não se perde');
+});
+prova('B', 'AC7.1 e AC7.6 (sonda Q7 do QA) — check-in «a conferir quantidade» (almoço sem ração na ficha): a observação na faixa, fora do vermelho; a alergia da ficha no vermelho', () => {
+  const p = { n: 'Teste 17', tutor: 'Tutor Teste', raca: 'SRD', dias: ['seg'] };
+  const e = EST({ nome: 'Teste 17', refKey: 'teste 17__tutor teste' }); e.ficha.alim.refs.fixas.almoco.racao = '';
+  const c = cartao(almoco(S, { alunos: [{ p }], cad: { 'Teste 17': { restr: '', alim: 'Ração' } }, extra: { 'Teste 17': { alergia: 'corante' } }, estadias: { e17: e } }).grid, 'Teste 17');
+  assert.ok(c.indexOf('<div class="alm-restr">Confirme a refeição e a quantidade antes de servir.</div>') >= 0, 'o cartão está «a conferir»');
+  igual(vermelhos(c).filter((v) => /corante/.test(v)), ['<div class="alm-restr">&#9888; RESTRIÇÃO: corante</div>'], 'a alergia no vermelho, sem a observação junto');
+  vermelhos(c).forEach((v) => assert.ok(v.indexOf(OBS_ERRADA) < 0, 'observação fora do vermelho: ' + v));
+  igual(faixas(c), ['<div class="janta-box">Observação do check-in: ' + OBS_ERRADA + '</div>']);
+});
+
+// ---- QA M1: a restrição e a alergia da FICHA do hóspede em vermelho no Almoço e no Café, também para quem não tem entrada no
+// Day Care (a sonda Q9 do QA, virada prova). A restrição entra pelo caminho do check-in («Tem restrição ou alergia?» → «O que
+// ele NÃO pode?», ciSalvarRestricao, sem banco: guarda no aparelho e em pelCadCache); a alergia, pelo retrato vivo de
+// daycare/cadastro (pelCadCache, o que o ouvinte do app entrega). As duas são o que a tarja da ficha lê (extraDoHosp).
+function fichaDoHospede(S0, restricao, alergia) {
+  S0.el('ciRestricaoTexto').value = restricao;
+  S0.run(`__bkCi6121=ciHosp; ciHosp={nome:'Teste 01', tutor:'Tutor Teste', raca:'SRD', refKey:'${KH}'}; ciSalvarRestricao(); ciHosp=__bkCi6121;
+    pelCadCache['${KH}']=Object.assign({}, pelCadCache['${KH}']||{}, {alergia:${JSON.stringify(alergia)}});`);
+}
+const semFicha = (S0) => S0.run(`delete pelCadCache['${KH}'];`);
+const RF = '<div class="alm-restr">&#9888; RESTRIÇÃO: frango · corante</div>';
+prova('B', 'M1 (sonda Q9 do QA) — hóspede SEM entrada no Day Care com restrição (gravada pelo check-in) e alergia na ficha: o Almoço e o Café em vermelho com as duas, sem faixa; é a mesma tarja da ficha (extraDoHosp)', () => {
+  fichaDoHospede(S, 'frango', 'corante');
+  try {
+    igual(S.J(`(function(x){ return [x.restricao, x.alergia]; })(extraDoHosp({nome:'Teste 01', tutor:'Tutor Teste', refKey:'${KH}'}))`), ['frango', 'corante'], 'a tarja da ficha do hóspede');
+    const e = EST(); e.ficha.alim.obs = '';
+    const r = almoco(S, { estadias: { e1: e } });
+    assert.ok(r.grid.indexOf('abrirPeludinhoDay(') < 0, 'o hóspede não tem entrada no Day Care (índice hosp…)');
+    const c = cartao(r.grid, 'Teste 01');
+    igual(vermelhos(c), [RF], 'Almoço');
+    igual(faixas(c), []);
+    const g = cafe(S, { e1: e });
+    igual(vermelhos(g), [RF], 'Café');
+    igual(faixas(g), []);
+  } finally { semFicha(S); }
+});
+prova('B', 'M1 (sonda Q9 do QA) — a mesma ficha MAIS a observação do check-in: o vermelho com as duas e a faixa amarela também, no Almoço e no Café', () => {
+  fichaDoHospede(S, 'frango', 'corante');
+  try {
+    const e = EST(); e.ficha.alim.obs = 'alérgico a frango, não dar petisco';
+    const FX = ['<div class="janta-box">Observação do check-in: alérgico a frango, não dar petisco</div>'];
+    const c = cartao(almoco(S, { estadias: { e1: e } }).grid, 'Teste 01');
+    igual([vermelhos(c), faixas(c)], [[RF], FX], 'Almoço');
+    const iV = c.indexOf(RF), iF = c.indexOf(FX[0]), iB = c.indexOf('<div class="alm-actions">');
+    assert.ok(iV >= 0 && iV < iF && iF < iB, 'o vermelho em cima, a faixa logo acima dos botões');
+    const g = cafe(S, { e1: e });
+    igual([vermelhos(g), faixas(g)], [[RF], FX], 'Café');
+  } finally { semFicha(S); }
+});
+prova('B', 'M1 (sonda Q9 do QA) — sem nada na ficha: nenhum vermelho (a observação vai na faixa); sem ficha e sem observação: nem vermelho nem faixa', () => {
+  semFicha(S);
+  const c = cartao(almoco(S, { estadias: { e1: EST() } }).grid, 'Teste 01');
+  igual([vermelhos(c), faixas(c)], [[], ['<div class="janta-box">Observação do check-in: ' + OBS_ERRADA + '</div>']], 'Almoço');
+  const g = cafe(S, { e1: EST() });
+  igual([vermelhos(g), faixas(g).length], [[], 1], 'Café');
+  const e = EST(); e.ficha.alim.obs = '';
+  igual([vermelhos(cartao(almoco(S, { estadias: { e1: e } }).grid, 'Teste 01')), faixas(cafe(S, { e1: e }))], [[], []]);
+});
+prova('B', 'M1 — o hóspede que é aluno: o vermelho do Almoço é o de antes (sem dobrar); no Café, a ficha dele também fica em vermelho; o café do aluno do Day Care (sem hospedagem) não muda', () => {
+  const p = { n: 'Teste 08', tutor: 'Tutor Teste', raca: 'SRD', dias: ['seg'] };
+  const e = EST({ nome: 'Teste 08', refKey: 'teste 08__tutor teste' });
+  const turma = { alunos: [{ p }], cad: { 'Teste 08': { restr: '', alim: 'Ração' } }, extra: { 'Teste 08': { restricao: 'sem glúten', alergia: 'corante' } }, estadias: { e8: e } };
+  const c = cartao(almoco(S, turma).grid, 'Teste 08');
+  igual(vermelhos(c), ['<div class="alm-restr">&#9888; RESTRIÇÃO: sem glúten · corante</div>'], 'Almoço: uma vez cada');
+  const g = cafe(S, { e8: e });
+  igual(vermelhos(g), ['<div class="alm-restr">&#9888; RESTRIÇÃO: sem glúten · corante</div>'], 'Café');
+  igual(faixas(g).length, 1);
+  // o aluno do Day Care no café (exceção da Recepção, sem hospedagem), mesmo com alergia na ficha: o cartão igual ao da base
+  const alunoNoCafe = (S0) => {
+    S0.run(`__bkCA6121=cafeAlunoDados; cafeAlunoDados=function(){ return {pronto:true, participantes:[{hospede:{nome:'Teste 19', tutor:'Tutor Teste', raca:'SRD', cafeAlunoKey:'ca19', cafeAluno:true}, plano:{origem:'cafe-aluno-excecao'}, porcao:{texto:'30 g · Recepção Teste'}}]}; };
+      pelCadCache['teste 19__tutor teste']={alergia:'corante'};`);
+    try { return cafe(S0, {}); } finally { S0.run(`cafeAlunoDados=__bkCA6121; delete pelCadCache['teste 19__tutor teste'];`); }
+  };
+  const ga = alunoNoCafe(S);
+  assert.ok(ga.indexOf('Teste 19') >= 0, 'o aluno está no café');
+  igual(vermelhos(ga), [], 'nenhum vermelho novo');
+  igual(ga, alunoNoCafe(base()), 'o cartão do aluno no café é o da base');
+});
+prova('B', 'M1 — a constante da pergunta 73 em false não tira a ficha do vermelho: volta a juntar «ficha · observação», no Almoço e no Café', () => {
+  fichaDoHospede(S, 'frango', 'corante');
+  S.run('ALIM_OBS_CHECKIN_EM_FAIXA=false;');
+  try {
+    const J = '<div class="alm-restr">&#9888; RESTRIÇÃO: frango · corante · ' + OBS_ERRADA + '</div>';
+    igual([vermelhos(cartao(almoco(S, { estadias: { e1: EST() } }).grid, 'Teste 01')), vermelhos(cafe(S, { e1: EST() }))], [[J], [J]]);
+  } finally { S.run('ALIM_OBS_CHECKIN_EM_FAIXA=true;'); semFicha(S); }
+});
+prova('B', 'M1 e AC15 — abrir o Almoço (carregarAlmoco) e o Café (cafeCarregar) faz as MESMAS leituras da base, na mesma ordem, com a ficha preenchida; o vermelho da ficha vem só da memória', async () => {
+  // páginas novas (a base e o novo), para contar a abertura de verdade; a ficha do hóspede já está em memória, como no app
+  async function abertura(arq) {
+    const X = abrir(arq);
+    fichaDoHospede(X, 'frango', 'corante');
+    almoco(X, { estadias: { e1: EST() } });
+    const B = criarBanco({ daycare: {}, auaulandia: {} });
+    X.ctx.__B = B; ['cafeGrid', 'cafeResumo', 'cafeBarraTempo'].forEach((id) => X.el(id));
+    X.run(`DB=__B; dcAtiv='almoco'; almStep='grade'; hospedes=[]; carregarAlmoco();`); await volta();
+    // o registro do aparelho usa um código sorteado por página: fica como {aparelho} para comparar
+    const sem = (l) => l.map((x) => [x[0], String(x[1]).replace(/aparelhos\/[0-9a-f-]{36}/, 'aparelhos/{aparelho}')].concat(x.slice(2)));
+    const almocoLog = sem(B.log.slice()); const grid = X.els.almGrid.innerHTML;
+    X.run(`cafeLeitura={dia:'', geracao:0, cafe:'nao-lido', turno:'nao-lido', promessa:null}; cafeCarregar();`); await volta();
+    const cafeLog = sem(B.log.slice(almocoLog.length));
+    return { almocoLog, cafeLog, grid, cafeGrid: X.els.cafeGrid.innerHTML };
+  }
+  const n = await abertura(ARQ), b = await abertura(arqBase());
+  console.log('      (abrir o Almoço: ' + n.almocoLog.length + ' chamadas ao banco; abrir o Café: ' + n.cafeLog.length + ')');
+  assert.ok(n.almocoLog.length > 0 && n.cafeLog.length > 0, 'a abertura leu o banco (a conta não está vazia por engano)');
+  igual(n.almocoLog, b.almocoLog, 'abrir o Almoço: as mesmas chamadas e caminhos da base');
+  igual(n.cafeLog, b.cafeLog, 'abrir o Café: as mesmas chamadas e caminhos da base');
+  igual(n.almocoLog.concat(n.cafeLog).filter((x) => /daycare\/cadastro/.test(x[1])), [], 'nenhuma leitura da ficha no banco');
+  igual(vermelhos(cartao(n.grid, 'Teste 01')), [RF], 'o Almoço aberto mostra a ficha em vermelho');
+  igual(vermelhos(n.cafeGrid), [RF], 'o Café aberto mostra a ficha em vermelho');
+});
+
 // ================================================================== C — os textos do Almoço com acento
 const TEXTOS_C = [
   ['Almoco - Quarta', 'Almoço - Quarta'], ['Inicio: <strong>', 'Início: <strong>'], ['&#9654; Iniciar almoco', '&#9654; Iniciar almoço'],
@@ -754,11 +892,13 @@ prova('R', 'AC14.2 — o módulo mudou, então o ?v= da linha dele trocou (2026-
   const outros = (h) => (h.match(/<script src="(?!alimentacao-hospede\.js)[^"]+"><\/script>/g) || []).join('\n');
   igual(outros(ARQ.html), outros(arqBase().html));
 });
-prova('R', 'AC15 — as funções alteradas não ganharam nenhuma chamada ao banco; os cartões do Almoço e do Café não leem nada', () => {
+prova('R', 'AC15 — as funções alteradas não ganharam nenhuma chamada ao banco (nem a leitura da ficha do QA M1); os cartões do Almoço e do Café não leem nada', () => {
   const SBx = base();
   const chamadas = (s) => (s.match(/\bDB\b|\.ref\(|\.once\(|\.on\(['"]|\.transaction\(|\.update\(/g) || []).length;
   ['mcrComidaDe', 'mcrDiffComida', 'mcrComidaRastro', 'mcrMontar', 'mcrComidaHTML', 'almDadosHospede29', 'renderAlmoco', 'renderCafe'].forEach((f) => igual(chamadas(S.run('String(' + f + ')')), chamadas(SBx.run('String(' + f + ')')), f));
   igual(chamadas(S.run('String(alimObsCheckinCartao)')), 0);
+  igual(chamadas(S.run('String(alimRestricaoDaFicha)')), 0, 'a leitura da ficha (QA M1) não toca o banco');
+  assert.ok(S.run('String(alimRestricaoDaFicha)').indexOf('extraDoHosp(h)') >= 0, 'é a leitura da tarja da ficha (extraDoHosp)');
   igual(chamadas(ARQ.alim), 0, 'o módulo continua sem banco');
   // desenhar os cartões (Almoço e Café) num banco que conta: o mesmo que a base (a turma já está ligada; o desenho não lê nada novo)
   const desenhar = (S0) => { almoco(S0, TESTE01_SEM_FICHA()); cafe(S0, { e1: EST() }); const B = criarBanco({}); S0.ctx.__B = B; S0.run('__bkDB6121=DB; DB=__B;'); try { almoco(S0, TESTE01_SEM_FICHA()); cafe(S0, { e1: EST() }); } finally { S0.run('DB=__bkDB6121;'); } return B.log; };
@@ -818,7 +958,7 @@ prova('N', 'AC9.2 — a 375 px: a faixa amarela (rgba(222, 180, 40, 0.18)), sem 
   });
   return msg;
 });
-prova('N', 'AC1.4 — a 375 px, a tela «Comida e remédio» com o campo: cabe sem rolagem lateral, o texto comprido quebra em linhas, sem corte; foto', async () => {
+prova('N', 'AC1.4 — a 375 px, a tela «Comida e remédio» com o campo: cabe sem rolagem lateral, o texto comprido quebra em linhas e rola dentro do campo, sem corte; foto como a tela abre (o campo com 2 linhas, sem esticar)', async () => {
   const longo = OBS_CERTA + '; misturar o patê devagar e esperar esfriar antes de servir, sem pressa, conferindo se ele comeu tudo.';
   tela(S, { est: (() => { const e = EST(); e.ficha.alim.obs = longo; return e; })() });
   S.el('mcrTela').innerHTML = '';
@@ -830,16 +970,18 @@ prova('N', 'AC1.4 — a 375 px, a tela «Comida e remédio» com o campo: cabe s
     const r = await pg.evaluate(() => {
       const ta = document.querySelector('textarea[aria-label^="Observação da alimentação"]');
       const b = ta.getBoundingClientRect(), tela = document.getElementById('mcrTela');
-      return { dir: b.right, esq: b.left, sw: ta.scrollWidth, cw: ta.clientWidth, sh: ta.scrollHeight, ch: ta.clientHeight, linhas: Math.round(ta.scrollHeight / parseFloat(getComputedStyle(ta).lineHeight || '20')), telaSw: tela.querySelector('.mcr-in').scrollWidth, valor: ta.value };
+      return { dir: b.right, esq: b.left, sw: ta.scrollWidth, cw: ta.clientWidth, sh: ta.scrollHeight, ch: ta.clientHeight, linhas: ta.rows, telaSw: tela.querySelector('.mcr-in').scrollWidth, valor: ta.value };
     });
     assert.ok(r.esq >= 0 && r.dir <= 375, 'o campo cabe: ' + r.esq + '–' + r.dir);
     assert.ok(r.sw <= r.cw, 'sem rolagem lateral dentro do campo: ' + r.sw + ' > ' + r.cw);
     assert.ok(r.telaSw <= 375, 'a tela sem rolagem lateral: ' + r.telaSw);
     igual(r.valor, longo, 'o texto inteiro, sem corte');
+    // como a tela abre de verdade (QA B3): o campo com 2 linhas; o resto do texto comprido rola dentro dele (ou se arrasta o canto)
+    igual(r.linhas, 2, 'o campo abre com 2 linhas');
+    assert.ok(r.sh > r.ch, 'o texto comprido continua inteiro, rolando dentro do campo: ' + r.sh + ' > ' + r.ch);
     if (FOTOS) {
       fs.mkdirSync(FOTOS, { recursive: true });
-      await pg.evaluate(() => { const ta = document.querySelector('textarea[aria-label^="Observação da alimentação"]'); ta.style.height = (ta.scrollHeight + 4) + 'px'; });
-      // o cartão «Comida» inteiro, com o campo à vista (o bloco «Mudar o que ele come» fechado)
+      // o cartão «Comida» inteiro, com o campo à vista (o bloco «Mudar o que ele come» fechado), sem esticar o campo
       const card = await pg.$('#mcrTela .mcr-card:has(textarea[aria-label^="Observação da alimentação"])');
       await card.screenshot({ path: foto('comida-e-remedio-campo') });
     }
@@ -854,6 +996,31 @@ prova('N', 'foto — o cartão do almoço do caso (antes: base; depois: o texto 
   const msg = await noNavegador(async (pg) => {
     await pg.setContent(pagina('<div class="pets-grid" id="almGrid" style="max-width:359px">' + g + '</div>'));
     if (FOTOS) { fs.mkdirSync(FOTOS, { recursive: true }); await (await pg.$('.alm-card')).screenshot({ path: foto('cartao-do-caso') }); }
+  });
+  return msg;
+});
+
+prova('N', 'M1 — a 375 px, o hóspede sem entrada no Day Care com alergia e restrição na ficha e observação do check-in: no Almoço e no Café, o vermelho da ficha e a faixa amarela, sem rolagem lateral; fotos', async () => {
+  fichaDoHospede(S, 'frango', 'corante');
+  let gA, gC;
+  try {
+    const e = EST(); e.ficha.alim.obs = 'Ração do Teste 01 fica no armário; servir morno';
+    gA = almoco(S, { estadias: { e1: e } }).grid; gC = cafe(S, { e1: e });
+  } finally { semFicha(S); }
+  if (S.run("typeof alimRestricaoDaFicha!=='function'")) assert.fail('o app não lê a ficha do hóspede no cartão');
+  const msg = await noNavegador(async (pg) => {
+    for (const [rot, g] of [['almoco', gA], ['cafe', gC]]) {
+      await pg.setContent(pagina('<div class="pets-grid" style="max-width:359px">' + g + '</div>'));
+      const r = await pg.evaluate(() => {
+        const v = Array.from(document.querySelectorAll('.alm-card .alm-restr')).map((el) => { const s = getComputedStyle(el); return { t: el.textContent, bg: s.backgroundColor, anim: s.animationName }; });
+        const f = Array.from(document.querySelectorAll('.alm-card .janta-box')).map((el) => ({ t: el.textContent, bg: getComputedStyle(el).backgroundColor }));
+        return { v, f, sw: document.documentElement.scrollWidth };
+      });
+      igual(r.v.map((x) => [x.t, x.bg, x.anim]), [['\u26a0 RESTRIÇÃO: frango · corante', 'rgb(192, 57, 43)', 'piscaAlerta']], rot + ': o vermelho da ficha');
+      igual(r.f.map((x) => [x.t, x.bg]), [['Observação do check-in: Ração do Teste 01 fica no armário; servir morno', 'rgba(222, 180, 40, 0.18)']], rot + ': a faixa');
+      assert.ok(r.sw <= 375, rot + ': sem rolagem lateral: ' + r.sw);
+      if (FOTOS) { fs.mkdirSync(FOTOS, { recursive: true }); await (await pg.$('.alm-card')).screenshot({ path: foto('cartao-' + rot + '-hospede-sem-day-care-ficha-e-observacao') }); }
+    }
   });
   return msg;
 });

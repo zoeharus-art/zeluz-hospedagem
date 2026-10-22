@@ -17394,6 +17394,17 @@ return { criar };
     var repete=!!o && r.split(/\s*·\s*/).some(function(v){ return jsNorm(v)===jsNorm(o); });
     return {restr:r, faixa:(o&&!repete)?('<div class="alm-info"><div class="janta-box">Observação do check-in: '+escAttr(o)+'</div></div>'):''};
   }
+  // ===== A RESTRIÇÃO E A ALERGIA DA FICHA DO HÓSPEDE NOS CARTÕES DO ALMOÇO E DO CAFÉ (Story 6.121, QA M1) =====
+  // O vermelho do cartão é para alergia e restrição de verdade, cadastradas na ficha. O hóspede que também é
+  // aluno do Day Care já as tinha no almoço (pelExtra); o hóspede SEM entrada no Day Care e o café nunca as
+  // leram, e a observação do check-in era o único vermelho que eles tinham. Esta é a MESMA leitura da tarja da
+  // ficha do hóspede (extraDoHosp), onde o check-in grava «Tem restrição ou alergia?» → «O que ele NÃO pode?»
+  // (ciSalvarRestricao). Só memória: o retrato vivo de daycare/cadastro (pelCadCache, que o app já mantém
+  // aberto), o que este aparelho guardou e os cadastros já carregados; nenhuma leitura nova do banco.
+  function alimRestricaoDaFicha(h){
+    var ex=(h&&typeof extraDoHosp==='function')?(extraDoHosp(h)||{}):{};
+    return [ex.restricao, ex.alergia].map(function(v){ return String(v==null?'':v).trim(); }).filter(Boolean).filter(function(v,i,a){ return a.indexOf(v)===i; });
+  }
   function renderCafe(){
     var grid=document.getElementById('cafeGrid'); if(!grid) return;
     var barra=document.getElementById('cafeBarraTempo'), leitura=cafeParticipantesAtivos(), guarda=cafePodeOperar();
@@ -17420,7 +17431,7 @@ return { criar };
       +'<div class="dc-stat pend"><b>'+faltam+'</b>faltam</div>'
       +(naochegou?'<div class="dc-stat"><b>'+naochegou+'</b>não chegou ainda</div>':'')+'</div>';
     grid.innerHTML=avisos+itens.map(function(o){
-      var h=o.hospede||{}, plano=o.plano||{}, por=o.porcao||{}, k=cafeKey(h), m=cafeEstado(k), pendente=!!cafeMarcasPendentes[k], obsCi=alimObsCheckinCartao('', plano.restricao);
+      var h=o.hospede||{}, plano=o.plano||{}, por=o.porcao||{}, k=cafeKey(h), m=cafeEstado(k), pendente=!!cafeMarcasPendentes[k], rf=h.cafeAluno?'':alimRestricaoDaFicha(h).join(' · '), obsCi=alimObsCheckinCartao(rf, plano.restricao);
       var foto=(typeof fotoDe==='function')?fotoDe(h):'';
       var ph=foto?'<div class="ph" style="background-image:url(\''+foto+'\');background-size:cover;background-position:center"></div>'
                  :'<div class="ph" style="background:'+(h.cor||'#234D67')+'">'+(h.ini||((h.nome||'?')[0]||'?').toUpperCase())+'</div>';
@@ -17434,7 +17445,7 @@ return { criar };
       return '<div class="pet alm-card '+(m||'')+'">'+ph
         +'<div class="nm">'+escAttr(h.nome||'')+'</div>'
         +'<div class="br">'+escAttr(h.raca||(typeof racaDe==='function'?(racaDe(h)||'') :''))+'</div>'
-        +(obsCi.restr?'<div class="alm-restr">&#9888; '+escAttr(obsCi.restr)+'</div>':'')
+        +(obsCi.restr?'<div class="alm-restr">&#9888; '+escAttr((rf&&!/restri/i.test(obsCi.restr)?'RESTRIÇÃO: ':'')+obsCi.restr)+'</div>':'')
         +linhaCafe
         +(plano.marca?'<div class="alm-info"><div class="alm-line"><span>Ração</span><b>'+escAttr(plano.marca)+'</b></div></div>':'')
         +cafeRegistroVisivel(k)
@@ -74489,6 +74500,8 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     if(!o.hospede||!ehHoje()) return base;
     var restr=[]; if(base&&base.restr)restr.push(base.restr);
     if(typeof o.i==='number'){var ex=pelExtra(p)||{};if(ex.restricao)restr.push(ex.restricao);if(ex.alergia)restr.push(ex.alergia);}
+    // 6.121 (QA M1): sem entrada no Day Care, a restrição e a alergia vêm da ficha do hóspede (a tarja da ficha).
+    else restr=restr.concat(alimRestricaoDaFicha({nome:p.n,tutor:p.tutor,raca:p.raca,refKey:o.refKey}));
     base=Object.assign({},base||{}, {restr:restr.filter(function(v,i,a){return a.indexOf(v)===i;}).join(' · ')});
     var pendente=function(){return {alim:'Alimentação da hospedagem',quant:'',extra:'Confirme a refeição e a quantidade no check-in.',conferir:true,fonte:'sem-registro',lento:!!base.lento,restr:base.restr};};
     if(typeof CF_ESTADIAS_LIDO==='undefined'||CF_ESTADIAS_LIDO!==true||typeof ZeluzAlimentacaoHospede==='undefined') return pendente();
