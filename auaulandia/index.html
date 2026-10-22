@@ -23617,10 +23617,14 @@ return { criar };
     F[orcMaisDias(p,-2)]='Sexta-feira Santa'; F[orcMaisDias(p,60)]='Corpus Christi';
     return (__orcFeriadosAno[ano]=F);
   }
+  // Rápida de propósito (22/out/2026, lentidão): é chamada em laços de dias, nas telas de reposição,
+  // vencimentos e turma. Sem expressão regular: confere o formato «aaaa-mm-dd» e usa o ano já calculado.
   function orcFeriadoDoCalendario(iso){
-    var s=String(iso||'');
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';
-    return orcFeriadosDoAno(+s.slice(0,4))[s]||'';
+    var s=(typeof iso==='string')?iso:String(iso||'');
+    if(s.length!==10||s.charCodeAt(4)!==45||s.charCodeAt(7)!==45) return '';
+    var F=__orcFeriadosAno[s.slice(0,4)];
+    if(!F){ var ano=+s.slice(0,4); if(!(ano>0)) return ''; F=orcFeriadosDoAno(ano); }
+    return F[s]||'';
   }
   let orcFeriadosCfg=null;
   let orcSheetsCfg=null;   // {url, token} — a ponte com a planilha de Hospedagem
