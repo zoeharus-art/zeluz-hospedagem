@@ -18,7 +18,8 @@
  *
  * Grupos de provas (PROVAS=P1,P3 roda só esses):
  *   P1 — o incidente de 22/10: a virada, a volta (aplicarLogin) e o relógio do reenvio à meia-noite (AC1)
- *   P2 — o prazo: Configurações, a guarda, a porta única, o aviso por FILHOt, o reenvio manual, a cobrança e a tela (AC2 a AC6)
+ *   P2 — o prazo: Configurações, a guarda, a porta única, o aviso por FILHOt, o reenvio manual, a cobrança e a tela (AC2 a AC6);
+ *        com as provas do QA M1 (22/10): o sábado, o fim configurado, o Meu Painel pelo pmAbrir e a porta antes das 07:00
  *   P3 — o reenvio automático: quem serviu e a hora da marcação, o prazo e a trava de 2 minutos (AC5.3)
  *   P7 — o consumo do banco: a entrada no app, a tela «Quem não comeu hoje» e o relógio de 2 min (AC2.1, AC2.4, AC7)
  *   R  — varreduras do arquivo (AC1.3, AC4.3)
@@ -545,6 +546,153 @@ prova('P2', 'AC2.1 — abrir «Quem não comeu hoje» (consultora, supervisor, g
   }
 });
 
+// ---------------------------------------------------------------- QA M1 (22/10): o que as provas acima não seguravam
+// O QA independente plantou 4 defeitos que passavam pelas 30 provas: a guarda barrando o sábado, o porquê fixo em
+// «passou das 18:00» com outro fim configurado, o pmAbrir sem passar os registros de hoje ao pmCardAvisos e a porta
+// única deixando passar antes das 07:00. Cada prova abaixo fica vermelha com um deles.
+// 24/10/2026 é sábado: o Day Care funciona e o almoço vai ao grupo como num dia de semana. Só o domingo fica de fora.
+const SAB = '2026-10-24';
+const MSG_NAO_COMEU = (quem, hora) => '<b>Teste 01</b> · SRD · Tutor: Tutor Teste 01\nNão comeu no 1º nem no 2º horário.\nQuem serviu o 2º horário: ' + quem + ' às ' + hora;
+const MSG_AO_TUTOR = 'Mensagem para enviar ao tutor do Teste 01:\n\nOi, Tutor, como está?\n\nHoje o Teste 01 não quis comer por aqui. 🐶\nTentamos no primeiro horário e oferecemos novamente no segundo, mas ele não aceitou.\n\nGentileza, reforçar a comidinha em casa mais tarde. 💛';
+prova('P2', 'AC4.1/AC4.2 (QA M1) — sábado tem Day Care: a guarda deixa às 07:00, 15:33 e 18:00 (e barra 06:59 e 18:01), a porta única vai à ponte às 15:33; o domingo continua barrado', async () => {
+  const app = abrir({ dia: SAB, hora: '15:33' });
+  assert.strictEqual(app.run('almTgDiaDaSemana()'), 6, '24/10/2026 é sábado no relógio do aparelho');
+  for (const [hora, pode, porque] of [['07:00', true, ''], ['15:33', true, ''], ['18:00', true, ''], ['06:59', false, 'ainda não é hora'], ['18:01', false, 'passou do prazo']]) {
+    app.hora(SAB, hora);
+    igual(app.J('almTgPodeSair(dcDataKey())'), { pode, porque }, 'sábado ' + hora);
+  }
+  app.hora(SAB, '15:33');
+  const r = await app.run("tgAvisar({grupo:'comida', texto:'teste'})");
+  assert.strictEqual(r.ok, true, 'sábado 15:33, a porta única deixa: ' + JSON.stringify(r));
+  assert.strictEqual(app.fetchComida().length, 1, 'uma ida à ponte, com o grupo comida');
+  app.hora('2026-10-25', '15:33');
+  assert.strictEqual(app.run('almTgDiaDaSemana()'), 0, '25/10/2026 é domingo');
+  igual(app.J('almTgPodeSair(dcDataKey())'), { pode: false, porque: 'domingo' }, 'o domingo segue barrado');
+  igual(await app.run("tgAvisar({grupo:'comida', texto:'teste'})"), { ok: false, foraDoPrazo: true, erro: 'domingo, sem Day Care' }, 'a porta única no domingo');
+  assert.strictEqual(app.fetchComida().length, 1, 'no domingo, nenhuma ida à ponte');
+});
+prova('P2', 'AC5.1/AC6.1/AC6.2 (QA M1) — sábado, os caminhos de sempre: «não comeu» no 2º horário às 15:33 manda as 2 mensagens letra por letra; a cobrança das 16:25 e o «dia conferido» das 16:30 saem como num dia de semana', async () => {
+  {
+    const banco = criarBanco({});
+    const app = abrir({ dia: SAB, hora: '15:33', banco, papel: 'monitor' });
+    app.turma(['Teste 01']); app.quemServe('Encãotadora Teste');
+    const k = kDe(app, 'Teste 01');
+    app.run('genMarcas={};');
+    app.run(`marcarAlmoco2(${JSON.stringify(k)}, 'nao')`);
+    await esperar();
+    igual(app.tgComida().map((d) => d.texto), [MSG_NAO_COMEU('Encãotadora Teste', '15:33'), MSG_AO_TUTOR], 'sábado 15:33: as 2 mensagens');
+    assert.strictEqual(app.fetchComida().length, 2, 'duas idas à ponte');
+    const fim = banco.ler('daycare/avisos-telegram-comida/' + SAB + '/' + k);
+    assert.strictEqual(fim.ok, true, JSON.stringify(fim)); assert.ok(!fim.foraDoPrazo, 'sem foraDoPrazo');
+    assert.ok(app.aud().some((a) => a.acao === 'telegram-comida' && a.detalhe === 'avisou o grupo que Teste 01 não almoçou'), JSON.stringify(app.aud()));
+    igual(app.alertas(), [], 'sem cartaz');
+  }
+  {
+    const banco = criarBanco({});
+    const app = abrir({ dia: SAB, hora: '16:25', banco, papel: 'consultora' });
+    await app.run('empVigiaAlmoco2()'); await esperar();
+    igual(app.tgComida().map((d) => d.texto), ['<b>ALMOÇO — 2º horário sem registro hoje</b>\n\nNão foi aberto o programa hoje no 2º horário do almoço. Confirmar.\n\nAmanda: ligar para o Day Care confirmando se não houve nenhum FILHOt que não comeu hoje.'], 'sábado 16:25: a cobrança de 28/08');
+    const trava = banco.ler('daycare/cobranca-almoco2/' + SAB);
+    assert.ok(trava && trava.hora === '16:25', JSON.stringify(trava));
+  }
+  {
+    const banco = criarBanco({ daycare: { atividade: { [SAB]: { almoco2: { [K1]: 'comeu' } } } } });
+    const app = abrir({ dia: SAB, hora: '16:30', banco, papel: 'consultora' });
+    await app.run('empVigiaAlmoco2()'); await esperar();
+    igual(app.tgComida().map((d) => d.texto), ['<b>ALMOÇO — dia conferido</b>\n\nTodos comeram hoje. Nenhum tutor a avisar.'], 'sábado 16:30: o «dia conferido»');
+    assert.strictEqual((banco.ler('daycare/cobranca-almoco2/' + SAB) || {}).fechamento, true);
+  }
+});
+prova('P2', 'AC3.3/AC5.2/AC5.4 (QA M1) — com o fim mudado para 17:30 na Gestão, o porquê diz «17:30» em todo lugar: o registro e a auditoria da marcação às 17:45, a porta única, a tela, o selo e o «Reenviar» do Meu Painel', async () => {
+  const D = '2026-10-21';
+  const banco = criarBanco({});
+  const app = abrir({ dia: D, hora: '17:45', banco, papel: 'monitor' });
+  app.run("setAuditCfg('almocoTelegram','fim','17:30')");   // o mesmo caminho do editor de Configurações
+  igual(app.J('almTgPrazo()'), { ini: '07:00', fim: '17:30' }, 'o prazo novo');
+  app.turma(['Teste 01']); app.quemServe('Encãotadora Teste');
+  app.run("sessionStorage.setItem('zeluz_login', JSON.stringify({role:'monitor', nome:'Monitor 3', pessoa:'Encãotadora Teste'}));");
+  const k = kDe(app, 'Teste 01'), P = 'daycare/avisos-telegram-comida/' + D + '/' + k;
+  app.run('genMarcas={};');
+  app.run(`marcarAlmoco2(${JSON.stringify(k)}, 'nao')`);
+  await esperar();
+  igual(app.tgComida(), [], 'às 17:45, nada ao grupo');
+  igual(app.fetches, [], 'nenhuma ida à ponte');
+  const r = banco.ler(P);
+  assert.ok(r && typeof r.ts === 'number', 'registro com ts');
+  igual(Object.assign({}, r, { ts: 0 }), { ts: 0, ok: false, tentando: false, foraDoPrazo: true, nome: 'Teste 01', quem: 'Encãotadora Teste', erro: 'passou das 17:30' }, 'o registro');
+  assert.ok(app.aud().some((a) => a.acao === 'telegram-comida' && a.detalhe === 'NÃO avisou o grupo — passou das 17:30'), 'a auditoria: ' + JSON.stringify(app.aud()));
+  igual(await app.run("tgAvisar({grupo:'comida', texto:'teste'})"), { ok: false, foraDoPrazo: true, erro: 'passou das 17:30' }, 'a porta única');
+  // «Quem não comeu hoje»
+  app.ctx.__x = { k, grave: true }; app.ctx.__reg = r;
+  app.run(`EMP_TG={}; EMP_TG[${JSON.stringify(k)}]=__reg;`);
+  let h = app.run('empStatusGrupo(__x)');
+  assert.ok(h.indexOf('Não foi ao grupo (passou das 17:30). Avise por fora, se ainda fizer sentido.') >= 0, 'a tela, com o registro: ' + h);
+  app.run(`EMP_TG[${JSON.stringify(k)}]={ok:false, tentando:false, erro:'ponte fora'};`);
+  h = app.run('empStatusGrupo(__x)');
+  assert.ok(h.indexOf('Passou das 17:30: o aviso não vai mais ao Telegram. Avise por fora, se ainda fizer sentido.') >= 0 && h.indexOf('empReenviarGrupo(') < 0, 'a tela, no lugar do botão: ' + h);
+  // o Meu Painel: o selo e o «Reenviar»
+  app.ctx.__av = [{ no: 'telegram-comida', k, nome: 'Teste 01', erro: r.erro, ts: r.ts, motivo: 'não saiu' }];
+  app.ctx.__comida = { [k]: r };
+  h = app.run('pmCardAvisos(__av, __comida)');
+  assert.ok(h.indexOf('passou das 17:30') >= 0 && h.indexOf('pmReenviar(') < 0, 'o selo, sem o botão: ' + h);
+  app.run("PM_ULTIMO={avisos:__av}; __bt={disabled:false, textContent:'Reenviar'};");
+  app.run('pmReenviar(0, __bt)'); await esperar();
+  assert.strictEqual(app.run('__bt.textContent'), 'Não vai: passou das 17:30', 'o botão do Meu Painel');
+  igual(app.fetches, [], 'e nada foi à ponte');
+  assert.ok(!/18:00/.test(JSON.stringify(banco.ler(P)) + JSON.stringify(app.aud())), 'nenhum «18:00» no registro nem na auditoria');
+});
+prova('P2', 'AC5.4 (QA M1) — o Meu Painel de verdade (pmAbrir, o caminho da tela): o registro foraDoPrazo da própria pessoa sai com o selo «passou das 18:00» e sem «Reenviar»; o aviso preso de sempre continua com «Reenviar»', async () => {
+  const D = '2026-10-21';
+  for (const hora of ['18:30', '15:50']) {
+    const banco = criarBanco({ daycare: { 'avisos-telegram-comida': { [D]: {
+      [K1]: { ts: local(D, '18:05'), ok: false, tentando: false, foraDoPrazo: true, nome: 'Teste 01', quem: 'Encãotadora Teste', erro: 'passou das 18:00' },
+      [K2]: { ts: local(D, '15:40'), ok: false, tentando: false, nome: 'Teste 02', quem: 'Encãotadora Teste', erro: 'a ponte não respondeu' },
+      [K3]: { ts: local(D, '15:45'), ok: false, tentando: false, nome: 'Teste 03', quem: 'Outra Pessoa Teste', erro: 'a ponte não respondeu' },
+    } } } });
+    const app = abrir({ dia: D, hora, banco, papel: 'monitor' });
+    app.run("sessionStorage.setItem('zeluz_login', JSON.stringify({role:'monitor', nome:'Monitor 3', pessoa:'Encãotadora Teste'}));");
+    app.turma(['Teste 01', 'Teste 02']);
+    app.els.pmRoot = { innerHTML: '', querySelectorAll: () => [], querySelector: () => null };
+    assert.strictEqual(app.run("podePapel('painel-monitor')"), true, 'o monitor vê o Meu Painel');
+    app.run('pmAbrir(true)'); await esperar(200);
+    const h = app.els.pmRoot.innerHTML;
+    assert.ok(h.indexOf('Avisos que ficaram comigo') >= 0, hora + ': o card desenhado pelo pmAbrir: ' + h.slice(0, 200));
+    assert.ok(banco.log.leituras.indexOf('daycare/avisos-telegram-comida/' + D) >= 0, hora + ': o pmAbrir lê os registros de hoje');
+    igual(app.J('PM_ULTIMO.avisos.map(function(a){ return a.k; })'), [K1, K2], hora + ': os 2 avisos dela, do mais novo para o mais velho');
+    assert.strictEqual((h.match(/pmReenviar\(/g) || []).length, 1, hora + ': um «Reenviar» só');
+    assert.ok(h.indexOf('pmReenviar(1,this)') >= 0 && h.indexOf('pmReenviar(0,this)') < 0, hora + ': o «Reenviar» é do Teste 02 (preso de sempre), não do Teste 01 (passou do prazo)');
+    assert.ok(h.indexOf('<span class="pm-badge pm-b-atencao">passou das 18:00</span>') >= 0, hora + ': o selo do Teste 01');
+    assert.ok(h.indexOf('<span class="pm-badge pm-b-critico">não saiu</span>') >= 0, hora + ': o Teste 02, como hoje');
+    assert.ok(h.indexOf('Teste 03') < 0, hora + ': o aviso de outra pessoa não aparece');
+  }
+});
+prova('P2', 'AC4.2 (QA M1) — a porta única antes do início: tgAvisar({grupo:"comida"}) às 00:00:20, 03:29, 06:00 e 06:59 (quarta e sábado) recusa com «antes das 07:00» sem ir à rede; às 07:00 sai; com o início em 08:15, às 08:00 recusa e às 08:15 sai; os outros grupos saem às 06:59', async () => {
+  const app = abrir({ dia: '2026-10-21', hora: '06:59' });
+  for (const dia of ['2026-10-21', SAB]) {
+    for (const hora of ['00:00:20', '03:29', '06:00', '06:59']) {
+      app.hora(dia, hora);
+      igual(await app.run("tgAvisar({grupo:'comida', texto:'teste'})"), { ok: false, foraDoPrazo: true, erro: 'antes das 07:00' }, dia + ' ' + hora);
+    }
+  }
+  igual(app.fetches, [], 'antes das 07:00, nenhuma ida à ponte');
+  app.hora('2026-10-21', '07:00');
+  assert.strictEqual((await app.run("tgAvisar({grupo:'comida', texto:'teste'})")).ok, true, 'às 07:00 sai (faixa inclusiva)');
+  assert.strictEqual(app.fetchComida().length, 1, 'uma ida à ponte');
+  app.run("AUDIT_CFG.almocoTelegram={ini:'08:15', fim:'18:00', label:'Avisos do almoço no Telegram'};");
+  app.hora('2026-10-21', '08:00');
+  igual(await app.run("tgAvisar({grupo:'comida', texto:'teste'})"), { ok: false, foraDoPrazo: true, erro: 'antes das 08:15' }, 'com o início em 08:15, às 08:00');
+  assert.strictEqual(app.fetchComida().length, 1, 'às 08:00, nenhuma ida nova à ponte');
+  app.hora('2026-10-21', '08:15');
+  assert.strictEqual((await app.run("tgAvisar({grupo:'comida', texto:'teste'})")).ok, true, 'às 08:15 sai');
+  assert.strictEqual(app.fetchComida().length, 2);
+  app.hora('2026-10-21', '06:59');
+  for (const g of ['gestao', 'vet', 'diario', 'urgencia']) {
+    const n0 = app.fetches.length;
+    assert.strictEqual((await app.run(`tgAvisar({grupo:'${g}', texto:'teste'})`)).ok, true, g + ' às 06:59 continua saindo');
+    assert.strictEqual(app.fetches.length, n0 + 1, g + ': uma ida à ponte');
+  }
+});
+
 // ================================================================ P3 — o reenvio automático (C)
 function bancoDaFila() {
   return criarBanco({ daycare: { 'avisos-telegram-comida': { '2026-10-21': {
@@ -618,6 +766,17 @@ prova('P3', 'AC5.3 — dois aparelhos no mesmo tique (o mesmo banco): só um ree
   banco.poe('daycare/avisos-telegram-comida/2026-10-21/' + K1 + '/ok', false);
   a.hora('2026-10-21', '15:51'); a.run('__tg.length=0;'); a.run('comidaTgFilaTentar()'); await esperar();
   igual(a.tgComida(), [], 'dentro dos 2 minutos, o 2º tique não manda de novo');
+});
+prova('P3', 'AC5.3 (QA M1) — sábado, dentro do prazo, o relógio de 2 min lê o nó de hoje e reenvia o ok:false, com quem serviu e a hora da marcação', async () => {
+  const banco = criarBanco({ daycare: { 'avisos-telegram-comida': { [SAB]: {
+    [K1]: { ts: local(SAB, '15:34'), ok: false, tentando: false, nome: 'Teste 01', quem: 'Encãotadora Teste', erro: 'a ponte não respondeu', quemServiu: 'Encãotadora Teste', horaMarcacao: '15:33' },
+  } } } });
+  const app = abrir({ dia: SAB, hora: '15:50', banco, papel: 'recepcao' });
+  app.turma(['Teste 01']); app.quemServe('Aprendiz Teste');
+  app.run('comidaTgFilaTentar()'); await esperar();
+  igual(banco.log.leituras.filter((p) => p === 'daycare/avisos-telegram-comida/' + SAB), ['daycare/avisos-telegram-comida/' + SAB], 'o relógio lê uma vez o nó de hoje');
+  igual(app.tgComida().map((d) => d.texto), [MSG_NAO_COMEU('Encãotadora Teste', '15:33'), MSG_AO_TUTOR], 'as 2 mensagens do Teste 01');
+  assert.strictEqual(banco.ler('daycare/avisos-telegram-comida/' + SAB + '/' + K1).ok, true, 'reenviado sozinho');
 });
 
 // ================================================================ P7 — o consumo do banco
