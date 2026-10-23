@@ -784,6 +784,15 @@
   .vcal-n{display:inline-block;min-width:15px;border-radius:999px;padding:1px 4px;font-size:9.5px;
     font-weight:800;background:var(--c);color:#FFFDF6}
   .dcal-dia.sel .vcal-n{outline:1px solid var(--z-cream)}
+  .hub116-topline{display:flex;align-items:flex-start;flex-wrap:wrap;gap:12px 16px;margin-bottom:12px}
+  .hub116-topline-main{flex:1 1 300px;min-width:250px}
+  .hub116-topline-main [data-zt694-date-host]{max-width:360px}
+  .hub116-topline-ops{display:flex;align-items:center;flex-wrap:wrap;gap:8px;flex:1 1 260px}
+  .hub116-panes{min-width:0}
+  .hub116-tabs{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+  .hub116-tabs [data-zt694-count]{font-weight:800}
+  [data-zt694-snoopy-count]{margin-left:5px}
+  [data-zelozinha-hub116] [data-zt694-acao="whats-vazio"],[data-zelozinha-hub116] [data-zt694-acao="whats-texto"]{display:none!important}
   .vcal-n.vcal-lendo{background:none;color:var(--muted);font-weight:700}
   .dcal-dia.vcal-off{opacity:.32;background:none;cursor:default}
   .vcal-lg{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);
@@ -4385,21 +4394,33 @@
   <section class="view" id="v-contatos" aria-hidden="true"></section>
   <section class="view" id="v-hoje">
     <div data-zelozinha-hub116>
-      <div class="card" data-operacao116-status aria-live="polite">
-        <h2 style="font-size:19px;margin-bottom:6px">Zelozinha — cuidados de hoje</h2>
-        <p class="hint" data-operacao116-control>Estado da operação não confirmado.</p>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" data-operacao116-meta><span class="hint" data-operacao116-channel>Canal não confirmado.</span><span class="hint" data-operacao116-updated>Última atualização não confirmada.</span><div style="display:flex;gap:8px;flex-wrap:wrap" data-operacao116-actions>
-          <button type="button" class="btn btn-ghost" data-operacao116-action="pause" disabled>Controle indisponível</button>
-        </div></div>
-        <p class="hint" data-operacao116-message>Adriana ou Amanda podem pausar e retomar os envios.</p>
+      <header class="card hub116-topline" data-operacao116-status aria-live="polite">
+        <div class="hub116-topline-main">
+          <h2 style="font-size:19px;margin:0 0 8px">Zelozinha</h2>
+          <div data-zt694-date-host aria-label="Calendário do Day Care"></div>
+          <p class="hint" style="margin:6px 0 0"><span data-zt694-day-label>Escolha uma data</span> · <strong><span data-zt694-count>—</span> peludinhos com cuidados</strong></p>
+        </div>
+        <div class="hub116-topline-ops">
+          <span class="hint" data-operacao116-control>Estado da operação não confirmado.</span>
+          <span class="hint" data-operacao116-channel>Canal não confirmado.</span>
+          <span class="hint" data-operacao116-updated>Última atualização não confirmada.</span>
+          <div data-operacao116-actions><button type="button" class="btn" style="background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" data-operacao116-action="pause" disabled>Controle indisponível</button></div>
+          <span class="hint" data-operacao116-message>Adriana ou Amanda podem pausar e retomar os envios.</span>
+        </div>
+        <div data-operacao116-quarantines hidden></div>
+      </header>
+      <div class="hub116-panes">
+        <div class="hub116-tabs" role="tablist" aria-label="Telas da Zelozinha">
+          <button type="button" class="btn btn-primary" id="hub116-tab-care" role="tab" aria-selected="true" aria-controls="hub116-pane-care" data-zt694-tab="care">Cuidados</button>
+          <button type="button" class="btn btn-gold" id="hub116-tab-snoopy" role="tab" aria-selected="false" aria-controls="hub116-pane-snoopy" data-zt694-tab="snoopy">LANÇAR NO SNOOPY <span class="badge badge-neutral" data-zt694-snoopy-count aria-label="Pendências do Snoopy não confirmadas">—</span></button>
+        </div>
+        <section id="hub116-pane-care" role="tabpanel" aria-labelledby="hub116-tab-care" data-zt694-pane="care">
+          <div data-zt694-care-list><p class="hint">Escolha uma data para conferir os cuidados.</p></div>
+        </section>
+        <section id="hub116-pane-snoopy" role="tabpanel" aria-labelledby="hub116-tab-snoopy" data-zt694-pane="snoopy" hidden>
+          <div data-zt694-snoopy-list><p class="hint">As pendências do Snoopy serão confirmadas para a data escolhida.</p></div>
+        </section>
       </div>
-      <div class="card" id="hub116-cuidados"><h2 style="font-size:19px">Cuidados e respostas</h2><div data-z44-despacho="recepcao"><p class="hint">Conferindo cuidados reais de hoje…</p></div></div>
-      <div class="card"><h2 style="font-size:19px">Aulunos Presentes hoje</h2><div data-hub116-presence><p class="hint">Conferindo presença…</p></div></div>
-      <details class="card" data-hub116-section="history"><summary><strong>Histórico, mensagens e respostas anteriores</strong></summary><div data-hub116-history></div></details>
-      <details class="card" data-hub116-section="contacts"><summary><strong>Próximo dia e contatos sem resposta</strong></summary><div id="contatosRoot"><div class="hint">Montando a lista de contatos…</div></div></details>
-      <details class="card" data-hub116-section="presence"><summary><strong>Presenças e ações do DayCare</strong></summary><div id="hojeRoot"><div class="hint">Montando a lista de hoje…</div></div></details>
-      <details class="card" data-hub116-section="pending"><summary><strong>Pendências de prevenção de outras vindas</strong></summary><div id="pendRoot"><div class="hint">Carregando as pendências…</div></div></details>
-      <details class="card" data-hub116-section="quarantines"><summary><strong>Famílias isoladas para revisão humana</strong></summary><div data-operacao116-quarantines><p class="hint">As revisões de envio aparecerão aqui quando o serviço confirmar o estado.</p></div></details>
     </div>
   </section>
   <!-- ===== BANHOS RECORRENTES (Adriana, 24/set/2026) ==============================
@@ -60581,6 +60602,7 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
     var avisar = typeof op.avisar === 'function' ? op.avisar : function () {};
     var perguntar = typeof op.perguntar === 'function' ? op.perguntar : function () { return Promise.resolve(false); };
     var pedirMotivo = typeof op.pedirMotivo === 'function' ? op.pedirMotivo : function () { return Promise.resolve(null); };
+    var nomesAcoes = op.nomesAcoes && typeof op.nomesAcoes === 'object' ? op.nomesAcoes : {};
 
     function atualizarContexto() {
       var c = contexto(op);
@@ -60648,7 +60670,8 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
       avisar(acao, [textoTela]); return r;
     }
     function botao(acao, ref, textoBotao) {
-      return ' <button type="button" class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" data-snoopy-item="' + escapar(ref.item) + '" data-snoopy-id="' + escapar(ref.id) + '" onclick="' + acao + '(this)">' + escapar(textoBotao) + '</button>';
+      var nome = texto(nomesAcoes[acao]) || acao;
+      return ' <button type="button" class="btn" style="background:none;border:none;color:var(--z-blue);font-size:11.5px;text-decoration:underline;padding:0 4px" data-snoopy-item="' + escapar(ref.item) + '" data-snoopy-id="' + escapar(ref.id) + '" onclick="' + nome + '(this)">' + escapar(textoBotao) + '</button>';
     }
     function linhaHTML(item, id, reg) {
       var c = atualizarContexto(), ref = { dia: c.dia, item: item, id: id };
@@ -60748,7 +60771,23 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
       return executarDesfazer(ref, pendente, c);
     }
     function atualizar() { estado.situacao = 'novo'; estado.erro = ''; return carregar(); }
-    return { carregar: carregar, linhaHTML: linhaHTML, confirmar: confirmar, reenviar: reenviar, desfazer: desfazer, reenviarDesfazer: reenviarDesfazer, atualizar: atualizar, estado: function () { return copiar(estado); }, modais: function () { return copiar(modais); } };
+    function listarPendentes() {
+      var c = atualizarContexto();
+      if (!c.valido || estado.situacao !== 'pronto') return { dia: c.dia, estado: estado.situacao, total: null, itens: null };
+      var dados = dadosDoDia(), itens = [];
+      Object.keys(dados).sort().forEach(function (item) {
+        var grupo = dados[item]; if (!grupo || typeof grupo !== 'object' || Array.isArray(grupo)) return;
+        Object.keys(grupo).sort().forEach(function (id) {
+          var reg = grupo[id], ref = { dia: c.dia, item: item, id: id };
+          if (!elegivel(ref, reg)) return;
+          var p = projecao(ref, reg);
+          if (!p || p.estado === 'confirmacao-vigente') return;
+          itens.push({ dia: c.dia, item: item, id: id, estado: p.estado, motivo: texto(p.motivo), valor: texto(reg && reg.valor), html: linhaHTML(item, id, reg) });
+        });
+      });
+      return { dia: c.dia, estado: 'pronto', total: itens.length, itens: itens };
+    }
+    return { carregar: carregar, linhaHTML: linhaHTML, listarPendentes: listarPendentes, confirmar: confirmar, reenviar: reenviar, desfazer: desfazer, reenviarDesfazer: reenviarDesfazer, atualizar: atualizar, estado: function () { return copiar(estado); }, modais: function () { return copiar(modais); } };
   }
   return { criar: criar };
 }));
@@ -60774,6 +60813,263 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
   function dashSnoopy33ReenviarDesfazer(el){ var x=dashSnoopy33Instancia(),p=dashSnoopy33DadosDoBotao(el); return x?x.reenviarDesfazer(p.item,p.id):Promise.resolve(); }
   function dashSnoopy33Atualizar(){ var x=dashSnoopy33Instancia(); return x?x.atualizar():Promise.resolve(); }
   /* SNOOPY33-END */
+<script id="zelozinha-dados-painel116">
+(function (root, factory) {
+  'use strict';
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.ZelozinhaDadosPainel116 = api;
+}(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  function texto(v) { return typeof v === 'string' ? v.trim() : ''; }
+  function copiar(v) { return v == null ? v : JSON.parse(JSON.stringify(v)); }
+  function objeto(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
+  function diaValido(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')); }
+  function snapValor(s) {
+    if (!s || typeof s.val !== 'function') throw new Error('snapshot indisponível');
+    return s.val();
+  }
+  function mapa(v) {
+    if (v == null) return {};
+    if (!objeto(v)) throw new Error('mapa diário inválido');
+    return v;
+  }
+  function instanteValido(v) {
+    if (typeof v === 'number') return Number.isFinite(v) && v > 0;
+    var s = texto(String(v == null ? '' : v));
+    if (!s) return false;
+    if (/^\d{10,13}$/.test(s)) return Number.isFinite(Number(s)) && Number(s) > 0;
+    return Number.isFinite(Date.parse(s));
+  }
+  function entradaValida(v) { return objeto(v) && (!v.tipo || v.tipo === 'entrada') && instanteValido(v.fim); }
+  function saidaValida(v) { return objeto(v) && v.tipo === 'saida' && instanteValido(v.fim); }
+  function presencaDe(dcKey, checkins, checkouts, chamada) {
+    var entrada = checkins[dcKey], saida = checkouts[dcKey], marca = texto(chamada[dcKey]);
+    if (saidaValida(saida)) return { estado: 'saiu', confirmada: true };
+    if (entradaValida(entrada)) return { estado: 'presente', confirmada: true };
+    if (marca === 'veio') return { estado: 'presente', confirmada: true };
+    if (marca === 'faltou') return { estado: 'faltou', confirmada: true };
+    if (entrada != null || saida != null || marca) return { estado: 'revisar', confirmada: false };
+    return { estado: 'nao_confirmada', confirmada: false };
+  }
+  function canon(v) {
+    if (v === null || typeof v !== 'object') return JSON.stringify(v);
+    if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+    return '{' + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ':' + canon(v[k]); }).join(',') + '}';
+  }
+  function assinarPadrao(v) {
+    var g = typeof globalThis !== 'undefined' ? globalThis : null;
+    if (!(g && g.crypto && g.crypto.subtle) || typeof TextEncoder === 'undefined') return Promise.reject(new Error('assinatura indisponível'));
+    return g.crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)).then(function (buf) {
+      return Array.prototype.map.call(new Uint8Array(buf), function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+    });
+  }
+  function erro(dia, motivo) {
+    return { versao: 116, dia: dia, estado: 'desconhecido', motivo: motivo || 'fonte não confirmada', total: null, itens: null, assinatura: '', escopo: 'registros_confirmados_104' };
+  }
+
+  function criar(op) {
+    op = op || {};
+    if (!op.db || typeof op.db.ref !== 'function') throw new Error('db.ref é obrigatório');
+    if (typeof op.validarPainel !== 'function') throw new Error('validador 104 é obrigatório');
+    var ttl = Number(op.ttlMs) > 0 ? Number(op.ttlMs) : 60000;
+    var assinar = typeof op.assinar === 'function' ? op.assinar : assinarPadrao;
+    var sequencia = 0, atual = erro('', 'nenhuma data selecionada'), cache = {};
+
+    function lerNo(caminho) { return Promise.resolve(op.db.ref(caminho).once('value')).then(snapValor); }
+    function publicar(resultado, req) {
+      if (req !== sequencia) return { versao: 116, dia: resultado.dia, estado: 'obsoleto', total: null, itens: null, assinatura: '', escopo: 'registros_confirmados_104' };
+      atual = copiar(resultado);
+      if (typeof op.aoAtualizar === 'function') op.aoAtualizar(copiar(atual));
+      return copiar(atual);
+    }
+    function derivar(dia, painel, checkins, checkouts, chamada) {
+      var porDc = {}, identidades = painel.identidadesPets || {}, cuidados = painel.cuidadosDia && painel.cuidadosDia.itens || {};
+      var grupos = Array.isArray(painel.grupos) ? painel.grupos : Object.keys(painel.grupos || {}).map(function (k) { return painel.grupos[k]; });
+      function pertence(g, cuidado) {
+        var pares = [];
+        if (Array.isArray(g && g.membros) && g.membros.length) g.membros.forEach(function (m) {
+          var ciclos = Array.isArray(m && m.cycleKeys) ? m.cycleKeys : [], itens = Array.isArray(m && m.itemKs) ? m.itemKs : [];
+          ciclos.forEach(function (c, i) { pares.push([c, itens[i]]); });
+        });
+        else {
+          var ciclos = Array.isArray(g && g.cycleKeys) ? g.cycleKeys : [], itens = Array.isArray(g && g.itemKs) ? g.itemKs : [];
+          ciclos.forEach(function (c, i) { pares.push([c, itens[i]]); });
+        }
+        return pares.some(function (p) { return p[0] === cuidado.cycleKey && p[1] === cuidado.itemK; });
+      }
+      function textoConfirmado(cuidado) {
+        var achados = grupos.filter(function (g) { return g && g.textoDisponivel === true && texto(g.textoEnviado) && pertence(g, cuidado); });
+        return achados.length === 1 ? texto(achados[0].textoEnviado) : '';
+      }
+      Object.keys(cuidados).sort().forEach(function (hash) {
+        var cuidado = cuidados[hash], id = cuidado && identidades[cuidado.petId], dc = texto(id && id.dcKeyAtual);
+        if (!dc) throw new Error('cuidado 104 sem identidade atual');
+        var linha = porDc[dc];
+        if (!linha) linha = porDc[dc] = {
+          dcKey: dc,
+          pelKey: texto(id.pelKeyAtual),
+          petId: texto(id.petId),
+          tutorId: texto(id.tutorRefId),
+          nomePeludo: texto(id.nomePeludo),
+          nomeTutor: texto(id.nomeTutor),
+          presenca: presencaDe(dc, checkins, checkouts, chamada),
+          cuidados: []
+        };
+        linha.cuidados.push({
+          hash: hash,
+          cycleKey: cuidado.cycleKey,
+          care: cuidado.care,
+          itemK: cuidado.itemK,
+          dueDate: cuidado.dueDate,
+          statusPainel: cuidado.statusPainel,
+          motivo: cuidado.motivo,
+          textoEnviado: textoConfirmado(cuidado)
+        });
+      });
+      return Object.keys(porDc).sort().map(function (dc) { return porDc[dc]; });
+    }
+    function ler(dia, forcar) {
+      dia = texto(dia);
+      var req = ++sequencia, agora = Date.now(), salvo = cache[dia];
+      if (!diaValido(dia)) return Promise.resolve(publicar(erro(dia, 'data inválida'), req));
+      if (!forcar && salvo && agora - salvo.em < ttl) return Promise.resolve(publicar(salvo.valor, req));
+      return Promise.all([
+        lerNo('piloto59/interno-20261019/painel81/' + dia),
+        lerNo('daycare/checkin-corpo/' + dia),
+        lerNo('daycare/checkout-corpo/' + dia),
+        lerNo('daycare/chamada/' + dia)
+      ]).then(function (valores) {
+        if (req !== sequencia) return publicar(erro(dia, 'leitura substituída por outra data'), req);
+        var bruto = valores[0], painel = op.validarPainel(bruto, dia);
+        if (!painel || painel.dia !== dia || Number(painel.detalhesEnvioVersao) !== 104 || !painel.cuidadosDia || painel.cuidadosDia.versao !== 104 || !texto(bruto && bruto.assinaturaConteudo)) {
+          return publicar(erro(dia, 'projeção 104 da data não confirmada'), req);
+        }
+        var checkins = mapa(valores[1]), checkouts = mapa(valores[2]), chamada = mapa(valores[3]);
+        var itens = derivar(dia, painel, checkins, checkouts, chamada);
+        var material = {
+          dia: dia,
+          assinaturaConteudo: texto(bruto.assinaturaConteudo),
+          itens: itens.map(function (x) { return { dcKey: x.dcKey, presenca: x.presenca, cuidados: x.cuidados }; })
+        };
+        return Promise.resolve(assinar(canon(material))).then(function (assinatura) {
+          var resultado = {
+            versao: 116,
+            dia: dia,
+            estado: 'pronto',
+            total: itens.length,
+            itens: itens,
+            assinatura: texto(assinatura),
+            assinaturaFonte: texto(bruto.assinaturaConteudo),
+            escopo: 'registros_confirmados_104',
+            atualizadoEm: painel.atualizadoEm
+          };
+          if (!resultado.assinatura) return publicar(erro(dia, 'assinatura do estado indisponível'), req);
+          cache[dia] = { em: Date.now(), valor: copiar(resultado) };
+          return publicar(resultado, req);
+        });
+      }).catch(function () { return publicar(erro(dia, 'não foi possível confirmar os dados da data'), req); });
+    }
+    return {
+      ler: ler,
+      estado: function () { return copiar(atual); },
+      invalidar: function (dia) { if (dia) delete cache[dia]; else cache = {}; },
+      cancelar: function () { sequencia += 1; }
+    };
+  }
+
+  function criarSnoopy(op) {
+    op = op || {};
+    if (!op.db || typeof op.db.ref !== 'function') throw new Error('db.ref é obrigatório');
+    if (!op.confirmacao || typeof op.confirmacao.cobravelNaFonte !== 'function') throw new Error('regra Snoopy é obrigatória');
+    if (!op.adaptador || typeof op.adaptador.criar !== 'function') throw new Error('adaptador Snoopy é obrigatório');
+    if (!op.interface || typeof op.interface.criar !== 'function') throw new Error('interface Snoopy é obrigatória');
+    if (typeof op.dashEditarAtor !== 'function') throw new Error('identidade Snoopy é obrigatória');
+    var ttl = Number(op.ttlMs) > 0 ? Number(op.ttlMs) : 60000;
+    var sequencia = 0, selecionado = '', atual = { versao: 116, dia: '', estado: 'desconhecido', total: null, itens: null }, cache = {};
+
+    function publicar(valor, req) {
+      if (req != null && req !== sequencia) return { versao: 116, dia: valor.dia, estado: 'obsoleto', total: null, itens: null };
+      atual = copiar(valor);
+      if (typeof op.aoAtualizar === 'function') op.aoAtualizar(copiar(atual));
+      return copiar(atual);
+    }
+    function desconhecido(dia, motivo) { return { versao: 116, dia: dia, estado: 'desconhecido', motivo: motivo || 'Snoopy não confirmado', total: null, itens: null }; }
+    function listarEntrada(entrada) {
+      if (!entrada || !entrada.instancia || typeof entrada.instancia.listarPendentes !== 'function') return desconhecido(entrada && entrada.dia || '', 'lista Snoopy indisponível');
+      var lista = entrada.instancia.listarPendentes();
+      if (!lista || lista.estado !== 'pronto' || !Array.isArray(lista.itens)) return desconhecido(entrada.dia, 'histórico Snoopy não confirmado');
+      return { versao: 116, dia: entrada.dia, estado: 'pronto', total: lista.itens.length, itens: copiar(lista.itens) };
+    }
+    function construir(dia, dados) {
+      var metadados = { dia: dia, ok: true, obj: dados };
+      var base = op.adaptador.criar({ db: op.db, snoopy28: op.confirmacao, dashEditarAtor: op.dashEditarAtor, agora: typeof op.agora === 'function' ? op.agora : Date.now });
+      base.cobravelNaFonte = op.confirmacao.cobravelNaFonte;
+      var entrada = { dia: dia, dados: dados, metadados: metadados, instancia: null, em: Date.now() };
+      entrada.instancia = op.interface.criar({
+        db: op.db,
+        snoopy: base,
+        dashDia: function () { return entrada.dia; },
+        dashDados: function () { return entrada.dados; },
+        dashEditarAtor: op.dashEditarAtor,
+        dadosProntos: function (d) { return metadados.ok === true && metadados.dia === d && metadados.obj === entrada.dados; },
+        escapar: op.escapar,
+        perguntar: op.perguntar,
+        pedirMotivo: op.pedirMotivo,
+        avisar: op.avisar,
+        nomesAcoes: op.nomesAcoes,
+        redesenhar: function () { if (selecionado === entrada.dia) publicar(listarEntrada(entrada)); }
+      });
+      return entrada;
+    }
+    function ler(dia, forcar) {
+      dia = texto(dia);
+      var req = ++sequencia;
+      selecionado = dia;
+      if (!diaValido(dia)) return Promise.resolve(publicar(desconhecido(dia, 'data inválida'), req));
+      var entrada = cache[dia];
+      var obter = !forcar && entrada && Date.now() - entrada.em < ttl
+        ? Promise.resolve(entrada)
+        : Promise.resolve(op.db.ref('daycare/dashboard/' + dia).once('value')).then(snapValor).then(function (dados) {
+            dados = mapa(dados);
+            var nova = construir(dia, dados);
+            cache[dia] = nova;
+            return nova;
+          });
+      return obter.then(function (e) {
+        if (req !== sequencia || selecionado !== dia) return publicar(desconhecido(dia, 'leitura substituída por outra data'), req);
+        return Promise.resolve(e.instancia.carregar()).then(function (r) {
+          if (req !== sequencia || selecionado !== dia) return publicar(desconhecido(dia, 'leitura substituída por outra data'), req);
+          if (!r || r.estado !== 'pronto') return publicar(desconhecido(dia, 'histórico Snoopy não confirmado'), req);
+          return publicar(listarEntrada(e), req);
+        });
+      }).catch(function () { return publicar(desconhecido(dia, 'não foi possível conferir o Snoopy'), req); });
+    }
+    function acao(nome, item, id) {
+      var dia = selecionado, entrada = cache[dia], inst = entrada && entrada.instancia;
+      if (!inst || typeof inst[nome] !== 'function') return Promise.resolve(desconhecido(dia, 'ação Snoopy indisponível'));
+      return Promise.resolve(inst[nome](texto(item), texto(id))).then(function (r) {
+        if (selecionado !== dia) return { estado: 'revisar', motivo: 'data alterada antes da confirmação' };
+        publicar(listarEntrada(entrada));
+        return r;
+      });
+    }
+    return {
+      ler: ler,
+      confirmar: function (item, id) { return acao('confirmar', item, id); },
+      reenviar: function (item, id) { return acao('reenviar', item, id); },
+      desfazer: function (item, id) { return acao('desfazer', item, id); },
+      reenviarDesfazer: function (item, id) { return acao('reenviarDesfazer', item, id); },
+      estado: function () { return copiar(atual); },
+      invalidar: function (dia) { if (dia) delete cache[dia]; else cache = {}; },
+      cancelar: function () { sequencia += 1; selecionado = ''; }
+    };
+  }
+
+  return { criar: criar, criarSnoopy: criarSnoopy, presencaDe: presencaDe, canon: canon };
+}));
+</script>
 
   function dashCartaoHTML(it, __diaDash){
 var lista=DASH_DADOS[it.k]||{};
@@ -96391,8 +96687,8 @@ function zPainel104ValidarCuidados(envelope,dia,identidadesPets){
   }
   return{versao:104,itens:retorno};
 }
-function zPainel44ValidarFonte80(v){
-  var diaAtual=zPainel44Dia();if(!v||typeof v!=='object'||Array.isArray(v)||v.versao!==81||v.dia!==diaAtual||!v.atualizadoEm||!Number.isFinite(Date.parse(v.atualizadoEm)))return null;
+function zPainel44ValidarFonte80(v,diaEsperado){
+  var diaAtual=String(diaEsperado||zPainel44Dia());if(!/^\d{4}-\d{2}-\d{2}$/.test(diaAtual)||!v||typeof v!=='object'||Array.isArray(v)||v.versao!==81||v.dia!==diaAtual||!v.atualizadoEm||!Number.isFinite(Date.parse(v.atualizadoEm)))return null;
   if(!v.autoria||v.autoria.id!=='zelozinha-zeluz'||v.autoria.nome!=='Zelozinha'||v.autoria.tipo!=='servico'||!v.estadoRecibos43||!window.Recibos43||typeof window.Recibos43.validarEstado43!=='function')return null;
   var envelopeLedger=v.estadoRecibos43,ledgerKeys=Object.keys(envelopeLedger).sort(),estado;
   if(envelopeLedger.versao!==43||typeof envelopeLedger.stateJson!=='string'||ledgerKeys.length!==2||ledgerKeys[0]!=='stateJson'||ledgerKeys[1]!=='versao')return null;
@@ -99647,10 +99943,19 @@ renderAtual=function(){
     if(tarefa.estado==='realizado')return{id:'realizado',texto:'aplicado e conferido'};
     return{id:'criada',texto:'falta aplicar e conferir'};
   }
+  /* A mensagem de sucesso pertence à linha material relida, não ao estado otimista da tarefa. */
+  function linhaDoLancamentoConfirmada(ctx){
+    ctx=ctx||{};var c=ctx.contato||{},cy=ctx.ciclo||{},tarefa=ctx.tarefa||{},resposta=ctx.resposta||{},linha=ctx.linha,ref=tarefa.linha||{},o=linha&&linha.origemVencimento;
+    return !!(linha&&typeof linha==='object'&&o&&typeof o==='object'&&
+      txt(linha.chave)===txt(c.dcKey)&&txt(ref.dia)===txt(c.dia)&&txt(ref.item)===txt(ctx.item)&&txt(ref.id)===txt(ctx.id)&&
+      o.protocolo==='cuidado57'&&txt(o.linhaId)===txt(ctx.id)&&txt(o.groupKey)===txt(ctx.groupKey)&&
+      txt(o.cycleKey)===txt(cy.cycleKey)&&txt(o.itemK)===txt(cy.itemK)&&txt(o.respostaId)===txt(resposta.respostaId)&&
+      Number.isInteger(Number(resposta.revisao))&&Number(o.revisao)===Number(resposta.revisao)&&txt(o.origemResposta)===txt(resposta.origem));
+  }
   return{RESPOSTAS:RESPOSTAS,FRASE_JA_NO_SNOOPY:FRASE_JA_NO_SNOOPY,FRASE_JA_APLICADO:FRASE_JA_APLICADO,FRASE_TROCA_APLICADO:FRASE_TROCA_APLICADO,
     rotuloResposta:rotuloResposta,mascara:mascara,hora:hora,quandoEnviado:quandoEnviado,retornoDepois:retornoDepois,msAte1330:msAte1330,inicio1330:inicio1330,horaDaSaida:horaDaSaida,
     grupoDoPet:grupoDoPet,resumo:resumo,rotuloGrupo:rotuloGrupo,topo:topo,ordenar:ordenar,camposDoCuidado:camposDoCuidado,ondePadrao:ondePadrao,faltaEscolher:faltaEscolher,
-    podeEscolher:podeEscolher,mesclarEscolha:mesclarEscolha,decidirTroca:decidirTroca,estadoDaTarefa:estadoDaTarefa};
+    podeEscolher:podeEscolher,mesclarEscolha:mesclarEscolha,decidirTroca:decidirTroca,estadoDaTarefa:estadoDaTarefa,linhaDoLancamentoConfirmada:linhaDoLancamentoConfirmada};
 });
 </script>
 <script id="zelozinha-contatos89-ui">'use strict';
@@ -99843,10 +100148,10 @@ renderAtual=function(){
   function posHTML(c,v,i){
     var cy=v.cy,html='';
     if(daLinha(v.valor)){
-      var e=v.tstate,dc='Foi para a lista do Day Care: '+itemNome(cy)+' — '+e.texto+'.';
+      var e=v.tstate,l=v.tarefa&&v.tarefa.linha,linha=l&&l.id&&l.item?linhaDoDia(c,l.item,l.id):null,confirmada=!!(l&&T.linhaDoLancamentoConfirmada({contato:c,ciclo:cy,tarefa:v.tarefa,resposta:v.atual,linha:linha,item:l.item,id:l.id,groupKey:v.grupo}));
       if(e.id==='nao-criada')html+='<p class="zt694-aviso" data-zt694-dc="nao-criada">Resposta salva, mas a tarefa do Day Care ainda não foi criada.</p><button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="tarefa-tentar">Tentar de novo</button>';
-      else html+='<p class="zt694-aviso" data-zt694-dc="'+e.id+'">'+esc(dc)+'</p>';
-      if(e.id!=='nao-criada')html+=snoopyHTML(c,v)+escolhasHTML(c,v,i);
+      else if(!confirmada)html+='<p class="zt694-aviso" data-zt694-dc="conferindo">Conferindo o Lançamento do dia…</p>';
+      else html+='<p class="zt694-aviso" data-zt694-dc="'+e.id+'">Foi para o Lançamento do dia</p>'+snoopyHTML(c,v)+escolhasHTML(c,v,i);
     }else if(v.valor&&v.tarefa&&(v.tarefa.estado==='criada'||v.tarefa.estado==='reservada')){
       html+='<p class="zt694-aviso" data-zt694-orfa>O cuidado ainda está na lista do Day Care: a troca não terminou.</p><button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="completar">Tirar da lista do Day Care</button>';
     }
@@ -99944,6 +100249,19 @@ renderAtual=function(){
     var corpo=vms.map(function(v,i){return careHTML(c,v,i);}).join(''),familyKey='family|'+id,resumoCuidados=vms.map(function(v){var data=txt(v.cy&&v.cy.vence).replace(/^(\d{4})-(\d{2})-(\d{2})$/,'$3/$2/$1');return itemNome(v.cy)+(data?' · '+data:'')+' · '+txt(v.st&&v.st.rotulo||'situação a conferir');}),resumoFamilia=nomePet(c)+' · '+(tutor||'Família a conferir')+' · '+(resumoCuidados.join('; ')||'cuidados a conferir');
     return '<details class="zt694-familia" data-zt694-aberto="'+esc(familyKey)+'"'+(estado.abertos[familyKey]===true?' open':'')+'><summary class="zt694-familia-resumo">'+esc(resumoFamilia)+'</summary><article class="zt694-pet" data-zt694-pet="'+esc(id)+'" data-z104-pet="'+esc(c.petId||c.dcKey||'')+'" data-z89-dc="'+esc(id)+'">'+cab+presencaHTML(c)+todosHTML(c,vms)+corpo+copiaHTML(c,vms)+'<span class="zt694-status" aria-live="polite" data-zt694-status>'+esc(estado.msgs[dc]||'')+'</span></article></details>';
   }
+  /* O histórico usa o mesmo cartão 6.94, mas nasce de um snapshot 104 já validado para
+     a data escolhida. Ele é somente leitura: não recebe botões nem consulta a ficha atual. */
+  function historico104HTML(c){
+    c=c&&typeof c==='object'?c:{};var cuidados=Array.isArray(c.cuidados)?c.cuidados:[],id=encodeURIComponent(txt(c.dcKey)),vistos={},textos=[];
+    var pres={presente:'Presença confirmada',saiu:'Saiu nesse dia',faltou:'Falta confirmada',revisar:'Presença a conferir',nao_confirmada:'Presença não confirmada'},estados={ainda_nao_enviada:'Contato ainda não enviado',reservado:'Preparação reservada',tentativa_iniciada:'Envio iniciado',envio_registrado_entrega_pendente:'Entrega a confirmar',entrega_confirmada:'Entrega confirmada',incerto_conciliacao:'Conferência necessária',acompanhamento_humano:'Acompanhamento humano'};
+    cuidados.forEach(function(x){var t=txt(x&&x.textoEnviado);if(t&&!vistos[t]){vistos[t]=true;textos.push(t);}});
+    var resumoCuidados=cuidados.map(function(x){return itemNome(x)+' · '+(dataBR(x&&x.dueDate)||'data não confirmada')+' · '+(estados[x&&x.statusPainel]||'Situação a conferir');});
+    var resumo=(txt(c.nomePeludo)||'FILHOt')+' · '+(txt(c.nomeTutor)||'Família a conferir')+' · '+(resumoCuidados.join('; ')||'cuidados a conferir');
+    var mensagens=textos.length?'<details class="zt694-msg"><summary>Ver mensagem</summary>'+textos.map(function(t){return '<div class="zt694-msg-texto z86-texto">'+esc(t)+'</div>';}).join('')+'</details>':'<p class="zt694-sub">Nenhum texto confirmado para esta data.</p>';
+    var cab='<header class="zt694-cab"><div class="zt694-id"><strong class="zt694-nome">'+esc(txt(c.nomePeludo)||'FILHOt')+'</strong><span class="zt694-quem">'+esc(txt(c.nomeTutor)||'Família a conferir')+' · '+esc(pres[c.presenca&&c.presenca.estado]||'Presença não confirmada')+'</span>'+mensagens+'</div></header>';
+    var corpo=cuidados.map(function(x){return '<div class="zt694-care" role="group"><p class="zt694-leg"><span>'+esc(itemNome(x))+' · '+esc(dataBR(x&&x.dueDate)||'data não confirmada')+'</span><small>'+esc(estados[x&&x.statusPainel]||'Situação a conferir')+'</small></p></div>';}).join('');
+    return '<details class="zt694-familia"><summary class="zt694-familia-resumo">'+esc(resumo)+'</summary><article class="zt694-pet" data-z116-dc="'+esc(id)+'">'+cab+corpo+'</article></details>';
+  }
   function algumaEscolha(){return Object.keys(estado.itens).some(function(dc){var c=estado.itens[dc];return vmsDe(c).some(function(v){return daLinha(v.valor)&&T.camposDoCuidado(v.cy.itemK).length&&v.tstate.id!=='nao-criada';});});}
   function descs(){return (estado.resultado&&estado.resultado.itens||[]).map(function(c){return descPet(estado.itens[c.dcKey]||c);});}
   function topoTexto(){return T.topo(T.resumo(descs()),depois1330());}
@@ -99958,7 +100276,7 @@ renderAtual=function(){
     }).join('')+'</div>';
   }
   /* ---------- escrever na página sem pular ---------- */
-  function alvosAtuais(){return Array.prototype.slice.call(document.querySelectorAll('[data-z89-contatos]'));}
+  function alvosAtuais(){return Array.prototype.slice.call(document.querySelectorAll('[data-z89-contatos],[data-zt694-care-list][data-zt694-operacional="1"]'));}
   function guardarAncora(){
     var rows=document.querySelectorAll('[data-zt694-pet]'),r=null;
     for(var i=0;i<rows.length;i++){var b=rows[i].getBoundingClientRect();if(b.bottom>0){r={dc:rows[i].getAttribute('data-zt694-pet'),top:b.top};break;}}
@@ -100138,6 +100456,17 @@ renderAtual=function(){
     })();
     return estado.diaLendo;
   }
+  /* A aba Snoopy116 grava no mesmo histórico, mas usa uma instância isolada por data.
+     Depois de uma confirmação real, releia somente o histórico Snoopy da instância 6.94;
+     o Dashboard já está em memória e não precisa ser relido. */
+  async function sincronizarSnoopyExterno(){
+    if(estado.diaLendo)await estado.diaLendo;
+    if(!estado.resultado||estado.dia!==diaAtual()||!algumaLoja())return false;
+    estado.snoopyEstado='carregando';repintarCuidadosDoDayCare();
+    try{estado.snoopyEstado=(await snoopyPronto(true))?'pronto':'falhou';}
+    catch(_){estado.snoopyEstado='falhou';}
+    repintarCuidadosDoDayCare();return estado.snoopyEstado==='pronto';
+  }
   /* ---------- as 13h30 e a virada do dia: relabel no lugar, sem reler e sem mudar a rolagem ---------- */
   function programarRelogio(){
     if(estado.timer)clearTimeout(estado.timer);estado.timer=null;
@@ -100233,6 +100562,7 @@ renderAtual=function(){
     }
     redesenharLinha(dc);
     garantirDia(false,true);
+    try{if(typeof window.zelozinha116SnoopyAtualizar==='function')window.zelozinha116SnoopyAtualizar();}catch(_){/* a aba mantém estado desconhecido até a próxima conferência */}
     /* A autorização cria somente a tarefa. Produto, dose/quantidade e local dependem
        de escolha humana posterior nos chips do próprio card; nada é pré-gravado aqui. */
   }
@@ -100458,9 +100788,200 @@ renderAtual=function(){
     estado.scrollY=window.pageYOffset;
     if(!estado.vistaAgendada){estado.vistaAgendada=true;(window.requestAnimationFrame||setTimeout)(function(){estado.vistaAgendada=false;anotarVista();});}
   },{passive:true});
-  instalarEstilo();instalarObservador();window.z89Render104=render;setTimeout(function(){render(false);},0);
+  instalarEstilo();instalarObservador();window.z89Render104=render;window.z89Historico104HTML=historico104HTML;window.z89SnoopyAtualizar=sincronizarSnoopyExterno;setTimeout(function(){render(false);},0);
 })();</script>
 <style>.z-painel44__zelozinha{display:none!important}[data-operacao116-form]{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-top:10px}[data-operacao116-form] label{display:flex;flex-direction:column;gap:4px;flex:1 1 180px;font-size:13px;font-weight:700;color:var(--z-blue)}[data-operacao116-form] input{min-height:40px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--z-cream);color:var(--z-blue);font:inherit}[data-operacao116-form] [data-operacao116-submit]{align-self:end}</style>
+<script id="zelozinha-painel116-controller">
+(function (w, d) {
+  'use strict';
+  if (w.__zelozinhaPainel116Instalado) return;
+  w.__zelozinhaPainel116Instalado = true;
+
+  var hub = d.querySelector('[data-zelozinha-hub116]');
+  if (!hub) return;
+  var host = hub.querySelector('[data-zt694-date-host]');
+  var rotuloDia = hub.querySelector('[data-zt694-day-label]');
+  var contador = hub.querySelector('[data-zt694-count]');
+  var listaCuidados = hub.querySelector('[data-zt694-care-list]');
+  var listaSnoopy = hub.querySelector('[data-zt694-snoopy-list]');
+  var contadorSnoopy = hub.querySelector('[data-zt694-snoopy-count]');
+  var selecionado = '', mes = '', dadosApi = null, snoopyApi = null, seq = 0, tentativasBoot = 0, timerBoot = null;
+
+  function txt(v) { return typeof v === 'string' ? v.trim() : ''; }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function iso(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')); }
+  function hoje() { try { return txt(w.zPainel44Dia()); } catch (_) { return ''; } }
+  function dataLonga(dia) {
+    try { return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(dia + 'T12:00:00-03:00')); }
+    catch (_) { return dia; }
+  }
+  function evento(nome, detalhe) {
+    try { d.dispatchEvent(new CustomEvent(nome, { detail: detalhe })); } catch (_) {}
+  }
+  function bancoAtual() {
+    try { if (typeof DB !== 'undefined' && DB) return DB; } catch (_) {}
+    return w.DB || null;
+  }
+  function telaAtiva() {
+    var view = hub.closest ? hub.closest('#v-hoje') : null;
+    return !!(view && view.classList && view.classList.contains('active'));
+  }
+  function prepararApis() {
+    if (dadosApi && snoopyApi) return true;
+    var banco = bancoAtual();
+    if (!banco || !w.ZelozinhaDadosPainel116 || !w.ZeluzSnoopyConfirmacao || !w.ZeluzSnoopy31AdaptadorDB || !w.ZeluzSnoopy33Interface) return false;
+    dadosApi = w.ZelozinhaDadosPainel116.criar({
+      db: banco,
+      validarPainel: function (v, dia) { return typeof w.zPainel44ValidarFonte80 === 'function' ? w.zPainel44ValidarFonte80(v, dia) : null; },
+      aoAtualizar: renderDados
+    });
+    snoopyApi = w.ZelozinhaDadosPainel116.criarSnoopy({
+      db: banco,
+      confirmacao: w.ZeluzSnoopyConfirmacao,
+      adaptador: w.ZeluzSnoopy31AdaptadorDB,
+      interface: w.ZeluzSnoopy33Interface,
+      dashEditarAtor: w.dashEditarAtor,
+      escapar: typeof w.escAttr === 'function' ? w.escAttr : esc,
+      perguntar: function (t, l, o) { return typeof w.zPergunta === 'function' ? w.zPergunta(t, l, o) : Promise.resolve(false); },
+      pedirMotivo: function (t, l, o) { return typeof w.zTexto === 'function' ? w.zTexto(t, l, { rotulo: 'Motivo', ph: 'Explique o motivo', botao: o.botao || 'Desfazer' }) : Promise.resolve(null); },
+      avisar: function (t, l) { if (typeof w.zAlertao === 'function') w.zAlertao(t, l, { botao: 'Entendi' }); },
+      nomesAcoes: {
+        dashSnoopy33Atualizar: 'zelozinha116SnoopyAtualizar',
+        dashSnoopy33Confirmar: 'zelozinha116SnoopyConfirmar',
+        dashSnoopy33Reenviar: 'zelozinha116SnoopyReenviar',
+        dashSnoopy33Desfazer: 'zelozinha116SnoopyDesfazer',
+        dashSnoopy33ReenviarDesfazer: 'zelozinha116SnoopyReenviarDesfazer'
+      },
+      aoAtualizar: renderSnoopy
+    });
+    return true;
+  }
+  function mesMover(delta) {
+    var p = (mes || selecionado.slice(0, 7)).split('-'), y = Number(p[0]), m = Number(p[1]) - 1 + delta;
+    while (m < 0) { m += 12; y -= 1; }
+    while (m > 11) { m -= 12; y += 1; }
+    mes = y + '-' + String(m + 1).padStart(2, '0');
+    renderCalendario();
+  }
+  function renderCalendario() {
+    if (!host || !iso(selecionado)) return;
+    var nomes = w.DCAL_MESES || ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    var ym = mes || selecionado.slice(0, 7), y = Number(ym.slice(0, 4)), m = Number(ym.slice(5, 7)) - 1;
+    var inicio = new Date(y, m, 1).getDay(), qtd = new Date(y, m + 1, 0).getDate(), h = '<div class="dcal"><div class="dcal-top">';
+    h += '<button type="button" class="dcal-nav" data-z116-mes="-1" aria-label="mês anterior">‹</button><span class="dcal-mes">' + esc(nomes[m]) + ' de ' + y + '</span><button type="button" class="dcal-nav" data-z116-mes="1" aria-label="próximo mês">›</button></div><div class="dcal-grade">';
+    ['dom','seg','ter','qua','qui','sex','sáb'].forEach(function (x) { h += '<div class="dcal-sem">' + x + '</div>'; });
+    for (var vazio = 0; vazio < inicio; vazio += 1) h += '<button type="button" class="dcal-dia" disabled></button>';
+    for (var n = 1; n <= qtd; n += 1) {
+      var dia = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(n).padStart(2, '0'), classe = 'dcal-dia';
+      if (dia === selecionado) classe += ' sel'; else if (dia < hoje()) classe += ' passado';
+      if (dia === hoje()) classe += ' hoje';
+      h += '<button type="button" class="' + classe + '" data-z116-dia="' + dia + '" title="' + dia + '">' + n + '</button>';
+    }
+    host.innerHTML = h + '</div></div>';
+  }
+  function renderPassado(r) {
+    if (!listaCuidados) return;
+    listaCuidados.removeAttribute('data-zt694-operacional');
+    listaCuidados.removeAttribute('data-zt694-ok');
+    if (!r || r.estado !== 'pronto' || !Array.isArray(r.itens)) {
+      listaCuidados.innerHTML = '<p class="hint">Não foi possível confirmar os cuidados desta data. O total continua desconhecido.</p>';
+      return;
+    }
+    if (!r.itens.length) {
+      listaCuidados.innerHTML = '<p class="hint">Nenhum cuidado foi confirmado para esta data.</p>';
+      return;
+    }
+    if (typeof w.z89Historico104HTML !== 'function') {
+      listaCuidados.innerHTML = '<p class="hint">Não foi possível montar os cartões desta data. O total confirmado continua acima.</p>';
+      return;
+    }
+    listaCuidados.innerHTML = '<div class="zt694" data-zt694>' + r.itens.map(function (x) { return w.z89Historico104HTML(x); }).join('') + '</div><p class="hint">Mostramos somente os cuidados confirmados para o dia escolhido.</p>';
+  }
+  function renderDados(r) {
+    if (!r || r.dia !== selecionado) return;
+    var operacional = selecionado === hoje();
+    if (rotuloDia) rotuloDia.textContent = dataLonga(selecionado);
+    if (contador) contador.textContent = r.estado === 'pronto' && Number.isInteger(r.total) ? String(r.total) : '—';
+    evento('zt694:data-ready', { dia: selecionado, estado: r.estado, total: r.total, assinatura: r.assinatura || '', escopo: r.escopo || 'registros_confirmados_104', itens: r.itens, acoesResposta: operacional });
+    if (operacional) {
+      listaCuidados.setAttribute('data-zt694-operacional', '1');
+      listaCuidados.removeAttribute('data-zt694-ok');
+      if (typeof w.z89Render104 === 'function') w.z89Render104(true);
+    } else renderPassado(r);
+  }
+  function badgeSnoopy(total) {
+    if (!contadorSnoopy) return;
+    contadorSnoopy.classList.remove('badge-warning', 'badge-success', 'badge-neutral');
+    if (Number.isInteger(total) && total > 0) { contadorSnoopy.textContent = String(total); contadorSnoopy.classList.add('badge-warning'); contadorSnoopy.setAttribute('aria-label', total === 1 ? '1 lançamento aguardando confirmação no Snoopy' : total + ' lançamentos aguardando confirmação no Snoopy'); }
+    else if (total === 0) { contadorSnoopy.textContent = '0'; contadorSnoopy.classList.add('badge-success'); contadorSnoopy.setAttribute('aria-label', 'Nenhum lançamento aguardando confirmação no Snoopy'); }
+    else { contadorSnoopy.textContent = '—'; contadorSnoopy.classList.add('badge-neutral'); contadorSnoopy.setAttribute('aria-label', 'Pendências do Snoopy ainda não conferidas'); }
+  }
+  function renderSnoopy(r) {
+    if (!r || r.dia !== selecionado) return;
+    badgeSnoopy(r.estado === 'pronto' ? r.total : null);
+    evento('zt694:snoopy-ready', { dia: selecionado, estado: r.estado, total: r.total, itens: r.itens });
+    if (!listaSnoopy) return;
+    if (r.estado !== 'pronto' || !Array.isArray(r.itens)) { listaSnoopy.innerHTML = '<p class="hint">Não foi possível confirmar os lançamentos e o histórico Snoopy desta data.</p>'; return; }
+    if (!r.itens.length) { listaSnoopy.innerHTML = '<p class="hint">Nenhum lançamento cobrável está pendente de confirmação humana nesta data.</p>'; return; }
+    listaSnoopy.innerHTML = r.itens.map(function (x) {
+      return '<article class="zt694-pet"><div class="role-note"><span><strong>' + esc(x.valor || 'Lançamento') + '</strong> · ' + esc(x.item) + '</span><span class="badge badge-warning">Pendente</span></div><div class="zt694-snoopy" data-z116-snoopy="' + esc(x.item + '|' + x.id) + '">' + (x.html || '<span>Confirmação humana pendente</span>') + '</div></article>';
+    }).join('');
+  }
+  function selecionar(dia, forcar) {
+    dia = txt(dia); if (!iso(dia)) return Promise.resolve(false);
+    selecionado = dia; mes = dia.slice(0, 7); seq += 1; renderCalendario();
+    if (rotuloDia) rotuloDia.textContent = dataLonga(dia);
+    if (!telaAtiva()) return Promise.resolve(false);
+    if (!prepararApis()) { agendarBoot(); return Promise.resolve(false); }
+    if (contador) contador.textContent = '—';
+    badgeSnoopy(null);
+    if (listaCuidados) { listaCuidados.removeAttribute('data-zt694-operacional'); listaCuidados.removeAttribute('data-zt694-ok'); listaCuidados.innerHTML = '<p class="hint">Conferindo os cuidados desta data…</p>'; }
+    if (listaSnoopy) listaSnoopy.innerHTML = '<p class="hint">Conferindo os lançamentos cobráveis e o histórico Snoopy…</p>';
+    var minha = seq;
+    return Promise.all([dadosApi.ler(dia, forcar === true), snoopyApi.ler(dia, forcar === true)]).then(function () { return minha === seq; });
+  }
+  function alternarAba(nome) {
+    Array.prototype.forEach.call(hub.querySelectorAll('[data-zt694-tab]'), function (b) { var on = b.getAttribute('data-zt694-tab') === nome; b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+    Array.prototype.forEach.call(hub.querySelectorAll('[data-zt694-pane]'), function (p) { p.hidden = p.getAttribute('data-zt694-pane') !== nome; });
+  }
+  function dadoBotao(el) { return { item: txt(el && el.getAttribute('data-snoopy-item')), id: txt(el && el.getAttribute('data-snoopy-id')) }; }
+  async function acaoSnoopy(nome, el) {
+    if (!prepararApis()) return;
+    var x = dadoBotao(el), r = await snoopyApi[nome](x.item, x.id), mudou = r && (r.estado === 'confirmacao-vigente' || r.estado === 'desfeito');
+    if (mudou && selecionado === hoje() && typeof w.z89SnoopyAtualizar === 'function') await w.z89SnoopyAtualizar();
+    return r;
+  }
+  w.zelozinha116SelecionarDia = selecionar;
+  w.zelozinha116SnoopyAtualizar = function () { return selecionar(selecionado, true); };
+  w.zelozinha116SnoopyConfirmar = function (el) { return acaoSnoopy('confirmar', el); };
+  w.zelozinha116SnoopyReenviar = function (el) { return acaoSnoopy('reenviar', el); };
+  w.zelozinha116SnoopyDesfazer = function (el) { return acaoSnoopy('desfazer', el); };
+  w.zelozinha116SnoopyReenviarDesfazer = function (el) { return acaoSnoopy('reenviarDesfazer', el); };
+  host.addEventListener('click', function (ev) { var m = ev.target.closest('[data-z116-mes]'), b = ev.target.closest('[data-z116-dia]'); if (m) mesMover(Number(m.getAttribute('data-z116-mes'))); else if (b) selecionar(b.getAttribute('data-z116-dia'), false); });
+  hub.addEventListener('click', function (ev) { var b = ev.target.closest('[data-zt694-tab]'); if (b) alternarAba(b.getAttribute('data-zt694-tab')); });
+  function agendarBoot() {
+    if (!telaAtiva() || timerBoot || tentativasBoot >= 80) return;
+    tentativasBoot += 1;
+    timerBoot = setTimeout(function () { timerBoot = null; ativar(false); }, 250);
+  }
+  function ativar(forcar) {
+    if (!telaAtiva()) return Promise.resolve(false);
+    if (!prepararApis()) {
+      if (listaCuidados) listaCuidados.innerHTML = '<p class="hint">Preparando a leitura desta data…</p>';
+      agendarBoot(); return Promise.resolve(false);
+    }
+    tentativasBoot = 0;
+    if (timerBoot) { clearTimeout(timerBoot); timerBoot = null; }
+    return selecionar(selecionado || hoje(), forcar === true);
+  }
+  w.zelozinha116Ativar = ativar;
+  var abrirHojeBase = w.hojeAbrir;
+  if (typeof abrirHojeBase === 'function') w.hojeAbrir = function () { var r = abrirHojeBase.apply(this, arguments); ativar(false); return r; };
+  selecionado = hoje();
+  if (iso(selecionado)) { mes = selecionado.slice(0, 7); renderCalendario(); if (rotuloDia) rotuloDia.textContent = dataLonga(selecionado); }
+  if (telaAtiva()) ativar(false);
+}(window, document));
+</script>
 <script data-operacao116-hub>
 (function(w,d){
   'use strict';
@@ -100487,21 +101008,23 @@ renderAtual=function(){
   function hora(v){if(!iso(v))return 'Última atualização não confirmada.';try{return 'Atualizado em '+new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(v))+' (horário de Brasília).';}catch(_){return 'Última atualização não confirmada.';}}
   function source(){var raw=null;try{raw=w.Z44_DISPATCH80&&w.Z44_DISPATCH80.dados;}catch(_){}var p=projetar(raw);if(!p)return null;if(localControl&&p.control.revision>=localControl.revision){localControl=null;var m=hub&&hub.querySelector('[data-operacao116-message]');if(m)m.dataset.sticky='';}if(localControl)p.control=localControl;return p;}
   function safe(v){return String(v==null?'':v);}
+  function motivoCanal(code){var m={not_ready:'a conexão ainda está sendo preparada',disconnected:'a conexão está indisponível',auth_failed:'a conexão precisa ser autenticada novamente',rate_limited:'o canal pediu uma pausa temporária',provider_error:'o canal não respondeu como esperado'};return m[safe(code)]||'o canal precisa ser conferido';}
+  function botaoOperacao(el){if(!el)return;el.className='btn';el.style.cssText='background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)';}
   function mensagemControle(code){var mensagens={unauthenticated:'Não foi possível validar a senha. Confira e tente novamente.',unauthorized:'Esta ação está disponível somente para Adriana e Amanda.',revision_conflict:'O estado mudou. Atualize o painel antes de confirmar novamente.',already_paused:'A pausa já está registrada. Atualize o painel.',not_paused:'Não há pausa registrada para retomar. Atualize o painel.',attempt_in_flight:'Há uma mensagem em andamento. Aguarde a confirmação da pausa.',rate_limited:'Houve várias tentativas. Aguarde alguns minutos antes de tentar novamente.'};return mensagens[code]||'Não foi possível confirmar a alteração. Atualize o painel antes de tentar novamente.';}
   function setText(el,value){if(el&&el.textContent!==value)el.textContent=value;}
   function render(){
     renderAgendado=false;var p=source(),control=hub.querySelector('[data-operacao116-control]'),channel=hub.querySelector('[data-operacao116-channel]'),updated=hub.querySelector('[data-operacao116-updated]'),message=hub.querySelector('[data-operacao116-message]'),actions=hub.querySelector('[data-operacao116-actions]'),quar=hub.querySelector('[data-operacao116-quarantines]'),formAberto=!!hub.querySelector('[data-operacao116-form]');
-    if(!p){setText(control,'Controle de envios ainda indisponível.');setText(channel,'Canal não confirmado.');setText(updated,'Última atualização não confirmada.');setText(message,'Ainda não foi possível confirmar o estado da Zelozinha. Confira os contatos e registre as respostas abaixo.');if(!formAberto&&actionsSignature!=='unavailable'){actions.replaceChildren();var indisponivel=d.createElement('button');indisponivel.type='button';indisponivel.className='btn btn-ghost';indisponivel.disabled=true;indisponivel.textContent='Controle indisponível';actions.appendChild(indisponivel);actionsSignature='unavailable';}if(quarantineSignature!=='unavailable'){quar.textContent='As revisões de envio aparecerão aqui quando o serviço confirmar o estado.';quarantineSignature='unavailable';}return;}
-    var c=p.control;setText(control,c.status==='running'?'Fila ativa.':c.status==='pause_requested'?'Pausa solicitada — a mensagem já iniciada ainda pode terminar.':'Pausada por '+safe(c.pause.actor.name)+': '+safe(c.pause.reason)+' · '+hora(c.pause.effectiveAt));setText(channel,p.channel.status==='operational'?'Canal operacional.':p.channel.status==='disconnected'?'Canal desconectado'+(p.channel.code?' · '+p.channel.code:'')+'.':'Suspensão técnica'+(p.channel.code?' · '+p.channel.code:'')+'.');setText(updated,hora(p.updatedAt));
-    var adapter=w.ZelozinhaOperacao116&&typeof w.ZelozinhaOperacao116.control==='function',actionSig=c.status+'|'+c.revision+'|'+(adapter?'ready':'missing');if(!formAberto&&actionsSignature!==actionSig){actions.replaceChildren();if(c.status==='pause_requested'){var wait=d.createElement('span');wait.className='hint';wait.textContent='A pausa será efetivada após a tentativa já iniciada.';actions.appendChild(wait);}else{var button=d.createElement('button');button.type='button';button.className='btn btn-ghost';button.dataset.operacao116Action=c.status==='paused'?'resume':'pause';button.disabled=!adapter;button.textContent=c.status==='paused'?'Retomar':'Pausar';actions.appendChild(button);}actionsSignature=actionSig;}
+    if(!p){setText(control,'Controle de envios ainda indisponível.');setText(channel,'Canal não confirmado.');setText(updated,'Última atualização não confirmada.');setText(message,'Ainda não foi possível confirmar o estado da Zelozinha. Confira os contatos e registre as respostas abaixo.');if(!formAberto&&actionsSignature!=='unavailable'){actions.replaceChildren();var indisponivel=d.createElement('button');indisponivel.type='button';botaoOperacao(indisponivel);indisponivel.disabled=true;indisponivel.textContent='Controle indisponível';actions.appendChild(indisponivel);actionsSignature='unavailable';}if(quar&&quarantineSignature!=='unavailable'){quar.textContent='As revisões de envio aparecerão aqui quando o serviço confirmar o estado.';quarantineSignature='unavailable';}return;}
+    var c=p.control;setText(control,c.status==='running'?'Fila ativa.':c.status==='pause_requested'?'Pausa solicitada — a mensagem já iniciada ainda pode terminar.':'Pausada por '+safe(c.pause.actor.name)+': '+safe(c.pause.reason)+' · '+hora(c.pause.effectiveAt));setText(channel,p.channel.status==='operational'?'Canal operacional.':p.channel.status==='disconnected'?'Canal desconectado: '+motivoCanal(p.channel.code)+'.':'Envios suspensos: '+motivoCanal(p.channel.code)+'.');setText(updated,hora(p.updatedAt));
+    var adapter=w.ZelozinhaOperacao116&&typeof w.ZelozinhaOperacao116.control==='function',actionSig=c.status+'|'+c.revision+'|'+(adapter?'ready':'missing');if(!formAberto&&actionsSignature!==actionSig){actions.replaceChildren();if(c.status==='pause_requested'){var wait=d.createElement('span');wait.className='hint';wait.textContent='A pausa será efetivada após a tentativa já iniciada.';actions.appendChild(wait);}else{var button=d.createElement('button');button.type='button';botaoOperacao(button);button.dataset.operacao116Action=c.status==='paused'?'resume':'pause';button.disabled=!adapter;button.textContent=c.status==='paused'?'Retomar':'Pausar';actions.appendChild(button);}actionsSignature=actionSig;}
     if(!adapter)setText(message,'O botão de pausa ainda não está conectado à Zelozinha.');else if(!message.dataset.sticky)setText(message,'Adriana ou Amanda podem pausar e retomar os envios.');
-    var quarSig=JSON.stringify(p.quarantines.items);if(quarantineSignature!==quarSig){quar.replaceChildren();if(!p.quarantines.total){quar.textContent='Nenhuma família isolada nesta projeção.';}else{p.quarantines.items.forEach(function(x){var row=d.createElement('p');row.className='hint';var completos=textoOpcional(x.nomeTutor,150)&&Array.isArray(x.nomesPeludinhos)&&x.nomesPeludinhos.length>0&&diaIso(x.diaOriginal),contexto='';if(completos)contexto=x.nomesPeludinhos.join(' e ')+' · '+x.nomeTutor+' · '+x.diaOriginal.split('-').reverse().join('/')+' · ';else contexto='Família a conferir · revisão humana necessária · '+hora(x.since)+' · ';row.appendChild(d.createTextNode(contexto+'Conferir mensagem no WhatsApp; não haverá repetição automática · '));var link=d.createElement('a');link.href='#hub116-cuidados';link.textContent='ver cuidados do dia';row.appendChild(link);quar.appendChild(row);});}quarantineSignature=quarSig;}
+    var quarSig=JSON.stringify(p.quarantines.items);if(quar&&quarantineSignature!==quarSig){quar.replaceChildren();if(!p.quarantines.total){quar.textContent='Nenhuma família isolada nesta projeção.';}else{p.quarantines.items.forEach(function(x){var row=d.createElement('p');row.className='hint';var completos=textoOpcional(x.nomeTutor,150)&&Array.isArray(x.nomesPeludinhos)&&x.nomesPeludinhos.length>0&&diaIso(x.diaOriginal),contexto='';if(completos)contexto=x.nomesPeludinhos.join(' e ')+' · '+x.nomeTutor+' · '+x.diaOriginal.split('-').reverse().join('/')+' · ';else contexto='Família a conferir · revisão humana necessária · '+hora(x.since)+' · ';row.appendChild(d.createTextNode(contexto+'Conferir mensagem no WhatsApp; não haverá repetição automática · '));var link=d.createElement('a');link.href='#hub116-cuidados';link.textContent='ver cuidados do dia';row.appendChild(link);quar.appendChild(row);});}quarantineSignature=quarSig;}
   }  function schedule(){if(renderAgendado)return;renderAgendado=true;setTimeout(render,0);}
   function abrirFormulario(action){
     var actions=hub.querySelector('[data-operacao116-actions]'),p=source(),adapter=w.ZelozinhaOperacao116&&w.ZelozinhaOperacao116.control;if(!p||typeof adapter!=='function')return;
     var old=hub.querySelector('[data-operacao116-form]');if(old){old.remove();return;}
     var form=d.createElement('form');form.dataset.operacao116Form='';
-    form.innerHTML='<label>Senha de operação<input type="password" name="password" autocomplete="current-password" required></label><label>Motivo da alteração<input type="text" name="reason" maxlength="240" minlength="3" required></label><button type="submit" class="btn btn-primary" data-operacao116-submit>Confirmar</button><button type="button" class="btn btn-ghost" data-operacao116-cancel>Cancelar</button><span class="hint" data-operacao116-form-status aria-live="polite"></span>';
+    form.innerHTML='<label>Senha de operação<input type="password" name="password" autocomplete="current-password" required></label><label>Motivo da alteração<input type="text" name="reason" maxlength="240" minlength="3" required></label><button type="submit" class="btn" style="background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" data-operacao116-submit>Confirmar</button><button type="button" class="btn" style="background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" data-operacao116-cancel>Cancelar</button><span class="hint" data-operacao116-form-status aria-live="polite"></span>';
     actions.after(form);var field=form.elements.password;field.focus();
     form.addEventListener('click',function(ev){if(ev.target.closest('[data-operacao116-cancel]')){field.value='';form.remove();schedule();}});
     form.addEventListener('submit',async function(ev){
