@@ -30193,7 +30193,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-23-02';
+  const APP_VERSAO='2026-10-24-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -98565,7 +98565,7 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
     var doc=root.document;if(!doc)return;
     var hojeA=doc.querySelector('a[data-v="hoje"]'),contatoA=doc.querySelector('a[data-v="contatos"]'),vencA=doc.querySelector('a[data-v="vencimentos"]');
     function rotulo(a,v){if(!a)return;var s=a.querySelectorAll('span');if(s.length>1)s[1].textContent=v;}
-    rotulo(hojeA,'Quem está hoje');if(hojeA)hojeA.title='Presença, check-in, banho, remédio e pendências operacionais de quem está na Zêluz.';
+    rotulo(hojeA,'Zelozinha');if(hojeA)hojeA.title='Presença, check-in, banho, remédio e pendências operacionais de quem está na Zêluz.';
     rotulo(contatoA,'Contatos e respostas');if(contatoA){contatoA.title='Lugar único para conferir o contato de hoje e registrar a resposta da família.';if(!contatoA.__consolidacao91){contatoA.__consolidacao91=true;contatoA.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();abrirCentral();});}}
     if(vencA){var acc=vencA.closest?vencA.closest('.acc'):null;(acc||vencA).hidden=true;}
   }
