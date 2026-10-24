@@ -30193,7 +30193,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-24-01';
+  const APP_VERSAO='2026-10-24-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -101140,6 +101140,10 @@ renderAtual=function(){
   if (telaAtiva()) ativar(false);
 }(window, document));
 </script>
+<script src="ponte121/contrato116.js"></script>
+<script src="ponte121/transporte116.js"></script>
+<script src="ponte121/config-publica116.js"></script>
+<script src="ponte121/inicializador116.js"></script>
 <script data-operacao116-hub>
 (function(w,d){
   'use strict';
