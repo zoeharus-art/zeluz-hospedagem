@@ -41,6 +41,10 @@ auaulandia/painel-logica.js
 auaulandia/financeiro-logica.js
 auaulandia/autoria-logica.js
 auaulandia/navegacao-inicio.js
+auaulandia/marcia129/painel.css
+auaulandia/marcia129/painel.js
+auaulandia/marcia129/dados.js
+auaulandia/marcia129/app.js
 auaulandia/hospedes-atividades.js
 auaulandia/alimentacao-hospede.js
 auaulandia/cafe-operacional.js

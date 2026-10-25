@@ -16,7 +16,7 @@ function podeDe(lista) {
 
 assert.equal(modulo.escolherPorta(podeDe(['painel-consultoras'])).rota, 'consultoras');
 assert.equal(modulo.escolherPorta(podeDe(['painel-amanda', 'painel-consultoras'])).rota, 'painel-amanda');
-assert.equal(modulo.escolherPorta(podeDe(['painel-operacao', 'painel-amanda'])).rota, 'paineloperacao');
+assert.equal(modulo.escolherPorta(podeDe(['painel-operacao', 'painel-amanda'])).rota, 'gestaomarcia');
 assert.equal(modulo.escolherPorta(podeDe(['painel-diretoria', 'painel-operacao'])).rota, 'painel-diretoria');
 assert.equal(modulo.escolherPorta(podeDe(['painel-monitor'])).rota, 'painelmeu');
 assert.equal(modulo.escolherPorta(podeDe([])), null);
@@ -24,7 +24,7 @@ assert.equal(modulo.escolherPorta(podeDe([])), null);
 const supervisor = modulo.escolherPorta(podeDe(['painel-amanda', 'painel-consultoras']));
 assert.deepEqual(supervisor.atalhos.map((x) => x.rota), ['consultoras']);
 const diretoria = modulo.escolherPorta(podeDe(['painel-diretoria', 'painel-operacao', 'painel-amanda', 'historico-checkins']));
-assert.deepEqual(diretoria.atalhos.map((x) => x.rota), ['paineloperacao', 'painel-amanda', 'historicocheckins']);
+assert.deepEqual(diretoria.atalhos.map((x) => x.rota), ['gestaomarcia', 'painel-amanda', 'historicocheckins']);
 
 for (const porta of modulo.PORTAS) {
   assert.match(html, new RegExp('id="v-' + porta.rota.replace(/[.*+?^\${}()|[\]\\]/g, '\\$&') + '"'));

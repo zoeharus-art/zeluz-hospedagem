@@ -7,12 +7,12 @@
   var PORTAS = [
     {capacidade:'painel-diretoria', rota:'painel-diretoria', titulo:'Diretoria', acao:'Abrir Diretoria',
       resumo:'Visão da casa, recebido no mês e valores a receber.', atalhos:[
-        {capacidade:'painel-operacao', rota:'paineloperacao', rotulo:'Gestão da operação'},
+        {capacidade:'painel-operacao', rota:'gestaomarcia', rotulo:'Márcia Gestão'},
         {capacidade:'painel-amanda', rota:'painel-amanda', rotulo:'Supervisão'},
         {capacidade:'historico-checkins', rota:'historicocheckins', rotulo:'Histórico de hospedagens'}
       ]},
-    {capacidade:'painel-operacao', rota:'paineloperacao', titulo:'Gestão da operação', acao:'Abrir Gestão da operação',
-      resumo:'Faltas, contatos disponíveis e ritmo do time.', atalhos:[
+    {capacidade:'painel-operacao', rota:'gestaomarcia', titulo:'Márcia Gestão', acao:'Abrir Márcia Gestão',
+      resumo:'Agenda, tarefas, faltas e cuidados do dia em um só lugar.', atalhos:[
         {capacidade:'painel-amanda', rota:'painel-amanda', rotulo:'Supervisão'},
         {capacidade:'historico-checkins', rota:'historicocheckins', rotulo:'Histórico de hospedagens'}
       ]},
