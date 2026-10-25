@@ -302,7 +302,7 @@
     if (!pronto(fontes.dashboard)) return { estado: falhou(fontes.dashboard) ? 'falha' : 'carregando', itens: [] };
     var peludinhos = lista(cad.peludinhos), grupo = valor(fontes.dashboard).avaliacao;
     var fonteConferenciaPronta = pronto(fontes.avaliacoesGestao), conferencias = valor(fontes.avaliacoesGestao);
-    var itens = registros(grupo).map(function (it, ordem) {
+    var itens = registros(grupo).filter(function(it){var a=objeto(objeto(it.reg.det).avaliacao129);return a.estado!=='cancelada'&&objeto(a.cancelamento).ativo!==true;}).map(function (it, ordem) {
       var p = cad.pronto === true ? associarCadastro(deps, peludinhos, it.reg, false) : null;
       var v = separarValor(it.reg), conf = conferenciaEfetiva(deps, dia, p, it.reg, conferencias[it.id], fonteConferenciaPronta);
       return {

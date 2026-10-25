@@ -80,13 +80,46 @@
   }
   function pagamentoSeguro(v) {
     v = objeto(v);
-    var ok = v.recebido === true && v.valorPagoCentavos === PRECO_CENTAVOS && texto(v.autorId) && texto(v.autorNome) && Number(v.ts) > 0;
+    var ts = v.ts, ok = v.recebido === true && v.valorPagoCentavos === PRECO_CENTAVOS &&
+      texto(v.autorId) && texto(v.autorNome) && Number.isFinite(ts) && ts > 0;
     return {
       recebido: !!ok, valorPagoCentavos: ok ? PRECO_CENTAVOS : 0,
       quem: ok ? texto(v.autorNome) : '', quando: ok ? texto(v.quando) : '',
-      autorId: ok ? texto(v.autorId) : '', autorNome: ok ? texto(v.autorNome) : '', ts: ok ? Number(v.ts) : 0,
+      autorId: ok ? texto(v.autorId) : '', autorNome: ok ? texto(v.autorNome) : '', ts: ok ? ts : 0,
       historico: Array.isArray(v.historico) ? copiar(v.historico.slice(-LIMITE_HISTORICO)) : []
     };
+  }
+  function ehAgenda(reg) {
+    reg = objeto(reg);
+    var det = objeto(reg.det), a = objeto(det.avaliacao129), versao = Number(a.versao) || 0;
+    return det.agendaMarcia === true || a.agendaMarcia === true || versao === 131 || versao === 133;
+  }
+  function cancelamentoSeguro(v) {
+    v = objeto(v);
+    /* Cancelamento é fail-closed: uma marca `ativo:true` incompleta nunca pode vazar
+       para Lançamentos/TV. A autoria completa continua obrigatória para CRIAR a marca. */
+    var ativo = v.ativo === true;
+    return {
+      ativo: !!ativo, motivo: ativo ? texto(v.motivo) : '', quem: ativo ? texto(v.autorNome) : '',
+      quando: ativo ? texto(v.quando) : '', autorId: ativo ? texto(v.autorId) : '',
+      autorNome: ativo ? texto(v.autorNome) : '', ts: ativo && Number.isFinite(v.ts) && v.ts > 0 ? v.ts : 0,
+      historico: Array.isArray(v.historico) ? copiar(v.historico.slice(-LIMITE_HISTORICO)) : []
+    };
+  }
+  function publicavel(reg) {
+    reg = objeto(reg);
+    var a = objeto(objeto(reg.det).avaliacao129);
+    return pagamentoSeguro(a.pagamento).recebido === true && a.estado !== 'cancelada' && cancelamentoSeguro(a.cancelamento).ativo !== true;
+  }
+  function estadoRegistro(reg) {
+    var a = objeto(objeto(objeto(reg).det).avaliacao129);
+    if (a.estado === 'cancelada' || cancelamentoSeguro(a.cancelamento).ativo) return 'cancelada';
+    return publicavel(reg) ? 'confirmada' : 'pendente';
+  }
+  function espelhoLegadoComprovado(reg) {
+    reg = objeto(reg);
+    var a = objeto(objeto(reg.det).avaliacao129), versao = Number(a.versao) || 0;
+    return (versao === 131 || versao === 132) && reg.planilha_ok === true;
   }
   function aplicarPagamento(atual, intencao, autor, rel, criacao) {
     atual = objeto(atual);
@@ -104,10 +137,17 @@
       autorId: autor.id, autorNome: autor.nome, ts: rel.ts, quando: rel.quando, historico: hist
     };
   }
+  function aplicarCancelamento(atual, ativo, motivo, autor, rel) {
+    atual = objeto(atual);
+    var hist = Array.isArray(atual.historico) ? atual.historico.slice(-(LIMITE_HISTORICO - 1)) : [];
+    hist.push({ ativo: ativo, motivo: ativo ? motivo : '', autorId: autor.id, autorNome: autor.nome, ts: rel.ts, quando: rel.quando });
+    if (!ativo) return { ativo: false, historico: hist };
+    return { ativo: true, motivo: motivo, autorId: autor.id, autorNome: autor.nome, ts: rel.ts, quando: rel.quando, historico: hist };
+  }
   function dados131(reg) {
     reg = objeto(reg);
     var det = objeto(reg.det), a = objeto(det.avaliacao129), v = separarValor(reg);
-    var marcada = a.agendaMarcia === true || det.agendaMarcia === true || Number(a.versao) === 131;
+    var marcada = ehAgenda(reg), canc = cancelamentoSeguro(a.cancelamento), estado = estadoRegistro(reg);
     return {
       /* O protocolo nativo de edição altera o resumo superior. Em 131 ele é canônico;
          o bloco interno não pode ressuscitar nome/raça/hora antigos. */
@@ -118,16 +158,20 @@
       experiencia: texto(a.experiencia), saude: texto(a.saude), observacoes: texto(a.observacoes),
       pagamento: pagamentoSeguro(a.pagamento), revisao: Number(a.revisao) || 0,
       autorId: texto(a.autorId), autorNome: texto(a.autorNome), ts: Number(a.ts) || 0, quando: texto(a.quando),
-      agendaMarcia: marcada
+      agendaMarcia: marcada, estado: estado, confirmada: estado === 'confirmada', cancelada: estado === 'cancelada',
+      cancelamento: canc, projecao: copiar(objeto(a.projecao))
     };
   }
   function serialCampos(d) {
+    var canc = objeto(d.cancelamento);
     return JSON.stringify({
       nome: d.nome, raca: d.raca, tutor: d.tutor, hora: d.hora,
       vacina: !!d.vacina.conferido, vermifugo: !!d.vermifugo.conferido, carrapaticida: !!d.carrapaticida.conferido,
       experiencia: d.experiencia, saude: d.saude, observacoes: d.observacoes,
       pagamento: { recebido: d.pagamento.recebido, valorPagoCentavos: d.pagamento.valorPagoCentavos,
-        autorId: d.pagamento.autorId, ts: d.pagamento.ts }
+        autorId: d.pagamento.autorId, ts: d.pagamento.ts },
+      estado: d.estado, cancelamento: { ativo: canc.ativo === true, autorId: texto(canc.autorId),
+        ts: Number.isFinite(canc.ts) ? canc.ts : 0, motivo: texto(canc.motivo) }
     });
   }
   function fingerprintRegistro(reg) {
@@ -135,12 +179,15 @@
     return 'am131-' + hash(serialCampos(d) + '^r' + d.revisao);
   }
   function itemDeRegistro(dia, id, reg) {
-    var d = dados131(reg);
+    var d = dados131(reg), estadoProjecao = texto(objeto(d.projecao).estado);
     return {
       id: texto(id), dia: dia, hora: d.hora, nome: d.nome, raca: d.raca, tutor: d.tutor,
       vacina: d.vacina, vermifugo: d.vermifugo, carrapaticida: d.carrapaticida,
       experiencia: d.experiencia, saude: d.saude, observacoes: d.observacoes,
       pagamento: { recebido: d.pagamento.recebido, valorCent: d.pagamento.valorPagoCentavos, quem: d.pagamento.quem, quando: d.pagamento.quando },
+      estado: d.estado, confirmada: d.confirmada, cancelada: d.cancelada,
+      cancelamento: d.cancelada ? { motivo: d.cancelamento.motivo, quem: d.cancelamento.quem, quando: d.cancelamento.quando } : null,
+      espelhoOk: estadoProjecao === 'pendente' ? false : (estadoProjecao === 'confirmada' ? true : null),
       revisao: d.revisao, fingerprint: fingerprintRegistro(reg), quem: d.autorNome, quando: d.quando
     };
   }
@@ -266,18 +313,67 @@
       if (!idValido(id)) throw new Error('ID_INDISPONIVEL');
       mapa[chave] = id; return id;
     }
+    function mesmaAutoria(a) {
+      var b = autorValido(); return !!(b && a && b.id === a.id && b.nome === a.nome);
+    }
+    function confirmarProjecao(cmd, autorEsperado) {
+      cmd = cmd || {};
+      var dia = texto(cmd.dia), id = texto(cmd.id), opId = texto(cmd.opId || cmd.op_id), revisao = Number(cmd.revisao), motivo = '';
+      if (!dataValida(dia)) return Promise.reject(new Error('DIA_INVALIDO'));
+      if (!idValido(id) || !idValido(opId) || !Number.isInteger(revisao) || revisao < 1) return Promise.reject(new Error('PROJECAO_INVALIDA'));
+      if (!autorizado()) return Promise.reject(new Error('SEM_PERMISSAO'));
+      var autorInicio = autorEsperado || autorValido(); if (!autorInicio) return Promise.reject(new Error('AUTORIA_OBRIGATORIA'));
+      if (!mesmaAutoria(autorInicio)) return Promise.reject(new Error('AUTORIA_ALTERADA'));
+      if (!db || typeof db.ref !== 'function') return Promise.reject(new Error('BANCO_INDISPONIVEL'));
+      var ref = db.ref(caminhoDia(dia) + '/' + id);
+      return Promise.resolve(ref.transaction(function (atual) {
+        if (!autorizado()) { motivo = 'SEM_PERMISSAO'; return; }
+        if (!mesmaAutoria(autorInicio)) { motivo = 'AUTORIA_ALTERADA'; return; }
+        if (!atual || !ehAgenda(atual)) { motivo = 'AGENDAMENTO_DESATUALIZADO'; return; }
+        var reg = copiar(atual), det = copiar(objeto(reg.det)), a = copiar(objeto(det.avaliacao129)), p = objeto(a.projecao);
+        if (['lancar', 'editar', 'remover'].indexOf(texto(p.acao)) < 0 || texto(p.opId || p.op_id) !== opId || Number(p.revisao) !== revisao || p.estado !== 'pendente') {
+          motivo = 'PROJECAO_DESATUALIZADA'; return;
+        }
+        var resumoAtual = objeto(p.depois), resumoRemover = objeto(p.antes);
+        if (texto(reg.valor) !== texto(resumoAtual.valor) || texto(reg.hora) !== texto(resumoAtual.hora) ||
+            (p.acao === 'remover' && (publicavel(reg) || !texto(resumoRemover.valor))) ||
+            (p.acao !== 'remover' && !publicavel(reg))) {
+          motivo = 'PROJECAO_DESATUALIZADA'; return;
+        }
+        var rel = relogioSP(deps.agora);
+        p.estado = 'confirmada'; p.confirmadoTs = rel.ts; p.confirmadoQuando = rel.quando;
+        p.confirmadoPor = { id: autorInicio.id, nome: autorInicio.nome };
+        a.projecao = p; det.avaliacao129 = a; reg.det = det;
+        reg.planilha_ok = true; reg.planilha_msg = '';
+        if (p.acao === 'remover') delete reg.planilha_linha;
+        if (p.acao === 'editar') delete reg.edicao_pendente;
+        motivo = ''; return reg;
+      })).then(function (res) {
+        if (!res || res.committed !== true) throw new Error(motivo || 'PROJECAO_DESATUALIZADA');
+        var reg = objeto(res.snapshot && res.snapshot.val && res.snapshot.val());
+        if (!cache[dia]) cache[dia] = {}; cache[dia][id] = copiar(reg);
+        return { ok: true, dia: dia, id: id, opId: opId, revisao: revisao, item: itemDeRegistro(dia, id, reg) };
+      });
+    }
     function salvar(cmd) {
       cmd = cmd || {};
-      var dia = texto(cmd.dia), entradaCampos = cmd.avaliacao && typeof cmd.avaliacao === 'object' ? cmd.avaliacao : cmd, campos, pagamento;
+      var dia = texto(cmd.dia), id = texto(cmd.id), token = texto(cmd.requestId || cmd.token), acao = texto(cmd.acao) || (id ? 'editar' : 'criar');
+      var entradaCampos = cmd.avaliacao && typeof cmd.avaliacao === 'object' ? cmd.avaliacao : cmd, campos = null, pagamento = null;
+      var mutacaoCadastro = acao === 'criar' || acao === 'editar', editando = acao !== 'criar';
       if (!dataValida(dia)) return Promise.reject(new Error('DIA_INVALIDO'));
+      if (['criar', 'editar', 'cancelar', 'reativar'].indexOf(acao) < 0 || (acao === 'criar' && id) || (acao !== 'criar' && !id)) return Promise.reject(new Error('ACAO_INVALIDA'));
       if (!autorizado()) return Promise.reject(new Error('SEM_PERMISSAO'));
       var autorInicio = autorValido(); if (!autorInicio) return Promise.reject(new Error('AUTORIA_OBRIGATORIA'));
-      try { campos = normalizarCampos(entradaCampos); pagamento = intencaoPagamento(entradaCampos.pagamento); } catch (e) { return Promise.reject(e); }
-      var editando = !!texto(cmd.id), id = texto(cmd.id), token = texto(cmd.requestId || cmd.token);
-      var acao = texto(cmd.acao) || (editando ? 'editar' : 'criar');
-      if ((acao !== 'criar' && acao !== 'editar') || (acao === 'criar' && editando) || (acao === 'editar' && !editando)) return Promise.reject(new Error('ACAO_INVALIDA'));
-      var chaveCriacao = token || hash(dia + '^' + serialCampos(Object.assign({}, campos, { pagamento: { recebido: pagamento && pagamento.recebido, valorPagoCentavos: pagamento && pagamento.valorPagoCentavos, autorId: '', ts: 0 } })));
-      try { if (!editando) id = obterIdCriacao(dia, chaveCriacao); } catch (e) { return Promise.reject(e); }
+      var motivoCancelamento = '';
+      try {
+        if (mutacaoCadastro) { campos = normalizarCampos(entradaCampos); pagamento = intencaoPagamento(entradaCampos.pagamento); }
+        if (acao === 'cancelar') motivoCancelamento = campo(cmd.motivo, 300, false, 'MOTIVO');
+      } catch (e) { return Promise.reject(e); }
+      var chaveCriacao = '';
+      if (acao === 'criar') {
+        chaveCriacao = token || hash(dia + '^' + serialCampos(Object.assign({}, campos, { pagamento: { recebido: pagamento && pagamento.recebido, valorPagoCentavos: pagamento && pagamento.valorPagoCentavos, autorId: '', ts: 0 } })));
+        try { id = obterIdCriacao(dia, chaveCriacao); } catch (e) { return Promise.reject(e); }
+      }
       if (!idValido(id)) return Promise.reject(new Error('ID_INVALIDO'));
       var revisaoEsperada = cmd.expectedRevision, base = texto(cmd.expectedFingerprint || cmd.fingerprint || cmd.base);
       if (editando && (!Number.isInteger(revisaoEsperada) || revisaoEsperada < 0 || !base)) return Promise.reject(new Error('BASE_OBRIGATORIA'));
@@ -285,7 +381,7 @@
       if (emVoo[voo]) return emVoo[voo];
       if (!db || typeof db.ref !== 'function') return Promise.reject(new Error('BANCO_INDISPONIVEL'));
       var ref = db.ref(caminhoDia(dia) + '/' + id), motivo = '', tokenSalvo = 'c-' + hash(chaveCriacao);
-      var antesCommit = null, resumoAlterado = false, pendenteCriada = null, idempotente = false;
+      var antesCommit = null, resumoAlterado = false, projecaoCriada = null, acaoProjecao = 'nenhuma', idempotente = false;
       var promessa = Promise.resolve(ref.transaction(function (atual) {
         if (!autorizado()) { motivo = 'SEM_PERMISSAO'; return; }
         var autor = autorValido();
@@ -299,66 +395,96 @@
         if (editando && (!existe || dAtual.revisao !== revisaoEsperada || fingerprintRegistro(regAtual) !== base)) {
           motivo = 'AGENDAMENTO_DESATUALIZADO'; return;
         }
-        var rel = relogioSP(deps.agora), reg = copiar(regAtual), det = copiar(objeto(reg.det)), aAtual = objeto(det.avaliacao129);
+        if (acao === 'cancelar' && dAtual.cancelada) { motivo = 'AGENDAMENTO_JA_CANCELADO'; return; }
+        if (acao === 'reativar' && !dAtual.cancelada) { motivo = 'AGENDAMENTO_NAO_CANCELADO'; return; }
+        var rel = relogioSP(deps.agora), reg = copiar(regAtual), det = copiar(objeto(reg.det)), aAtual = objeto(det.avaliacao129), a = copiar(aAtual);
         var revisao = (editando ? dAtual.revisao : 0) + 1, hist = Array.isArray(aAtual.historico) ? aAtual.historico.slice(-(LIMITE_HISTORICO - 1)) : [];
-        var pg = aplicarPagamento(aAtual.pagamento, pagamento, autor, rel, !editando);
+        /* Formato antigo já vivia em Lançamentos/TV sem recibo estruturado. Só no
+           retrato ANTERIOR ele conta como público; depois de migrado vale a régua
+           estrita R$80+autoria, sem fabricar pagamento para o legado. */
+        var antesPublicavel = existe && (!ehAgenda(regAtual) || publicavel(regAtual) || espelhoLegadoComprovado(regAtual)), valorAntes = texto(regAtual.valor), horaAntes = texto(regAtual.hora);
         antesCommit = editando ? copiar(regAtual) : null;
-        resumoAlterado = editando && (texto(regAtual.valor) !== campos.nome + ' / ' + campos.raca || texto(regAtual.hora) !== campos.hora);
-        if (resumoAlterado && regAtual.edicao_pendente) { motivo = 'EDICAO_PENDENTE'; return; }
-        hist.push({ revisao: revisao, autorId: autor.id, autorNome: autor.nome, ts: rel.ts });
-        det.agendaMarcia = true;
-        det.fora_do_cadastro = true;
-        det.avaliacao129 = {
-          versao: 131, agendaMarcia: true, criacaoToken: texto(aAtual.criacaoToken) || tokenSalvo,
-          nome: campos.nome, raca: campos.raca, tutor: campos.tutor, hora: campos.hora,
-          vacina: campos.vacina, vermifugo: campos.vermifugo, carrapaticida: campos.carrapaticida,
-          experiencia: campos.experiencia, saude: campos.saude, observacoes: campos.observacoes,
-          pagamento: pg, revisao: revisao, autorId: autor.id, autorNome: autor.nome, ts: rel.ts, quando: rel.quando, historico: hist
-        };
-        reg.valor = campos.nome + ' / ' + campos.raca;
-        reg.hora = campos.hora;
-        reg.quem = autor.nome;
-        reg.ts = rel.ts;
-        reg.det = det;
-        if (!editando) {
-          reg.planilha_ok = false;
-          reg.planilha_msg = 'lançamento aguardando confirmação da planilha';
-        }
-        if (resumoAlterado) {
-          pendenteCriada = {
-            op_id: 'am131-' + hash(id + '^' + revisao + '^' + autor.id + '^' + rel.ts), dia: dia,
-            estado: 'ponte_pendente', quem: autor.nome, autor: { id: autor.id, nome: autor.nome },
-            solicitado_ts: rel.ts, tentativas: 0,
-            antes: { valor: texto(regAtual.valor), hora: texto(regAtual.hora), planilha_linha: Number(regAtual.planilha_linha) || 0 },
-            depois: { valor: reg.valor, hora: reg.hora }
+        if (mutacaoCadastro) {
+          var pg = aplicarPagamento(aAtual.pagamento, pagamento, autor, rel, !editando);
+          resumoAlterado = editando && (valorAntes !== campos.nome + ' / ' + campos.raca || horaAntes !== campos.hora);
+          if (resumoAlterado && objeto(aAtual.projecao).estado === 'pendente') { motivo = 'PROJECAO_PENDENTE'; return; }
+          a = {
+            versao: 133, agendaMarcia: true, criacaoToken: texto(aAtual.criacaoToken) || tokenSalvo,
+            nome: campos.nome, raca: campos.raca, tutor: campos.tutor, hora: campos.hora,
+            vacina: campos.vacina, vermifugo: campos.vermifugo, carrapaticida: campos.carrapaticida,
+            experiencia: campos.experiencia, saude: campos.saude, observacoes: campos.observacoes,
+            pagamento: pg, cancelamento: copiar(aAtual.cancelamento), projecao: copiar(aAtual.projecao),
+            revisao: revisao, autorId: autor.id, autorNome: autor.nome, ts: rel.ts, quando: rel.quando, historico: hist
           };
-          reg.edicao_pendente = copiar(pendenteCriada);
-          reg.planilha_ok = false;
-          reg.planilha_msg = 'alteração aguardando confirmação da planilha';
+          reg.valor = campos.nome + ' / ' + campos.raca; reg.hora = campos.hora;
+        } else {
+          a.versao = 133; a.agendaMarcia = true; a.revisao = revisao;
+          a.autorId = autor.id; a.autorNome = autor.nome; a.ts = rel.ts; a.quando = rel.quando; a.historico = hist;
+          a.cancelamento = aplicarCancelamento(aAtual.cancelamento, acao === 'cancelar', motivoCancelamento, autor, rel);
         }
-        motivo = '';
-        return reg;
+        hist.push({ revisao: revisao, acao: acao, autorId: autor.id, autorNome: autor.nome, ts: rel.ts });
+        a.historico = hist; a.estado = a.cancelamento && a.cancelamento.ativo === true ? 'cancelada' : (pagamentoSeguro(a.pagamento).recebido ? 'confirmada' : 'pendente');
+        det.agendaMarcia = true; det.fora_do_cadastro = true; det.avaliacao129 = a;
+        reg.quem = autor.nome; reg.ts = rel.ts; reg.det = det;
+        var depoisPublicavel = publicavel(reg);
+        if (!antesPublicavel && depoisPublicavel) acaoProjecao = 'lancar';
+        else if (antesPublicavel && !depoisPublicavel) acaoProjecao = 'remover';
+        else if (antesPublicavel && depoisPublicavel && resumoAlterado) acaoProjecao = 'editar';
+        else acaoProjecao = 'nenhuma';
+        if (acaoProjecao !== 'nenhuma') {
+          projecaoCriada = {
+            opId: 'am133-' + hash(id + '^' + revisao + '^' + acaoProjecao + '^' + autor.id + '^' + rel.ts),
+            revisao: revisao, acao: acaoProjecao, estado: 'pendente', solicitadoTs: rel.ts,
+            solicitadoQuando: rel.quando, solicitadoPor: { id: autor.id, nome: autor.nome },
+            antes: { valor: valorAntes, hora: horaAntes, planilhaLinha: Number(regAtual.planilha_linha) || 0 },
+            depois: { valor: texto(reg.valor), hora: texto(reg.hora) }
+          };
+          a.projecao = copiar(projecaoCriada); det.avaliacao129 = a; reg.det = det;
+          reg.planilha_tent = 0;
+          delete reg.planilha_desisti;
+          /* Clientes antigos reenviam automaticamente somente `planilha_ok:false` como
+             lançamento. Remoção usa null e é retomada exclusivamente pelo protocolo
+             `a.projecao`, evitando ressuscitar avaliação cancelada/desconfirmada. */
+          reg.planilha_ok = acaoProjecao === 'remover' ? null : false;
+          reg.planilha_msg = acaoProjecao === 'remover' ? 'remoção aguardando confirmação da planilha' : (acaoProjecao === 'editar' ? 'alteração aguardando confirmação da planilha' : 'lançamento aguardando confirmação da planilha');
+          if (acaoProjecao === 'editar') {
+            reg.edicao_pendente = {
+              op_id: projecaoCriada.opId, dia: dia, estado: 'ponte_pendente', quem: autor.nome,
+              autor: { id: autor.id, nome: autor.nome }, solicitado_ts: rel.ts, tentativas: 0,
+              antes: { valor: valorAntes, hora: horaAntes, planilha_linha: Number(regAtual.planilha_linha) || 0 },
+              depois: { valor: texto(reg.valor), hora: texto(reg.hora) }
+            };
+          } else delete reg.edicao_pendente;
+        }
+        motivo = ''; return reg;
       })).then(function (res) {
         if (!res || res.committed !== true) throw new Error(motivo || 'AGENDAMENTO_DESATUALIZADO');
         var reg = res.snapshot && typeof res.snapshot.val === 'function' ? objeto(res.snapshot.val()) : {}, item = itemDeRegistro(dia, id, reg), dConfirmado = dados131(reg);
-        if (!dConfirmado.agendaMarcia || item.nome !== campos.nome || item.raca !== campos.raca || item.hora !== campos.hora) throw new Error('CONFIRMACAO_INVALIDA');
-        if (!cache[dia]) cache[dia] = {};
-        cache[dia][id] = copiar(reg);
-        var espelhoOk = true;
-        function ack(ok) { return { ok: true, acao: acao, dia: dia, id: id, revisao: item.revisao, quem: item.quem, quando: item.quando, item: copiar(item), espelhoOk: ok }; }
-        function espelhoConfirmado(v) { return v !== false && !(v && typeof v === 'object' && v.ok === false); }
-        if (!idempotente && typeof deps.aoSalvar === 'function') {
-          try {
-            var retorno = deps.aoSalvar({
-              acao: acao, dia: dia, id: id, valor: reg.valor, hora: reg.hora, quem: reg.quem, ts: reg.ts,
-              antes: copiar(antesCommit), registro: copiar(reg), resumoAlterado: resumoAlterado,
-              pendente: copiar(pendenteCriada), edicaoPendente: copiar(pendenteCriada)
-            });
-            if (retorno && typeof retorno.then === 'function') return retorno.then(function (v) { return ack(espelhoConfirmado(v)); }, function () { return ack(false); });
-            espelhoOk = espelhoConfirmado(retorno);
-          } catch (_) { espelhoOk = false; }
+        if (!dConfirmado.agendaMarcia || (mutacaoCadastro && (item.nome !== campos.nome || item.raca !== campos.raca || item.hora !== campos.hora))) throw new Error('CONFIRMACAO_INVALIDA');
+        if (!cache[dia]) cache[dia] = {}; cache[dia][id] = copiar(reg);
+        function ack(ok, itemFinal) {
+          var final = itemFinal || item;
+          return { ok: true, acao: acao, dia: dia, id: id, revisao: final.revisao, quem: final.quem, quando: final.quando, item: copiar(final), espelhoOk: ok };
         }
-        return ack(espelhoOk);
+        function espelhoConfirmado(v) { return v !== false && !(v && typeof v === 'object' && v.ok === false); }
+        if (idempotente) return ack(objeto(dConfirmado.projecao).estado !== 'pendente');
+        if (acaoProjecao === 'nenhuma') return ack(objeto(dConfirmado.projecao).estado !== 'pendente');
+        if (typeof deps.aoSalvar !== 'function' || !mesmaAutoria(autorInicio) || !autorizado()) return ack(false);
+        var contexto = {
+          acao: acao, acaoProjecao: acaoProjecao, dia: dia, id: id, valor: reg.valor, hora: reg.hora, quem: reg.quem, ts: reg.ts,
+          antes: copiar(antesCommit), registro: copiar(reg), resumoAlterado: resumoAlterado,
+          projecao: copiar(projecaoCriada), pendente: acaoProjecao === 'editar' ? copiar(reg.edicao_pendente) : null,
+          edicaoPendente: acaoProjecao === 'editar' ? copiar(reg.edicao_pendente) : null
+        };
+        function finalizarEspelho(v) {
+          if (!espelhoConfirmado(v)) return ack(false);
+          return confirmarProjecao({ dia: dia, id: id, opId: projecaoCriada.opId, revisao: projecaoCriada.revisao }, autorInicio)
+            .then(function (confirmada) { return ack(true, confirmada.item); }, function () { return ack(false); });
+        }
+        try {
+          var retorno = deps.aoSalvar(contexto);
+          return retorno && typeof retorno.then === 'function' ? retorno.then(finalizarEspelho, function () { return ack(false); }) : finalizarEspelho(retorno);
+        } catch (_) { return ack(false); }
       });
       emVoo[voo] = promessa.then(function (x) { delete emVoo[voo]; return x; }, function (e) { delete emVoo[voo]; throw e; });
       return emVoo[voo];
@@ -374,8 +500,9 @@
         experiencia: cmd.experiencia, saude: cmd.saude, observacoes: cmd.observacoes
       });
     }
-    return { observar: observar, observarMes: observarMes, fechar: fecharTudo, salvar: salvar, salvarConferencia: salvarConferencia };
+    return { observar: observar, observarMes: observarMes, fechar: fecharTudo, salvar: salvar,
+      salvarConferencia: salvarConferencia, confirmarProjecao: confirmarProjecao };
   }
 
-  return { criar: criar, PRECO_CENTAVOS: PRECO_CENTAVOS };
+  return { criar: criar, PRECO_CENTAVOS: PRECO_CENTAVOS, publicavel: publicavel, ehAgenda: ehAgenda };
 });

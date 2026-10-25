@@ -182,6 +182,30 @@ async function executar() {
     });
   });
 
+  const canceladaDados = fontesBase(), reciboCancelada = {
+    recebido: true, valorPagoCentavos: 8000, autorId: 'recepcao', autorNome: 'Recepção', ts: 10, quando: '23/10/2026 08:00'
+  };
+  const registroCancelado = {
+    valor: 'Cancelada Única / SRD', hora: '11:00', planilha_ok: true,
+    det: { agendaMarcia: true, avaliacao129: {
+      versao: 133, agendaMarcia: true, estado: 'cancelada',
+      tutor: 'Família Cancelada', vacina: { conferido: true }, vermifugo: { conferido: true }, carrapaticida: { conferido: true },
+      pagamento: reciboCancelada,
+      cancelamento: { ativo: true, motivo: 'Tutor pediu cancelamento', autorId: 'gestao-1', autorNome: 'Márcia Teste', ts: 20, quando: '23/10/2026 09:00' },
+      revisao: 3, autorId: 'gestao-1', autorNome: 'Márcia Teste', ts: 20
+    } }
+  };
+  canceladaDados['daycare/dashboard/' + DIA].avaliacao = { canceladaOriginal: registroCancelado };
+  const canceladaAntes = JSON.parse(JSON.stringify(canceladaDados['daycare/dashboard/' + DIA].avaliacao));
+  const canceladaDB = new FakeDB(canceladaDados), canceladaSnap = await Dados.criar(dependencias(canceladaDB)).carregar(DIA);
+  assert.deepEqual(canceladaSnap.agenda.itens, [], 'avaliação cancelada não aparece na agenda ativa da Gestão');
+  assert.equal(canceladaSnap.tarefas.itens.some(t => JSON.stringify(t).includes('Cancelada Única') || t.id.includes('canceladaOriginal')), false,
+    'avaliação cancelada não gera item no to-do da Gestão');
+  assert.deepEqual(canceladaDB.dados['daycare/dashboard/' + DIA].avaliacao, canceladaAntes,
+    'leitura preserva o registro cancelado e seu recibo original no fixture');
+  assert.deepEqual(canceladaDB.dados['daycare/dashboard/' + DIA].avaliacao.canceladaOriginal.det.avaliacao129.pagamento, reciboCancelada);
+  assert.equal(canceladaDB.writes.length, 0, 'filtrar cancelada não grava nem remove o registro');
+
   const origemDados = fontesBase();
   origemDados['daycare/dashboard/' + DIA].avaliacao = {
     'mesmo-id': {

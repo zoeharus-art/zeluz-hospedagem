@@ -36,20 +36,16 @@
           });}catch(e){reject(e);}
         });
       }
-      painel=op.painel.montar(raiz,{dia:op.dia(),clientes:op.clientes(),carregar:carregar,
+      painel=op.painel.montar(raiz,{dia:op.dia(),clientes:op.clientes(),racas:op.racas,canonizarRaca:op.canonizarRaca,carregar:carregar,
         observarMes:function(mes,cb){if(!permitido()||dados!==fonte||typeof dados.observarMes!=='function'){cb({mes:mes,estado:'falha',dias:{}});return function(){};}return dados.observarMes(mes,function(s){if(dados===fonte&&permitido())cb(s);});},
         observar:function(dia,cb){if(ultimo&&ultimo.dia===dia){receber=cb;cb(ultimo);}return function(){if(receber===cb)receber=null;};},
+        reenviarProjecao:function(cmd){if(!permitido()||dados!==fonte||typeof op.reenviarProjecao!=='function')return Promise.reject(new Error('SEM_PERMISSAO'));return op.reenviarProjecao(cmd);},
         salvar:function(cmd){if(!permitido()||dados!==fonte)return Promise.reject(new Error('SEM_PERMISSAO'));return dados.salvar(cmd);}});
       return true;
     }
     return {abrir:abrir,fechar:fechar,sessaoValida:permitido};
   }
-  function resumoHTML(reg){
-    var det=reg&&reg.det||{},a=det.avaliacao129||{},pg=a.pagamento||{};
-    if(det.agendaMarcia!==true&&a.agendaMarcia!==true&&a.versao!==131)return '';
-    var pago=pg.recebido===true&&pg.valorPagoCentavos===8000&&typeof pg.autorId==='string'&&pg.autorId.trim()&&typeof pg.autorNome==='string'&&pg.autorNome.trim()&&Number(pg.ts)>0;
-    return ' <span class="'+(pago?'am131__resumo-pago':'am131__resumo-pendente')+'">'+(pago?'Avaliação confirmada · R$ 80 recebidos':'Avaliação pendente · falta receber R$ 80')+'</span>';
-  }
+  function resumoHTML(){return '';}
   function instalar(root){
     var atual=null,observador=null;
     root.agendaMarciaResumoHTML=resumoHTML;
@@ -61,23 +57,30 @@
       var lista=typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS)?PELUDINHOS:[];
       return lista.filter(function(p){try{return typeof pelInativo!=='function'||!pelInativo(p);}catch(_){return false;}}).map(function(p,i){
         function dado(k,f){try{return texto(typeof pelGet==='function'?pelGet(p,k):'')||texto(f);}catch(_){return texto(f);}}
-        return {id:String(i),nome:texto(p.n),raca:dado('r',p.r),tutor:dado('tutor',p.tutor)};
+        return {id:String(i),nome:texto(p.n),raca:dado('raca',p.raca||p.r),tutor:dado('tutor',p.tutor)};
       });
     }
     function espelhar(ctx){
       if(!pode()||!autor())return Promise.reject(new Error('SEM_PERMISSAO'));
-      if(ctx.acao==='editar'&&ctx.resumoAlterado===false)return Promise.resolve();
-      if(ctx.pendente&&typeof dashEditarEnviarPendente==='function')return Promise.resolve(dashEditarEnviarPendente('avaliacao',ctx.id,null,ctx.dia,ctx.pendente)).then(function(ok){if(ok!==true)throw new Error('PLANILHA_PENDENTE');});
-      if(ctx.acao==='editar')return Promise.reject(new Error('PLANILHA_PENDENTE'));
-      if(typeof dashEspelhar!=='function')return Promise.reject(new Error('PLANILHA_INDISPONIVEL'));
-      return Promise.resolve(dashEspelhar('avaliacao',ctx.id,{valor:ctx.valor,hora:ctx.hora,quem:ctx.quem,ts:ctx.ts},'lancar',ctx.dia)).then(function(r){if(!r||r.ok!==true)throw new Error('PLANILHA_PENDENTE');});
+      if(ctx.acaoProjecao==='nenhuma')return Promise.resolve({ok:true});
+      if(typeof dashAgendaMarciaProjetar133!=='function')return Promise.reject(new Error('PLANILHA_INDISPONIVEL'));
+      return dashAgendaMarciaProjetar133(ctx.dia,ctx.id,ctx.registro,false);
     }
     root.agendaMarciaFechar=function(){if(atual){atual.fechar();atual=null;}if(observador){observador.disconnect();observador=null;}};
     root.agendaMarciaAbrir=function(){
       root.agendaMarciaFechar();
       atual=criar({raiz:function(){return root.document.getElementById('agendaMarciaRoot');},db:function(){return typeof DB!=='undefined'?DB:null;},
-        pode:pode,autor:autor,clientes:clientes,dados:root.ZeluzAgendaMarcia,painel:root.ZeluzAgendaMarciaPainel,
-        dia:function(){return root.ZeluzMarcia129.dataSP();},agora:function(){return Date.now();},aoSalvar:espelhar});
+        pode:pode,autor:autor,clientes:clientes,racas:function(){
+          if(typeof orcRacasAtualizar==='function')orcRacasAtualizar();
+          return (typeof RACAS!=='undefined'&&Array.isArray(RACAS)?RACAS:[]).concat(typeof RACAS_CADASTRO!=='undefined'&&Array.isArray(RACAS_CADASTRO)?RACAS_CADASTRO:[]);
+        },canonizarRaca:function(v){return typeof racaCanonica==='function'?racaCanonica(v):'';},dados:root.ZeluzAgendaMarcia,painel:root.ZeluzAgendaMarciaPainel,
+        dia:function(){return root.ZeluzMarcia129.dataSP();},agora:function(){return Date.now();},aoSalvar:espelhar,reenviarProjecao:function(cmd){
+          if(!pode()||!autor()||!cmd||!/^\d{4}-\d{2}-\d{2}$/.test(cmd.dia)||!cmd.id||/[.#$\[\]\/]/.test(cmd.id))return Promise.reject(new Error('SEM_PERMISSAO'));
+          return DB.ref('daycare/dashboard/'+cmd.dia+'/avaliacao/'+cmd.id).once('value').then(function(s){
+            var reg=s.val();if(!reg||typeof dashAgendaMarciaProjetar133!=='function')throw new Error('PLANILHA_INDISPONIVEL');
+            return dashAgendaMarciaProjetar133(cmd.dia,cmd.id,reg,true).then(function(r){return {ok:r.ok===true,dia:cmd.dia,id:cmd.id,espelhoOk:r.ok===true};});
+          });
+        }});
       var abriu=atual.abrir();
       if(abriu&&typeof root.MutationObserver==='function'){observador=new root.MutationObserver(function(){if(!atual||!atual.sessaoValida())root.agendaMarciaFechar();});observador.observe(root.document.body,{attributes:true,attributeFilter:['data-role']});}
       return abriu;

@@ -68,11 +68,41 @@ function observarPronto(api, db, valor = {}) {
 
 async function executar() {
   assert.equal(Agenda.PRECO_CENTAVOS, 8000);
+  const regPagoEstrito = { det: { agendaMarcia: true, avaliacao129: { versao: 133, pagamento: {
+    recebido: true, valorPagoCentavos: 8000, autorId: 'a', autorNome: 'Pessoa', ts: 1, quando: 'agora'
+  } } } };
+  assert.equal(Agenda.ehAgenda(regPagoEstrito), true);
+  assert.equal(Agenda.publicavel(regPagoEstrito), true);
+  assert.equal(Agenda.publicavel({ det: { agendaMarcia: true, avaliacao129: { pagamento: {
+    recebido: true, valorPagoCentavos: 8000, autorId: 'a', autorNome: '', ts: 1
+  } } } }), false, 'R$ 80 sem autoria completa nunca confirma');
+  for (const tsInvalido of ['Infinity', Infinity, -Infinity, NaN, '10']) {
+    assert.equal(Agenda.publicavel({ det: { agendaMarcia: true, avaliacao129: { pagamento: {
+      recebido: true, valorPagoCentavos: 8000, autorId: 'a', autorNome: 'Pessoa', ts: tsInvalido
+    } } } }), false, 'timestamp não finito ou não numérico nunca autentica recibo');
+  }
+  const regCanceladoEstrito = clone(regPagoEstrito);
+  regCanceladoEstrito.det.avaliacao129.cancelamento = { ativo: true, autorId: 'a', autorNome: 'Pessoa', ts: 2 };
+  assert.equal(Agenda.publicavel(regCanceladoEstrito), false, 'cancelamento válido fecha o gate mesmo preservando o recibo');
+  const regCanceladoIncompleto = clone(regPagoEstrito);
+  regCanceladoIncompleto.det.avaliacao129.cancelamento = { ativo: true };
+  assert.equal(Agenda.publicavel(regCanceladoIncompleto), false, 'marca de cancelamento incompleta falha fechada e nunca vaza para TV');
   const db = new FakeDB(), ctx = criar(db), obs = observarPronto(ctx.api, db);
   assert.equal(obs.vistos[0].estado, 'carregando');
   assert.equal(obs.ultimo().estado, 'pronto');
   assert.deepEqual(db.reads, [CAMINHO], 'observa somente avaliações do dia');
   assert.equal(db.writes.length, 0, 'observar/renderizar não grava');
+
+  const dbPendenteSemTv = new FakeDB(), chamadasPendente = [];
+  const pendenteSemTvCtx = criar(dbPendenteSemTv, { aoSalvar: x => { chamadasPendente.push(x); return true; } });
+  observarPronto(pendenteSemTvCtx.api, dbPendenteSemTv);
+  const pendenteSemTv = await pendenteSemTvCtx.api.salvar(pedido({ requestId: 'pendente-sem-tv' }));
+  assert.equal(chamadasPendente.length, 0, 'avaliação sem pagamento não chama ponte nem TV');
+  assert.equal(pendenteSemTv.item.estado, 'pendente');
+  assert.equal(pendenteSemTv.item.espelhoOk, null, 'sem projeção não inventa confirmação de espelho');
+  const criadoSemRequestId = await pendenteSemTvCtx.api.salvar({ acao: 'criar', dia: DIA, avaliacao: avaliacao({ nome: 'Sem token' }) });
+  assert.equal(criadoSemRequestId.ok, true, 'criação via UI funciona sem requestId e sem cancelamento prévio');
+  assert.equal(criadoSemRequestId.item.nome, 'Sem token');
 
   const dbFalha = new FakeDB(), falhaCtx = criar(dbFalha), falhas = [];
   falhaCtx.api.observar(DIA, s => falhas.push(s));
@@ -122,9 +152,12 @@ async function executar() {
   assert.equal(regPendente.hora, '09:30');
   assert.equal(regPendente.det.agendaMarcia, true);
   assert.equal(regPendente.det.avaliacao129.agendaMarcia, true);
-  assert.equal(regPendente.det.avaliacao129.versao, 131);
+  assert.equal(regPendente.det.avaliacao129.versao, 133);
   assert.equal(regPendente.det.fora_do_cadastro, true);
-  assert.equal(regPendente.planilha_ok, false, 'criação nasce na fila nativa até a ponte confirmar');
+  assert(!Object.prototype.hasOwnProperty.call(regPendente, 'planilha_ok'), 'pendente não entra na fila nativa da TV');
+  assert.equal(pendente.item.estado, 'pendente');
+  assert.equal(pendente.item.confirmada, false);
+  assert.equal(pendente.item.cancelada, false);
   assert(!('tutor' in regPendente), 'dados completos ficam no det e não vazam para projeção da TV');
   const repetido = await ctx.api.salvar(pedido());
   assert.equal(repetido.id, pendente.id);
@@ -198,6 +231,8 @@ async function executar() {
     avaliacao: avaliacao({ observacoes: 'Nota alterada sem mexer no pagamento', pagamento: { recebido: false, valorCent: 0 } })
   });
   assert.equal(desfeito.item.pagamento.recebido, false);
+  assert.equal(espelhos.at(-1).acaoProjecao, 'remover', 'corrigir pagamento recebido remove a projeção sem apagar o registro');
+  assert.equal(dbPago.dados[pagoNo].planilha_ok, true, 'remoção confirmada pode marcar o estado técnico como resolvido');
   const histPg = dbPago.dados[pagoNo].det.avaliacao129.pagamento.historico;
   assert.deepEqual(histPg.map(x => x.recebido), [true, false], 'recebimento e desfazer ficam auditados');
   assert(histPg.every(x => x.autorId === 'consultora-1' && x.ts > 0));
@@ -234,7 +269,10 @@ async function executar() {
   const dbResumo = new FakeDB(), contextosResumo = [];
   const resumoCtx = criar(dbResumo, { aoSalvar: x => { contextosResumo.push(x); return x.acao === 'editar' ? false : true; } });
   observarPronto(resumoCtx.api, dbResumo);
-  const resumoCriado = await resumoCtx.api.salvar(pedido({ requestId: 'resumo-1' }));
+  const resumoCriado = await resumoCtx.api.salvar(pedido({ requestId: 'resumo-1', avaliacao: avaliacao({ pagamento: { recebido: true, valorCent: 8000 } }) }));
+  const resumoNo = CAMINHO + '/' + resumoCriado.id;
+  dbResumo.dados[resumoNo].planilha_tent = 5;
+  dbResumo.dados[resumoNo].planilha_desisti = true;
   const resumoEditado = await resumoCtx.api.salvar({
     acao: 'editar', dia: DIA, id: resumoCriado.id, expectedRevision: resumoCriado.revisao,
     expectedFingerprint: resumoCriado.item.fingerprint,
@@ -245,8 +283,11 @@ async function executar() {
   assert.equal(resumoReg.edicao_pendente.depois.valor, 'Luna Nova / SRD');
   assert.equal(resumoReg.edicao_pendente.depois.hora, '10:15');
   assert.equal(resumoReg.planilha_ok, false);
+  assert.equal(resumoReg.planilha_tent, 0, 'nova projeção reabre a fila com zero tentativas');
+  assert.equal(Object.prototype.hasOwnProperty.call(resumoReg, 'planilha_desisti'), false, 'nova projeção limpa desistência antiga');
   assert.equal(contextosResumo.at(-1).resumoAlterado, true);
   assert.deepEqual(contextosResumo.at(-1).pendente, contextosResumo.at(-1).edicaoPendente);
+  assert.equal(contextosResumo.at(-1).acaoProjecao, 'editar');
 
   const dbEspelho = new FakeDB(), espelhoCtx = criar(dbEspelho, { aoSalvar: () => Promise.reject(new Error('espelho indisponível')) });
   observarPronto(espelhoCtx.api, dbEspelho);
@@ -254,6 +295,166 @@ async function executar() {
   assert.equal(semEspelho.espelhoOk, false);
   assert.equal(semEspelho.item.pagamento.recebido, true, 'ACK financeiro vem da transação, não do espelho');
   assert.equal(dbEspelho.pushes, 1, 'falha do espelho não cria segundo push');
+
+  const noSemEspelho = CAMINHO + '/' + semEspelho.id;
+  const projSemEspelho = dbEspelho.dados[noSemEspelho].det.avaliacao129.projecao;
+  assert.equal(projSemEspelho.acao, 'lancar');
+  assert.equal(projSemEspelho.estado, 'pendente', 'falha externa deixa operação recuperável no mesmo registro');
+  const retrySemEspelho = await espelhoCtx.api.salvar(pedido({
+    requestId: 'espelho-1', avaliacao: avaliacao({ pagamento: { recebido: true, valorCent: 8000 } })
+  }));
+  assert.equal(retrySemEspelho.id, semEspelho.id);
+  assert.equal(retrySemEspelho.espelhoOk, false, 'retry idempotente não esconde projeção ainda pendente');
+  const notasDurantePendente = await espelhoCtx.api.salvar({
+    acao: 'editar', dia: DIA, id: semEspelho.id, expectedRevision: semEspelho.revisao,
+    expectedFingerprint: semEspelho.item.fingerprint,
+    avaliacao: avaliacao({ observacoes: 'Nota segura enquanto a projeção aguarda' })
+  });
+  assert.equal(notasDurantePendente.espelhoOk, false, 'editar só notas não mascara a projeção anterior pendente');
+  assert.equal(notasDurantePendente.revisao, semEspelho.revisao + 1);
+  assert.equal(dbEspelho.dados[noSemEspelho].det.avaliacao129.projecao.opId, projSemEspelho.opId);
+  assert.equal(dbEspelho.dados[noSemEspelho].det.avaliacao129.projecao.revisao, projSemEspelho.revisao,
+    'revisão da projeção é própria e não acompanha edição de notas');
+  const revAntesConfirmar = notasDurantePendente.item.revisao;
+  const projConfirmada = await espelhoCtx.api.confirmarProjecao({
+    dia: DIA, id: semEspelho.id, opId: projSemEspelho.opId, revisao: projSemEspelho.revisao
+  });
+  assert.equal(projConfirmada.ok, true);
+  assert.equal(projConfirmada.item.revisao, revAntesConfirmar, 'confirmação técnica não altera revisão editável');
+  assert.equal(dbEspelho.dados[noSemEspelho].det.avaliacao129.projecao.estado, 'confirmada');
+  assert.equal(dbEspelho.dados[noSemEspelho].planilha_ok, true);
+  await assert.rejects(espelhoCtx.api.confirmarProjecao({
+    dia: DIA, id: semEspelho.id, opId: projSemEspelho.opId, revisao: projSemEspelho.revisao
+  }), /PROJECAO_DESATUALIZADA/, 'mesmo opId não confirma duas vezes');
+
+  const dbPayload = new FakeDB(), payloadCtx = criar(dbPayload, { aoSalvar: () => false });
+  observarPronto(payloadCtx.api, dbPayload);
+  const payloadPendente = await payloadCtx.api.salvar(pedido({
+    requestId: 'payload-imutavel', avaliacao: avaliacao({ pagamento: { recebido: true, valorCent: 8000 } })
+  }));
+  const noPayload = CAMINHO + '/' + payloadPendente.id;
+  const opPayload = clone(dbPayload.dados[noPayload].det.avaliacao129.projecao);
+  dbPayload.dados[noPayload].valor = 'Alterado fora do protocolo / SRD';
+  await assert.rejects(payloadCtx.api.confirmarProjecao({
+    dia: DIA, id: payloadPendente.id, opId: opPayload.opId, revisao: opPayload.revisao
+  }), /PROJECAO_DESATUALIZADA/, 'CAS não confirma projeção cujo resumo foi alterado fora do protocolo');
+  assert.equal(dbPayload.writes.at(-1).path, noPayload, 'confirmação transaciona só o registro, nunca o ancestral do dia');
+
+  const dbLegado = new FakeDB(), chamadasLegado = [], legadoCtx = criar(dbLegado, {
+    aoSalvar: x => { chamadasLegado.push(clone(x)); return true; }
+  });
+  const rawLegado = { valor: 'Legado / SRD', hora: '08:30', quem: 'Pessoa Antiga', ts: 10, det: { avaliacao129: {
+    nome: 'Legado', raca: 'SRD', tutor: 'Família Legado', hora: '08:30', vacina: { conferido: true },
+    vermifugo: { conferido: true }, carrapaticida: { conferido: true }, experiencia: '', saude: '', observacoes: '',
+    revisao: 4, autorId: 'antigo', autorNome: 'Pessoa Antiga', ts: 10, quando: 'antes'
+  } } };
+  const obsLegado = observarPronto(legadoCtx.api, dbLegado, { legado: rawLegado });
+  dbLegado.dados[CAMINHO + '/legado'] = clone(rawLegado);
+  const itemLegado = obsLegado.ultimo().itens[0];
+  assert.equal(Agenda.ehAgenda(rawLegado), false, 'fixture prova ausência de marker legado');
+  assert.equal(Agenda.publicavel(rawLegado), false, 'helper estrito não inventa recibo para formato antigo');
+  const canceladoLegado = await legadoCtx.api.salvar({
+    acao: 'cancelar', dia: DIA, id: 'legado', expectedRevision: itemLegado.revisao,
+    expectedFingerprint: itemLegado.fingerprint, motivo: 'Cancelamento do registro antigo'
+  });
+  assert.equal(canceladoLegado.item.cancelada, true);
+  assert.equal(chamadasLegado.length, 1);
+  assert.equal(chamadasLegado[0].acaoProjecao, 'remover', 'cancelar legado já listado solicita retirada da TV mesmo sem recibo novo');
+  assert.equal(chamadasLegado[0].projecao.antes.valor, 'Legado / SRD');
+  const legadoCanceladoRaw = dbLegado.dados[CAMINHO + '/legado'];
+  assert.equal(canceladoLegado.item.pagamento.recebido, false);
+  assert.equal(Object.prototype.hasOwnProperty.call(legadoCanceladoRaw.det.avaliacao129, 'pagamento'), false,
+    'cancelar legado não fabrica pagamento nem reembolso');
+  const legadoReativado = await legadoCtx.api.salvar({
+    acao: 'reativar', dia: DIA, id: 'legado', expectedRevision: canceladoLegado.revisao,
+    expectedFingerprint: canceladoLegado.item.fingerprint
+  });
+  assert.equal(legadoReativado.item.estado, 'pendente');
+  assert.equal(legadoReativado.item.pagamento.recebido, false);
+  assert.equal(chamadasLegado.length, 1, 'reativar legado sem recibo não relança na TV');
+
+  const db131SemPg = new FakeDB(), chamadas131SemPg = [], ctx131SemPg = criar(db131SemPg, {
+    aoSalvar: x => { chamadas131SemPg.push(clone(x)); return false; }
+  });
+  const raw131SemPg = clone(rawLegado);
+  raw131SemPg.planilha_ok = true;
+  raw131SemPg.det.agendaMarcia = true;
+  raw131SemPg.det.avaliacao129.versao = 131;
+  raw131SemPg.det.avaliacao129.agendaMarcia = true;
+  const obs131SemPg = observarPronto(ctx131SemPg.api, db131SemPg, { antigo131: raw131SemPg });
+  db131SemPg.dados[CAMINHO + '/antigo131'] = clone(raw131SemPg);
+  const item131SemPg = obs131SemPg.ultimo().itens[0];
+  assert.equal(item131SemPg.pagamento.recebido, false, 'v131 antigo continua sem recibo inventado');
+  const cancelado131SemPg = await ctx131SemPg.api.salvar({
+    acao: 'cancelar', dia: DIA, id: 'antigo131', expectedRevision: item131SemPg.revisao,
+    expectedFingerprint: item131SemPg.fingerprint, motivo: 'Cancelar avaliação antiga já espelhada'
+  });
+  assert.equal(cancelado131SemPg.item.cancelada, true);
+  assert.equal(chamadas131SemPg.length, 1);
+  assert.equal(chamadas131SemPg[0].acaoProjecao, 'remover', 'v131 sem pagamento mas com planilha_ok true retira a linha antiga');
+  assert.equal(Object.prototype.hasOwnProperty.call(db131SemPg.dados[CAMINHO + '/antigo131'].det.avaliacao129, 'pagamento'), false,
+    'compatibilidade v131 não fabrica pagamento');
+
+  const dbCancelar = new FakeDB(), projecoes = [];
+  let falharRemocao = true;
+  const cancelarCtx = criar(dbCancelar, { aoSalvar: x => { projecoes.push(clone(x)); return x.acaoProjecao === 'remover' && falharRemocao ? false : true; } });
+  const cancelarObs = observarPronto(cancelarCtx.api, dbCancelar);
+  const ativo = await cancelarCtx.api.salvar(pedido({
+    requestId: 'cancelar-pago', avaliacao: avaliacao({ pagamento: { recebido: true, valorCent: 8000 } })
+  }));
+  assert.equal(ativo.item.estado, 'confirmada');
+  const cancelado = await cancelarCtx.api.salvar({
+    acao: 'cancelar', dia: DIA, id: ativo.id, expectedRevision: ativo.revisao,
+    expectedFingerprint: ativo.item.fingerprint, motivo: 'Tutor pediu nova data'
+  });
+  assert.equal(cancelado.item.estado, 'cancelada');
+  assert.equal(cancelado.item.confirmada, false);
+  assert.equal(cancelado.item.cancelada, true);
+  assert.deepEqual(cancelado.item.cancelamento, { motivo: 'Tutor pediu nova data', quem: 'Consultora Ana', quando: '25/10/2026 09:00' });
+  assert.equal(cancelado.item.pagamento.recebido, true, 'cancelar preserva o recebimento e não declara reembolso');
+  assert.equal(cancelado.item.pagamento.valorCent, 8000);
+  assert.equal(cancelado.espelhoOk, false);
+  assert.equal(projecoes.at(-1).acaoProjecao, 'remover');
+  const regCancelado = dbCancelar.dados[CAMINHO + '/' + ativo.id];
+  assert.equal(regCancelado.det.avaliacao129.projecao.acao, 'remover');
+  assert.equal(regCancelado.det.avaliacao129.projecao.estado, 'pendente');
+  assert.equal(regCancelado.planilha_ok, null, 'cancelamento não entra na fila antiga de relançamento');
+  dbCancelar.emitir(CAMINHO, { [ativo.id]: regCancelado });
+  assert.equal(cancelarObs.ultimo().itens[0].espelhoOk, false, 'reload preserva aviso de retirada pendente');
+  const fpCancelado = cancelado.item.fingerprint;
+  falharRemocao = false;
+  await cancelarCtx.api.confirmarProjecao({ dia: DIA, id: ativo.id,
+    opId: regCancelado.det.avaliacao129.projecao.opId, revisao: regCancelado.det.avaliacao129.projecao.revisao });
+  const aposRemover = dbCancelar.dados[CAMINHO + '/' + ativo.id];
+  assert.equal(aposRemover.det.avaliacao129.projecao.estado, 'confirmada');
+  assert.equal(Agenda.publicavel(aposRemover), false);
+  dbCancelar.emitir(CAMINHO, { [ativo.id]: aposRemover });
+  assert.equal(cancelarObs.ultimo().itens[0].espelhoOk, true, 'reload reconhece retirada confirmada');
+  const reativado = await cancelarCtx.api.salvar({
+    acao: 'reativar', dia: DIA, id: ativo.id, expectedRevision: cancelado.revisao,
+    expectedFingerprint: fpCancelado
+  });
+  assert.equal(reativado.item.cancelada, false);
+  assert.equal(reativado.item.cancelamento, null);
+  assert.equal(reativado.item.estado, 'confirmada', 'reativar usa o recibo válido já preservado');
+  assert.equal(reativado.item.pagamento.recebido, true);
+  assert.equal(reativado.item.espelhoOk, true, 'ACK recomposto depois do cleanup traz espelho confirmado');
+  assert.equal(projecoes.at(-1).acaoProjecao, 'lancar');
+  assert.notEqual(reativado.item.fingerprint, fpCancelado);
+  const histCancelamento = dbCancelar.dados[CAMINHO + '/' + ativo.id].det.avaliacao129.cancelamento.historico;
+  assert.deepEqual(histCancelamento.map(x => x.ativo), [true, false], 'cancelar e reativar deixam histórico assinado');
+
+  const dbCancelaPendente = new FakeDB(), chamadasCancelaPendente = [];
+  const cancelaPendenteCtx = criar(dbCancelaPendente, { aoSalvar: x => { chamadasCancelaPendente.push(x); return true; } });
+  observarPronto(cancelaPendenteCtx.api, dbCancelaPendente);
+  const abertoPendente = await cancelaPendenteCtx.api.salvar(pedido({ requestId: 'cancela-pendente' }));
+  dbCancelaPendente.dados[CAMINHO + '/' + abertoPendente.id].planilha_ok = true;
+  const fechadoPendente = await cancelaPendenteCtx.api.salvar({
+    acao: 'cancelar', dia: DIA, id: abertoPendente.id, expectedRevision: abertoPendente.revisao,
+    expectedFingerprint: abertoPendente.item.fingerprint, motivo: ''
+  });
+  assert.equal(fechadoPendente.item.cancelada, true);
+  assert.equal(chamadasCancelaPendente.length, 0, 'v133 pendente não chama remoção nem com planilha_ok residual');
 
   const dbAutoria = new FakeDB(), autoriaCtx = criar(dbAutoria);
   observarPronto(autoriaCtx.api, dbAutoria);

@@ -17,6 +17,7 @@ class BancoFalso {
     limitToFirst(n) { assert.equal(this.ordenada,true); assert.equal(n,1); db.queries.push({path,limit:n}); return this; },
     push() { db.pushCount += 1; return { key: 'row-' + db.pushCount }; },
     on(tipo, ok, erro) { assert.equal(tipo, 'value'); (db.listeners[path] || (db.listeners[path] = [])).push({ ok, erro }); queueMicrotask(() => ok(snap(db.valor(path)))); },
+    once(tipo) { assert.equal(tipo, 'value'); return Promise.resolve(snap(db.valor(path))); },
     off(tipo, ok) { assert.equal(tipo, 'value'); db.offCount += 1; db.listeners[path] = (db.listeners[path] || []).filter(x => x.ok !== ok); },
     transaction(fn) { db.writes.push(path); if (db.antesTx) db.antesTx(path); const atual = clone(db.valor(path)), novo = fn(atual); if (novo === undefined) return Promise.resolve({ committed: false, snapshot: snap(atual) }); db.set(path, novo); return Promise.resolve({ committed: true, snapshot: snap(novo) }); }
   }; }
@@ -46,11 +47,11 @@ function submit(root, f) { root.handlers.submit({ target: f, preventDefault() {}
 function tick() { return new Promise(resolve => setImmediate(resolve)); }
 
 async function executar() {
-  const db = new BancoFalso(), raizAgenda = new Raiz(), espelhos = [], edicoesResumo = [];
+  const db = new BancoFalso(), raizAgenda = new Raiz(), projecoes = [];
   let permissao = true;
   const usuario = { id: 'consultora-1', nome: 'Consultora Ana', role: 'recepcao' };
   const globalAntes = {};
-  ['DB', 'usuarioAtual', 'papelDoCorpo', 'telaVemDoPapel', 'paginaConcedida', 'PELUDINHOS', 'pelInativo', 'pelGet', 'dashEspelhar', 'dashEditarEnviarPendente'].forEach(k => { globalAntes[k] = globalThis[k]; });
+  ['DB', 'usuarioAtual', 'papelDoCorpo', 'telaVemDoPapel', 'paginaConcedida', 'PELUDINHOS', 'pelInativo', 'pelGet', 'RACAS', 'RACAS_CADASTRO', 'orcRacasAtualizar', 'racaCanonica', 'dashAgendaMarciaProjetar133'].forEach(k => { globalAntes[k] = globalThis[k]; });
   globalThis.DB = db;
   globalThis.usuarioAtual = () => usuario;
   globalThis.papelDoCorpo = () => usuario.role;
@@ -59,8 +60,14 @@ async function executar() {
   globalThis.PELUDINHOS = [{ n: 'Maya', raca: 'SRD', tutor: 'Família Maya' }];
   globalThis.pelInativo = () => false;
   globalThis.pelGet = (p, k) => p[k];
-  globalThis.dashEspelhar = (...args) => { espelhos.push(args); return Promise.resolve({ ok: true }); };
-  globalThis.dashEditarEnviarPendente = (...args) => { edicoesResumo.push(args); return Promise.resolve(true); };
+  globalThis.RACAS = ['SRD', 'Poodle']; globalThis.RACAS_CADASTRO = [];
+  globalThis.orcRacasAtualizar = () => {};
+  globalThis.racaCanonica = v => v;
+  globalThis.dashAgendaMarciaProjetar133 = (dia, id, reg, retry) => {
+    const p = (((reg || {}).det || {}).avaliacao129 || {}).projecao || {};
+    projecoes.push({ dia, id, acao: p.acao, retry: retry === true, reg: clone(reg) });
+    return Promise.resolve({ ok: true });
+  };
 
   const root = { document: {
     body: {},
@@ -93,8 +100,7 @@ async function executar() {
     await tick(); await tick(); await tick();
     assert.equal(db.pushCount, 1, 'toque duplo de create aloca uma chave só');
     assert.equal(db.writes.filter(p => p.startsWith(PAI + '/')).length, 1, 'create concorrente faz uma transação');
-    assert.equal(espelhos.length, 1, 'create espelha o resumo uma vez');
-    assert.deepEqual(espelhos[0].slice(0, 5), ['avaliacao', 'row-1', { valor: 'Maya / SRD', hora: '09:30', quem: 'Consultora Ana', ts: espelhos[0][2].ts }, 'lancar', DIA]);
+    assert.equal(projecoes.length, 0, 'agendamento pendente não vai para Lançamentos/TV');
     const linha = db.valores[PAI + '/row-1'];
     assert.equal(linha.valor, 'Maya / SRD');
     assert.equal(linha.hora, '09:30');
@@ -103,7 +109,7 @@ async function executar() {
     assert.equal(linha.det.avaliacao129.carrapaticida.conferido, false);
     assert(!('tutor' in linha) && !linha.valor.includes('Família') && !linha.valor.includes('Resumo da chegada'), 'a planilha recebe só a projeção nome/raça/hora');
     assert.equal(linha.det.avaliacao129.pagamento.recebido, false, 'novo agendamento começa sem recebimento');
-    assert.equal(root.agendaMarciaResumoHTML(linha).includes('Avaliação pendente · falta receber R$ 80'), true);
+    assert.equal(root.agendaMarciaResumoHTML(linha), '', 'rota não injeta resumo paralelo no dashboard');
     assert(raizAgenda.innerHTML.includes('Agendamento salvo · pagamento pendente'));
     assert(!raizAgenda.innerHTML.includes('Avaliação confirmada'), 'pendente não aparece como avaliação confirmada');
 
@@ -117,33 +123,26 @@ async function executar() {
     assert.equal(linhaPaga.det.avaliacao129.pagamento.valorPagoCentavos, 8000);
     assert.equal(linhaPaga.det.avaliacao129.pagamento.autorId, usuario.id);
     assert.equal(linhaPaga.det.avaliacao129.pagamento.historico.at(-1).recebido, true);
-    assert.equal(root.agendaMarciaResumoHTML(linhaPaga).includes('Avaliação confirmada · R$ 80 recebidos'), true);
+    assert.equal(root.agendaMarciaResumoHTML(linhaPaga), '');
     assert(raizAgenda.innerHTML.includes('Avaliação confirmada · Consultora Ana'));
-    assert.equal(espelhos.length, 1, 'marcar pagamento não lança outra linha-resumo');
+    assert.equal(projecoes.length, 1, 'pagamento confirmado lança uma vez');
+    assert.equal(projecoes[0].acao, 'lancar');
 
-    // Sem marcar recebido, o segundo evento segue pendente; se falta a ponte de edição,
-    // o evento persiste e a UI mantém o aviso de resumo ainda não espelhado.
+    // Sem marcar recebido, o segundo evento segue pendente e não chama a projeção.
     submit(raizAgenda, form('novo', { nome: 'Sol', raca: 'Poodle', tutor: 'Família Sol', hora: '11:00', observacoes: 'Nota privada' }));
     await tick(); await tick(); await tick();
     const solPath = PAI + '/row-2', sol = db.valores[solPath];
     assert(sol, 'segundo agendamento persistiu');
     assert.equal(sol.det.avaliacao129.pagamento.recebido, false, 'não marcar o checkbox não inventa recebimento');
-    assert.equal(root.agendaMarciaResumoHTML(sol).includes('Avaliação pendente · falta receber R$ 80'), true);
-    assert.equal(espelhos.length, 2, 'cada nova avaliação espelha só nome/raça/hora');
-    globalThis.dashEditarEnviarPendente = undefined;
-    submit(raizAgenda, form('row-2', { nome: 'Sol Nova', raca: 'Poodle', tutor: 'Família Sol', hora: '11:30', observacoes: 'Nota privada' }));
-    await tick(); await tick(); await tick();
-    assert.equal(db.valores[solPath].valor, 'Sol Nova / Poodle', 'alteração fica salva no registro original');
-    assert.equal(db.valores[solPath].edicao_pendente.estado, 'ponte_pendente');
-    assert(raizAgenda.innerHTML.includes('Resumo na planilha/TV ainda pendente'), 'falta da integração aparece sem fingir espelho concluído');
-    globalThis.dashEditarEnviarPendente = (...args) => { edicoesResumo.push(args); return Promise.resolve(true); };
+    assert.equal(root.agendaMarciaResumoHTML(sol), '');
+    assert.equal(projecoes.length, 1, 'segundo agendamento pendente também não espelha');
 
     // Um edit só de observações preserva o recibo e não reenvia o resumo.
     const fEdit = form('row-1', { nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', hora: '09:30',
       'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
       observacoes: 'Observação revisada', 'pagamento-recebido': true });
     submit(raizAgenda, fEdit); await tick(); await tick();
-    assert.equal(espelhos.length, 2, 'mudança só de detalhes não envia outra linha-resumo');
+    assert.equal(projecoes.length, 1, 'mudança só de detalhes não envia outra linha-resumo');
     assert.equal(db.valores[PAI + '/row-1'].det.avaliacao129.pagamento.recebido, true, 'editar preserva recebimento');
 
     // Mudar o resumo gera uma única pendência de edição e usa a ponte de update.
@@ -151,24 +150,46 @@ async function executar() {
       'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
       observacoes: 'Observação revisada', 'pagamento-recebido': true });
     submit(raizAgenda, fResumo); await tick(); await tick();
-    assert.equal(edicoesResumo.length, 1, 'edição do resumo entra na fila existente');
-    assert.equal(edicoesResumo[0][0], 'avaliacao'); assert.equal(edicoesResumo[0][1], 'row-1');
-    assert.equal(edicoesResumo[0][2], null); assert.equal(edicoesResumo[0][3], DIA);
-    assert.equal(edicoesResumo[0][4].depois.valor, 'Maya Nova / SRD');
-    assert.equal(edicoesResumo[0][4].depois.hora, '10:00');
+    assert.equal(projecoes.length, 2, 'edição do resumo pago usa uma projeção editar');
+    assert.equal(projecoes[1].acao, 'editar'); assert.equal(projecoes[1].id, 'row-1');
+    assert.equal(projecoes[1].reg.valor, 'Maya Nova / SRD');
+    assert.equal(projecoes[1].reg.hora, '10:00');
     assert.equal(db.valores[PAI + '/row-1'].det.avaliacao129.pagamento.recebido, true);
+
+    // Se a projeção de outra edição paga falha, os dados ficam salvos e a pendência fica visível.
+    globalThis.dashAgendaMarciaProjetar133 = (dia,id,reg,retry) => { const p=reg.det.avaliacao129.projecao||{}; projecoes.push({dia,id,acao:p.acao,retry:retry===true,reg:clone(reg)}); return Promise.resolve({ok:false}); };
+    submit(raizAgenda, form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', hora: '10:30',
+      'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
+      observacoes: 'Observação revisada', 'pagamento-recebido': true }));
+    await tick(); await tick(); await tick();
+    const linhaPendente = db.valores[PAI + '/row-1'];
+    assert.equal(linhaPendente.hora, '10:30', 'falha da projeção não desfaz a edição do registro original');
+    assert.equal(linhaPendente.det.avaliacao129.projecao.estado, 'pendente');
+    assert.equal(linhaPendente.edicao_pendente.estado, 'ponte_pendente');
+    assert.equal(projecoes.length, 3);
+    assert.equal(projecoes[2].acao, 'editar');
+    assert(raizAgenda.innerHTML.includes('Resumo na planilha/TV ainda pendente'), 'falha da projeção aparece sem fingir conclusão');
+
+    // Mesmo com a projeção pendente, uma nota privada não tenta reenviar a linha-resumo.
+    globalThis.dashAgendaMarciaProjetar133 = (dia,id,reg,retry) => { const p=reg.det.avaliacao129.projecao||{}; projecoes.push({dia,id,acao:p.acao,retry:retry===true,reg:clone(reg)}); return Promise.resolve({ok:true}); };
+    submit(raizAgenda, form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', hora: '10:30',
+      'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
+      observacoes: 'Nota após falha', 'pagamento-recebido': true }));
+    await tick(); await tick();
+    assert.equal(projecoes.length, 3, 'nota privada não reenvia uma projeção pendente');
+    assert.equal(db.valores[PAI + '/row-1'].det.avaliacao129.observacoes, 'Nota após falha');
 
     // Conflito nativo após o snapshot antigo deve ser recusado pelo CAS.
     const before = clone(db.valores[PAI + '/row-1']);
     const stale = clone(before); stale.det.avaliacao129.observacoes = 'mudança concorrente'; stale.det.avaliacao129.revisao += 1;
     db.valores[PAI + '/row-1'] = stale;
-    const fStale = form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', hora: '10:00',
+    const fStale = form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', hora: '10:30',
       'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false, observacoes: 'Tentativa antiga', 'pagamento-recebido': true });
-    const writesBeforeStale = db.writes.length, mirrorsBeforeStale = edicoesResumo.length;
+    const writesBeforeStale = db.writes.length, mirrorsBeforeStale = projecoes.length;
     submit(raizAgenda, fStale); await tick(); await tick();
     assert.equal(db.writes.length, writesBeforeStale + 1, 'CAS foi tentado uma vez');
     assert.equal(db.valores[PAI + '/row-1'].det.avaliacao129.observacoes, 'mudança concorrente', 'stale não sobrescreve a concorrência');
-    assert.equal(edicoesResumo.length, mirrorsBeforeStale, 'conflito não chama o espelho');
+    assert.equal(projecoes.length, mirrorsBeforeStale, 'conflito não chama o espelho');
     assert(raizAgenda.innerHTML.includes('Não foi possível salvar.'), 'a interface informa o conflito e mantém o rascunho');
 
     // A consulta à rota não encosta em namespaces de cuidados clínicos ou cobrança.
@@ -181,7 +202,7 @@ async function executar() {
     console.log('agenda-marcia-qa131: OK');
   } finally {
     try { root.agendaMarciaFechar(); } catch (_) {}
-    ['DB', 'usuarioAtual', 'papelDoCorpo', 'telaVemDoPapel', 'paginaConcedida', 'PELUDINHOS', 'pelInativo', 'pelGet', 'dashEspelhar', 'dashEditarEnviarPendente'].forEach(k => {
+    ['DB', 'usuarioAtual', 'papelDoCorpo', 'telaVemDoPapel', 'paginaConcedida', 'PELUDINHOS', 'pelInativo', 'pelGet', 'RACAS', 'RACAS_CADASTRO', 'orcRacasAtualizar', 'racaCanonica', 'dashAgendaMarciaProjetar133'].forEach(k => {
       if (globalAntes[k] === undefined) delete globalThis[k]; else globalThis[k] = globalAntes[k];
     });
   }
