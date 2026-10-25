@@ -1,0 +1,190 @@
+'use strict';
+
+// Integração real App → Dados → Painel usando apenas um banco falso.
+const assert = require('node:assert/strict');
+const Agenda = require('../auaulandia/agenda-marcia/dados.js');
+const Painel = require('../auaulandia/agenda-marcia/painel.js');
+const App = require('../auaulandia/agenda-marcia/app.js');
+
+const DIA = '2026-10-25';
+const PAI = 'daycare/dashboard/' + DIA + '/avaliacao';
+function clone(v) { return v == null ? v : JSON.parse(JSON.stringify(v)); }
+function snap(v) { return { val() { return clone(v); } }; }
+class BancoFalso {
+  constructor() { this.valores = {}; this.listeners = {}; this.referencias = []; this.writes = []; this.queries = []; this.pushCount = 0; this.offCount = 0; this.antesTx = null; }
+  ref(path) { this.referencias.push(path); const db = this; return {
+    orderByKey() { this.ordenada=true; return this; },
+    limitToFirst(n) { assert.equal(this.ordenada,true); assert.equal(n,1); db.queries.push({path,limit:n}); return this; },
+    push() { db.pushCount += 1; return { key: 'row-' + db.pushCount }; },
+    on(tipo, ok, erro) { assert.equal(tipo, 'value'); (db.listeners[path] || (db.listeners[path] = [])).push({ ok, erro }); queueMicrotask(() => ok(snap(db.valor(path)))); },
+    off(tipo, ok) { assert.equal(tipo, 'value'); db.offCount += 1; db.listeners[path] = (db.listeners[path] || []).filter(x => x.ok !== ok); },
+    transaction(fn) { db.writes.push(path); if (db.antesTx) db.antesTx(path); const atual = clone(db.valor(path)), novo = fn(atual); if (novo === undefined) return Promise.resolve({ committed: false, snapshot: snap(atual) }); db.set(path, novo); return Promise.resolve({ committed: true, snapshot: snap(novo) }); }
+  }; }
+  valor(path) {
+    if (Object.prototype.hasOwnProperty.call(this.valores, path)) return this.valores[path];
+    const prefix = path.endsWith('/') ? path : path + '/'; const out = {};
+    Object.keys(this.valores).forEach(k => { if (k.startsWith(prefix)) out[k.slice(prefix.length)] = this.valores[k]; });
+    return Object.keys(out).length ? out : null;
+  }
+  set(path, value) { this.valores[path] = clone(value); const parent = path.slice(0, path.lastIndexOf('/')); const valueParent = this.valor(parent); (this.listeners[parent] || []).slice().forEach(x => x.ok(snap(valueParent))); }
+}
+class Raiz {
+  constructor() { this.innerHTML = ''; this.handlers = {}; this.ownerDocument = { activeElement: null }; }
+  addEventListener(n, f) { this.handlers[n] = f; }
+  removeEventListener(n) { delete this.handlers[n]; }
+  contains() { return true; }
+  querySelector() { return null; }
+}
+function form(id, v = {}) {
+  const d = Object.assign({ nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', hora: '09:30',
+    'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
+    experiencia: '', saude: '', observacoes: '', 'pagamento-recebido': false }, v);
+  return { closest() { return this; }, getAttribute(n) { return n === 'data-am-form' ? id : null; },
+    querySelector(s) { const m = /^\[name="(.+)"\]$/.exec(s); return m ? { value: d[m[1]] == null ? '' : d[m[1]], checked: d[m[1]] === true } : null; } };
+}
+function submit(root, f) { root.handlers.submit({ target: f, preventDefault() {} }); }
+function tick() { return new Promise(resolve => setImmediate(resolve)); }
+
+async function executar() {
+  const db = new BancoFalso(), raizAgenda = new Raiz(), espelhos = [], edicoesResumo = [];
+  let permissao = true;
+  const usuario = { id: 'consultora-1', nome: 'Consultora Ana', role: 'recepcao' };
+  const globalAntes = {};
+  ['DB', 'usuarioAtual', 'papelDoCorpo', 'telaVemDoPapel', 'paginaConcedida', 'PELUDINHOS', 'pelInativo', 'pelGet', 'dashEspelhar', 'dashEditarEnviarPendente'].forEach(k => { globalAntes[k] = globalThis[k]; });
+  globalThis.DB = db;
+  globalThis.usuarioAtual = () => usuario;
+  globalThis.papelDoCorpo = () => usuario.role;
+  globalThis.telaVemDoPapel = (page, role) => permissao && page === 'agendamarcia' && role === 'recepcao';
+  globalThis.paginaConcedida = () => false;
+  globalThis.PELUDINHOS = [{ n: 'Maya', raca: 'SRD', tutor: 'Família Maya' }];
+  globalThis.pelInativo = () => false;
+  globalThis.pelGet = (p, k) => p[k];
+  globalThis.dashEspelhar = (...args) => { espelhos.push(args); return Promise.resolve({ ok: true }); };
+  globalThis.dashEditarEnviarPendente = (...args) => { edicoesResumo.push(args); return Promise.resolve(true); };
+
+  const root = { document: {
+    body: {},
+    getElementById(id) {
+      if (id === 'v-agendamarcia') return { classList: { contains() { return false; } } };
+      return id === 'agendaMarciaRoot' ? raizAgenda : null;
+    }
+  }, ZeluzAgendaMarcia: Agenda, ZeluzAgendaMarciaPainel: Painel, ZeluzMarcia129: { dataSP: () => DIA } };
+
+  try {
+    App.instalar(root);
+    assert.equal(root.agendaMarciaAbrir(), true, 'rota autorizada abre');
+    await tick(); await tick();
+    assert(raizAgenda.innerHTML.includes('Agenda Márcia'));
+    assert.deepEqual(db.referencias.filter(x => x === PAI), [PAI,PAI], 'fonte do dia e consulta limitada do calendário, sem once duplicado');
+    assert.equal(db.queries.length,31,'calendário limita a uma avaliação por dia do mês visível');
+    assert.equal(db.referencias.length,32,'31 consultas pequenas e uma fonte diária completa');
+
+    // Campos obrigatórios faltando não chegam ao provider nem ao banco.
+    submit(raizAgenda, form('novo', { nome: '', raca: '', tutor: '', hora: '', 'vacina-conferido': false }));
+    await tick();
+    assert.equal(db.writes.length, 0);
+    assert(raizAgenda.innerHTML.includes('Informe o nome.') && raizAgenda.innerHTML.includes('Informe o tutor.'));
+
+    // Dois submits simultâneos iguais reaproveitam o mesmo ID/transação.
+    const fNovo = form('novo', { nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', hora: '09:30',
+      'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
+      observacoes: 'Resumo da chegada', 'pagamento-recebido': false });
+    submit(raizAgenda, fNovo); submit(raizAgenda, fNovo);
+    await tick(); await tick(); await tick();
+    assert.equal(db.pushCount, 1, 'toque duplo de create aloca uma chave só');
+    assert.equal(db.writes.filter(p => p.startsWith(PAI + '/')).length, 1, 'create concorrente faz uma transação');
+    assert.equal(espelhos.length, 1, 'create espelha o resumo uma vez');
+    assert.deepEqual(espelhos[0].slice(0, 5), ['avaliacao', 'row-1', { valor: 'Maya / SRD', hora: '09:30', quem: 'Consultora Ana', ts: espelhos[0][2].ts }, 'lancar', DIA]);
+    const linha = db.valores[PAI + '/row-1'];
+    assert.equal(linha.valor, 'Maya / SRD');
+    assert.equal(linha.hora, '09:30');
+    assert.equal(linha.det.avaliacao129.vacina.conferido, false, 'check desmarcado continua falso');
+    assert.equal(linha.det.avaliacao129.vermifugo.conferido, false);
+    assert.equal(linha.det.avaliacao129.carrapaticida.conferido, false);
+    assert(!('tutor' in linha) && !linha.valor.includes('Família') && !linha.valor.includes('Resumo da chegada'), 'a planilha recebe só a projeção nome/raça/hora');
+    assert.equal(linha.det.avaliacao129.pagamento.recebido, false, 'novo agendamento começa sem recebimento');
+    assert.equal(root.agendaMarciaResumoHTML(linha).includes('Avaliação pendente · falta receber R$ 80'), true);
+    assert(raizAgenda.innerHTML.includes('Agendamento salvo · pagamento pendente'));
+    assert(!raizAgenda.innerHTML.includes('Avaliação confirmada'), 'pendente não aparece como avaliação confirmada');
+
+    // Só depois que a Consultora marca recebido, o registro e os dois painéis confirmam R$ 80.
+    submit(raizAgenda, form('row-1', { nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', hora: '09:30',
+      'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
+      observacoes: 'Resumo da chegada', 'pagamento-recebido': true }));
+    await tick(); await tick();
+    const linhaPaga = db.valores[PAI + '/row-1'];
+    assert.equal(linhaPaga.det.avaliacao129.pagamento.recebido, true);
+    assert.equal(linhaPaga.det.avaliacao129.pagamento.valorPagoCentavos, 8000);
+    assert.equal(linhaPaga.det.avaliacao129.pagamento.autorId, usuario.id);
+    assert.equal(linhaPaga.det.avaliacao129.pagamento.historico.at(-1).recebido, true);
+    assert.equal(root.agendaMarciaResumoHTML(linhaPaga).includes('Avaliação confirmada · R$ 80 recebidos'), true);
+    assert(raizAgenda.innerHTML.includes('Avaliação confirmada · Consultora Ana'));
+    assert.equal(espelhos.length, 1, 'marcar pagamento não lança outra linha-resumo');
+
+    // Sem marcar recebido, o segundo evento segue pendente; se falta a ponte de edição,
+    // o evento persiste e a UI mantém o aviso de resumo ainda não espelhado.
+    submit(raizAgenda, form('novo', { nome: 'Sol', raca: 'Poodle', tutor: 'Família Sol', hora: '11:00', observacoes: 'Nota privada' }));
+    await tick(); await tick(); await tick();
+    const solPath = PAI + '/row-2', sol = db.valores[solPath];
+    assert(sol, 'segundo agendamento persistiu');
+    assert.equal(sol.det.avaliacao129.pagamento.recebido, false, 'não marcar o checkbox não inventa recebimento');
+    assert.equal(root.agendaMarciaResumoHTML(sol).includes('Avaliação pendente · falta receber R$ 80'), true);
+    assert.equal(espelhos.length, 2, 'cada nova avaliação espelha só nome/raça/hora');
+    globalThis.dashEditarEnviarPendente = undefined;
+    submit(raizAgenda, form('row-2', { nome: 'Sol Nova', raca: 'Poodle', tutor: 'Família Sol', hora: '11:30', observacoes: 'Nota privada' }));
+    await tick(); await tick(); await tick();
+    assert.equal(db.valores[solPath].valor, 'Sol Nova / Poodle', 'alteração fica salva no registro original');
+    assert.equal(db.valores[solPath].edicao_pendente.estado, 'ponte_pendente');
+    assert(raizAgenda.innerHTML.includes('Resumo na planilha/TV ainda pendente'), 'falta da integração aparece sem fingir espelho concluído');
+    globalThis.dashEditarEnviarPendente = (...args) => { edicoesResumo.push(args); return Promise.resolve(true); };
+
+    // Um edit só de observações preserva o recibo e não reenvia o resumo.
+    const fEdit = form('row-1', { nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', hora: '09:30',
+      'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
+      observacoes: 'Observação revisada', 'pagamento-recebido': true });
+    submit(raizAgenda, fEdit); await tick(); await tick();
+    assert.equal(espelhos.length, 2, 'mudança só de detalhes não envia outra linha-resumo');
+    assert.equal(db.valores[PAI + '/row-1'].det.avaliacao129.pagamento.recebido, true, 'editar preserva recebimento');
+
+    // Mudar o resumo gera uma única pendência de edição e usa a ponte de update.
+    const fResumo = form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', hora: '10:00',
+      'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
+      observacoes: 'Observação revisada', 'pagamento-recebido': true });
+    submit(raizAgenda, fResumo); await tick(); await tick();
+    assert.equal(edicoesResumo.length, 1, 'edição do resumo entra na fila existente');
+    assert.equal(edicoesResumo[0][0], 'avaliacao'); assert.equal(edicoesResumo[0][1], 'row-1');
+    assert.equal(edicoesResumo[0][2], null); assert.equal(edicoesResumo[0][3], DIA);
+    assert.equal(edicoesResumo[0][4].depois.valor, 'Maya Nova / SRD');
+    assert.equal(edicoesResumo[0][4].depois.hora, '10:00');
+    assert.equal(db.valores[PAI + '/row-1'].det.avaliacao129.pagamento.recebido, true);
+
+    // Conflito nativo após o snapshot antigo deve ser recusado pelo CAS.
+    const before = clone(db.valores[PAI + '/row-1']);
+    const stale = clone(before); stale.det.avaliacao129.observacoes = 'mudança concorrente'; stale.det.avaliacao129.revisao += 1;
+    db.valores[PAI + '/row-1'] = stale;
+    const fStale = form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', hora: '10:00',
+      'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false, observacoes: 'Tentativa antiga', 'pagamento-recebido': true });
+    const writesBeforeStale = db.writes.length, mirrorsBeforeStale = edicoesResumo.length;
+    submit(raizAgenda, fStale); await tick(); await tick();
+    assert.equal(db.writes.length, writesBeforeStale + 1, 'CAS foi tentado uma vez');
+    assert.equal(db.valores[PAI + '/row-1'].det.avaliacao129.observacoes, 'mudança concorrente', 'stale não sobrescreve a concorrência');
+    assert.equal(edicoesResumo.length, mirrorsBeforeStale, 'conflito não chama o espelho');
+    assert(raizAgenda.innerHTML.includes('Não foi possível salvar.'), 'a interface informa o conflito e mantém o rascunho');
+
+    // A consulta à rota não encosta em namespaces de cuidados clínicos ou cobrança.
+    assert(db.referencias.every(p => /^daycare\/dashboard\/2026-10-\d{2}\/avaliacao(?:\/row-\d+)?$/.test(p)), 'só avaliações diárias são consultadas; não há leitura do dashboard mensal inteiro');
+    assert(db.referencias.every(p => !/vet|medicacao|cobranca|pagamento\/gateway/i.test(p)));
+    root.agendaMarciaFechar();
+    assert.equal(Object.keys(raizAgenda.handlers).length, 0, 'fechar remove listeners da UI');
+    assert.equal(db.offCount,32,'fechar remove a fonte diária e as 31 consultas limitadas');
+    assert(Object.values(db.listeners).every(x=>x.length===0),'nenhuma assinatura fica ativa depois de fechar');
+    console.log('agenda-marcia-qa131: OK');
+  } finally {
+    try { root.agendaMarciaFechar(); } catch (_) {}
+    ['DB', 'usuarioAtual', 'papelDoCorpo', 'telaVemDoPapel', 'paginaConcedida', 'PELUDINHOS', 'pelInativo', 'pelGet', 'dashEspelhar', 'dashEditarEnviarPendente'].forEach(k => {
+      if (globalAntes[k] === undefined) delete globalThis[k]; else globalThis[k] = globalAntes[k];
+    });
+  }
+}
+
+executar().catch(e => { console.error(e); process.exitCode = 1; });
