@@ -373,6 +373,28 @@ async function executar() {
   assert.equal(legadoReativado.item.pagamento.recebido, false);
   assert.equal(chamadasLegado.length, 1, 'reativar legado sem recibo não relança na TV');
 
+  const db131SemPg = new FakeDB(), chamadas131SemPg = [], ctx131SemPg = criar(db131SemPg, {
+    aoSalvar: x => { chamadas131SemPg.push(clone(x)); return false; }
+  });
+  const raw131SemPg = clone(rawLegado);
+  raw131SemPg.planilha_ok = true;
+  raw131SemPg.det.agendaMarcia = true;
+  raw131SemPg.det.avaliacao129.versao = 131;
+  raw131SemPg.det.avaliacao129.agendaMarcia = true;
+  const obs131SemPg = observarPronto(ctx131SemPg.api, db131SemPg, { antigo131: raw131SemPg });
+  db131SemPg.dados[CAMINHO + '/antigo131'] = clone(raw131SemPg);
+  const item131SemPg = obs131SemPg.ultimo().itens[0];
+  assert.equal(item131SemPg.pagamento.recebido, false, 'v131 antigo continua sem recibo inventado');
+  const cancelado131SemPg = await ctx131SemPg.api.salvar({
+    acao: 'cancelar', dia: DIA, id: 'antigo131', expectedRevision: item131SemPg.revisao,
+    expectedFingerprint: item131SemPg.fingerprint, motivo: 'Cancelar avaliação antiga já espelhada'
+  });
+  assert.equal(cancelado131SemPg.item.cancelada, true);
+  assert.equal(chamadas131SemPg.length, 1);
+  assert.equal(chamadas131SemPg[0].acaoProjecao, 'remover', 'v131 sem pagamento mas com planilha_ok true retira a linha antiga');
+  assert.equal(Object.prototype.hasOwnProperty.call(db131SemPg.dados[CAMINHO + '/antigo131'].det.avaliacao129, 'pagamento'), false,
+    'compatibilidade v131 não fabrica pagamento');
+
   const dbCancelar = new FakeDB(), projecoes = [];
   let falharRemocao = true;
   const cancelarCtx = criar(dbCancelar, { aoSalvar: x => { projecoes.push(clone(x)); return x.acaoProjecao === 'remover' && falharRemocao ? false : true; } });
@@ -426,12 +448,13 @@ async function executar() {
   const cancelaPendenteCtx = criar(dbCancelaPendente, { aoSalvar: x => { chamadasCancelaPendente.push(x); return true; } });
   observarPronto(cancelaPendenteCtx.api, dbCancelaPendente);
   const abertoPendente = await cancelaPendenteCtx.api.salvar(pedido({ requestId: 'cancela-pendente' }));
+  dbCancelaPendente.dados[CAMINHO + '/' + abertoPendente.id].planilha_ok = true;
   const fechadoPendente = await cancelaPendenteCtx.api.salvar({
     acao: 'cancelar', dia: DIA, id: abertoPendente.id, expectedRevision: abertoPendente.revisao,
     expectedFingerprint: abertoPendente.item.fingerprint, motivo: ''
   });
   assert.equal(fechadoPendente.item.cancelada, true);
-  assert.equal(chamadasCancelaPendente.length, 0, 'cancelar algo nunca projetado não chama remoção externa');
+  assert.equal(chamadasCancelaPendente.length, 0, 'v133 pendente não chama remoção nem com planilha_ok residual');
 
   const dbAutoria = new FakeDB(), autoriaCtx = criar(dbAutoria);
   observarPronto(autoriaCtx.api, dbAutoria);

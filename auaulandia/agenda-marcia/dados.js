@@ -116,6 +116,11 @@
     if (a.estado === 'cancelada' || cancelamentoSeguro(a.cancelamento).ativo) return 'cancelada';
     return publicavel(reg) ? 'confirmada' : 'pendente';
   }
+  function espelhoLegadoComprovado(reg) {
+    reg = objeto(reg);
+    var a = objeto(objeto(reg.det).avaliacao129), versao = Number(a.versao) || 0;
+    return (versao === 131 || versao === 132) && reg.planilha_ok === true;
+  }
   function aplicarPagamento(atual, intencao, autor, rel, criacao) {
     atual = objeto(atual);
     var seguro = pagamentoSeguro(atual), hist = seguro.historico.slice(-(LIMITE_HISTORICO - 1));
@@ -397,7 +402,7 @@
         /* Formato antigo já vivia em Lançamentos/TV sem recibo estruturado. Só no
            retrato ANTERIOR ele conta como público; depois de migrado vale a régua
            estrita R$80+autoria, sem fabricar pagamento para o legado. */
-        var antesPublicavel = existe && (!ehAgenda(regAtual) || publicavel(regAtual)), valorAntes = texto(regAtual.valor), horaAntes = texto(regAtual.hora);
+        var antesPublicavel = existe && (!ehAgenda(regAtual) || publicavel(regAtual) || espelhoLegadoComprovado(regAtual)), valorAntes = texto(regAtual.valor), horaAntes = texto(regAtual.hora);
         antesCommit = editando ? copiar(regAtual) : null;
         if (mutacaoCadastro) {
           var pg = aplicarPagamento(aAtual.pagamento, pagamento, autor, rel, !editando);
