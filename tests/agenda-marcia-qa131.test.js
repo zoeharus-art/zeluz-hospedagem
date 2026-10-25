@@ -11,8 +11,10 @@ const PAI = 'daycare/dashboard/' + DIA + '/avaliacao';
 function clone(v) { return v == null ? v : JSON.parse(JSON.stringify(v)); }
 function snap(v) { return { val() { return clone(v); } }; }
 class BancoFalso {
-  constructor() { this.valores = {}; this.listeners = {}; this.referencias = []; this.writes = []; this.pushCount = 0; this.offCount = 0; this.antesTx = null; }
+  constructor() { this.valores = {}; this.listeners = {}; this.referencias = []; this.writes = []; this.queries = []; this.pushCount = 0; this.offCount = 0; this.antesTx = null; }
   ref(path) { this.referencias.push(path); const db = this; return {
+    orderByKey() { this.ordenada=true; return this; },
+    limitToFirst(n) { assert.equal(this.ordenada,true); assert.equal(n,1); db.queries.push({path,limit:n}); return this; },
     push() { db.pushCount += 1; return { key: 'row-' + db.pushCount }; },
     on(tipo, ok, erro) { assert.equal(tipo, 'value'); (db.listeners[path] || (db.listeners[path] = [])).push({ ok, erro }); queueMicrotask(() => ok(snap(db.valor(path)))); },
     off(tipo, ok) { assert.equal(tipo, 'value'); db.offCount += 1; db.listeners[path] = (db.listeners[path] || []).filter(x => x.ok !== ok); },
@@ -73,7 +75,9 @@ async function executar() {
     assert.equal(root.agendaMarciaAbrir(), true, 'rota autorizada abre');
     await tick(); await tick();
     assert(raizAgenda.innerHTML.includes('Agenda Márcia'));
-    assert.deepEqual(db.referencias.filter(x => x === PAI), [PAI], 'carregamento observa só a avaliação daquele dia');
+    assert.deepEqual(db.referencias.filter(x => x === PAI), [PAI,PAI], 'fonte do dia e consulta limitada do calendário, sem once duplicado');
+    assert.equal(db.queries.length,31,'calendário limita a uma avaliação por dia do mês visível');
+    assert.equal(db.referencias.length,32,'31 consultas pequenas e uma fonte diária completa');
 
     // Campos obrigatórios faltando não chegam ao provider nem ao banco.
     submit(raizAgenda, form('novo', { nome: '', raca: '', tutor: '', hora: '', 'vacina-conferido': false }));
@@ -168,11 +172,12 @@ async function executar() {
     assert(raizAgenda.innerHTML.includes('Não foi possível salvar.'), 'a interface informa o conflito e mantém o rascunho');
 
     // A consulta à rota não encosta em namespaces de cuidados clínicos ou cobrança.
-    assert.deepEqual(db.referencias.filter(p => !p.startsWith(PAI)), [], 'somente o nó original de avaliação é lido/escrito');
+    assert(db.referencias.every(p => /^daycare\/dashboard\/2026-10-\d{2}\/avaliacao(?:\/row-\d+)?$/.test(p)), 'só avaliações diárias são consultadas; não há leitura do dashboard mensal inteiro');
     assert(db.referencias.every(p => !/vet|medicacao|cobranca|pagamento\/gateway/i.test(p)));
     root.agendaMarciaFechar();
     assert.equal(Object.keys(raizAgenda.handlers).length, 0, 'fechar remove listeners da UI');
-    assert(db.offCount >= 1, 'fechar remove assinatura de dados');
+    assert.equal(db.offCount,32,'fechar remove a fonte diária e as 31 consultas limitadas');
+    assert(Object.values(db.listeners).every(x=>x.length===0),'nenhuma assinatura fica ativa depois de fechar');
     console.log('agenda-marcia-qa131: OK');
   } finally {
     try { root.agendaMarciaFechar(); } catch (_) {}

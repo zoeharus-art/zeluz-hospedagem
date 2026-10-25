@@ -37,6 +37,7 @@
         });
       }
       painel=op.painel.montar(raiz,{dia:op.dia(),clientes:op.clientes(),carregar:carregar,
+        observarMes:function(mes,cb){if(!permitido()||dados!==fonte||typeof dados.observarMes!=='function'){cb({mes:mes,estado:'falha',dias:{}});return function(){};}return dados.observarMes(mes,function(s){if(dados===fonte&&permitido())cb(s);});},
         observar:function(dia,cb){if(ultimo&&ultimo.dia===dia){receber=cb;cb(ultimo);}return function(){if(receber===cb)receber=null;};},
         salvar:function(cmd){if(!permitido()||dados!==fonte)return Promise.reject(new Error('SEM_PERMISSAO'));return dados.salvar(cmd);}});
       return true;

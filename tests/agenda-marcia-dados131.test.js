@@ -7,7 +7,7 @@ function clone(v) { return v == null ? v : JSON.parse(JSON.stringify(v)); }
 function snap(v) { return { val() { return clone(v); } }; }
 class FakeDB {
   constructor() {
-    this.dados = {}; this.listeners = {}; this.reads = []; this.writes = []; this.offs = [];
+    this.dados = {}; this.listeners = {}; this.reads = []; this.queries = []; this.writes = []; this.offs = [];
     this.pushes = 0; this.antesTx = null;
   }
   ref(path) { return new FakeRef(this, path || ''); }
@@ -20,6 +20,8 @@ class FakeDB {
 class FakeRef {
   constructor(db, path) { this.db = db; this.path = path; }
   push() { this.db.pushes += 1; return { key: 'push-' + this.db.pushes }; }
+  orderByKey() { this.db.queries.push({ path: this.path, metodo: 'orderByKey' }); return this; }
+  limitToFirst(n) { this.db.queries.push({ path: this.path, metodo: 'limitToFirst', valor: n }); return this; }
   on(tipo, ok, erro) {
     assert.equal(tipo, 'value'); this.db.reads.push(this.path);
     (this.db.listeners[this.path] || (this.db.listeners[this.path] = [])).push({ ok, erro });
@@ -77,6 +79,34 @@ async function executar() {
   dbFalha.falhar(CAMINHO);
   assert.equal(falhas.at(-1).estado, 'falha', 'falha da fonte não vira lista pronta vazia');
   assert.equal(dbFalha.writes.length, 0);
+
+  const mesVistosA = [], mesVistosB = [], leiturasAntesMes = db.reads.length;
+  const offMesA = ctx.api.observarMes('2026-11', s => mesVistosA.push(s));
+  const offMesB = ctx.api.observarMes('2026-11', s => mesVistosB.push(s));
+  assert.equal(mesVistosA[0].estado, 'carregando');
+  assert.equal(db.reads.length - leiturasAntesMes, 30, 'mês de novembro abre no máximo uma query por dia');
+  assert.equal(db.queries.filter(x => x.metodo === 'limitToFirst').length, 30);
+  assert(db.queries.filter(x => x.metodo === 'limitToFirst').every(x => x.valor === 1), 'toda query mensal limita o payload a uma avaliação');
+  assert(db.reads.slice(leiturasAntesMes).every(p => /^daycare\/dashboard\/2026-11-\d{2}\/avaliacao$/.test(p)), 'não lê dashboard mensal ou raiz ampla');
+  for (let n = 1; n <= 29; n += 1) {
+    const dia = '2026-11-' + String(n).padStart(2, '0');
+    db.emitir('daycare/dashboard/' + dia + '/avaliacao', n === 5 ? { unica: { valor: 'Sintética / SRD' } } : {});
+  }
+  db.falhar('daycare/dashboard/2026-11-30/avaliacao');
+  const mesFinal = mesVistosA.at(-1);
+  assert.equal(mesFinal.estado, 'falha');
+  assert.equal(mesFinal.dias['2026-11-05'], true);
+  assert.equal(mesFinal.dias['2026-11-04'], false, 'false só aparece depois de leitura vazia confirmada');
+  assert(!Object.prototype.hasOwnProperty.call(mesFinal.dias, '2026-11-30'), 'erro não vira false');
+  assert.equal(mesVistosB.at(-1).estado, 'falha', 'assinantes do mesmo mês compartilham as queries');
+  const offsAntesA = db.offs.length;
+  offMesA();
+  assert.equal(db.offs.length, offsAntesA, 'primeiro assinante não desliga a fonte compartilhada');
+  const bAntesOff = mesVistosB.length;
+  offMesB();
+  assert.equal(db.offs.length - offsAntesA, 30, 'o último assinante remove somente os callbacks do mês');
+  db.emitir('daycare/dashboard/2026-11-05/avaliacao', {});
+  assert.equal(mesVistosB.length, bAntesOff, 'callback mensal descartado fica inerte');
 
   const pendente = await ctx.api.salvar(pedido());
   assert.deepEqual(

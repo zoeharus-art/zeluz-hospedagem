@@ -23,6 +23,12 @@
     d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12));
     return d.getUTCFullYear() === Number(m[1]) && d.getUTCMonth() === Number(m[2]) - 1 && d.getUTCDate() === Number(m[3]);
   }
+  function mesValido(v) { return /^\d{4}-(0[1-9]|1[0-2])$/.test(texto(v)); }
+  function diasDoMes(mes) {
+    var p = mes.split('-').map(Number), qtd = new Date(Date.UTC(p[0], p[1], 0, 12)).getUTCDate(), out = [], i;
+    for (i = 1; i <= qtd; i += 1) out.push(mes + '-' + String(i).padStart(2, '0'));
+    return out;
+  }
   function idValido(v) { return !!texto(v) && !/[.#$\[\]\/]/.test(texto(v)) && texto(v).length <= 160; }
   function caminhoDia(dia) { return 'daycare/dashboard/' + dia + '/avaliacao'; }
   function separarValor(reg) {
@@ -147,6 +153,7 @@
 
   function criar(entrada) {
     var deps = entrada || {}, db = deps.db, ativo = null, geracao = 0, cache = {}, idsCriacao = {}, emVoo = {};
+    var mesesAtivos = {}, cacheMeses = {};
     function autorizado() { try { return typeof deps.pode === 'function' && deps.pode() === true; } catch (_) { return false; } }
     function autorValido() {
       var a; try { a = typeof deps.autor === 'function' ? deps.autor() : null; } catch (_) { a = null; }
@@ -156,6 +163,78 @@
       if (!ativo) return;
       try { if (ativo.ref && typeof ativo.ref.off === 'function') ativo.ref.off('value', ativo.ok); } catch (_) {}
       ativo = null; geracao += 1;
+    }
+    function retratoMes(sessao) {
+      var total = sessao.datas.length, terminados = Object.keys(sessao.resolvidos).length + Object.keys(sessao.erros).length;
+      var estado = terminados < total ? 'carregando' : (Object.keys(sessao.erros).length ? 'falha' : 'pronto');
+      return { mes: sessao.mes, estado: estado, dias: copiar(sessao.dias) };
+    }
+    function publicarMes(sessao) {
+      if (!sessao || sessao.ativo !== true || mesesAtivos[sessao.mes] !== sessao) return;
+      var snap = retratoMes(sessao);
+      sessao.assinantes.slice().forEach(function (a) { try { a.callback(copiar(snap)); } catch (_) {} });
+    }
+    function desligarMes(sessao) {
+      if (!sessao || sessao.ativo !== true) return;
+      sessao.ativo = false;
+      sessao.assinaturas.forEach(function (a) {
+        try { if (a.query && typeof a.query.off === 'function') a.query.off('value', a.ok); } catch (_) {}
+      });
+      if (mesesAtivos[sessao.mes] === sessao) delete mesesAtivos[sessao.mes];
+    }
+    function observarMes(mes, callback) {
+      mes = texto(mes);
+      if (!mesValido(mes)) throw new Error('MES_INVALIDO');
+      if (typeof callback !== 'function') throw new Error('CALLBACK_OBRIGATORIO');
+      if (!autorizado()) throw new Error('SEM_PERMISSAO');
+      var sessao = mesesAtivos[mes], assinatura = { callback: callback };
+      if (!sessao) {
+        sessao = mesesAtivos[mes] = {
+          mes: mes, ativo: true, datas: diasDoMes(mes), dias: copiar(cacheMeses[mes] || {}),
+          resolvidos: {}, erros: {}, assinaturas: [], assinantes: []
+        };
+        sessao.assinantes.push(assinatura);
+        publicarMes(sessao);
+        sessao.datas.forEach(function (dia) {
+          var ref = db && typeof db.ref === 'function' ? db.ref(caminhoDia(dia)) : null, query = null;
+          try {
+            if (!ref || typeof ref.orderByKey !== 'function') throw new Error('QUERY_INDISPONIVEL');
+            query = ref.orderByKey();
+            if (!query || typeof query.limitToFirst !== 'function') throw new Error('QUERY_INDISPONIVEL');
+            query = query.limitToFirst(1);
+            if (!query || typeof query.on !== 'function') throw new Error('QUERY_INDISPONIVEL');
+          } catch (_) {
+            sessao.erros[dia] = true; delete sessao.dias[dia]; publicarMes(sessao); return;
+          }
+          var ok = function (s) {
+            if (!sessao.ativo || mesesAtivos[mes] !== sessao) return;
+            var v = s && typeof s.val === 'function' ? s.val() : null;
+            sessao.dias[dia] = !!(v && typeof v === 'object' && Object.keys(v).length);
+            sessao.resolvidos[dia] = true; delete sessao.erros[dia];
+            cacheMeses[mes] = copiar(sessao.dias); publicarMes(sessao);
+          };
+          var erro = function () {
+            if (!sessao.ativo || mesesAtivos[mes] !== sessao) return;
+            sessao.erros[dia] = true; delete sessao.resolvidos[dia]; delete sessao.dias[dia];
+            if (cacheMeses[mes]) delete cacheMeses[mes][dia]; publicarMes(sessao);
+          };
+          sessao.assinaturas.push({ query: query, ok: ok });
+          try { query.on('value', ok, erro); } catch (_) { erro(); }
+        });
+      } else {
+        sessao.assinantes.push(assinatura);
+        try { callback(copiar(retratoMes(sessao))); } catch (_) {}
+      }
+      var ligada = true;
+      return function () {
+        if (!ligada) return; ligada = false;
+        sessao.assinantes = sessao.assinantes.filter(function (a) { return a !== assinatura; });
+        if (!sessao.assinantes.length) desligarMes(sessao);
+      };
+    }
+    function fecharTudo() {
+      desligar();
+      Object.keys(mesesAtivos).forEach(function (mes) { desligarMes(mesesAtivos[mes]); });
     }
     function observar(dia, callback) {
       dia = texto(dia); if (!dataValida(dia)) throw new Error('DIA_INVALIDO');
@@ -295,7 +374,7 @@
         experiencia: cmd.experiencia, saude: cmd.saude, observacoes: cmd.observacoes
       });
     }
-    return { observar: observar, fechar: desligar, salvar: salvar, salvarConferencia: salvarConferencia };
+    return { observar: observar, observarMes: observarMes, fechar: fecharTudo, salvar: salvar, salvarConferencia: salvarConferencia };
   }
 
   return { criar: criar, PRECO_CENTAVOS: PRECO_CENTAVOS };

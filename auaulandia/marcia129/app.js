@@ -5,13 +5,14 @@
 })(typeof window!=='undefined'?window:null,function(){
   'use strict';
   function criar(op){
-    var painel=null,dados=null,parar=null,geracao=0,removerCaches=null,sessaoId='',sessaoNome='';
+    var painel=null,dados=null,calendarioDados=null,parar=null,geracao=0,removerCaches=null,sessaoId='',sessaoNome='';
     function permitido(){try{var a=op.autor();return op.pode()===true&&!!a&&(!sessaoId||a.id===sessaoId&&a.nome===sessaoNome);}catch(_){return false;}}
     function fechar(){
       geracao+=1;
       if(parar){parar();parar=null;}
       if(removerCaches){removerCaches();removerCaches=null;}
       if(dados){dados.fechar();dados=null;}
+      if(calendarioDados){calendarioDados.fechar();calendarioDados=null;}
       if(painel){painel.destroy();painel=null;}
       sessaoId='';sessaoNome='';
     }
@@ -24,6 +25,8 @@
       dados=op.dados.criar({db:op.db(),pode:permitido,autor:op.autor,fontesCadastro:op.fontesCadastro,helpers:op.helpers,
         ZeluzHospedesAtividades:op.hospedes,Presenca96:op.presenca,agora:op.agora});
       var fonte=dados;
+      if(op.agendaDados)calendarioDados=op.agendaDados.criar({db:op.db(),pode:permitido,autor:op.autor,agora:op.agora});
+      var calendario=calendarioDados;
       function carregar(dia){
         if(parar){parar();parar=null;}
         var minha=++geracao;
@@ -42,7 +45,10 @@
           }catch(e){reject(e);}
         });
       }
-      painel=op.painel.montar(raiz,{dia:op.dia(),carregar:carregar,salvarTarefa:function(pedido){
+      painel=op.painel.montar(raiz,{dia:op.dia(),carregar:carregar,observarMes:function(mes,cb){
+        if(!permitido()||!calendario||typeof calendario.observarMes!=='function'){cb({mes:mes,estado:'falha',dias:{}});return function(){};}
+        return calendario.observarMes(mes,function(s){if(calendario===calendarioDados&&permitido())cb(s);});
+      },salvarTarefa:function(pedido){
         if(!permitido())return Promise.reject(new Error('SEM_PERMISSAO'));
         return fonte.salvarTarefa(pedido);
       },salvarAvaliacao:function(pedido){
@@ -117,7 +123,7 @@
       root.marcia129Fechar();
       atual=criar({raiz:function(){return root.document.getElementById('marcia129Root');},db:function(){return typeof DB!=='undefined'?DB:null;},
         pode:pode,autor:autor,fontesCadastro:fontesCadastro,observarCaches:observarCaches,
-        dados:root.ZeluzMarciaDados129,painel:root.ZeluzMarcia129,hospedes:root.ZeluzHospedesAtividades,presenca:root.ZeluzPresenca96Core,
+        dados:root.ZeluzMarciaDados129,painel:root.ZeluzMarcia129,agendaDados:root.ZeluzAgendaMarcia,hospedes:root.ZeluzHospedesAtividades,presenca:root.ZeluzPresenca96Core,
         helpers:{pelDias:typeof pelDias==='function'?pelDias:null,pelGet:typeof pelGet==='function'?pelGet:null,pelExtra:typeof pelExtra==='function'?pelExtra:null,
           dcKey:typeof dcKey==='function'?dcKey:null,pelInativo:typeof pelInativo==='function'?pelInativo:null,ehMoradorZeluz:typeof ehMoradorZeluz==='function'?ehMoradorZeluz:null,
           pelKey:typeof pelKey==='function'?pelKey:null,diffMin:typeof diffMin==='function'?diffMin:null,

@@ -111,6 +111,13 @@
     for (var n = 1; n <= qtd; n += 1) { var d = base + '-' + String(n).padStart(2, '0'); dias.push({ dia: d, numero: n, selecionado: d === selecionado, hoje: d === dataSP(), passado: d < dataSP() }); }
     return { mes: base, dias: dias };
   }
+  function mesAvaliacoes(valor, mes, anterior) {
+    valor = valor && typeof valor === 'object' ? valor : {};
+    var st = ['pronto','carregando','falha'].indexOf(valor.estado) >= 0 ? valor.estado : 'falha', dias = {};
+    if (st !== 'pronto' && anterior && anterior.mes === mes) Object.keys(anterior.dias || {}).forEach(function (d) { if (anterior.dias[d] === true) dias[d] = true; });
+    if (valor.mes === mes && valor.dias && typeof valor.dias === 'object') Object.keys(valor.dias).forEach(function (d) { if (d.slice(0, 7) === mes && valor.dias[d] === true) dias[d] = true; });
+    return { mes: mes, estado: st, dias: dias };
+  }
 
   function nomeData(dia) {
     var p = dia.split('-').map(Number);
@@ -207,7 +214,8 @@
     var cal = calendario(s.dia, ui.mes);
     var mesNome = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(cal.mes + '-01T12:00:00Z'));
     var semana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'].map(function (x) { return '<div class="dcal-sem">' + x + '</div>'; }).join('');
-    var dias = cal.dias.map(function (x) { if (!x) return '<button type="button" class="dcal-dia" disabled aria-hidden="true"></button>'; return '<button type="button" data-marcia-dia="' + x.dia + '" class="dcal-dia' + (x.selecionado ? ' sel' : x.passado ? ' passado' : '') + (x.hoje ? ' hoje' : '') + '" aria-label="' + esc(nomeData(x.dia)) + '" aria-pressed="' + (x.selecionado ? 'true' : 'false') + '">' + x.numero + '</button>'; }).join('');
+    var mm = ui.mesAvaliacoes && ui.mesAvaliacoes.mes === cal.mes ? ui.mesAvaliacoes : { estado: 'carregando', dias: {} };
+    var dias = cal.dias.map(function (x) { if (!x) return '<button type="button" class="dcal-dia" disabled aria-hidden="true"></button>'; var tem = mm.dias[x.dia] === true; return '<button type="button" data-marcia-dia="' + x.dia + '" class="dcal-dia' + (x.selecionado ? ' sel' : x.passado ? ' passado' : '') + (x.hoje ? ' hoje' : '') + '" aria-label="' + esc(nomeData(x.dia) + (tem ? ' · tem avaliação' : '')) + '" aria-pressed="' + (x.selecionado ? 'true' : 'false') + '">' + x.numero + (tem ? '<span class="dcal-dot" aria-hidden="true"></span>' : '') + '</button>'; }).join('');
     var secoesTela = [
       { chave: 'faltas', titulo: 'Faltas', bloco: s.faltas, tom: 'critico' },
       { chave: 'novatos', titulo: 'Novatos', bloco: s.novatos, tom: 'info' },
@@ -226,15 +234,15 @@
     }).join('');
     var atualizado = s.atualizadoEm ? '<p class="marcia129__atualizado">Atualizado em ' + esc(s.atualizadoEm) + '</p>' : '';
     var agendaContagem = s.agenda.estado === 'pronto' ? s.agenda.itens.length : '—';
-    return '<div class="marcia129" data-marcia-dia-atual="' + s.dia + '"><header class="marcia129__cabecalho"><div><p class="marcia129__sobretitulo">Márcia · Gestão</p><h2>' + esc(nomeData(s.dia)) + '</h2>' + atualizado + '</div><button type="button" class="marcia129__hoje" data-marcia-hoje>Hoje</button></header><section class="pm-card marcia129__agenda" aria-labelledby="marcia129-agenda"><div class="marcia129__titulo"><h2 class="pm-tit" id="marcia129-agenda">Agenda da Márcia</h2><span class="marcia129__badge">Avaliações do dia (' + agendaContagem + ')</span></div><div class="dcal marcia129__cal"><div class="dcal-top"><button type="button" class="dcal-nav" data-marcia-mes="-1" aria-label="mês anterior">‹</button><span class="dcal-mes">' + esc(mesNome) + '</span><button type="button" class="dcal-nav" data-marcia-mes="1" aria-label="próximo mês">›</button></div><div class="dcal-grade">' + semana + dias + '</div></div><div class="marcia129__agenda-lista">' + agendaHTML(s.agenda, s.dia, ui.podeSalvarAvaliacao, ui.avaliacoesPendentes, ui.avaliacoesErros) + '</div></section><section class="pm-card marcia129__todo" aria-labelledby="marcia129-todo"><h2 class="pm-tit" id="marcia129-todo">O que fazer hoje</h2>' + tarefasHTML(s.tarefas, ui.pendentes, ui.erros) + '</section><section class="marcia129__quantidades" aria-labelledby="marcia129-quantidades"><h2 class="pm-tit" id="marcia129-quantidades">Visão do dia</h2>' + quantidadesHTML(s.quantidades) + '</section><section class="marcia129__detalhes" aria-label="Detalhes do dia">' + accordions + '</section></div>';
+    return '<div class="marcia129" data-marcia-dia-atual="' + s.dia + '"><header class="marcia129__cabecalho"><div><p class="marcia129__sobretitulo">Márcia · Gestão</p><h2>' + esc(nomeData(s.dia)) + '</h2>' + atualizado + '</div><button type="button" class="marcia129__hoje" data-marcia-hoje>Hoje</button></header><section class="pm-card marcia129__agenda" aria-labelledby="marcia129-agenda"><div class="marcia129__titulo"><h2 class="pm-tit" id="marcia129-agenda">Agenda da Márcia</h2><span class="marcia129__badge">Avaliações do dia (' + agendaContagem + ')</span></div><div class="dcal marcia129__cal"><div class="dcal-top"><button type="button" class="dcal-nav" data-marcia-mes="-1" aria-label="mês anterior">‹</button><span class="dcal-mes">' + esc(mesNome) + (mm.estado === 'carregando' ? '<small class="dcal-mes-estado" role="status"> atualizando</small>' : mm.estado === 'falha' ? '<small class="dcal-mes-estado" role="status"> marcações indisponíveis</small>' : '') + '</span><button type="button" class="dcal-nav" data-marcia-mes="1" aria-label="próximo mês">›</button></div><div class="dcal-grade">' + semana + dias + '</div></div><div class="marcia129__agenda-lista">' + agendaHTML(s.agenda, s.dia, ui.podeSalvarAvaliacao, ui.avaliacoesPendentes, ui.avaliacoesErros) + '</div></section><section class="pm-card marcia129__todo" aria-labelledby="marcia129-todo"><h2 class="pm-tit" id="marcia129-todo">O que fazer hoje</h2>' + tarefasHTML(s.tarefas, ui.pendentes, ui.erros) + '</section><section class="marcia129__quantidades" aria-labelledby="marcia129-quantidades"><h2 class="pm-tit" id="marcia129-quantidades">Visão do dia</h2>' + quantidadesHTML(s.quantidades) + '</section><section class="marcia129__detalhes" aria-label="Detalhes do dia">' + accordions + '</section></div>';
   }
 
   function montar(root, opcoes) {
     if (!root || typeof root.addEventListener !== 'function') throw new TypeError('raiz_invalida');
     opcoes = opcoes || {};
     if (typeof opcoes.carregar !== 'function' || typeof opcoes.salvarTarefa !== 'function') throw new TypeError('provider_invalido');
-    var vivo = true, versao = 0, revisaoLive = 0;
-    var ui = { dia: dataValida(opcoes.dia) ? opcoes.dia : dataSP(), mes: '', pendentes: {}, erros: {}, podeSalvarAvaliacao: typeof opcoes.salvarAvaliacao === 'function', avaliacoesPendentes: {}, avaliacoesErros: {} };
+    var vivo = true, versao = 0, revisaoLive = 0, offMes = null, versaoMes = 0, cacheMes = {};
+    var ui = { dia: dataValida(opcoes.dia) ? opcoes.dia : dataSP(), mes: '', mesAvaliacoes: null, pendentes: {}, erros: {}, podeSalvarAvaliacao: typeof opcoes.salvarAvaliacao === 'function', avaliacoesPendentes: {}, avaliacoesErros: {} };
     var atual = normalizar({ dia: ui.dia, agenda: { estado: 'carregando' }, quantidades: { estado: 'carregando' }, faltas: { estado: 'carregando' }, novatos: { estado: 'carregando' }, comida: { estado: 'carregando' }, saude: { estado: 'carregando' }, tempos: { estado: 'carregando' }, tarefas: { estado: 'carregando' } }, ui.dia);
 
     function pintar() {
@@ -258,7 +266,8 @@
     }
 
     function carregar(dia) {
-      ui.dia = dia; ui.mes = dia.slice(0, 7); ui.erros = {}; ui.pendentes = {}; ui.avaliacoesPendentes = {}; ui.avaliacoesErros = {};
+      var mudouMes = ui.mes !== dia.slice(0, 7); ui.dia = dia; ui.mes = dia.slice(0, 7); ui.erros = {}; ui.pendentes = {}; ui.avaliacoesPendentes = {}; ui.avaliacoesErros = {};
+      if (mudouMes) observarMesVisivel();
       var minha = ++versao;
       var liveNoInicio = revisaoLive;
       atual = normalizar({ dia: dia, agenda: { estado: 'carregando' }, quantidades: { estado: 'carregando' }, faltas: { estado: 'carregando' }, novatos: { estado: 'carregando' }, comida: { estado: 'carregando' }, saude: { estado: 'carregando' }, tempos: { estado: 'carregando' }, tarefas: { estado: 'carregando' } }, dia);
@@ -275,6 +284,19 @@
         atual = normalizar({ dia: dia, agenda: { estado: 'falha' }, quantidades: { estado: 'falha' }, faltas: { estado: 'falha' }, novatos: { estado: 'falha' }, comida: { estado: 'falha' }, saude: { estado: 'falha' }, tempos: { estado: 'falha' }, tarefas: { estado: 'falha' } }, dia); pintar(); return false;
       });
     }
+    function observarMesVisivel() {
+      var mes = ui.mes, minha = ++versaoMes;
+      if (offMes) { try { offMes(); } catch (e) {} offMes = null; }
+      var antiga = cacheMes[mes] || { mes: mes, estado: 'carregando', dias: {} };
+      ui.mesAvaliacoes = mesAvaliacoes({ mes: mes, estado: 'carregando', dias: {} }, mes, antiga);
+      pintar();
+      if (typeof opcoes.observarMes !== 'function') return;
+      var off = opcoes.observarMes(mes, function (valor) {
+        if (!vivo || minha !== versaoMes || ui.mes !== mes) return;
+        var prox = mesAvaliacoes(valor, mes, cacheMes[mes] || antiga); cacheMes[mes] = prox; ui.mesAvaliacoes = prox; pintar();
+      });
+      if (typeof off === 'function') offMes = off;
+    }
 
     function clique(ev) {
       var alvo = ev.target.closest && ev.target.closest('[data-marcia-dia],[data-marcia-mes],[data-marcia-hoje],[data-marcia-tarefa]');
@@ -283,7 +305,7 @@
       if (alvo.hasAttribute('data-marcia-hoje')) { carregar(dataSP()); return; }
       if (alvo.hasAttribute('data-marcia-mes')) {
         var p = ui.mes.split('-').map(Number), delta = Number(alvo.getAttribute('data-marcia-mes'));
-        var d = new Date(Date.UTC(p[0], p[1] - 1 + delta, 1, 12)); ui.mes = d.toISOString().slice(0, 7); pintar(); return;
+        var d = new Date(Date.UTC(p[0], p[1] - 1 + delta, 1, 12)); ui.mes = d.toISOString().slice(0, 7); observarMesVisivel(); return;
       }
       var id = alvo.getAttribute('data-marcia-tarefa');
       var tarefa = atual.tarefas.itens.find(function (x) { return x.id === id; });
@@ -342,7 +364,7 @@
     root.addEventListener('submit', submeter);
     carregar(ui.dia);
     return {
-      destroy: function () { vivo = false; versao += 1; root.removeEventListener('click', clique); root.removeEventListener('submit', submeter); root.innerHTML = ''; },
+      destroy: function () { vivo = false; versao += 1; versaoMes += 1; if (offMes) try { offMes(); } catch (e) {} root.removeEventListener('click', clique); root.removeEventListener('submit', submeter); root.innerHTML = ''; },
       carregar: carregar,
       atualizar: function (snapshot) {
         if (!vivo || !snapshot || snapshot.dia !== ui.dia) return false;
@@ -352,5 +374,5 @@
     };
   }
 
-  return { montar: montar, normalizar: normalizar, desenhar: desenhar, calendario: calendario, dataSP: dataSP, validarConferencia: validarConferencia };
+  return { montar: montar, normalizar: normalizar, desenhar: desenhar, calendario: calendario, mesAvaliacoes: mesAvaliacoes, dataSP: dataSP, validarConferencia: validarConferencia };
 });

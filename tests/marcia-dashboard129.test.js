@@ -83,6 +83,10 @@ async function executar() {
   assert.equal(cal.dias.filter(x => x && x.selecionado).length, 1);
   assert.equal(cal.dias.filter(x => x === null).length, 4, 'grade usa apenas vazios iniciais e dias do mês');
   assert.equal(M.calendario('2026-10-24', '2026-13').mes, '2026-10', 'mês inválido volta ao selecionado');
+  assert.equal(M.mesAvaliacoes({ mes: '2026-10', estado: 'falha', dias: {} }, '2026-10', { mes: '2026-10', estado: 'pronto', dias: { '2026-10-25': true } }).dias['2026-10-25'], true, 'falha mensal não apaga marca confirmada');
+  const mesMarcado = M.desenhar(snap('2026-10-24'), { dia: '2026-10-24', mes: '2026-10', mesAvaliacoes: { mes: '2026-10', estado: 'pronto', dias: { '2026-10-25': true } } });
+  assert(mesMarcado.includes('class="dcal-dot"'));
+  assert(mesMarcado.includes('25 de outubro · tem avaliação'));
   assert.doesNotThrow(() => M.normalizar(snap('2026-10-24', { agenda: bloco([null]), faltas: bloco([null]) }), '2026-10-24'));
 
   const oito = M.desenhar(snap(), { dia: '2026-10-24' });
@@ -217,6 +221,18 @@ async function executar() {
   await adiar(); await adiar();
   assert(raiz10.innerHTML.includes('SNAPSHOT B'));
   assert(!raiz10.innerHTML.includes('SNAPSHOT A'), 'carga inicial não regride atualização live');
+
+  const raizMes = new RaizFake(), observadoresMes = {}, desligadosMes = [];
+  const controleMes = M.montar(raizMes, { dia: '2026-10-24', carregar(d) { return Promise.resolve(snap(d)); }, salvarTarefa() { return Promise.reject(); }, observarMes(m, cb) { observadoresMes[m] = cb; return () => desligadosMes.push(m); } });
+  await adiar(); await adiar(); observadoresMes['2026-10']({ mes: '2026-10', estado: 'pronto', dias: { '2026-10-25': true } });
+  assert(raizMes.innerHTML.includes('dcal-dot'));
+  raizMes.clicar('data-marcia-mes', '1');
+  assert(desligadosMes.includes('2026-10'));
+  observadoresMes['2026-10']({ mes: '2026-10', estado: 'pronto', dias: { '2026-10-26': true } });
+  assert(!raizMes.innerHTML.includes('26 de outubro · tem avaliação'), 'callback mensal antigo é ignorado');
+  observadoresMes['2026-11']({ mes: '2026-11', estado: 'falha', dias: {} });
+  assert(raizMes.innerHTML.includes('marcações indisponíveis'));
+  controleMes.destroy(); assert(desligadosMes.includes('2026-11'));
 
   const cargaComErro = controlada();
   const raiz11 = new RaizFake();
