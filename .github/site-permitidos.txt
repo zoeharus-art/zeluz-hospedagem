@@ -66,3 +66,9 @@ auaulandia/cafe51-injecao.js
 
 # --- Textos com cara de arquivo que não são pedidos ao site ---
 nao-e-arquivo auaulandia/foto-do-corpo.jpg
+
+# Agenda Márcia: agendamento completo separado do resumo diário.
+auaulandia/agenda-marcia/dados.js
+auaulandia/agenda-marcia/painel.js
+auaulandia/agenda-marcia/painel.css
+auaulandia/agenda-marcia/app.js

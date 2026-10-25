@@ -218,6 +218,76 @@ async function executar() {
   assert.equal(origemItem.conferencia.observacoes, 'Nota revisada pela gestão');
   assert.equal(origemItem.conferencia.revisao, 4, 'fallback da origem não fabrica revisão da gestão');
 
+  const registro131 = {
+    valor: 'Agenda Nova / SRD', hora: '13:30', planilha_ok: false,
+    edicao_pendente: { op_id: 'pendente-1', antes: { valor: 'Agenda / SRD', hora: '13:00' }, depois: { valor: 'Agenda Nova / SRD', hora: '13:30' } },
+    det: {
+      agendaMarcia: true, fora_do_cadastro: true,
+      avaliacao129: {
+        versao: 131, agendaMarcia: true, nome: 'Nome interno antigo', raca: 'Raça antiga', tutor: 'Família da agenda', hora: '12:00',
+        vacina: { conferido: true }, vermifugo: { conferido: false }, carrapaticida: { conferido: true },
+        experiencia: 'Origem 131', saude: '', observacoes: 'Nota 131',
+        pagamento: { recebido: true, valorPagoCentavos: 8000, autorId: 'recepcao', autorNome: 'Recepção', ts: 10, historico: [] },
+        revisao: 2, autorId: 'recepcao', autorNome: 'Recepção', ts: 10
+      }
+    }
+  };
+  const dados131 = fontesBase();
+  dados131['daycare/dashboard/' + DIA].avaliacao = { nova131: registro131 };
+  dados131['daycare/dashboard/' + DIA + '/avaliacao/nova131'] = registro131;
+  dados131['daycare/avaliacoes-gestao/' + DIA] = {
+    nova131: { tutor: 'Legado não autoritativo', vacina: { conferido: false }, observacoes: 'Legado', revisao: 20 }
+  };
+  const db131 = new FakeDB(dados131), provider131 = Dados.criar(dependencias(db131));
+  const snap131 = await provider131.carregar(DIA), item131 = snap131.agenda.itens[0];
+  assert.equal(item131.nome, 'Agenda Nova');
+  assert.equal(item131.raca, 'SRD');
+  assert.equal(item131.hora, '13:30', 'dashboard usa o resumo superior alterado pelo protocolo nativo');
+  assert.equal(item131.agendaMarcia, true);
+  assert.deepEqual(item131.pagamento, { recebido: true, valorCent: 8000, quem: 'Recepção', quando: item131.pagamento.quando });
+  assert(item131.pagamento.quando, 'pagamento válido expõe data/hora comprovada');
+  assert.equal(item131.tutor, 'Família da agenda', 'marker 131 torna o registro original autoritativo');
+  assert.equal(item131.vacina.conferido, true);
+  assert.equal(item131.conferencia.observacoes, 'Nota 131');
+  assert.equal(item131.conferencia.revisao, 2, 'revisão 131 não vem da metadata legada');
+  const metaLegadaAntes = JSON.parse(JSON.stringify(dados131['daycare/avaliacoes-gestao/' + DIA]));
+  const ack131 = await provider131.salvarAvaliacao({
+    dia: DIA, id: item131.id, expectedRevision: 2, tutor: 'Família conferida',
+    vacina: { conferido: false }, vermifugo: { conferido: true }, carrapaticida: { conferido: false },
+    experiencia: 'Revista', saude: 'Atenção', observacoes: 'Revisada pela Márcia'
+  });
+  assert.equal(db131.writes.at(-1).path, 'daycare/dashboard/' + DIA + '/avaliacao/nova131', 'conferência 131 usa o mesmo registro');
+  const salvo131 = db131.dados['daycare/dashboard/' + DIA + '/avaliacao/nova131'];
+  assert.equal(salvo131.valor, 'Agenda Nova / SRD');
+  assert.equal(salvo131.hora, '13:30');
+  assert.equal(salvo131.planilha_ok, false);
+  assert.equal(salvo131.edicao_pendente.op_id, 'pendente-1', 'conferência não apaga pendência do espelho');
+  assert.equal(salvo131.det.avaliacao129.pagamento.valorPagoCentavos, 8000, 'conferência preserva pagamento');
+  assert.equal(salvo131.det.avaliacao129.revisao, 3);
+  assert.equal(ack131.conferencia.revisao, 3);
+  assert.deepEqual(db131.dados['daycare/avaliacoes-gestao/' + DIA], metaLegadaAntes, 'marker 131 não regrava metadata legada');
+
+  const cas131Dados = fontesBase();
+  cas131Dados['daycare/dashboard/' + DIA].avaliacao = { nova131: registro131 };
+  cas131Dados['daycare/dashboard/' + DIA + '/avaliacao/nova131'] = JSON.parse(JSON.stringify(registro131));
+  const cas131DB = new FakeDB(cas131Dados), cas131Provider = Dados.criar(dependencias(cas131DB));
+  const cas131Snap = await cas131Provider.carregar(DIA), cas131Item = cas131Snap.agenda.itens[0];
+  cas131DB.dados['daycare/dashboard/' + DIA + '/avaliacao/nova131'].hora = '14:10';
+  await assert.rejects(cas131Provider.salvarAvaliacao({
+    dia: DIA, id: cas131Item.id, expectedRevision: 2, tutor: 'Família conferida',
+    vacina: { conferido: false }, vermifugo: { conferido: true }, carrapaticida: { conferido: false }
+  }), /AVALIACAO_DESATUALIZADA/, 'mudança nativa no resumo participa do CAS da conferência');
+
+  const pagamentoInvalidoDados = fontesBase(), pagamentoInvalido = JSON.parse(JSON.stringify(registro131));
+  pagamentoInvalido.det.avaliacao129.pagamento = { recebido: true, valorPagoCentavos: '8000', autorId: 'recepcao', autorNome: 'Recepção', ts: 10 };
+  pagamentoInvalidoDados['daycare/dashboard/' + DIA].avaliacao = { invalido131: pagamentoInvalido };
+  const pagamentoInvalidoSnap = await Dados.criar(dependencias(new FakeDB(pagamentoInvalidoDados))).carregar(DIA);
+  assert.deepEqual(
+    pagamentoInvalidoSnap.agenda.itens[0].pagamento,
+    { recebido: false, valorCent: 0, quem: '', quando: '' },
+    'valor string ou recibo malformado jamais confirma pagamento'
+  );
+
   const horasDados = fontesBase();
   horasDados['daycare/dashboard/' + DIA].avaliacao = {
     tarde: { valor: 'Tarde / SRD', hora: '15h' },

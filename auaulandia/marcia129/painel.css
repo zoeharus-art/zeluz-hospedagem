@@ -16,3 +16,7 @@
 @media(min-width:701px){.marcia129__agenda{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px}.marcia129__titulo{grid-column:1/-1}.marcia129__agenda-lista{margin-top:0}}
 @media(max-width:700px){.marcia129{padding:12px;font-size:15px}.marcia129 .pm-tit{font-size:18px}.marcia129__kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.marcia129__cabecalho{align-items:flex-start}.marcia129__cabecalho h2{font-size:1.25rem}.marcia129__kpis .pm-tile:last-child{grid-column:1/-1}.marcia129__topico>summary{padding:12px}.marcia129__topico-corpo{padding:0 12px 12px}.marcia129__prev-form{grid-template-columns:1fr}}
 @media(max-width:440px){.marcia129__titulo{flex-direction:column;align-items:flex-start;gap:6px}.marcia129__badge{font-size:.8125rem;padding:3px 10px}.marcia129__cal .dcal-grade{grid-template-columns:repeat(7,minmax(0,1fr))}.marcia129__cal .dcal-dia{min-height:44px;min-width:0;width:100%;aspect-ratio:auto}.marcia129__prev li{grid-template-columns:1fr}.marcia129__prev small{grid-column:1}.marcia129__cabecalho{flex-wrap:wrap}}
+
+.marcia129__avaliacao-resumo .marcia129__pago,.am131__resumo-pago{color:var(--crm-ok-text)}
+.marcia129__avaliacao-resumo .marcia129__aguarda-pagamento,.am131__resumo-pendente{color:var(--crm-atencao-text)}
+.am131__resumo-pago,.am131__resumo-pendente{display:block;font-size:13px;line-height:1.5;font-weight:600;margin-top:4px}

@@ -61,7 +61,7 @@ function fazerAmbiente() {
     pendAvaliarLancamento() {}, DC_DASH_TURMA: { quando: 0 }
   };
   vm.createContext(contexto);
-  ['dashDet', 'dashForaFalta', 'dashDetFalta', 'dashAvaliacaoDados', 'dashEscolher', 'dashSugerir', 'dashLancar']
+  ['dashDet', 'dashForaFalta', 'dashDetFalta', 'dashEscolher', 'dashSugerir', 'dashLancar']
     .forEach(nome => vm.runInContext(funcao(nome), contexto, { filename: 'index.html#' + nome }));
   return { contexto, escritas, referencias, alertas, dom, setHora(v) { hora = v; }, get chamadasPlanCasar() { return chamadasPlanCasar; } };
 }
@@ -113,7 +113,7 @@ async function executar() {
   const escolha = /dashEscolher\('avaliacao','Maya\/SRD \(Tutor Beta\)',(\d+)\)/.exec(sugestoes);
   assert(escolha, 'sugestão do homônimo envia seu índice de ficha');
   vm.runInContext("dashEscolher('avaliacao','Maya/SRD (Tutor Beta)'," + escolha[1] + ')', c);
-  assert.equal(c.DASH_DET.avaliacao.tutor, 'Tutor Beta', 'tutor vem da ficha explicitamente escolhida');
+  assert.equal(c.DASH_DET.avaliacao.tutor, undefined, 'Lançamento diário permanece um resumo; dados completos usam a Agenda Márcia');
   assert.equal(vm.runInContext("dashDetFalta('avaliacao')", c), 'Horário', 'cadastro selecionado ainda exige hora');
   env.setHora('10:30');
   assert.equal(vm.runInContext("dashDetFalta('avaliacao')", c), '', 'tutor e hora válidos liberam confirmação');
@@ -121,23 +121,20 @@ async function executar() {
   assert.equal(env.escritas.length, 1, 'uma única persistência para o cadastro selecionado');
   assert.equal(env.escritas[0].caminho, 'daycare/dashboard/' + DIA + '/avaliacao');
   assert.equal(env.escritas[0].registro.chave, 'maya__tutor beta', 'a chave é da ficha selecionada, não do homônimo');
-  assert.deepEqual(env.escritas[0].registro.det.avaliacao129, {
-    tutor: 'Tutor Beta', vacina: { conferido: false }, vermifugo: { conferido: false }, carrapaticida: { conferido: false },
-    experiencia: '', saude: '', observacoes: ''
-  });
+  assert.equal(env.escritas[0].registro.det && env.escritas[0].registro.det.avaliacao129, undefined);
 
   // Nome manual idêntico às duas fichas não pode ser resolvido por texto nem ganhar chave.
   c.DASH_FORA.avaliacao = true;
   c.DASH_DET.avaliacao = {};
   env.setHora('');
-  assert.equal(vm.runInContext("dashDetFalta('avaliacao')", c), 'Nome · Raça · Tutor · Horário');
+  assert.equal(vm.runInContext("dashDetFalta('avaliacao')", c), 'Nome · Raça · Horário');
   await vm.runInContext("dashLancar('avaliacao','Maya/SRD')", c);
   assert.equal(env.escritas.length, 1, 'horário ausente: nenhum write');
   assert.match(env.alertas.at(-1), /Escolha o horário/);
   env.setHora('09:00');
   await vm.runInContext("dashLancar('avaliacao','Maya/SRD')", c);
   assert.equal(env.escritas.length, 1, 'nome, raça e tutor ausentes: nenhum write');
-  assert.match(env.alertas.at(-1), /Nome · Raça · Tutor/);
+  assert.match(env.alertas.at(-1), /Nome · Raça/);
   c.DASH_DET.avaliacao = { nome: 'Maya', raca: 'SRD', tutor: 'Tutor Beta', vacina: true, vermifugo: false, carrapaticida: true };
   env.setHora('11:00');
   await vm.runInContext("dashLancar('avaliacao','Maya/SRD')", c);
@@ -145,8 +142,7 @@ async function executar() {
   assert.equal(env.escritas[1].caminho, 'daycare/dashboard/' + DIA + '/avaliacao');
   assert.equal(env.escritas[1].registro.chave, undefined, 'manual sem ficha permanece sem vínculo');
   assert.equal(env.escritas[1].registro.det.fora_do_cadastro, true);
-  assert.equal(env.escritas[1].registro.det.avaliacao129.vacina.conferido, true);
-  assert.equal(env.escritas[1].registro.det.avaliacao129.vermifugo.conferido, false, 'false é mantido como não conferido');
+  assert.equal(env.escritas[1].registro.det.avaliacao129, undefined, 'diário nativo não cria formulário completo paralelo');
   assert.equal(env.chamadasPlanCasar, 0, 'nome manual nunca chama casamento pelo texto, mesmo com duas fichas iguais');
   assert.deepEqual(env.referencias.filter(p => /avaliacoes-gestao|vet|medicacao|saude/.test(p)), [], 'launch path has no second or clinical reference');
   assert.equal(env.referencias.filter(p => p === 'daycare/dashboard/' + DIA + '/avaliacao').length, 2);
@@ -155,6 +151,7 @@ async function executar() {
   // inclusive false, e os demais campos vêm de det.avaliacao129 pelo mesmo ID.
   const dashboard = { avaliacao: {} };
   env.escritas.forEach(x => { dashboard.avaliacao[x.key] = x.registro; });
+  dashboard.avaliacao[env.escritas[1].key].det.avaliacao129={tutor:'Tutor Beta',vacina:{conferido:true},vermifugo:{conferido:false},carrapaticida:{conferido:true},experiencia:'',saude:'',observacoes:''};
   const dados = {
     ['daycare/dashboard/' + DIA]: dashboard,
     ['daycare/avaliacoes-gestao/' + DIA]: {

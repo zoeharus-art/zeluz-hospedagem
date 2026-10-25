@@ -233,17 +233,43 @@
     var legado = prevConferencia(v, dia);
     return { conferido: !!legado && legado.situacao === 'em-dia' };
   }
+  function agendaMarcia131(reg) {
+    var det = objeto(reg && reg.det), a = objeto(det.avaliacao129);
+    return det.agendaMarcia === true || a.agendaMarcia === true || Number(a.versao) === 131;
+  }
+  function pagamentoAgenda131(reg) {
+    var a = objeto(objeto(reg && reg.det).avaliacao129), pg = objeto(a.pagamento);
+    var ok = agendaMarcia131(reg) && pg.recebido === true && pg.valorPagoCentavos === 8000 &&
+      !!texto(pg.autorId) && !!texto(pg.autorNome) && Number(pg.ts) > 0;
+    return {
+      recebido: !!ok, valorCent: ok ? 8000 : 0,
+      quem: ok ? texto(pg.autorNome) : '', quando: ok ? (texto(pg.quando) || quandoBR(pg.ts)) : ''
+    };
+  }
+  function fingerprintAgenda131(reg) {
+    reg = objeto(reg);
+    var a = objeto(objeto(reg.det).avaliacao129), pg = objeto(a.pagamento);
+    return hash(JSON.stringify({
+      valor: texto(reg.valor), hora: texto(reg.hora), nome: texto(a.nome), raca: texto(a.raca), tutor: texto(a.tutor),
+      vacina: objeto(a.vacina).conferido, vermifugo: objeto(a.vermifugo).conferido, carrapaticida: objeto(a.carrapaticida).conferido,
+      experiencia: texto(a.experiencia), saude: texto(a.saude), observacoes: texto(a.observacoes),
+      pagamento: { recebido: pg.recebido, valorPagoCentavos: pg.valorPagoCentavos, autorId: texto(pg.autorId), ts: Number(pg.ts) || 0 }
+    }));
+  }
   function conferenciaEfetiva(deps, dia, p, regAvaliacao, persistida, fontePronta) {
     var basePrev = prevencao(deps, p, dia), baseDet = detalhesAvaliacao(deps, p, regAvaliacao), r = objeto(persistida);
     var origem = objeto(objeto(regAvaliacao && regAvaliacao.det).avaliacao129);
+    var origemAutoritativa = agendaMarcia131(regAvaliacao);
     function prev(nome) {
-      if (proprio(r, nome)) return prevCheckConferencia(r[nome], dia);
-      if (proprio(origem, nome)) return prevCheckConferencia(origem[nome], dia);
+      var primeira = origemAutoritativa ? origem : r, segunda = origemAutoritativa ? r : origem;
+      if (proprio(primeira, nome)) return prevCheckConferencia(primeira[nome], dia);
+      if (proprio(segunda, nome)) return prevCheckConferencia(segunda[nome], dia);
       return { conferido: !!basePrev[nome] && basePrev[nome].situacao === 'em-dia' };
     }
     function campo(nome, limite, base) {
-      if (proprio(r, nome)) return textoPersistido(r[nome], limite);
-      if (proprio(origem, nome)) return textoPersistido(origem[nome], limite);
+      var primeira = origemAutoritativa ? origem : r, segunda = origemAutoritativa ? r : origem;
+      if (proprio(primeira, nome)) return textoPersistido(primeira[nome], limite);
+      if (proprio(segunda, nome)) return textoPersistido(segunda[nome], limite);
       return texto(base);
     }
     return {
@@ -252,9 +278,9 @@
       experiencia: campo('experiencia', 500, baseDet.experiencia),
       saude: campo('saude', 500, baseDet.saude),
       observacoes: campo('observacoes', 1000, baseDet.observacoes),
-      revisao: fontePronta ? (Number(r.revisao) || 0) : null,
-      quem: fontePronta ? primeiroTexto([textoPersistido(r.autorNome, 140), textoPersistido(r.quem, 140)]) : '',
-      quando: fontePronta ? (texto(r.quando) || quandoBR(r.ts)) : ''
+      revisao: origemAutoritativa ? (Number(origem.revisao) || 0) : (fontePronta ? (Number(r.revisao) || 0) : null),
+      quem: origemAutoritativa ? textoPersistido(origem.autorNome, 140) : (fontePronta ? primeiroTexto([textoPersistido(r.autorNome, 140), textoPersistido(r.quem, 140)]) : ''),
+      quando: origemAutoritativa ? (texto(origem.quando) || quandoBR(origem.ts)) : (fontePronta ? (texto(r.quando) || quandoBR(r.ts)) : '')
     };
   }
   function prevAgenda(v) { return { conferido: !!(v && v.conferido) }; }
@@ -283,7 +309,8 @@
         id: 'avaliacao-' + hash(it.id), codigoOrigem: it.id, hora: texto(it.reg.hora),
         nome: v.nome, raca: v.raca, tutor: conf.tutor,
         vacina: prevAgenda(conf.vacina), vermifugo: prevAgenda(conf.vermifugo), carrapaticida: prevAgenda(conf.carrapaticida),
-        observacoes: observacoesConferencia(p, conf), conferencia: conf, _ordem: ordem
+        observacoes: observacoesConferencia(p, conf), conferencia: conf,
+        agendaMarcia: agendaMarcia131(it.reg), pagamento: pagamentoAgenda131(it.reg), _ordem: ordem
       };
     });
     itens.sort(function (a, b) {
@@ -746,15 +773,66 @@
       var ultimo = ultimos[dia], fonteDia = fontesUltimas[dia];
       var item = ultimo && ultimo.agenda && ultimo.agenda.estado === 'pronto' && ultimo.agenda.itens.filter(function (x) { return x.id === id; })[0];
       if (!item || !texto(item.codigoOrigem)) return Promise.reject(new Error('AVALIACAO_DESATUALIZADA'));
-      if (!fonteDia || !pronto(fonteDia.dashboard) || !pronto(fonteDia.avaliacoesGestao)) return Promise.reject(new Error('FONTE_AVALIACOES_INDISPONIVEL'));
-      var codigoOrigem = texto(item.codigoOrigem), existe = registros(valor(fonteDia.dashboard).avaliacao).some(function (x) { return x.id === codigoOrigem; });
+      if (!fonteDia || !pronto(fonteDia.dashboard)) return Promise.reject(new Error('FONTE_AVALIACOES_INDISPONIVEL'));
+      var codigoOrigem = texto(item.codigoOrigem), grupoDashboard = objeto(valor(fonteDia.dashboard).avaliacao), regDashboard = objeto(grupoDashboard[codigoOrigem]);
+      var existe = proprio(grupoDashboard, codigoOrigem), registro131 = agendaMarcia131(regDashboard);
       if (!existe || /[.#$\[\]\/]/.test(codigoOrigem) || codigoOrigem.length > 160) return Promise.reject(new Error('AVALIACAO_DESATUALIZADA'));
+      if (!registro131 && !pronto(fonteDia.avaliacoesGestao)) return Promise.reject(new Error('FONTE_AVALIACOES_INDISPONIVEL'));
       var revisaoEsperada = Number(item.conferencia && item.conferencia.revisao) || 0;
       if (cmd.expectedRevision != null) {
         var informada = cmd.expectedRevision;
         if (!Number.isInteger(informada) || informada < 0 || informada !== revisaoEsperada) return Promise.reject(new Error('AVALIACAO_DESATUALIZADA'));
       }
       if (!db || typeof db.ref !== 'function') return Promise.reject(new Error('BANCO_INDISPONIVEL'));
+      if (registro131) {
+        var ref131 = db.ref('daycare/dashboard/' + dia + '/avaliacao/' + codigoOrigem), motivo131 = '';
+        var fingerprintEsperado = fingerprintAgenda131(regDashboard);
+        return Promise.resolve(ref131.transaction(function (atual) {
+          if (!autorizado()) { motivo131 = 'SEM_PERMISSAO'; return; }
+          var autor = autorValido();
+          if (!autor) { motivo131 = 'AUTORIA_OBRIGATORIA'; return; }
+          if (autor.id !== autorInicio.id || autor.nome !== autorInicio.nome) { motivo131 = 'AUTORIA_ALTERADA'; return; }
+          atual = objeto(atual);
+          var det = objeto(atual.det), aAtual = objeto(det.avaliacao129), revisaoReal = Number(aAtual.revisao) || 0;
+          if (!agendaMarcia131(atual) || revisaoReal !== revisaoEsperada || fingerprintAgenda131(atual) !== fingerprintEsperado) {
+            motivo131 = 'AVALIACAO_DESATUALIZADA'; return;
+          }
+          var rel = relogioSP(deps.agora), revisao = revisaoReal + 1, a = copiar(aAtual), reg = copiar(atual);
+          var prevs = {
+            vacina: prevParaGravar(aAtual.vacina, entradaNormalizada.vacina),
+            vermifugo: prevParaGravar(aAtual.vermifugo, entradaNormalizada.vermifugo),
+            carrapaticida: prevParaGravar(aAtual.carrapaticida, entradaNormalizada.carrapaticida)
+          };
+          var hist = Array.isArray(aAtual.historico) ? aAtual.historico.slice(-(LIMITE_HISTORICO - 1)) : [];
+          hist.push({
+            revisao: revisao, tutor: entradaNormalizada.tutor,
+            vacina: prevs.vacina, vermifugo: prevs.vermifugo, carrapaticida: prevs.carrapaticida,
+            experiencia: entradaNormalizada.experiencia, saude: entradaNormalizada.saude, observacoes: entradaNormalizada.observacoes,
+            autorId: autor.id, autorNome: autor.nome, ts: rel.ts
+          });
+          a.versao = 131; a.agendaMarcia = true;
+          a.tutor = entradaNormalizada.tutor;
+          a.vacina = prevs.vacina; a.vermifugo = prevs.vermifugo; a.carrapaticida = prevs.carrapaticida;
+          a.experiencia = entradaNormalizada.experiencia; a.saude = entradaNormalizada.saude; a.observacoes = entradaNormalizada.observacoes;
+          a.autorId = autor.id; a.autorNome = autor.nome; a.ts = rel.ts; a.quando = quandoBR(rel.ts); a.revisao = revisao; a.historico = hist;
+          det.agendaMarcia = true; det.avaliacao129 = a; reg.det = det;
+          motivo131 = '';
+          return reg;
+        })).then(function (res) {
+          if (!res || res.committed !== true) throw new Error(motivo131 || 'AVALIACAO_DESATUALIZADA');
+          var reg = res.snapshot && typeof res.snapshot.val === 'function' ? objeto(res.snapshot.val()) : {}, a = objeto(objeto(reg.det).avaliacao129);
+          if (Number(a.revisao) !== revisaoEsperada + 1 || texto(a.autorId) !== autorInicio.id || texto(a.autorNome) !== autorInicio.nome) throw new Error('CONFIRMACAO_INVALIDA');
+          var dashAtual = copiar(valor(fonteDia.dashboard)), avaliacoes = copiar(objeto(dashAtual.avaliacao));
+          avaliacoes[codigoOrigem] = copiar(reg); dashAtual.avaliacao = avaliacoes;
+          fonteDia.dashboard = { estado: 'pronto', valor: dashAtual };
+          var atualizado;
+          if (ativoObs && ativoObs.dia === dia && typeof ativoObs.publicar === 'function') atualizado = ativoObs.publicar();
+          else atualizado = copiar(memorizar(dia, montarSnapshot(deps, dia, fonteDia), fonteDia));
+          var agenda = atualizado.agenda.itens.filter(function (x) { return x.id === id; })[0];
+          if (!agenda) throw new Error('CONFIRMACAO_INVALIDA');
+          return { id: id, codigoOrigem: codigoOrigem, agenda: copiar(agenda), conferencia: copiar(agenda.conferencia) };
+        });
+      }
       var ref = db.ref('daycare/avaliacoes-gestao/' + dia + '/' + codigoOrigem), motivo = '';
       return Promise.resolve(ref.transaction(function (atual) {
         if (!autorizado()) { motivo = 'SEM_PERMISSAO'; return; }

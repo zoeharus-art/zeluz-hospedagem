@@ -72,6 +72,7 @@
       }
       return Object.assign(b, {
         codigoOrigem: texto(x.codigoOrigem), hora: texto(x.hora),
+        agendaMarcia:x.agendaMarcia===true, pagamento:{recebido:!!(x.pagamento&&x.pagamento.recebido===true&&x.pagamento.valorCent===8000),valorCent:x.pagamento&&x.pagamento.valorCent===8000?8000:0,quem:texto(x.pagamento&&x.pagamento.quem),quando:texto(x.pagamento&&x.pagamento.quando)},
         vacina: prevComConferencia('vacina'), vermifugo: prevComConferencia('vermifugo'), carrapaticida: prevComConferencia('carrapaticida'),
         tutor: texto(c.tutor) || b.tutor,
         observacoes: lista(x.observacoes).map(function (o) { return { rotulo: texto(o && o.rotulo), valor: texto(o && o.valor) }; }).filter(function (o) { return o.rotulo || o.valor; }),
@@ -163,7 +164,7 @@
       }
       if (x.conferencia.quem && x.conferencia.quando) form = '<p class="marcia129__situacao marcia129__situacao--conferido" role="status">Conferência salva · ' + esc(x.conferencia.quem) + ' · ' + esc(x.conferencia.quando) + '</p>' + form;
       var prevLeitura = podeSalvar ? '' : '<ul class="marcia129__prev">' + prevHTML('Vacina', x.vacina) + prevHTML('Vermífugo', x.vermifugo) + prevHTML('Pulgas e carrapatos', x.carrapaticida) + '</ul>';
-      return '<details class="marcia129__avaliacao" data-marcia-avaliacao="' + esc(x.id) + '"><summary><span class="marcia129__hora">' + esc(x.hora || 'Horário a conferir') + '</span><span class="marcia129__avaliacao-resumo"><strong>' + esc(x.nome || 'FILHOt a conferir') + '</strong><small>' + esc(x.raca || 'Raça a conferir') + ' · ' + esc(x.tutor || 'Tutor a conferir') + '</small>' + (!completa ? '<em>Dados a conferir</em>' : '') + '</span><span class="marcia129__chevron" aria-hidden="true">⌄</span></summary><div class="marcia129__avaliacao-corpo">' + prevLeitura + obs + form + '</div></details>';
+      return '<details class="marcia129__avaliacao" data-marcia-avaliacao="' + esc(x.id) + '"><summary><span class="marcia129__hora">' + esc(x.hora || 'Horário a conferir') + '</span><span class="marcia129__avaliacao-resumo"><strong>' + esc(x.nome || 'FILHOt a conferir') + '</strong><small>' + esc(x.raca || 'Raça a conferir') + ' · ' + esc(x.tutor || 'Tutor a conferir') + '</small>' + (!completa ? '<em>Dados a conferir</em>' : '') + (x.agendaMarcia ? '<em class="'+(x.pagamento.recebido?'marcia129__pago':'marcia129__aguarda-pagamento')+'">'+(x.pagamento.recebido?'Confirmada · R$ 80,00 recebidos':'Pendente de pagamento · R$ 80,00')+'</em>' : '') + '</span><span class="marcia129__chevron" aria-hidden="true">⌄</span></summary><div class="marcia129__avaliacao-corpo">' + prevLeitura + obs + form + '</div></details>';
     }).join('') + '</div>';
   }
 

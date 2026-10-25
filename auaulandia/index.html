@@ -2630,6 +2630,7 @@
 
 </style>
 <link rel="stylesheet" href="marcia129/painel.css">
+<link rel="stylesheet" href="agenda-marcia/painel.css">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -2867,6 +2868,7 @@
           <a data-v="banhos" class="so-recepcao" title="Quem tem banho fixo, em que dia e a que horas — o app lança sozinho na planilha."><span data-icon="drop"></span><span>Banhos recorrentes</span></a>
           <!-- Adriana, 19/ago/2026: é aqui que a recepção lança o que hoje digita na
                planilha — e a planilha vira só o espelho que alimenta a TV. -->
+          <a data-v="agendamarcia" class="so-recepcao" title="Agendar avaliações, conferir os dados e registrar os R$ 80 recebidos."><span data-icon="calendar"></span><span>Agenda Márcia</span></a>
           <a data-v="dashdc" class="so-recepcao" title="A planilha do Day Care, item por item."><span data-icon="list-check"></span><span>Lançamentos do dia</span></a>
           <!-- PENDÊNCIAS DE PREVENÇÃO (Adriana, 18/set/2026) — "tá lá que o Batata tem que
                tomar vermífugo. No entanto, o Batata não foi hoje. Então isso precisa de um
@@ -5147,6 +5149,10 @@
        Regra "menos informação": número grande, desenho simples, no máximo 3 linhas por
        quadro. O detalhe abre na tela que já existe, por link — nunca aqui.
        Este painel só OBSERVA: nenhum botão daqui grava coisa alguma. -->
+  <section class="view" id="v-agendamarcia">
+    <div id="agendaMarciaRoot"><div class="pm-card"><p class="pm-sub">Preparando a Agenda Márcia…</p></div></div>
+  </section>
+
   <section class="view" id="v-gestaomarcia">
     <div id="marcia129Root"><div class="pm-card"><p class="pm-sub">Preparando o dia da Márcia…</p></div></div>
   </section>
@@ -8120,6 +8126,7 @@ return { criar };
     'lancar-pagamento':['Lançar pagamento','O recebimento do plano vira registro — é o que faz o Financeiro sair de R$ 0,00.'],
     paineloperacao:['Gestão da operação','Faltas, ritmo do time, Hotel e operação do dia.'],
     gestaomarcia:['Márcia Gestão','Agenda, tarefas e cuidados do dia.'],
+    agendamarcia:['Agenda Márcia','Avaliações, dados da família e confirmação do recebimento.'],
     planodia:['Escala e plano do dia','A escala de cada um e qual plano vale hoje.'],
     abertura:['Abertura do dia','Monitor 1: como a casa abre.'],sair:['Sair','Encerra a sessão neste aparelho.']};
 
@@ -8192,6 +8199,8 @@ return { criar };
   // Orçamento (a Temporada aparecia sem os botões). Agora é UMA lista só: os dois caminhos
   // passam por aqui. Tela nova = uma linha, num lugar só.
   function aoAbrirView(v){
+    if(v!=='agendamarcia' && typeof agendaMarciaFechar==='function') agendaMarciaFechar();
+    if(v==='agendamarcia' && typeof agendaMarciaAbrir==='function') agendaMarciaAbrir();
     if(v!=='gestaomarcia' && typeof marcia129Fechar==='function') marcia129Fechar();
     if(v==='hospedagem'){ if(typeof fecharPlantao==='function') fecharPlantao(); }
     if(v==='gestdia'){ GD_TENT=0; GD_MED_TENT=0; if(typeof gdCarregar==='function') gdCarregar(); }
@@ -31356,7 +31365,7 @@ return { criar };
       // sidebar letra por letra. 24/set: "Vence amanhã" virou "Vencimentos" — a CHAVE é a
       // mesma, quem tinha a tela concedida continua com ela.
       {k:'hoje', t:'Hoje na Zêluz'}, {k:'contatos', t:'Quem chamar hoje'},
-      {k:'banhos', t:'Banhos recorrentes'}, {k:'dashdc', t:'Lançamentos do dia'},
+      {k:'banhos', t:'Banhos recorrentes'}, {k:'agendamarcia',t:'Agenda Márcia'},{k:'dashdc', t:'Lançamentos do dia'},
       {k:'pendencias', t:'Pendências de prevenção'}, {k:'peso', t:'Peso'},
       {k:'alergia', t:'Pesquisa com a Família Multiespécie'}, {k:'vacinas', t:'Prevenção'},
       {k:'vencimentos', t:'Vencimentos'}, {k:'emporio', t:'Quem não comeu hoje'},
@@ -31376,7 +31385,7 @@ return { criar };
   // desmarcado nada. Por isso, para estas, vale a regra do PERM_MENU: o papel é o piso e a
   // marcação só acrescenta. Marcada, a tela aparece para a pessoa; desmarcada, fica o que o
   // papel dela já mostrava.
-  const NAV_PAGINAS_SO_LIBERA=['eahist','ritmo','gestdia','banhos','dashdc','peso','alergia','vacinas'];
+  const NAV_PAGINAS_SO_LIBERA=['eahist','ritmo','gestdia','banhos','dashdc','agendamarcia','peso','alergia','vacinas'];
   // O que está no sidebar e NÃO se concede daqui — dito na própria tela do Time, para a
   // Gestão não procurar o que não existe.
   //  · config (Configurações): senhas das pontes e logins — só Gestão e Diretoria;
@@ -57213,7 +57222,7 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
     // cadastro — "a gente está conhecendo o peludo, então a gente não tem ele no cadastro".
     // Continua sendo lançamento do dia: aqui NÃO nasce ficha nenhuma — o cadastro é um só,
     // feito pela Recepção depois.
-    {k:'avaliacao',     t:'Avaliação (Márcia)',         col:'Avaliação',                      colHora:'Horário',         hora:true, icone:'📋', foraDoCadastro:true, campos:[]},
+    {k:'avaliacao',     t:'Avaliação (Márcia)',         col:'Avaliação',                      colHora:'Horário',         hora:true, icone:'📋', foraDoCadastro:true},
     // O AVULSO TAMBÉM ESCREVE À MÃO (Adriana, 23/set/2026): "Preciso lançar uma diária avulsa,
     // mas o pequeno não está mais matriculado no daycare. Não consigo lançar em Lançamentos do
     // dia. (…) Eu prefiro lançar sem ter que fazer o cadastro: só lançar a diária avulsa, a
@@ -60904,6 +60913,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
                 :'')))
            // 6.49: o banho de hoje diz se está na planilha que a TV lê (os avisos acima vêm antes).
            +dashTvMaoHTML(it.k, o, id)
+           +((it.k==='avaliacao'&&typeof agendaMarciaResumoHTML==='function')?agendaMarciaResumoHTML(o):'')
            // 6.60: a falta avisada à mão sem crédito («Dar a reposição») e a Reposição sem abater («Abater agora»)
            +((it.k==='faltas')?dashFaltaMaoHTML(o, id, __diaDash):'')+((it.k==='reposicao')?dashRepMaoHTML(o, id, __diaDash):'')
            +'</span>'
@@ -61045,12 +61055,6 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
   function dashEscolher(k, rot, idx){
     DASH_SEL[k]=rot; DASH_DET[k]={};
     if(typeof idx==='number'&&idx>=0) DASH_SEL_I[k]=idx; else delete DASH_SEL_I[k];
-    // A avaliação usa a ficha somente para poupar digitação. A consultora ainda confere
-    // os três itens no balcão; ausência de data nunca vira confirmação inventada.
-    if(k==='avaliacao' && typeof idx==='number' && idx>=0 && typeof PELUDINHOS!=='undefined' && PELUDINHOS[idx]){
-      var __pa=PELUDINHOS[idx]||{};
-      DASH_DET[k].tutor=String((typeof pelGet==='function'?pelGet(__pa,'tutor'):'')||__pa.tutor||'').slice(0,60);
-    }
     // VERMÍFUGO (Adriana, 21/set/2026): escolhido o FILHOt, a dose que o peso indica já vem
     // marcada. É RASCUNHO na tela — o mesmo DASH_DET que a pessoa mexe, e nada vai para o
     // banco antes do botão Lançar. Se o peso pede balança, NADA vem marcado.
@@ -61103,7 +61107,6 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     if(DASH_FORA[k]) return dashForaFalta(k);
     var it=dashItem(k); if(!it||!it.campos) return '';
     var d=dashDet(k), falta=[];
-    if(k==='avaliacao' && !dashForaLimpo(d.tutor)) falta.push('Tutor');
     // O horário faz o alarme tocar na TV. No painel ele mora aqui dentro, então é aqui
     // que ele é cobrado — o botão não pode dizer "Lançar" e depois recusar.
     if(it.hora && it.campos && DASH_SEL[k]){
@@ -61279,7 +61282,6 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     var d=dashDet(k), falta=[];
     if(!dashForaLimpo(d.nome)) falta.push('Nome');
     if(!dashForaLimpo(d.raca)) falta.push('Raça');
-    if(k==='avaliacao' && !dashForaLimpo(d.tutor)) falta.push('Tutor');
     // No avulso, o tutor é obrigatório: a diária é dele, e é por nome+tutor que o
     // pré-cadastro se identifica — "nome sozinho não identifica ninguém".
     if(dashForaEhAvulso(k)){
@@ -61375,49 +61377,6 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     return '<button type="button" class="btn" style="margin-top:8px;width:100%;padding:8px 12px;font-size:12.5px;font-weight:800;border:1.5px dashed var(--z-blue);background:var(--z-cream-warm);color:var(--z-blue)"'
       +' onclick="dashForaAbrir(\''+k+'\')">Não está no cadastro? Escrever o nome</button>';
   }
-  function dashAvaliacaoMarcar(campo, marcado){
-    if(['vacina','vermifugo','carrapaticida'].indexOf(campo)<0) return;
-    dashDet('avaliacao')[campo]=!!marcado;
-    try{ renderDash(); }catch(e){} /* silencioso de propósito: redesenho de tela */
-  }
-  function dashAvaliacaoDados(){
-    var d=dashDet('avaliacao');
-    function texto(c, n){ return String(d[c]==null?'':d[c]).replace(/\s+/g,' ').trim().slice(0,n); }
-    return {
-      tutor:texto('tutor',60),
-      vacina:{conferido:d.vacina===true},
-      vermifugo:{conferido:d.vermifugo===true},
-      carrapaticida:{conferido:d.carrapaticida===true},
-      experiencia:texto('experiencia',300),
-      saude:texto('saude',300),
-      observacoes:texto('observacoes',500)
-    };
-  }
-  function dashAvaliacaoPainelHTML(){
-    var d=dashDet('avaliacao'), tutor=String(d.tutor==null?'':d.tutor);
-    var h='<label class="cad-lb" style="margin-top:9px;display:block">Tutor — nome e sobrenome'
-      +(dashForaLimpo(tutor)?'':' <span style="color:var(--crm-critico);font-weight:900">— falta responder</span>')+'</label>'
-      +'<input type="text" class="cad-in" id="dashAT_avaliacao" maxlength="60" autocomplete="off"'
-      +' value="'+escAttr(tutor)+'" oninput="dashSetDetTexto(\'avaliacao\',\'tutor\',this.value)"'
-      +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">'
-      +'<div class="cad-lb" style="margin-top:14px;display:block">Conferido agora</div>'
-      +'<div class="hint" style="margin-top:2px">Marque somente o que foi conferido. Desmarcado fica registrado como não conferido; isto não autoriza aplicação clínica.</div>';
-    [['vacina','Vacina'],['vermifugo','Vermífugo'],['carrapaticida','Carrapaticida']].forEach(function(x){
-      var on=d[x[0]]===true;
-      h+='<button type="button" class="btn" style="margin:6px 6px 0 0;padding:7px 11px;font-size:12.5px;font-weight:800;border:1.5px solid '
-        +(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')
-        +';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'" onclick="dashAvaliacaoMarcar(\''+x[0]+'\','+(!on)+')">'
-        +(on?'✓ ':'')+x[1]+'</button>';
-    });
-    [['experiencia','Experiência anterior em creche (opcional)',300],['saude','Saúde — informação útil para a avaliação (opcional)',300],['observacoes','Observações (opcional)',500]].forEach(function(x){
-      var v=String(d[x[0]]==null?'':d[x[0]]);
-      h+='<label class="cad-lb" style="margin-top:10px;display:block">'+x[1]+'</label>'
-        +'<textarea class="cad-in" id="dashAO_avaliacao_'+x[0]+'" maxlength="'+x[2]+'" rows="2"'
-        +' oninput="dashSetDetTexto(\'avaliacao\',\''+x[0]+'\',this.value)"'
-        +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">'+escAttr(v)+'</textarea>';
-    });
-    return h;
-  }
   function dashForaPainelHTML(it){
     var k=it.k, d=dashDet(k);
     var nome=String(d.nome==null?'':d.nome), raca=String(d.raca==null?'':d.raca);
@@ -61448,7 +61407,6 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
       +'<input type="text" class="cad-in" id="dashFR_'+k+'" maxlength="40" placeholder="Ex.: Spitz" autocomplete="off"'
       +' value="'+escAttr(raca)+'" oninput="dashSetDetTexto(\''+k+'\',\'raca\',this.value)"'
       +' onchange="try{renderDash()}catch(e){}/* silencioso de propósito: redesenho de tela */">';
-    if(k==='avaliacao') h+=dashAvaliacaoPainelHTML();
     // O TUTOR é obrigatório no avulso: a diária é dele, e é por nome+tutor que o
     // pré-cadastro se identifica. O telefone é o que permite ligar quando algo acontece —
     // pedido, nunca exigido, para a fila do balcão não parar por um número que ninguém sabe.
@@ -61645,7 +61603,6 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     // horário e nenhum lugar para escolher (Adriana, 28/ago/2026).
     // Com os horários prontos (02/out/2026).
     if(it.hora) h+=dashHorarioHTML(it.k);
-    if(it.k==='avaliacao') h+=dashAvaliacaoPainelHTML();
     // A data de início da adaptação: é ela que dá o dia 1 da contagem de 45 dias corridos
     // (Adriana, 04/set/2026: "começou 04/09 → 04/10 fez um mês, 19/10 faz 45 dias").
     // Já vem com o dia que está sendo lançado — a recepção só mexe se começou antes.
@@ -62046,12 +62003,6 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     // A CHAVE do FILHOt viaja com o lançamento. `undefined` não existe no Firebase: só entra
     // quando a ficha foi casada com segurança.
     try{ if(!__fora && pDoLanc&&pDoLanc.n){ var _ch=dcKey(pDoLanc.n,pDoLanc.tutor); if(_ch) reg.chave=_ch; } }catch(e){} /* silencioso de propósito: sem chave o lançamento entra igual — a pendência é que passa a depender do texto */
-    // A agenda da Márcia lê estes dados do próprio lançamento. Eles não entram em `valor`,
-    // portanto nome/raça/hora continuam exatamente como antes na planilha e na TV.
-    if(k==='avaliacao'){
-      __det=__det||{};
-      __det.avaliacao129=dashAvaliacaoDados();
-    }
     // `undefined` não existe no Firebase: só entra se houver detalhe mesmo.
     if(__det && Object.keys(__det).length) reg.det=__det;
     // `gravar` devolve a promessa (true = entrou, false = não salvou). Quem chama de fora
@@ -98963,9 +98914,12 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',tentar,{once:true});else tentar();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
+<script src="agenda-marcia/dados.js"></script>
+<script src="agenda-marcia/painel.js"></script>
 <script src="marcia129/painel.js"></script>
 <script src="marcia129/dados.js"></script>
 <script src="marcia129/app.js"></script>
+<script src="agenda-marcia/app.js"></script>
 </body>
 <script>
 (function(raiz, fabrica){
@@ -99885,7 +99839,8 @@ renderAtual=function(){
       '.zt694-pos{margin:16px 0 0;padding:16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--z-cream-warm)}',
       '.zt694-pos>.zt694-aviso:first-child{margin:0;padding:0 0 12px;border-bottom:1px solid var(--line);font-size:15px}',
       '.zt694-esc{margin:0;padding:12px 0 0;border-top:1px solid var(--line)}',
-      '.zt694-esc .zt694-lancamento-hint{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:16px}',      '.zt694 .zt694-acao{margin:8px 0 0}',
+      '.zt694-esc .zt694-lancamento-hint{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:16px}',
+      '.zt694 .zt694-acao{margin:8px 0 0}',
       '.zt694 .zt694-acao:disabled{opacity:.58;cursor:not-allowed}',
       '.zt694-sem{display:flex;align-items:center;justify-content:flex-start;gap:12px;margin:8px 0 0}',
       '.zt694-sem .zt694-quando{flex:1 1 auto;min-width:0}',
