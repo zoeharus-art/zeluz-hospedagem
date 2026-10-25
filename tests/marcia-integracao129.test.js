@@ -116,7 +116,8 @@ function setup(opcoes = {}) {
   const nav = fs.readFileSync(path.join(base, 'auaulandia/navegacao-inicio.js'), 'utf8');
   const appSource = fs.readFileSync(path.join(base, 'auaulandia/marcia129/app.js'), 'utf8');
   ['marcia129/painel.js', 'marcia129/dados.js', 'marcia129/app.js'].forEach(src => {
-    assert(page.includes('<script src="' + src + '"></script>'), src + ' linked');
+    const version = (page.match(/const APP_VERSAO='([^']+)'/) || [])[1];
+    assert(page.includes('<script src="' + src + '?v=' + version + '"></script>'), src + ' linked to the current app version');
     assert(allow.split(/\r?\n/).includes('auaulandia/' + src), src + ' publish-allowlisted');
   });
   assert(page.includes('data-v="gestaomarcia"'));
