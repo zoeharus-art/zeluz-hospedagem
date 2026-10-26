@@ -57,7 +57,8 @@
       var lista=typeof PELUDINHOS!=='undefined'&&Array.isArray(PELUDINHOS)?PELUDINHOS:[];
       return lista.filter(function(p){try{return typeof pelInativo!=='function'||!pelInativo(p);}catch(_){return false;}}).map(function(p,i){
         function dado(k,f){try{return texto(typeof pelGet==='function'?pelGet(p,k):'')||texto(f);}catch(_){return texto(f);}}
-        return {id:String(i),nome:texto(p.n),raca:dado('raca',p.raca||p.r),tutor:dado('tutor',p.tutor)};
+        var telefone='';try{telefone=texto(typeof poTelDoTutor==='function'?poTelDoTutor(p):'');}catch(_){}
+        return {id:String(i),nome:texto(p.n),raca:dado('raca',p.raca||p.r),tutor:dado('tutor',p.tutor),telefone:telefone};
       });
     }
     function espelhar(ctx){

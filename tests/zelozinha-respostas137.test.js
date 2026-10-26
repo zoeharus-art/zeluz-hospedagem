@@ -176,7 +176,7 @@ assert.match(fonte, /Agradecimento ao tutor, pronto para copiar/);
 assert.match(fonte, /Atualizar ficha — pendente/);
 const gravar = fonte.slice(fonte.indexOf('async function gravarRespostas'), fonte.indexOf('async function preMarcar'));
 assert.match(gravar, /estado\.fixosResolver\[dc\]=true/);
-assert.match(gravar, /if\(valor!==['"]autorizar_externo['"]\)abrirRota117/, 'resposta externa não troca a aba sob o cartão');
+assert.doesNotMatch(gravar, /abrirRota117\(/, 'respostas permanecem no cartão sem trocar a aba');
 assert.match(fonte, /if\(reler\)\{estado\.fixosResolver=\{\}/, 'Atualizar envios libera a reclassificação normal');
 assert.match(fonte, /estado\.datasTutor137\[T\.chaveRascunho137\(dc,cycleKey,itemK\)\]/, 'input guarda o rascunho pela identidade estável, sem índice visual');
 assert.match(fonte, /dataId='zt694-tutor-fez-'\+encodeURIComponent\(dataKey\)/, 'id do input deriva da identidade completa do pet, ciclo e cuidado');

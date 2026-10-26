@@ -56,6 +56,21 @@
     if (!m) throw new Error('HORA_INVALIDA');
     return s;
   }
+  function telefoneBR(v, obrigatorio) {
+    if (v == null || (typeof v === 'string' && !texto(v))) {
+      if (obrigatorio) throw new Error('TELEFONE_OBRIGATORIO');
+      return '';
+    }
+    if (typeof v !== 'string') throw new Error('TELEFONE_INVALIDO');
+    var digitos = v.replace(/\D/g, ''), normalizado = '';
+    if ((digitos.length === 12 || digitos.length === 13) && digitos.slice(0, 2) === '55') normalizado = '+' + digitos;
+    else if (digitos.length === 10 || digitos.length === 11) normalizado = '+55' + digitos;
+    if (!normalizado) {
+      if (obrigatorio) throw new Error('TELEFONE_INVALIDO');
+      return '';
+    }
+    return normalizado;
+  }
   function prev(v, codigo) {
     if (!v || typeof v !== 'object' || Array.isArray(v) || typeof v.conferido !== 'boolean') throw new Error(codigo + '_INVALIDO');
     return { conferido: v.conferido };
@@ -63,7 +78,7 @@
   function normalizarCampos(cmd) {
     return {
       nome: campo(cmd.nome, 80, true, 'NOME'), raca: campo(cmd.raca, 80, true, 'RACA'),
-      tutor: campo(cmd.tutor, 140, true, 'TUTOR'), hora: hora(cmd.hora),
+      tutor: campo(cmd.tutor, 140, true, 'TUTOR'), telefone: telefoneBR(cmd.telefone, true), hora: hora(cmd.hora),
       vacina: prev(cmd.vacina, 'VACINA'), vermifugo: prev(cmd.vermifugo, 'VERMIFUGO'),
       carrapaticida: prev(cmd.carrapaticida, 'CARRAPATICIDA'),
       experiencia: campo(cmd.experiencia, 500, false, 'EXPERIENCIA'),
@@ -152,7 +167,7 @@
       /* O protocolo nativo de edição altera o resumo superior. Em 131 ele é canônico;
          o bloco interno não pode ressuscitar nome/raça/hora antigos. */
       nome: marcada ? v.nome : (texto(a.nome) || v.nome), raca: marcada ? v.raca : (texto(a.raca) || v.raca),
-      tutor: texto(a.tutor), hora: marcada ? texto(reg.hora) : (texto(a.hora) || texto(reg.hora)),
+      tutor: texto(a.tutor), telefone: telefoneBR(a.telefone, false), hora: marcada ? texto(reg.hora) : (texto(a.hora) || texto(reg.hora)),
       vacina: { conferido: !!objeto(a.vacina).conferido }, vermifugo: { conferido: !!objeto(a.vermifugo).conferido },
       carrapaticida: { conferido: !!objeto(a.carrapaticida).conferido },
       experiencia: texto(a.experiencia), saude: texto(a.saude), observacoes: texto(a.observacoes),
@@ -165,7 +180,7 @@
   function serialCampos(d) {
     var canc = objeto(d.cancelamento);
     return JSON.stringify({
-      nome: d.nome, raca: d.raca, tutor: d.tutor, hora: d.hora,
+      nome: d.nome, raca: d.raca, tutor: d.tutor, telefone: d.telefone, hora: d.hora,
       vacina: !!d.vacina.conferido, vermifugo: !!d.vermifugo.conferido, carrapaticida: !!d.carrapaticida.conferido,
       experiencia: d.experiencia, saude: d.saude, observacoes: d.observacoes,
       pagamento: { recebido: d.pagamento.recebido, valorPagoCentavos: d.pagamento.valorPagoCentavos,
@@ -181,7 +196,7 @@
   function itemDeRegistro(dia, id, reg) {
     var d = dados131(reg), estadoProjecao = texto(objeto(d.projecao).estado);
     return {
-      id: texto(id), dia: dia, hora: d.hora, nome: d.nome, raca: d.raca, tutor: d.tutor,
+      id: texto(id), dia: dia, hora: d.hora, nome: d.nome, raca: d.raca, tutor: d.tutor, telefone: d.telefone,
       vacina: d.vacina, vermifugo: d.vermifugo, carrapaticida: d.carrapaticida,
       experiencia: d.experiencia, saude: d.saude, observacoes: d.observacoes,
       pagamento: { recebido: d.pagamento.recebido, valorCent: d.pagamento.valorPagoCentavos, quem: d.pagamento.quem, quando: d.pagamento.quando },
@@ -410,7 +425,7 @@
           if (resumoAlterado && objeto(aAtual.projecao).estado === 'pendente') { motivo = 'PROJECAO_PENDENTE'; return; }
           a = {
             versao: 133, agendaMarcia: true, criacaoToken: texto(aAtual.criacaoToken) || tokenSalvo,
-            nome: campos.nome, raca: campos.raca, tutor: campos.tutor, hora: campos.hora,
+            nome: campos.nome, raca: campos.raca, tutor: campos.tutor, telefone: campos.telefone, hora: campos.hora,
             vacina: campos.vacina, vermifugo: campos.vermifugo, carrapaticida: campos.carrapaticida,
             experiencia: campos.experiencia, saude: campos.saude, observacoes: campos.observacoes,
             pagamento: pg, cancelamento: copiar(aAtual.cancelamento), projecao: copiar(aAtual.projecao),
@@ -460,7 +475,7 @@
       })).then(function (res) {
         if (!res || res.committed !== true) throw new Error(motivo || 'AGENDAMENTO_DESATUALIZADO');
         var reg = res.snapshot && typeof res.snapshot.val === 'function' ? objeto(res.snapshot.val()) : {}, item = itemDeRegistro(dia, id, reg), dConfirmado = dados131(reg);
-        if (!dConfirmado.agendaMarcia || (mutacaoCadastro && (item.nome !== campos.nome || item.raca !== campos.raca || item.hora !== campos.hora))) throw new Error('CONFIRMACAO_INVALIDA');
+        if (!dConfirmado.agendaMarcia || (mutacaoCadastro && (item.nome !== campos.nome || item.raca !== campos.raca || item.telefone !== campos.telefone || item.hora !== campos.hora))) throw new Error('CONFIRMACAO_INVALIDA');
         if (!cache[dia]) cache[dia] = {}; cache[dia][id] = copiar(reg);
         function ack(ok, itemFinal) {
           var final = itemFinal || item;
@@ -496,7 +511,7 @@
       return salvar({
         acao: 'editar', dia: dia, id: id, expectedRevision: cmd.expectedRevision, fingerprint: cmd.fingerprint || cmd.base || fingerprintRegistro(reg),
         nome: atual.nome, raca: atual.raca, hora: atual.hora,
-        tutor: cmd.tutor, vacina: cmd.vacina, vermifugo: cmd.vermifugo, carrapaticida: cmd.carrapaticida,
+        tutor: cmd.tutor, telefone: atual.telefone, vacina: cmd.vacina, vermifugo: cmd.vermifugo, carrapaticida: cmd.carrapaticida,
         experiencia: cmd.experiencia, saude: cmd.saude, observacoes: cmd.observacoes
       });
     }
@@ -504,5 +519,5 @@
       salvarConferencia: salvarConferencia, confirmarProjecao: confirmarProjecao };
   }
 
-  return { criar: criar, PRECO_CENTAVOS: PRECO_CENTAVOS, publicavel: publicavel, ehAgenda: ehAgenda };
+  return { criar: criar, PRECO_CENTAVOS: PRECO_CENTAVOS, publicavel: publicavel, ehAgenda: ehAgenda, telefoneBR: telefoneBR };
 });

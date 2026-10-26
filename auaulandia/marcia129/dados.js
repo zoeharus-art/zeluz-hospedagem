@@ -307,7 +307,7 @@
       var v = separarValor(it.reg), conf = conferenciaEfetiva(deps, dia, p, it.reg, conferencias[it.id], fonteConferenciaPronta);
       return {
         id: 'avaliacao-' + hash(it.id), codigoOrigem: it.id, hora: texto(it.reg.hora),
-        nome: v.nome, raca: v.raca, tutor: conf.tutor,
+        nome: v.nome, raca: v.raca, tutor: conf.tutor, telefone: texto(objeto(objeto(it.reg.det).avaliacao129).telefone),
         vacina: prevAgenda(conf.vacina), vermifugo: prevAgenda(conf.vermifugo), carrapaticida: prevAgenda(conf.carrapaticida),
         observacoes: observacoesConferencia(p, conf), conferencia: conf,
         agendaMarcia: agendaMarcia131(it.reg), pagamento: pagamentoAgenda131(it.reg), _ordem: ordem

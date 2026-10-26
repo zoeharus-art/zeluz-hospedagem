@@ -16,3 +16,6 @@
 .am131__check input,.am131__pagamento input{accent-color:var(--z-blue)}
 
 .am131__check{min-width:0}.am131__check span{min-width:0;overflow-wrap:anywhere}
+
+.am131__contato{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:10px 0;padding:10px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--z-white)}.am131__telefone-rotulo{font-weight:700}.am131__telefone{font-weight:800;color:var(--z-blue-deep);overflow-wrap:anywhere}.am131__whatsapp{min-height:44px;display:inline-flex;align-items:center;color:var(--z-blue);text-decoration:underline;text-underline-offset:3px}.am131__copiar{min-height:44px;margin-left:auto;border:1px solid var(--z-blue-wash-15);color:var(--z-blue)}.am131__telefone-aviso{margin:10px 0;padding:9px 10px;border-radius:var(--radius-sm);background:var(--z-cream-warm);color:var(--muted);font-weight:700}.am131__telefone-status,.am131__telefone-fallback{flex-basis:100%;margin:6px 0 0;color:var(--crm-ok-text);font-weight:700}.am131__telefone-fallback{color:var(--crm-atencao-text)}.am131__telefone-fallback .cad-in{margin-top:5px}
+@media(max-width:440px){.am131__contato{align-items:stretch}.am131__telefone-rotulo,.am131__telefone{width:100%}.am131__whatsapp,.am131__copiar{justify-content:center;flex:1 1 120px;margin-left:0}}
