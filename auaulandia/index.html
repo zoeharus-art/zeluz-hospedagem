@@ -44378,6 +44378,19 @@ return { criar };
     if(typeof v==='string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return fmtBR(v);
     return corrValorTexto(v);
   }
+  // 26/out/2026 (Adriana): "era para ter dado a segunda dose, e foi dada [...] na guia Prevenção está dizendo
+  // que segunda dose sem data. Ela já era a segunda dose. Precisa mostrar quando será a próxima." A linha da
+  // 2ª dose mostrava «2ª dose: sem data → 26/10» — o «sem data» era o ANTES (a 2ª ainda não existia) e o próximo
+  // vermífugo, que é o que importa, não aparecia. Agora: a data da 2ª dada e o próximo vermífugo, antes → depois.
+  // Devolve '' quando a linha não é a de uma 2ª dose gravada (vale a linha de sempre).
+  function prevCorrDose2Texto(L){
+    L=L||{};
+    var d=L.depois||{}, a=L.antes||{};
+    if(String(L.k||'')!=='verm_dose2_p' || !/^\d{4}-\d{2}-\d{2}$/.test(String(d.verm_dose2_t||''))) return '';
+    var t='2ª dose dada em '+fmtBR(d.verm_dose2_t);
+    if(d.verm_p) t+=' · próximo vermífugo: '+(a.verm_p&&a.verm_p!==d.verm_p?(prevCorrValorTexto(a.verm_p)+' → '):'')+prevCorrValorTexto(d.verm_p);
+    return t;
+  }
   // PURA (AC5.5): algum campo da linha mudou depois dela? Devolve {c, valor} do primeiro que mudou, ou null.
   function prevCorrMudouDepois(L, ex){
     L=L||{}; ex=ex||{};
@@ -44409,7 +44422,8 @@ return { criar };
       +'<div class="hint" style="margin-top:2px">O que foi gravado hoje nas datas de prevenção — pelo painel, pela Prevenção e pelo «Lance aqui mesmo». Errou o FILHOt ou a data? Toque em <strong>Desfazer</strong> (a data volta a ser a de antes) ou em <strong>Corrigir</strong>.</div>';
     mostra.forEach(function(x){
       var c=prevCorrCampoPrincipal(x), recente=(agora-(Number(x.ts)||0))<PREV_CORR_DESTAQUE, des=x.desfeito;
-      var linha=esc(x.pet||'')+' — '+esc(prevCorrItemNome(x.k))+': '+esc(prevCorrValorTexto((x.antes||{})[c]))+' → '+esc(prevCorrValorTexto((x.depois||{})[c]));
+      var d2t=prevCorrDose2Texto(x);
+      var linha=esc(x.pet||'')+' — '+(d2t?('Vermífugo: '+esc(d2t)):(esc(prevCorrItemNome(x.k))+': '+esc(prevCorrValorTexto((x.antes||{})[c]))+' → '+esc(prevCorrValorTexto((x.depois||{})[c]))));
       h+='<div style="margin-top:9px;padding:9px 11px;border-radius:12px;border:1.5px solid '+(recente&&!des?'var(--z-gold)':'var(--line)')+';background:'+(recente&&!des?'var(--z-cream-warm)':'transparent')+'">'
         +'<div style="font-size:14px;font-weight:800;color:var(--z-blue)'+(des?';text-decoration:line-through;opacity:.75':'')+'">'+linha+'</div>'
         +'<div class="hint" style="margin-top:2px">'+esc(PREV_CORR_COMO[x.como]||x.como||'')+' · '+esc(x.quem||'-')+', às '+esc(corrHora(x.ts))+(x.tela?(' · '+esc(x.tela)):'')+'</div>';
@@ -44457,7 +44471,8 @@ return { criar };
     return corrAbrir({acao:'reabrir', titulo:'Desfazer a data gravada hoje', tituloOk:'Desfeito', botao:'Desfazer', tela:prevCorrigeTelaNome(tela||prevCorrTelaAtiva()),
       oque:'a data de '+prevCorrItemNome(L.k)+' de '+(L.pet||'')+' gravada hoje às '+corrHora(L.ts)+' ('+(PREV_CORR_COMO[L.como]||L.como||'')+')',
       original:{caminho:'daycare/prevencao-correcoes/'+PREV_CORR_DIA+'/'+id, id:id},
-      estado:'gravada hoje: '+prevCorrValorTexto((L.depois||{})[c]), paraEstado:'a de antes: '+prevCorrValorTexto((L.antes||{})[c]),
+      estado:'gravada hoje: '+(prevCorrDose2Texto(L)||prevCorrValorTexto((L.depois||{})[c])),
+      paraEstado:'a de antes: '+(prevCorrDose2Texto(L)?('2ª dose não registrada'+((L.antes||{}).verm_p?(' · próximo vermífugo: '+prevCorrValorTexto(L.antes.verm_p)):'')):prevCorrValorTexto((L.antes||{})[c])),
       info:info, volta:['Se esta data fechou a conversa com o tutor em Vencimentos, a conversa reabre sozinha.'],
       nivel:'propria', capacidade:manual?'prevencao-vencimento-manual':'prevencao-lancar-na-tela', assinaNome:String(L.quem||''),
       gravar:function(reg){ return prevCorrDesfazerGravar(id, reg, tela); }});
