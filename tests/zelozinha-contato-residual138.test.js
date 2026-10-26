@@ -23,7 +23,8 @@ assert.equal(Core.validarAtualizacaoFicha138(Object.assign({},selecaoFicha,{data
 const painel={versao:81,detalhesEnvioVersao:104,dia:DIA,grupos:[{groupKey:'envio-verm',statusPainel:'enviado_confirmado',petId,tutorId}]};
 const data=new Map([['daycare/cadastro/'+pk,{n:'FILHOt Sintético',tutor:'Família Sintética'}],['daycare/checkin-corpo/'+DIA+'/'+dk,{tipo:'entrada',quem:'Pessoa Sintética',fim:1760000000000}]]),writes=[];
 const cp=v=>v==null?v:JSON.parse(JSON.stringify(v));
-const db={ref(p){return{once:async()=>({val:()=>data.has(p)?cp(data.get(p)):null}),transaction:async fn=>{const old=data.has(p)?cp(data.get(p)):null,next=fn(cp(old));if(next===undefined)return{committed:false,snapshot:{val:()=>cp(old)}};data.set(p,cp(next));writes.push(p);return{committed:true,snapshot:{val:()=>cp(next)}};}};}};
+function readFake(p){if(data.has(p))return cp(data.get(p));const out={};let found=false;for(const [k,v] of data){if(!k.startsWith(p+'/'))continue;const parts=k.slice(p.length+1).split('/');let o=out;parts.forEach((part,i)=>{if(i===parts.length-1)o[part]=cp(v);else o=o[part]||(o[part]={});});found=true;}return found?out:null;}
+const db={ref(p){return{once:async()=>({val:()=>readFake(p)}),transaction:async fn=>{const old=data.has(p)?cp(data.get(p)):null,next=fn(cp(old));if(next===undefined)return{committed:false,snapshot:{val:()=>cp(old)}};data.set(p,cp(next));writes.push(p);return{committed:true,snapshot:{val:()=>cp(next)}};}};}};
 let actor={id:'pessoa-138',nome:'Pessoa Sintética',role:'recepcao'},painelDisponivel=true;
 const rows=[{chave:dk,p:{n:'FILHOt Sintético',tutor:'Família Sintética'}}];
 const api=Contatos.criar({db,dia:()=>DIA,linhasHoje:()=>rows,pelKey:()=>pk,dcKey:()=>dk,pelExtra:()=>({}),
@@ -35,6 +36,7 @@ const api=Contatos.criar({db,dia:()=>DIA,linhasHoje:()=>rows,pelKey:()=>pk,dcKey
   const card=(await api.listar(true)).itens[0];assert.equal(card.estado,'envio_aceito');assert.deepEqual(card.cycleKeys,[verm,ecto,vac]);
   const ack=await api.marcar(card,{cycleKeys:[ecto],itemKs:['ecto_p']});assert.equal(ack.ok,true);assert.deepEqual(ack.registro.cycleKeys,[ecto]);assert.deepEqual(ack.registro.itemKs,['ecto_p']);assert.equal(writes.length,1);
   const recarregado=(await api.listar(true)).itens[0],again=await api.marcar(recarregado,{cycleKeys:[ecto],itemKs:['ecto_p']});assert.equal(again.idempotente,true);assert.equal(writes.length,1,'releitura e correção encontram o mesmo escopo residual sem regravar');
+  assert.ok(recarregado.registroRespostas139.contatosHumanos89,'a linha recebe o registro confirmado daquele FILHOt e dia');
   const ackVac=await api.marcar(recarregado,{cycleKeys:[vac],itemKs:['vac_v10_p']});assert.equal(ackVac.ok,true);assert.notEqual(ackVac.fonteContato.contatoId,ack.fonteContato.contatoId);assert.equal(writes.length,2,'dois resíduos ficam em contatos independentes');
   await assert.rejects(()=>api.marcar(card,{cycleKeys:[verm],itemKs:['verm_p']}),/Este cuidado já teve contato hoje/);
   await assert.rejects(()=>api.marcar(card,{cycleKeys:[ecto],itemKs:['verm_p']}),/mudou|não é único/);

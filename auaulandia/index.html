@@ -30249,7 +30249,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-26-01';
+  const APP_VERSAO='2026-10-26-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -98423,7 +98423,7 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
      function decidir(entrada){entrada=entrada||{};var groupKey=texto(entrada.groupKey),petId=texto(entrada.petId),resposta=entrada.resposta||{},captura;
        var contatoId=texto(entrada.contatoId),fonteContato=entrada.fonteContato||null,lerFontes=function(){return Promise.all([contatoId?Promise.resolve(null):p.lerPainel(),p.resolverAtual({groupKey:groupKey,petId:petId,contatoId:contatoId,fonteContato:fonteContato,resposta:resposta}),p.sessaoHumana()]);},mesmaFonte=function(a,b){return (contatoId?true:mesmoGrupo(a[0],b[0],groupKey))&&mesmoAlvo(a[1],b[1])&&mesmaSessao(a[2],b[2]);},args=function(v,registro,hash){return{painel:v[0],groupKey:groupKey,petId:petId,contatoId:contatoId,destino:v[1],sessao:v[2],registro:registro||{},resposta:resposta,agora:captura.agora,textoShaCalculado:hash,conferirNaResposta:true};};
       return lerFontes().then(function(v){captura={painel:v[0],destino:v[1],sessao:v[2],agora:p.agora(),fontes:v};if(!mesmaSessao(captura.sessao,captura.sessao)||!captura.destino||captura.destino.confirmado!==true)return falha('fontes ou sessão humana não confirmadas');var g=contatoId?null:grupo(captura.painel,groupKey),hash='';if(!contatoId){if(!g)return falha('mensagem alvo não encontrada');hash=p.assinarTexto(g.textoEnviado);if(texto(hash).toLowerCase()!==texto(g.textoSha).toLowerCase())return falha('texto visível diverge do hash persistido');}var path=raiz+'/'+captura.destino.dia+'/'+captura.destino.dcKey,ref=p.db.ref(path),dentro=null;
-        return lerFontes().then(function(antes){if(!mesmaFonte(captura.fontes,antes))return falha('fontes mudaram antes da gravação');return transacaoComOuvinte(ref,function(atual){dentro=Core.decidir(args(antes,atual,hash));return dentro.ok&&dentro.alterou?dentro.registro:undefined;}).then(function(tx){if(tx===SEM_PRIMEIRO_VALOR)return falha('a conexão não respondeu em 5 segundos; nada foi salvo');if(!tx||!tx.snapshot||typeof tx.snapshot.val!=='function')return falha('transação sem snapshot',true);return lerFontes().then(function(depois){if(!mesmaFonte(captura.fontes,depois))return falha('fontes mudaram durante a gravação; repita o mesmo pedido para conferir',tx.committed===true);var final=Core.decidir(args(depois,tx.snapshot.val(),hash));if(!final.ok)return final;if(final.status==='ja_registrado')return final;return falha('transação não confirmou a resposta',tx.committed===true);});});});
+        return lerFontes().then(function(antes){if(!mesmaFonte(captura.fontes,antes))return falha('fontes mudaram antes da gravação');return transacaoComOuvinte(ref,function(atual){dentro=Core.decidir(args(antes,atual,hash));return dentro.ok&&dentro.alterou?dentro.registro:undefined;}).then(function(tx){if(tx===SEM_PRIMEIRO_VALOR)return falha('a conexão não respondeu em 5 segundos; nada foi salvo');if(!tx||!tx.snapshot||typeof tx.snapshot.val!=='function')return falha('transação sem snapshot',true);return lerFontes().then(function(depois){if(!mesmaFonte(captura.fontes,depois))return falha('fontes mudaram durante a gravação; repita o mesmo pedido para conferir',tx.committed===true);var final=Core.decidir(args(depois,tx.snapshot.val(),hash));if(!final.ok)return final;if(final.status==='ja_registrado')return Object.assign({},final,{alvoConfirmado88:{dia:captura.destino.dia,dcKey:captura.destino.dcKey,pelKey:captura.destino.pelKey,petId:captura.destino.petId,tutorId:captura.destino.tutorId}});return falha('transação não confirmou a resposta',tx.committed===true);});});});
       }).catch(function(){return falha('falha ao confirmar fontes da resposta');});
     }
     return{decidir:decidir,raiz:raiz};
@@ -98606,7 +98606,19 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   function resultadosIntencoes(resultado){return resultado&&Array.isArray(resultado.intencoes)?resultado.intencoes:[];}
   function decisaoDe(v){return v==='autorizar_loja'?['autorizar','loja']:v==='autorizar_bolsa'?['autorizar','bolsa']:v==='autorizar_externo'?['autorizar','externo']:v==='recusar'?['recusar',null]:['aguardar',null];}
   async function idResposta(groupKey,itens,contatoId,petId){var s=sessao(),canon=JSON.stringify([88,groupKey,t(contatoId),t(petId),s.id,itens.slice().sort(function(a,b){return(a.cycleKey+'|'+a.itemK).localeCompare(b.cycleKey+'|'+b.itemK);})]);return'r88_'+(await sha(canon)).slice(0,40);}
-  async function registrar(groupKey,itens,op){op=op||{};var fonte=op.fonteContato||null,contatoId=t(op.contatoId||(fonte&&fonte.contatoId)),petId=t(op.petId),rid=await idResposta(groupKey,itens,contatoId,petId),entrada={groupKey:groupKey,petId:petId,resposta:{id:rid,itens:itens}};if(contatoId){entrada.contatoId=contatoId;entrada.fonteContato=fonte;}var r=await repo().decidir(entrada);if(!r||!r.ok)return r||{ok:false,motivo:'resposta não registrada'};var d=contatoId?await resolverContatoHumano(fonte,entrada):(estado.cache&&estado.cache[groupKey]);if(r.registro&&d&&d.dia&&d.dcKey&&typeof VENC_PEND!=='undefined'){VENC_PEND[d.dia]=VENC_PEND[d.dia]||{};VENC_PEND[d.dia][d.dcKey]=cp(r.registro);}var tarefa=await materializar(r,entrada);if(d&&d.dia&&d.dcKey&&typeof VENC_PEND!=='undefined')try{var sn=await DB.ref('daycare/vencimentos/'+d.dia+'/'+d.dcKey).once('value'),fresco=snap(sn);if(fresco){VENC_PEND[d.dia]=VENC_PEND[d.dia]||{};VENC_PEND[d.dia][d.dcKey]=cp(fresco);}}catch(_){}if(op.semAtualizarPainel!==true&&typeof zPainel44AtualizarDespacho80==='function')try{zPainel44AtualizarDespacho80();}catch(_){}return Object.assign({},r,{tarefa:tarefa,aviso:tarefa&&tarefa.ok?(tarefa.aviso||r.aviso||'Resposta registrada.'):(tarefa&&tarefa.aviso)||'Resposta registrada; a tarefa ficou pendente de recuperação.'});}
+  async function registrar(groupKey,itens,op){
+    op=op||{};var fonte=op.fonteContato||null,contatoId=t(op.contatoId||(fonte&&fonte.contatoId)),petId=t(op.petId),rid=await idResposta(groupKey,itens,contatoId,petId),entrada={groupKey:groupKey,petId:petId,resposta:{id:rid,itens:itens}};
+    if(contatoId){entrada.contatoId=contatoId;entrada.fonteContato=fonte;}
+    var r=await repo().decidir(entrada);if(!r||!r.ok)return r||{ok:false,motivo:'resposta não registrada'};
+    var d=r.alvoConfirmado88||(contatoId?await resolverContatoHumano(fonte,entrada):await resolverGrupo(entrada));
+    /* O ACK pontual não significa que a fonte histórica inteira foi carregada. */
+    if(r.registro&&d&&d.dia&&d.dcKey&&typeof VENC_PEND!=='undefined'&&VENC_PEND&&typeof VENC_PEND==='object'){VENC_PEND[d.dia]=VENC_PEND[d.dia]||{};VENC_PEND[d.dia][d.dcKey]=cp(r.registro);}
+    var tarefa=await materializar(r,entrada);
+    if(d&&d.dia&&d.dcKey)try{var sn=await DB.ref('daycare/vencimentos/'+d.dia+'/'+d.dcKey).once('value'),fresco=snap(sn);if(fresco){r=Object.assign({},r,{registro:cp(fresco)});if(typeof VENC_PEND!=='undefined'&&VENC_PEND&&typeof VENC_PEND==='object'){VENC_PEND[d.dia]=VENC_PEND[d.dia]||{};VENC_PEND[d.dia][d.dcKey]=cp(fresco);}}}catch(_){}
+    if(op.semAtualizarPainel!==true&&typeof zPainel44AtualizarDespacho80==='function')try{zPainel44AtualizarDespacho80();}catch(_){}
+    return Object.assign({},r,{tarefa:tarefa,aviso:tarefa&&tarefa.ok?(tarefa.aviso||r.aviso||'Resposta registrada.'):(tarefa&&tarefa.aviso)||'Resposta registrada; a tarefa ficou pendente de recuperação.'});
+  }
+
   function no(tag,cls,txt){var e=root.document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
   function retornoDas1330(dia){
     try{var p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),x={};p.forEach(function(v){x[v.type]=v.value;});var hoje=x.year+'-'+x.month+'-'+x.day;return dia<hoje||(dia===hoje&&Number(x.hour)*60+Number(x.minute)>=810);}catch(_){return false;}
@@ -99744,9 +99756,9 @@ renderAtual=function(){
       var groupKey=JSON.stringify(['contato_humano89',petId,tutorId,dia]);
       var escopoSha=await sha(JSON.stringify([89,'contato_humano',dia,dk,pk,petId,tutorId,cycleKeys.map(function(k,i){return[k,itemKs[i]];})]));
       var contatoId='ch89_'+(await sha(JSON.stringify([groupKey,escopoSha]))).slice(0,32),key=b64key(contatoId);
-      var existente=await ler('daycare/vencimentos/'+dia+'/'+dk+'/contatosHumanos89/'+key);
+      var registroRespostas139=await ler('daycare/vencimentos/'+dia+'/'+dk),existente=registroRespostas139&&registroRespostas139.contatosHumanos89&&registroRespostas139.contatosHumanos89[key];
       var motivoContato=modoHumano(cadastro.comunicacaoZelozinha)?'Contato humano conforme configuração da ficha.':'Envio automático ainda não registrado.';
-      var base={row:row,cadastro:cadastro,dia:dia,dcKey:dk,pelKey:pk,petId:petId,tutorId:tutorId,ciclos:ciclos,cycleKeys:cycleKeys,itemKs:itemKs,groupKey:groupKey,escopoSha:escopoSha,contatoId:contatoId,key:key,motivoContato:motivoContato,identidadeFonte:identidade&&identidade.fonte||'',identidadeAmbigua:identidadeAmbigua};
+      var base={row:row,cadastro:cadastro,dia:dia,dcKey:dk,pelKey:pk,petId:petId,tutorId:tutorId,ciclos:ciclos,cycleKeys:cycleKeys,itemKs:itemKs,groupKey:groupKey,escopoSha:escopoSha,contatoId:contatoId,key:key,registroRespostas139:registroRespostas139||{},motivoContato:motivoContato,identidadeFonte:identidade&&identidade.fonte||'',identidadeAmbigua:identidadeAmbigua};
       if(identidadeAmbigua)return Object.assign({estado:'identidade_ambigua'},base);
       var envios=await enviosCorrespondentes(base,painel);if(envios===null){envios=[];base.envioNaoConfirmado=true;}
       if(envios.length)return Object.assign({estado:'envio_aceito',envios:envios,envioNaoResolvido:envios.some(function(x){return x.relacao==='revisao';})},base);
@@ -99852,7 +99864,7 @@ renderAtual=function(){
   /* «hh:mm» de São Paulo; vazio quando o instante não existe. Nunca usa a hora do aparelho como se fosse a do envio. */
   function hora(valor){
     var n=typeof valor==='number'?valor:Date.parse(String(valor==null?'':valor));
-    if(!Number.isFinite(n))return '';
+    if(!Number.isFinite(n)||n<=0)return '';
     var p=partesSP(n);return p?(p.hh+':'+p.mm):'';
   }
   /* AC1.3: `verificadoEm` do grupo é a hora em que a entrega foi verificada (não a do envio): o rótulo diz isso. */
@@ -99994,7 +100006,7 @@ renderAtual=function(){
   /* Fila 117: projeção visual pura. Cada dcKey ocupa exatamente uma fila; nenhum campo
      deste resultado significa aplicação, entrega, cobrança ou confirmação no Snoopy. */
   function cuidadoPendente117(c){
-    return !c||c.bloqueado===true||c.respostaSalva!==true||c.tarefaOrfa===true||(c.linhaObrigatoria===true&&c.linhaConfirmada!==true);
+    return !c||c.bloqueado===true||c.respostaSalva!==true||c.tarefaOrfa===true||c.cuidadoEmAberto===true||(c.linhaObrigatoria===true&&c.linhaConfirmada!==true);
   }
   function classificarFilas117(pets,fixosResolver){
     var ordem=[],porDc={};
@@ -100022,7 +100034,7 @@ renderAtual=function(){
 (function(){
   if(window.__zelozinhaContatos89Instalado)return;window.__zelozinhaContatos89Instalado=true;
   var T=window.ZelozinhaTela94;
-  var estado={linhas:{},api:null,alvos:[],seq:0,itens:{},grupos:[],ordemDepois:false,inFlight:null,projecao:null,resultado:null,dia:'',vet:null,sujo:true,projEm:'',salvando:{},avisos:{},msgs:{},copiaSt:{},agora94:{},presenca:{},abertos:{},fixosResolver:{},datasTutor137:{},rascunhoFicha138:null,diaCarregado:'',diaLendo:null,snoopyEstado:'novo',recarregarDia:true,obs:null,anexando:false,timer:null,scrollY:null,erro:''};
+  var estado={linhas:{},api:null,alvos:[],seq:0,itens:{},grupos:[],ordemDepois:false,inFlight:null,projecao:null,resultado:null,dia:'',vet:null,sujo:true,projEm:'',salvando:{},avisos:{},msgs:{},copiaSt:{},agora94:{},presenca:{},abertos:{},fixosResolver:{},datasTutor137:{},rascunhoFicha138:null,registros139:{},diaCarregado:'',diaLendo:null,snoopyEstado:'novo',recarregarDia:true,obs:null,anexando:false,timer:null,scrollY:null,erro:''};
   function instalarEstilo(){
     if(!document||!document.createElement||!document.head||document.getElementById&&document.getElementById('zelozinha-contatos89-style'))return;
     var st=document.createElement('style');st.id='zelozinha-contatos89-style';
@@ -100103,7 +100115,7 @@ renderAtual=function(){
   function nomePet(c){return txt(c.row&&c.row.p&&c.row.p.n)||'Peludinho';}
   function telDe(c){try{return typeof window.poTelDoTutor==='function'?txt(window.poTelDoTutor(c.row&&c.row.p)):'';}catch(_){return '';}}
   function codificar(cy){return window.ZeluzResposta88.codificarChave(cy.cycleKey);}
-  function registroDe(c){try{return VENC_PEND&&VENC_PEND[c.dia]&&VENC_PEND[c.dia][c.dcKey]||null;}catch(_){return null;}}
+  function registroDe(c){var parcial=estado.registros139[c.dcKey];if(parcial&&parcial.dia===c.dia)return parcial.registro;try{return VENC_PEND&&VENC_PEND[c.dia]&&VENC_PEND[c.dia][c.dcKey]||null;}catch(_){return null;}}
   function respostaAtual(c,cy){var reg=registroDe(c),rv=null;try{rv=reg&&reg.respostasEscopo49&&reg.respostasEscopo49.porCiclo&&reg.respostasEscopo49.porCiclo[codificar(cy)];}catch(_){rv=null;}return rv&&rv.cycleKey===cy.cycleKey&&rv.itemK===cy.itemK?rv:null;}
   function tarefaDe(c,cy){var reg=registroDe(c),tv=null;try{tv=reg&&reg.respostasEscopo49&&reg.respostasEscopo49.tarefas57&&reg.respostasEscopo49.tarefas57[codificar(cy)];}catch(_){tv=null;}return tv&&typeof tv==='object'?tv:null;}
   function valorAtual(rv){if(!rv)return'';if(rv.decisao==='aguardar')return'aguardar';if(rv.decisao==='autorizar'&&rv.origem==='bolsa')return'autorizar_bolsa';if(rv.decisao==='autorizar'&&rv.origem==='loja')return'autorizar_loja';if(rv.decisao==='autorizar'&&rv.origem==='externo')return'autorizar_externo';return'';}
@@ -100127,7 +100139,7 @@ renderAtual=function(){
     var l=v.tarefa&&v.tarefa.linha,linha=l&&l.id&&l.item?linhaDoDia(c,l.item,l.id):null,linhaObrigatoria=daLinha(v.valor);
     var linhaConfirmada=linhaObrigatoria&&!!l&&T.linhaDoLancamentoConfirmada({contato:c,ciclo:v.cy,tarefa:v.tarefa,resposta:v.atual,linha:linha,item:l.item,id:l.id,groupKey:v.grupo});
     var tarefaOrfa=!linhaObrigatoria&&!!v.valor&&!!v.tarefa&&(v.tarefa.estado==='criada'||v.tarefa.estado==='reservada');
-    return{respostaSalva:!!v.atual&&!!v.valor,linhaObrigatoria:linhaObrigatoria,linhaConfirmada:linhaConfirmada,bloqueado:v.bloqueado===true,tarefaOrfa:tarefaOrfa};
+    return{respostaSalva:!!v.atual&&!!v.valor,linhaObrigatoria:linhaObrigatoria,linhaConfirmada:linhaConfirmada,bloqueado:v.bloqueado===true,tarefaOrfa:tarefaOrfa,cuidadoEmAberto:!!v.valor&&(v.valor==='aguardar'||v.valor==='autorizar_externo'||(linhaObrigatoria&&v.tstate.id!=='realizado'))};
   }
   function classificacao117(){
     var vistos={},pets=[];
@@ -100324,7 +100336,7 @@ renderAtual=function(){
     var textos=caixasDe(c,vms),semTel=!telDe(c);
     if(!textos.length)return '';
     var caixas=textos.map(function(x,i){
-      return '<div class="zt694-copia" data-zt694-copia="'+i+'" data-zt694-tipo="'+x.tipo+'"><p class="zt694-copia-tit">'+esc(x.titulo)+'</p><div class="zt694-texto" data-zt694-texto tabindex="0">'+esc(x.texto)+'</div><div class="zt694-copia-bt"><button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="copiar">Copiar mensagem</button><button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="whats-texto"'+(semTel?' disabled':'')+'>Abrir no WhatsApp</button></div><span class="zt694-sub" aria-live="polite" data-zt694-copia-st>'+esc(copiaMsg(c,i,x.texto))+'</span></div>';
+      return '<div class="zt694-copia" data-zt694-copia="'+i+'" data-zt694-tipo="'+x.tipo+'"><p class="zt694-copia-tit">'+esc(x.titulo)+'</p><div class="zt694-texto" data-zt694-texto tabindex="0">'+esc(x.texto)+'</div><div class="zt694-copia-bt"><button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="copiar">Copiar mensagem</button></div><span class="zt694-sub" aria-live="polite" data-zt694-copia-st>'+esc(copiaMsg(c,i,x.texto))+'</span></div>';
     }).join('');
     return caixas+'<p class="zt694-sub">'+(semTel?'Sem telefone na ficha: use Copiar. ':'')+'Nenhuma aplicação ou cobrança foi criada.</p>';
   }
@@ -100377,7 +100389,7 @@ renderAtual=function(){
   }
   function algumaEscolha(){return Object.keys(estado.itens).some(function(dc){var c=estado.itens[dc];return vmsDe(c).some(function(v){return daLinha(v.valor)&&T.camposDoCuidado(v.cy.itemK).length&&v.tstate.id!=='nao-criada';});});}
   function descs(){return (estado.resultado&&estado.resultado.itens||[]).map(function(c){return descPet(estado.itens[c.dcKey]||c);});}
-  function topoTexto(){var n=classificacao117().paraResolver.length;return n+' '+(n===1?'peludinho para resolver':'peludinhos para resolver')+' · Falta responder ou confirmar o encaminhamento.';}
+  function topoTexto(){var n=classificacao117().paraResolver.length;return n+' '+(n===1?'peludinho para resolver':'peludinhos para resolver')+' · Falta responder ou acompanhar o cuidado.';}
   function montarMarkup(fila){
     var r=estado.resultado;
     if(estado.erro)return '<p class="pm-sub">'+esc(estado.erro)+'</p><button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="ler-de-novo">Tentar de novo</button>';
@@ -100466,7 +100478,7 @@ renderAtual=function(){
     window.Z94_CONTATOS_HUMANOS={dia:r&&r.dia||'',itens:(r&&r.itens||[]).map(function(x){var c=estado.itens[x.dcKey]||x;return{dcKey:c.dcKey||'',pelKey:c.pelKey||'',petId:c.petId||'',tutorId:c.tutorId||'',estado:c.estado||'',groupKey:c.groupKey||'',contatoId:c.contatoId||'',cycleKeys:Array.isArray(c.cycleKeys)?c.cycleKeys.slice():[],itemKs:Array.isArray(c.itemKs)?c.itemKs.slice():[],escopoSha:c.escopoSha||'',humanoNome:c.existente&&c.existente.humano&&c.existente.humano.nome||'',motivoContato:c.motivoContato||''};})};
   }
   /* as linhas sem vínculo (`revisao_identidade`, `envios_indisponiveis`) chegam do núcleo só com a presença: a chave e o dia vêm dela */
-  function normalizar(c){if(c&&typeof c==='object'){if(!txt(c.dcKey))c.dcKey=txt(c.row&&c.row.chave);if(!txt(c.dia))c.dia=estado.dia||diaAtual();}return c;}
+  function normalizar(c){if(c&&typeof c==='object'){if(!txt(c.dcKey))c.dcKey=txt(c.row&&c.row.chave);if(!txt(c.dia))c.dia=estado.dia||diaAtual();if('registroRespostas139' in c&&txt(c.dcKey)&&txt(c.dia))estado.registros139[c.dcKey]={dia:c.dia,registro:JSON.parse(JSON.stringify(c.registroRespostas139||{}))};}return c;}
   function indexar(result){
     (result&&result.itens||[]).forEach(normalizar);estado.itens={};(result&&result.itens||[]).forEach(function(c){estado.itens[c.dcKey]=c;});
     var pets=(result&&result.itens||[]).map(function(c){var d=descPet(c);d.grupo=T.grupoDoPet(d);return d;});
@@ -100522,7 +100534,7 @@ renderAtual=function(){
     return novo;
   }
   async function lerRegistro(c){
-    try{var s=await DB.ref('daycare/vencimentos/'+c.dia+'/'+c.dcKey).once('value'),v=s&&typeof s.val==='function'?s.val():null;if(v&&typeof v==='object'){VENC_PEND[c.dia]=VENC_PEND[c.dia]||{};VENC_PEND[c.dia][c.dcKey]=JSON.parse(JSON.stringify(v));}return v;}catch(_){return null;}
+    try{var s=await DB.ref('daycare/vencimentos/'+c.dia+'/'+c.dcKey).once('value'),v=s&&typeof s.val==='function'?s.val():null;if(v&&typeof v==='object'){estado.registros139[c.dcKey]={dia:c.dia,registro:JSON.parse(JSON.stringify(v))};if(typeof VENC_PEND!=='undefined'&&VENC_PEND&&typeof VENC_PEND==='object'){VENC_PEND[c.dia]=VENC_PEND[c.dia]||{};VENC_PEND[c.dia][c.dcKey]=JSON.parse(JSON.stringify(v));}}return v;}catch(_){return null;}
   }
   /* A tela só LÊ os Lançamentos do dia e o Snoopy (uma vez por abertura ou por «Atualizar envios»); nunca troca o dia escolhido lá. */
   function algumaLinhaDoDayCare(){return Object.keys(estado.itens).some(function(dc){return vmsDe(estado.itens[dc]).some(function(v){return daLinha(v.valor)&&v.tarefa&&v.tarefa.linha;});});}
@@ -100655,6 +100667,7 @@ renderAtual=function(){
     var op=enviada?{petId:c.petId}:{petId:c.petId,contatoId:fonteContato.contatoId,fonteContato:fonteContato};op.semAtualizarPainel=true;
     var r=await bridge.registrar(gk,itens,op);
     if(!r||!r.ok)throw Error(r&&r.motivo||'fontes não confirmadas');
+    var a=r.alvoConfirmado88;if(a&&r.registro&&a.dia===c.dia&&a.dcKey===c.dcKey&&a.petId===c.petId&&a.tutorId===c.tutorId)estado.registros139[c.dcKey]={dia:c.dia,registro:JSON.parse(JSON.stringify(r.registro))};
     return r;
   }
   function marcarSalvando(c,idxs,btn){
@@ -100698,7 +100711,7 @@ renderAtual=function(){
       catch(e){falhos.push({lista:lista,erro:e});}
     }
     var esperado={};salvos.forEach(function(v){esperado[v.cy.cycleKey]=valor;var lv=v.tarefa&&v.tarefa.linha;if(lv&&lv.id&&lv.item)delete estado.linhas[chaveLinha(c.dia,lv.item,lv.id)];});/* a resposta pode ter mudado a origem da linha (de bolsa para loja e o contrário): a cópia lida antes ficou velha e é lida de novo */
-    if(valor==='autorizar_externo'&&salvos.length)estado.fixosResolver[dc]=true;
+    if(salvos.length)estado.fixosResolver[dc]=true;
     if(extra&&extra.confirmacaoTutor137)salvos.forEach(function(v){delete estado.datasTutor137[T.chaveRascunho137(dc,v.cy.cycleKey,v.cy.itemK)];});
     await atualizarLinha(dc,esperado);
     delete estado.salvando[dc];
@@ -100723,7 +100736,7 @@ renderAtual=function(){
     }
     var destino117=prepararRota117(c2);
     redesenharLinha(dc);
-    if(valor!=='autorizar_externo')abrirRota117(destino117,dc);
+    /* A resposta permanece neste cartão; não trocar a aba após salvar. */
     garantirDia(false,true);
     try{if(typeof window.zelozinha116SnoopyAtualizar==='function')window.zelozinha116SnoopyAtualizar();}catch(_){/* a aba mantém estado desconhecido até a próxima conferência */}
     /* A autorização cria somente a tarefa. Produto, dose/quantidade e local dependem
@@ -100798,7 +100811,7 @@ renderAtual=function(){
     if(!op.soCompletar&&valor==='autorizar_externo'&&tarefaPendente&&linhaPendente&&!sn){
       var ator='';try{ator=typeof quemSou==='function'?txt(quemSou()):'';}catch(_){ator='';}
       var direto=await gravarTroca(c,v,i,valor,l,{motivo:'Correção para vai fazer em casa antes da execução',por:ator||'equipe',ts:Date.now()},op,pend),okDireto=!!(direto&&direto.ok);
-      if(okDireto&&valor==='autorizar_externo')estado.fixosResolver[dc]=true;
+      if(okDireto)estado.fixosResolver[dc]=true;
       if(okDireto&&op.confirmacaoTutor137)delete estado.datasTutor137[T.chaveRascunho137(dc,v.cy.cycleKey,v.cy.itemK)];
       await atualizarLinha(dc,null);
       var cDireto=estado.itens[dc]||c,rvDireto=respostaAtual(cDireto,v.cy);
@@ -100817,7 +100830,7 @@ renderAtual=function(){
       botao:op.soCompletar?'Tirar da lista':'Trocar e tirar da lista',
       gravar:function(reg){return gravarTroca(c,v,i,valor,l,reg,op,pend);}});
     var ok=!!(res&&res.ok);
-    if(ok&&valor==='autorizar_externo')estado.fixosResolver[dc]=true;
+    if(ok)estado.fixosResolver[dc]=true;
     if(ok&&op.confirmacaoTutor137)delete estado.datasTutor137[T.chaveRascunho137(dc,v.cy.cycleKey,v.cy.itemK)];
     await atualizarLinha(dc,null);
     var c2=estado.itens[dc]||c,rv=respostaAtual(c2,v.cy);
@@ -100826,7 +100839,7 @@ renderAtual=function(){
     if(ok&&typeof window.zelozinha116SnoopyAtualizar==='function')try{await window.zelozinha116SnoopyAtualizar();}catch(_){/* a linha já saiu; a aba oferece atualização se esta releitura falhar */}
     var destino117=ok?prepararRota117(c2):'resolve';
     redesenharLinha(dc);
-    if(valor!=='autorizar_externo')abrirRota117(destino117,dc);
+    /* A resposta permanece neste cartão; não trocar a aba após salvar. */
     return ok;
   }
   async function gravarTroca(c,v,i,valor,l,reg,op,pend){
