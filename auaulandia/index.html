@@ -10897,7 +10897,7 @@ return { criar };
     if(!cred || cred.tipo!=='credito'){ alert('Não achei esta falta avisada no Extrato. Atualize a tela.'); return Promise.resolve(null); }
     if(an[id]){ alert(repJaEstornadaTexto(repLancDe(L, 'est-'+id)||{})); return Promise.resolve(null); }
     var cas=repEstornarCascata(p, cred, L);
-    return corrAbrir({acao:'anular', nivel:'gestao', titulo:'Estornar a falta de '+repDataCurta(cred.data), botao:'Estornar', tituloOk:'Estornado',
+    return corrAbrir({acao:'anular', nivel:'adriana', adrianaOque:'cancela faltas lançadas', titulo:'Cancelar a falta lançada de '+repDataCurta(cred.data), botao:'Cancelar falta lançada', tituloOk:'Falta lançada cancelada',
       oque:'a falta avisada de '+repBRdata(cred.data)+' de '+pelNome(p), original:{caminho:'daycare/reposicao/'+pelKey(p)+'/lancamentos/'+id, id:String(id)},
       estado:'valendo', cascata:cas.linhas, aviso:cas.usado?repEstornoUsadoTexto(cas.livro):'',
       gravar:function(reg){ return repEstornarGravar(p, cred, reg); }}).then(function(r){
@@ -10908,6 +10908,7 @@ return { criar };
   // O estorno de sempre ({tipo:'estorno', data:hoje, motivo:'estorno', obs, estornaId}), pelo repGravar, na chave
   // fixa est-{crédito}: dois aparelhos estornando a mesma falta gravam UM estorno. «Estornado» só com o ok.
   function repEstornarGravar(p, cred, reg){
+    if(!corrRegDaAdriana(reg)) return Promise.resolve({ok:false, erro:'Só a Adriana pode cancelar uma falta lançada, com a senha dela.'});
     var mot=String(reg.motivo||'');
     var est={tipo:'estorno', data:repHojeISO(), motivo:'estorno', obs:mot, estornaId:cred._id, corr:reg};
     var feito=function(){
@@ -10927,7 +10928,7 @@ return { criar };
     var L=repLancamentos(p)||[], an=repAnulados(L), cred=repLancDe(L, id);
     var lote=(cred && cred.tipo==='credito' && !an[id])?cred.lote:'';
     var vivos=repLoteVivos(L, lote), todos=repLoteDe(L, lote);
-    if(vivos.length<2){ alert('Este lote não tem mais de um dia valendo. Use «Estornar» na linha da falta.'); return Promise.resolve(null); }
+    if(vivos.length<2){ alert('Este lote não tem mais de um dia valendo. Use «Cancelar falta lançada» na linha da falta.'); return Promise.resolve(null); }
     var mortos=todos.filter(function(l){ return an[l._id]; });
     var ests=vivos.map(function(l){ return {_id:'est-'+l._id, tipo:'estorno', estornaId:l._id}; });
     var usados=0;
@@ -10945,7 +10946,7 @@ return { criar };
     var livro=repSaldoDe(L.concat(ests)), usado=livro<0;
     var info={};
     var de=(cred.periodo&&cred.periodo.de)||vivos[0].data, ate=(cred.periodo&&cred.periodo.ate)||vivos[vivos.length-1].data;
-    return corrAbrir({acao:'anular', nivel:'gestao', titulo:'Estornar o lote ('+vivos.length+' dias)', botao:'Estornar o lote', tituloOk:'Lote estornado',
+    return corrAbrir({acao:'anular', nivel:'adriana', adrianaOque:'cancela faltas lançadas', titulo:'Cancelar faltas lançadas ('+vivos.length+' dias)', botao:'Cancelar faltas lançadas', tituloOk:'Faltas lançadas canceladas',
       oque:'o lote de faltas avisadas de '+pelNome(p)+' ('+repBRdata(de)+' a '+repBRdata(ate)+')', original:{caminho:'daycare/reposicao/'+pelKey(p)+'/lancamentos', id:String(lote)},
       estado:'valendo', cascata:linhas, aviso:usado?repLoteUsadoTexto(livro, usados):'',
       gravar:function(reg){ return repLoteEstornarGravar(p, lote, reg, vivos.map(function(l){ return l._id; }), info); }}).then(function(r){
@@ -10958,6 +10959,7 @@ return { criar };
   // abriu (corrigido ou restaurado em outro aparelho) também fica de fora, porque a Gestão não o viu ao assinar (2ª rodada,
   // REL-003). A confirmação diz os dois.
   function repLoteEstornarGravar(p, lote, reg, vistos, info){
+    if(!corrRegDaAdriana(reg)) return Promise.resolve({ok:false, erro:'Só a Adriana pode cancelar faltas lançadas, com a senha dela.'});
     var LE='E'+Date.now(), hoje=repHojeISO(), quem=(typeof quemSou==='function')?quemSou():'-', ts=Date.now(), mot=String(reg.motivo||'');
     var feito=function(ids, datas){
       repRastro('reposicao-lote-estornado', p, pelNome(p)+' — estornado o lote de '+ids.length+' faltas avisadas ('+repListaDatasE(datas)+'), assinado por '+(reg.por||'-')+': '+mot);
@@ -10993,7 +10995,7 @@ return { criar };
       motivoK:cred.motivo, obs:cred.obs||'', corrigeLote:cred.lote};
     zEscolha('LOTE ESTORNADO',
       ['Estornadas: '+repListaDatasE(info.datas||[])+'.'].concat(foraD.length?['Ficou de fora (já tinha sido estornada em outro aparelho): '+repListaDatasE(foraD)+'.']:[])
-        .concat((info.novos||[]).length?['Continua valendo (entrou no lote em outro aparelho depois que o cartaz abriu, e ninguém assinou por ela): '+repListaDatasE(info.novos)+'. Se também está errada, use «Estornar» na linha dela.']:[])
+        .concat((info.novos||[]).length?['Continua valendo (entrou no lote em outro aparelho depois que o cartaz abriu, e ninguém assinou por ela): '+repListaDatasE(info.novos)+'. Se também está errada, use «Cancelar falta lançada» na linha dela.']:[])
         .concat(['Para lançar as datas certas, toque em «Lançar o período certo»: a janela abre com '+pelNome(p)+', o modo, o motivo, a observação e as datas preenchidos. Nada é lançado sem o seu «Lançar reposição».']),
       [{t:'Lançar o período certo', cor:'#234D67', fn:function(){ repAbrirLancar(p, pre); }}, {t:'Fechar', cor:'#6b5f4b', fn:function(){}}], {corTitulo:'#234D67'});
   }
@@ -11265,12 +11267,19 @@ return { criar };
     var L=repLancamentos(p)||[], pend=[];
     try{ pend=repTrocasPendentesP(p); }catch(e){ pend=[]; } /* silencioso de propósito: sem a conta, nenhuma troca pendente */
     var anulado={}; L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId) anulado[l.estornaId]=true; });
-    return {L:L, X:repExtratoPares(L, pend), hojeServ:repHojeServidor(), anulado:anulado, repetidas:repRepetidas(L), ehG:repEhGestao(), i:i,
+    return {L:L, X:repExtratoPares(L, pend), hojeServ:repHojeServidor(), anulado:anulado, repetidas:repRepetidas(L), ehG:repEhGestao(), i:i, chave:pelKey(p),
       pode:op.ficha?repPodeLancar():true};
   }
   var REP_BOTAO_ESTILO='border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;min-height:44px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;';
   function repBotaoLinha(fn, i, id, rot, cor){
     return '<button type="button" onclick="'+fn+'('+i+',\''+escAttr(id)+'\')" style="'+REP_BOTAO_ESTILO+'color:'+(cor||'var(--z-blue)')+'">'+esc(rot)+'</button>';
+  }
+  function repBotaoMensagemTroca(chave, id, compacto){
+    var estilo=compacto
+      ? 'border:none;background:none;padding:0 2px;min-height:44px;font:inherit;font-size:11.5px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer'
+      : REP_BOTAO_ESTILO+'color:var(--z-blue)';
+    var chamada='repTrocaMensagemAbrir('+JSON.stringify(String(chave||''))+','+JSON.stringify(String(id||''))+')';
+    return '<button type="button" onclick="'+escAttr(chamada)+'" style="'+estilo+'">Mensagem para o tutor</button>';
   }
   // O que a linha diz a mais (6.60): quem desfez, de onde voltou, o que corrigiu. Texto puro (a tela escapa).
   function repExtratoNovidades(l, c){
@@ -11306,7 +11315,8 @@ return { criar };
     var i=c.i, L=c.L, h='';
     if(l.tipo==='credito' && !c.anulado[l._id]){
       if(!repSaidaAntecipada(l)) h+=repBotaoLinha('repCorrigirAbrir', i, l._id, 'Corrigir');
-      h+=repBotaoLinha('repEstornar', i, l._id, 'Estornar', 'var(--crm-critico)');
+      h+=repBotaoLinha('repEstornar', i, l._id, 'Cancelar falta lançada', 'var(--crm-critico)');
+      if(repTrocaViva(l)) h+=repBotaoMensagemTroca(c.chave, l._id, false);
       var nl=l.lote?repLoteVivos(L, l.lote).length:0;
       if(nl>=2) h+=repBotaoLinha('repLoteEstornarAbrir', i, l._id, 'Estornar o lote ('+nl+')', 'var(--crm-critico)');
     }
@@ -15867,6 +15877,34 @@ return { criar };
         .concat(aut?['Encaixe acima do limite, autorizado por '+aut.quem+'.']:[]),
       repMensagem(p,'troca',{de:de, para:para}), repTelDe(p));
   }
+  function repTrocaDataValida(d){
+    d=String(d||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+    var a=d.split('-').map(Number), y=a[0], m=a[1], dia=a[2];
+    return y>=1000 && m>=1 && m<=12 && dia>=1 && dia<=new Date(Date.UTC(y,m,0)).getUTCDate();
+  }
+  // Reabre somente a mensagem de uma troca que ainda vale. A chave do FILHOt e o id do
+  // lançamento são conferidos de novo no cache atual: reordenar a lista não troca o destinatário,
+  // e uma troca cancelada ou remarcada não reaparece como se ainda estivesse valendo.
+  function repTrocaMensagemAbrir(chave, id){
+    chave=String(chave||''); id=String(id||'');
+    if(!repPodeLancar()){ corrBarrar('ver a mensagem de uma troca', corrQuemPode('lancar-reposicao'), {alvo:chave, id:id}); return false; }
+    var iguais=[]; try{ iguais=(PELUDINHOS||[]).filter(function(x){ return pelKey(x)===chave; }); }catch(e){ iguais=[]; }
+    var p=iguais.length===1?iguais[0]:null;
+    if(!p || !id){ alert('Não achei uma ficha única para esta troca. Atualize a tela e abra o Extrato novamente.'); return false; }
+    var L=repLancamentos(p)||[], an=repAnulados(L), l=repLancDe(L, id);
+    var de=String((l&&l.troca&&l.troca.de)||''), para=String((l&&l.troca&&l.troca.para)||'');
+    var dataOk=repTrocaDataValida(de) && repTrocaDataValida(para);
+    if(!l || an[id] || !repTrocaViva(l) || !dataOk || String(l.data||'')!==de || String(l.volta||'')!==para){
+      alert('Esta troca não está mais valendo como aparece nesta tela. Atualize o Extrato antes de copiar a mensagem.');
+      return false;
+    }
+    repMsgModal('Mensagem para o tutor',
+      ['Troca registrada: '+pelNome(p)+' não vem '+repNoDia(de)+', e vem '+repNoDia(para)+'.',
+       'Esta janela só reabre a mensagem da troca já registrada. Nada foi lançado novamente.'],
+      repMensagem(p,'troca',{de:de, para:para}), repTelDe(p));
+    return true;
+  }
   function dxVeredictoHTML(v){
     if(!v.ok) return v.motivo?('<div class="vg-ok"><span>'+esc(v.motivo)+'</span></div>'):'';
     if(v.tipo==='troca'){
@@ -16132,7 +16170,7 @@ return { criar };
         +ag.map(function(d){
           var tc=repLancamentos(o.p).filter(function(l){ return l.volta===d&&repTrocaViva(l); })[0];
           var pzD=repPrazo(d);
-          return repBRdata(d)+(tc?(' (troca, no lugar de '+repBRdata(tc.troca.de||tc.data).slice(0,5)+')'):'')+(podeDesm?(' <button type="button" onclick="repDesmarcar('+o.i+',\''+d+'\')"'
+          return repBRdata(d)+(tc?(' (troca, no lugar de '+repBRdata(tc.troca.de||tc.data).slice(0,5)+') · '+repBotaoMensagemTroca(pelKey(o.p), tc._id, true)):'')+(podeDesm?(' <button type="button" onclick="repDesmarcar('+o.i+',\''+d+'\')"'
             +' style="border:none;background:none;padding:0 2px;font:inherit;font-size:11.5px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer">desmarcar</button>'
             +(pzD.dentro?(' até as 24h de '+String(repBRdata(pzD.limite)).slice(0,5)):' (fora do prazo)')
             // 6.61 (AC7.1): «mudar o dia» da reposição marcada para um dia futuro (a troca muda pelo caminho dela)
@@ -30211,7 +30249,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-25-03';
+  const APP_VERSAO='2026-10-26-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -42971,6 +43009,7 @@ return { criar };
       // 6.80 (AC1.7): a série anterior já venceu (vermSerieVenceu, a mesma regra do painel): esta dose é a 1ª da série nova,
       // nunca a 2ª atrasada; a frase vai para a linha e para o rastro
       if(vermSerieVenceu(exV, dt)){
+        if(window.Z138_FICHA_SELECAO&&window.Z138_FICHA_SELECAO.pelKey===String(chave)&&window.Z138_FICHA_SELECAO.itemK===String(k)){zAlertao('CONFIRA O ESQUEMA NA FICHA',['A data informada já não pertence à 2ª dose desta série. Nada foi gravado nem convertido em uma nova 1ª dose.'],{botao:'Entendi'});return Promise.resolve({ok:false,erro:'a 2ª dose informada exige revisão do esquema'});}
         var pSN=vermSerieNovaPatch(exV, dt);
         if(quem) pSN.verm_por=quem;
         return prevLanceGravar(p, chave, k, it, pSN, {dt:dt, quem:quem, nome:'Vermífugo (1ª dose da série nova)', campo:'verm_p', kReg:'verm_p', frase:vermSerieNovaFrase(exV, dt)});
@@ -43221,6 +43260,19 @@ return { criar };
     return rec;
   }
   function prevLanceGravar(p,chave,k,it,patch,o){
+    var tutor138=window.Z138_FICHA_SELECAO;
+    if(tutor138){
+      if(String(chave)!==String(tutor138.pelKey)||String(pelKey(p))!==String(tutor138.pelKey)||String(k)!==String(tutor138.itemK)){window.Z138_FICHA_SELECAO=null;tutor138=null;}
+    }
+    if(tutor138){
+      if(String(o&&o.dt||'')!==String(tutor138.dataAplicacao)||!/^Tutor\b/.test(String(o&&o.quem||'')))return Promise.resolve({ok:false,erro:'Use a data informada pelo tutor e confirme quem fez antes de salvar.'});
+      if(typeof window.zTutor138ValidarAntes!=='function')return Promise.resolve({ok:false,erro:'Não consegui conferir a resposta do tutor. Nada foi salvo.'});
+      return Promise.resolve(window.zTutor138ValidarAntes(tutor138,p,k)).then(function(v){
+        if(!v||v.ok!==true)return{ok:false,erro:(v&&v.motivo)||'A resposta, a ficha ou o cuidado mudou. Nada foi salvo.'};
+        var base=(String(k)==='verm_dose2_p')?'verm_dose2':String(k).replace(/_p$/,'');patch=Object.assign({},patch);patch[base+'_ondefoi']='Tutor em casa';
+        return prevLanceGravar35(p,chave,k,it,patch,o).then(function(r){if(r&&r.ok===true&&window.Z138_FICHA_SELECAO===tutor138){window.Z138_FICHA_SELECAO=null;try{if(typeof window.zTutor138DepoisSalvar==='function')window.zTutor138DepoisSalvar(tutor138,r);}catch(_){/* confirmação visual não muda o ACK do writer */}}else if(r&&r.ok===false){try{if(typeof window.zTutor138DepoisFalhar==='function')window.zTutor138DepoisFalhar(tutor138,r);}catch(_){/* o formulário e seus dados continuam na tela */}}return r;});
+      },function(){return{ok:false,erro:'Não consegui reler a ficha. Nada foi salvo.'};});
+    }
     var c=prevCuidado36Preparar(p,chave,k,patch,o||{});
     if(!c.ativo) return prevLanceGravar35(p,chave,k,it,patch,o);
     if(c.erro){ try{ zAlertao('CUIDADO A CONFERIR',[c.erro,'Os dados digitados continuam na tela.'],{botao:'Entendi'}); }catch(e){} return Promise.resolve({ok:false,erro:c.erro}); }
@@ -44276,10 +44328,10 @@ return { criar };
       if(el) el.innerHTML=prevCorrEstadoHTML(alvo);
     }catch(e){} /* silencioso de propósito: enfeite de tela — o estado aparece no próximo redesenho */
   }
-  function prevEdicaoHTML(o){
-    var chave=pelKey(o.p), ex=pelExtra(o.p)||{};
+  function prevEdicaoHTML(o, somenteItens){
+    var chave=pelKey(o.p), ex=pelExtra(o.p)||{}, embutido138=!!o.embutido138;
     var foco=(typeof cuidado57FocoAtual==='function')?cuidado57FocoAtual():null;
-    var itens=(foco&&String(foco.pelKey)===String(chave))?PREV_ITENS.filter(function(x){return x.k===foco.itemK;}):PREV_ITENS;
+    var itens=Array.isArray(somenteItens)?PREV_ITENS.filter(function(x){return somenteItens.indexOf(x.k)>=0;}):((foco&&String(foco.pelKey)===String(chave))?PREV_ITENS.filter(function(x){return x.k===foco.itemK;}):PREV_ITENS);
     // A chave junta nome e tutor: "Ana D'Ávila" traz um apóstrofo que, cru dentro do
     // onclick="fn('...')", fecha a string no meio e mata o "Feito em", o "Quem deu", o
     // "Salvar" e o "fechar" de todos os itens, sem aviso (P1 do QA48 da 6.11; story 6.51).
@@ -44334,7 +44386,7 @@ return { criar };
           :('<div><label class="cad-lb">Vale até</label><input type="date" class="cad-in" id="prevP_'+chId+'_'+it.k+'" value="'+escAttr(prox)+'" placeholder="calculo sozinho" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'))
         // Quem deu: em casa o tutor às vezes antecipa por ordem do veterinário — o registro
         // precisa dizer QUEM deu, senão a conta da próxima dose fica sem responsável (Adriana, 22/ago).
-        +'<div style="grid-column:1/-1"><label class="cad-lb">Quem deu</label>'
+        +(embutido138?'<div style="grid-column:1/-1"><label class="cad-lb">Local informado</label><p class="hint">Tutor em casa</p></div>':('<div style="grid-column:1/-1"><label class="cad-lb">Quem deu</label>'
         +['Day Care','Tutor em casa'].map(function(op){
             var ondeAtual=String(ex[it.k.replace(/_p$/,'')+'_ondefoi']||'');
             if(typeof cuidado57OndeValor==='function')ondeAtual=cuidado57OndeValor(chave,it.k,ondeAtual);
@@ -44342,7 +44394,7 @@ return { criar };
             return '<button type="button" class="btn" style="margin-right:6px;padding:5px 12px;font-size:12.5px;font-weight:800;border:1.5px solid var(--line);background:'
               +(on?'var(--z-gold)':'var(--z-cream-warm)')+';color:var(--z-blue)" onclick="prevOndeFoi(\''+chJs+'\',\''+it.k+'\',\''+op+'\')">'+op+'</button>';
           }).join('')
-        +'</div>'
+        +'</div>'))
         +'<div style="grid-column:1/-1"><label class="cad-lb">Quem fez</label>'
         +'<input class="cad-in" id="prevQ_'+chId+'_'+it.k+'" value="'+escAttr(por)+'" placeholder="Zêluz, o tutor, a clínica…" list="prevQuemLista"></div>'
         +(it.nomeK?('<div style="grid-column:1/-1"><label class="cad-lb">Nome do produto / vacina</label>'
@@ -44353,21 +44405,27 @@ return { criar };
             "prevRecalcular('"+jsAspas(chave)+"','ecto_p')")
           +'<div class="hint" id="prevCorrDH_'+escAttr('ed_'+chave+'_ecto_p')+'" style="margin-top:4px">'+escAttr(ectoFraseDias(String(ex.ecto_prod||''), parseInt(ex.ecto_outro_dias,10)||0))+'</div></div>'):'')
         +'</div>'
-        +'<button type="button" class="btn btn-gold" style="margin-top:7px;padding:6px 14px;font-size:12.5px" data-prev-chave="'+chId+'" data-prev-item="'+escAttr(it.k)+'" onclick="return prevLancar(this.getAttribute(\'data-prev-chave\'),this.getAttribute(\'data-prev-item\'))">'+((estLance && estLance.passo==='gravando' && !estLance.onde)?'Gravando…':('Salvar '+escAttr(it.nome)))+'</button>'
+        +'<button type="button" class="btn btn-gold" style="margin-top:7px;padding:6px 14px;font-size:12.5px" data-prev-chave="'+chId+'" data-prev-item="'+escAttr(it.k)+'" '+(embutido138?'data-zt694-acao="salvar-ficha"':'onclick="return prevLancar(this.getAttribute(\'data-prev-chave\'),this.getAttribute(\'data-prev-item\'))"')+'>'+((estLance && estLance.passo==='gravando' && !estLance.onde)?'Gravando…':('Salvar '+escAttr(it.nome)))+'</button>'
         +(atrasado?'<span style="margin-left:8px;font-size:12px;font-weight:800;color:var(--crm-critico)">continua vencido até você lançar uma data nova</span>':'')
         +prevLanceEstadoHTML(chave, it.k)
         // 6.63 (AC6.1): «Limpar a data (fica sem data)» na linha do item que tem data
-        +(Object.keys(prevCorrLimparCampos(it, ex)).length?('<div style="margin-top:6px"><button type="button" class="btn" style="min-height:44px;padding:6px 12px;font-size:12.5px;font-weight:800;background:#fff;color:var(--crm-critico);border:1.5px solid var(--crm-critico)" onclick="prevCorrLimparAbrir(\''+chJs+'\',\''+it.k+'\',\'prev\')">Limpar a data (fica sem data)</button></div>'):'')
+        +(!embutido138&&Object.keys(prevCorrLimparCampos(it, ex)).length?('<div style="margin-top:6px"><button type="button" class="btn" style="min-height:44px;padding:6px 12px;font-size:12.5px;font-weight:800;background:#fff;color:var(--crm-critico);border:1.5px solid var(--crm-critico)" onclick="prevCorrLimparAbrir(\''+chJs+'\',\''+it.k+'\',\'prev\')">Limpar a data (fica sem data)</button></div>'):'')
         +'</div>';
     };
-    return '<div id="prevEd_'+chId+'" class="card" style="margin:8px 0;border-left:4px solid var(--z-gold)">'
+    return '<div '+(embutido138?'data-z138-editor-native':'id="prevEd_'+chId+'"')+' class="card" style="margin:8px 0;border-left:4px solid var(--z-gold)">'
       +'<datalist id="prevQuemLista"><option value="Zêluz"><option value="Tutor"><option value="Clínica externa"></datalist>'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
       +'<h2 style="font-size:16px;margin:0">'+escAttr(o.nome)+'</h2>'
-      +'<button class="btn" style="background:none;border:none;color:var(--muted);font-weight:800" onclick="prevAbrir(\''+chJs+'\')">fechar</button></div>'
+      +'<button class="btn" style="background:none;border:none;color:var(--muted);font-weight:800" '+(embutido138?'data-zt694-acao="fechar-ficha"':'onclick="prevAbrir(\''+chJs+'\')"')+'>fechar</button></div>'
       +'<div class="hint">Lance aqui mesmo o que foi feito — não precisa abrir a ficha inteira. A data de validade eu calculo sozinho; se quiser outra, é só escrever.</div>'
       +itens.map(linha).join('')
       +'</div>';
+  }
+  function prevEdicaoItemHTML138(p,k,nome){
+    var chave=String(p&&pelKey(p)||''),itens=PREV_ITENS.filter(function(x){return x.k===k;});if(!chave||itens.length!==1)return{ok:false,motivo:'Não encontrei o formulário deste cuidado.'};
+    if(PREV_ABERTO){var pendente=prevLanceNaoSalvo(PREV_ABERTO);if(pendente)return{ok:false,motivo:'Há uma edição não salva em Prevenção. Salve ou descarte antes de abrir este cuidado.'};PREV_ABERTO='';renderPrevencao();}
+    if(document.getElementById('prevT_'+chave+'_'+k))return{ok:false,motivo:'Este cuidado já está aberto em outro editor.'};
+    return{ok:true,html:prevEdicaoHTML({p:p,nome:nome||pelNome(p)||p.n||'Atualizar ficha',embutido138:true},[k])};
   }
   // 6.63 (AC7.1): a pergunta da escova aberta no «Lance aqui mesmo» (a chave do FILHOt), uma por vez.
   var PREV_ED_ESCOVA='';
@@ -98204,6 +98262,29 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   function copia(v){return JSON.parse(JSON.stringify(v));}function falha(m){return{ok:false,status:'revisao',alterou:false,intencoes:[],motivo:m};}
   /* O Realtime Database elimina o filho nulo ao gravar (a releitura de `recusar` e `aguardar` volta sem `origem`): para comparar a resposta lida com a pedida, chave nula ou indefinida e chave ausente são a mesma coisa (6.97, AC1; o núcleo 49 já fazia isso em `canonResposta`). */
   function canon(v){if(Array.isArray(v))return '['+v.map(canon).join(',')+']';if(obj(v))return '{'+Object.keys(v).sort().filter(function(k){return v[k]!==null&&v[k]!==undefined;}).map(function(k){return JSON.stringify(k)+':'+canon(v[k]);}).join(',')+'}';return JSON.stringify(v);}
+  function diaISO(v){var s=texto(v),d=/^\d{4}-\d{2}-\d{2}$/.test(s)&&new Date(s+'T00:00:00.000Z');return !!(d&&Number.isFinite(d.getTime())&&d.toISOString().slice(0,10)===s);}
+  function diaSP(v){var p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(v)),x={};p.forEach(function(a){x[a.type]=a.value;});return x.year+'-'+x.month+'-'+x.day;}
+  function confirmacaoTutor137(v,x,agoraISO){
+    if(v===null||v===undefined)return null;
+    var permitidas={versao:1,tipo:1,dataAplicacao:1,estado:1};
+    if(!obj(v)||Object.keys(v).some(function(k){return !permitidas[k];})||v.versao!==137||v.tipo!=='tutor_ja_fez'||v.estado!=='atualizar_ficha_pendente'||!diaISO(v.dataAplicacao))throw Error('confirmação do tutor inválida');
+    if(!x||x.decisao!=='autorizar'||x.origem!=='externo')throw Error('confirmação do tutor exige acompanhamento externo');
+    if(v.dataAplicacao>diaSP(agoraISO))throw Error('data informada não pode estar no futuro');
+    return{versao:137,tipo:'tutor_ja_fez',dataAplicacao:v.dataAplicacao,estado:'atualizar_ficha_pendente'};
+  }
+  function subescopoContato138(cycleKeys,itemKs,atuais){
+    if(!Array.isArray(cycleKeys)||!Array.isArray(itemKs)||!cycleKeys.length||cycleKeys.length!==itemKs.length||!Array.isArray(atuais))return null;
+    var porPar={},duplicado=false;atuais.forEach(function(c){var k=texto(c&&c.cycleKey),i=texto(c&&c.itemK),u=k+'\u0000'+i;if(!k||!i||porPar[u])duplicado=true;else porPar[u]=c;});if(duplicado)return null;
+    var usados={},out=[];for(var n=0;n<cycleKeys.length;n++){var k=texto(cycleKeys[n]),i=texto(itemKs[n]),u=k+'\u0000'+i;if(!k||!i||usados[u]||!porPar[u])return null;usados[u]=true;out.push(copia(porPar[u]));}return out;
+  }
+  function validarAtualizacaoFicha138(s,f){
+    s=s||{};f=f||{};if(s.versao!==138||!diaISO(s.dia)||!texto(s.dcKey)||!texto(s.pelKey)||!texto(s.petId)||!texto(s.tutorId)||!texto(s.cycleKey)||!texto(s.itemK)||!diaISO(s.dataAplicacao)||!texto(s.respostaId)||!Number.isInteger(s.revisao)||!obj(s.ator))return{ok:false,motivo:'contexto da atualização inválido'};
+    if(f.dia!==s.dia||f.fichaUnica!==true||!obj(f.cadastro)||f.cadastro.excluido===true||texto(f.cadastro.movido_para)||texto(f.cadastro._renomeado_de))return{ok:false,motivo:'a ficha atual mudou'};
+    var a=f.ator||{};if(texto(a.id)!==texto(s.ator.id)||texto(a.nome)!==texto(s.ator.nome)||texto(a.papel)!==texto(s.ator.papel))return{ok:false,motivo:'a sessão humana mudou'};
+    var r=f.resposta||{},conf=null;try{conf=confirmacaoTutor137(r.confirmacaoTutor137,{decisao:r.decisao,origem:r.origem},f.agora);}catch(_){conf=null;}
+    if(r.cycleKey!==s.cycleKey||r.itemK!==s.itemK||texto(r.respostaId)!==s.respostaId||Number(r.revisao)!==s.revisao||!conf||conf.dataAplicacao!==s.dataAplicacao)return{ok:false,motivo:'a resposta do tutor mudou'};
+    var cs=Array.isArray(f.ciclos)?f.ciclos.filter(function(c){return c&&c.cycleKey===s.cycleKey&&c.itemK===s.itemK;}):[];if(cs.length!==1)return{ok:false,motivo:'o ciclo preventivo mudou'};return{ok:true};
+  }
   function chave(v){var s=String(v),b64;if(typeof Buffer!=='undefined')b64=Buffer.from(s,'utf8').toString('base64');else b64=btoa(unescape(encodeURIComponent(s)));return'v1_'+b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'');}
   function grupoPainel(painel,groupKey){var grupos=painel&&painel.grupos;if(!Array.isArray(grupos))return null;var a=grupos.filter(function(g){return g&&g.groupKey===groupKey;});return a.length===1?a[0]:null;}
   function canonEstavel(c){var b=c&&c.baseOperacional88||{};return{groupKey:c&&c.groupKey,dia:c&&c.dia,dcKey:c&&c.dcKey,humano:c&&c.humano,itens:c&&c.itens,fonte:{tipo:b.tipo,groupKey:b.groupKey,textoSha:b.textoSha||null,messageId:b.messageId||null,contatoId:b.contatoId||null,escopoSha:b.escopoSha||null}};}
@@ -98253,7 +98334,9 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
         var k=x.cycleKey+'^@'+x.itemK,c=ciclos[x.cycleKey];
         if(!permitidos[k]||vistos[k])throw Error('item fora do escopo comunicado');
         vistos[k]=true;
-        return{cycleKey:x.cycleKey,itemK:x.itemK,tipo:c.tipo,decisao:x.decisao,origem:x.decisao==='autorizar'?x.origem:null,onde:texto(x.onde),baseRevision:x.baseRevision};
+        var n={cycleKey:x.cycleKey,itemK:x.itemK,tipo:c.tipo,decisao:x.decisao,origem:x.decisao==='autorizar'?x.origem:null,onde:texto(x.onde),baseRevision:x.baseRevision},ct=confirmacaoTutor137(x.confirmacaoTutor137,n,e.agora);
+        if(ct)n.confirmacaoTutor137=ct;
+        return n;
       });
       var baseRegistro=copia(r);
       if(pv.conferenciaNova){
@@ -98288,7 +98371,7 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
       }
       var semMudanca=normal.every(function(x){
         var ant=rs.porCiclo[chave(x.cycleKey)];
-        return !!ant&&ant.revisao===x.baseRevision&&ant.decisao===x.decisao&&(ant.origem||null)===(x.origem||null)&&texto(ant.onde)===texto(x.onde);
+        return !!ant&&ant.revisao===x.baseRevision&&ant.decisao===x.decisao&&(ant.origem||null)===(x.origem||null)&&texto(ant.onde)===texto(x.onde)&&canon(ant.confirmacaoTutor137||null)===canon(x.confirmacaoTutor137||null);
       });
       if(semMudanca){
         var repetidas=normal.map(function(x){var ant=rs.porCiclo[chave(x.cycleKey)];return intencao(x,ant.revisao,ant.respostaId);}).filter(Boolean);
@@ -98297,6 +98380,7 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
       var intencoes=[];
       normal.forEach(function(x){
         var ck=chave(x.cycleKey),ant=rs.porCiclo[ck],rev=ant?ant.revisao+1:0,atual={cycleKey:x.cycleKey,itemK:x.itemK,groupKey:e.groupKey,respostaId:res.id,decisao:x.decisao,origem:x.origem,onde:x.onde,humanoId:pv.sessao.id,humanoNome:pv.sessao.nome,ts:agora,revisao:rev,estado:'decidido',baseOperacional88:copia(base88)};
+        if(x.confirmacaoTutor137)atual.confirmacaoTutor137=copia(x.confirmacaoTutor137);
         if(pv.destino.revisaoOperacional&&x.decisao==='autorizar'&&(x.origem==='loja'||x.origem==='bolsa'))atual.revisaoOperacional=pv.destino.revisaoOperacional;
         rs.porCiclo[ck]=atual;
         var it=intencao(x,rev,res.id);if(it)intencoes.push(it);
@@ -98307,7 +98391,7 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
       return{ok:true,status:'registrado',alterou:true,registro:n,intencoes:intencoes,aviso:pv.destino.revisaoOperacional?'Resposta salva. A coordenação precisa revisar os dados atuais antes do próximo passo; nenhuma aplicação foi criada.':'Resposta registrada. Nenhum cuidado foi executado automaticamente.'};
     }catch(x){return falha(x.message);}
   }
-  return{decidir:decidir,codificarChave:chave,constants:{versao:88,revisaoImplementacao:95,origens:Object.keys(ORIGENS)}};
+  return{decidir:decidir,codificarChave:chave,normalizarConfirmacaoTutor137:confirmacaoTutor137,subescopoContato138:subescopoContato138,validarAtualizacaoFicha138:validarAtualizacaoFicha138,constants:{versao:88,revisaoImplementacao:95,origens:Object.keys(ORIGENS)}};
 }));
 </script>
 
@@ -98419,8 +98503,10 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
       var path='daycare/vencimentos/'+dia+'/'+dc,rs=await Promise.all([DB.ref('daycare/cadastro/'+pk).once('value'),DB.ref('daycare/checkin-corpo/'+dia+'/'+dc).once('value'),DB.ref('daycare/checkout-corpo/'+dia+'/'+dc).once('value'),DB.ref(path).once('value')]),cad=snap(rs[0]),check=snap(rs[1]),checkout=snap(rs[2]),reg=snap(rs[3])||{};
       if(!cad||cad.excluido===true||t(cad.movido_para)||t(cad._renomeado_de))return{confirmado:false,motivo:'cadastro atual mudou'};
       if(!entradaCorporalValida(check)||!t(check.quem))return{confirmado:false,motivo:'entrada corporal histórica não confirmada'};
-       var saiu=checkoutCorporalValido(checkout),ciclos=listaContatoAtual(cad,candidatos[0].x,dia,petId,tutorId),cycleKeys=ciclos.map(function(c){return c.cycleKey;}),itemKs=ciclos.map(function(c){return c.itemK;});
-      if(JSON.stringify(cycleKeys)!==JSON.stringify(fonte.cycleKeys)||JSON.stringify(itemKs)!==JSON.stringify(fonte.itemKs))return{confirmado:false,motivo:'cuidados atuais divergem do contato humano'};
+       var saiu=checkoutCorporalValido(checkout),atuais=listaContatoAtual(cad,candidatos[0].x,dia,petId,tutorId),ciclos=root.ZeluzResposta88&&typeof root.ZeluzResposta88.subescopoContato138==='function'?root.ZeluzResposta88.subescopoContato138(fonte.cycleKeys,fonte.itemKs,atuais):null;
+      if(!ciclos)return{confirmado:false,motivo:'cuidados atuais divergem do contato humano'};
+      var cycleKeys=ciclos.map(function(c){return c.cycleKey;}),itemKs=ciclos.map(function(c){return c.itemK;});
+      if(JSON.stringify(cycleKeys)!==JSON.stringify(fonte.cycleKeys)||JSON.stringify(itemKs)!==JSON.stringify(fonte.itemKs))return{confirmado:false,motivo:'ordem ou identidade do contato humano diverge'};
       var escopo=await sha(JSON.stringify([89,'contato_humano',dia,dc,pk,petId,tutorId,cycleKeys.map(function(k,i){return[k,itemKs[i]];})]));
       if(escopo!==t(fonte.escopoSha).toLowerCase())return{confirmado:false,motivo:'assinatura atual do contato diverge'};
       var chave=root.ZeluzResposta88.codificarChave(contatoId),evento=reg.contatosHumanos89&&reg.contatosHumanos89[chave],itens=entrada&&entrada.resposta&&entrada.resposta.itens,soAguardar=Array.isArray(itens)&&itens.length>0&&itens.every(function(x){return x&&x.decisao==='aguardar'&&!t(x.origem);}),contatoFeito=evento&&evento.tipo==='contato_humano'&&evento.status==='feito',retornoPendente=evento&&evento.tipo==='retorno_humano'&&evento.status==='retorno_pendente'&&soAguardar;
@@ -98542,10 +98628,18 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
     if(!tutor||!k)return'';
     return /^vac_/.test(k)?TEXTO_EM_CASA.vacina(tutor):TEXTO_EM_CASA.geral(tutor);
   }
+  /* Rascunho 137: resposta HUMANA para copiar depois que o tutor informa que já fez.
+     Não envia, não cria aplicação Zêluz e não altera data de validade da ficha. */
+  function textoTutorJaFez(info,itemK,dataAplicacao){
+    var tutor=t(info&&info.tutor),pet=t(info&&info.pet),k=t(itemK),data=t(dataAplicacao),p=data.split('-');
+    if(!tutor||!pet||!k||p.length!==3)return'';
+    return'Obrigada por nos avisar, '+tutor+'! 💛\n\nVamos atualizar a ficha de '+pet+' com o cuidado realizado em '+p[2]+'/'+p[1]+'/'+p[0]+'.\n\nManter essas informações em dia nos ajuda a cuidar da segurança e do bem-estar de todos os nossos Aulunos.';
+  }
   function mensagemAprovada(cardInfo,ciclo,atual,destino){
     if(!atual)return'';
-    var tutor=t(cardInfo&&cardInfo.nomeTutor),pet=t(cardInfo&&cardInfo.nomePeludo);
-    if(atual.decisao==='autorizar'&&atual.origem==='externo'&&tutor)return textoEmCasa({tutor:tutor},ciclo.itemK);
+    var tutor=t(cardInfo&&cardInfo.nomeTutor),pet=t(cardInfo&&cardInfo.nomePeludo),conf=null;
+    if(atual.decisao==='autorizar'&&atual.origem==='externo'&&atual.confirmacaoTutor137)try{conf=root.ZeluzResposta88&&root.ZeluzResposta88.normalizarConfirmacaoTutor137(atual.confirmacaoTutor137,{decisao:atual.decisao,origem:atual.origem},new Date().toISOString());}catch(_){conf=null;}
+    if(atual.decisao==='autorizar'&&atual.origem==='externo'&&tutor){if(conf)return textoTutorJaFez({tutor:tutor,pet:pet},ciclo.itemK,conf.dataAplicacao);return textoEmCasa({tutor:tutor},ciclo.itemK);}
     if(atual.decisao==='aguardar'&&destino&&destino.presencaCorporal===true&&destino.checkout!==true&&tutor&&pet)return'Olá, '+tutor+'!\n\nPodemos fazer '+cuidadoNaFrase(ciclo.itemK)+' de '+pet+' hoje, enquanto está com a gente?\n\nAssim, vocês já resolvem esse cuidado sem precisar organizar outra visita e, juntos, cuidamos da segurança e do bem-estar de todos os nossos Aulunos. 💛';
     return'';
   }
@@ -98653,7 +98747,7 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   function preservarNormalizadorPainel(){var original=root.zPainel44ValidarFonte80;if(typeof original!=='function'||original.__resposta88Detalhes)return;var envolvido=function(v){var p=original(v),det=v&&Number(v.detalhesEnvioVersao);if(!p||[86,89,92,104].indexOf(det)<0||!t(v&&v.assinaturaConteudo))return null;p.detalhesEnvioVersao=det;p.assinaturaConteudo=t(v.assinaturaConteudo);return p;};envolvido.__resposta88Detalhes=true;root.zPainel44ValidarFonte80=envolvido;}
   function instalar(){if(estado.instalado||!root.document)return false;if(!root.ZeluzResposta88||!root.ZeluzResposta88RTDB||!root.ZeluzRespostaUI88)return false;estado.instalado=true;instalarPonte57();if(typeof root.zPainel44Atualizar==='function'){estado.atualizarOriginal=root.zPainel44Atualizar;root.zPainel44Atualizar=function(){var r=estado.atualizarOriginal.apply(this,arguments);programar(true);return r;};}root.document.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('[data-z44-reler]'))setTimeout(function(){carregar(true);},0);});programar(false);return true;}
   preservarNormalizadorPainel();
-  root.ZeluzRespostaApp88={instalar:instalar,carregar:carregar,painel:lerPainel,abrir:abrir,abrirContatoHumano:abrirContatoHumano,registrar:registrar,resolverGrupo:resolverGrupo,resolverContatoHumano:resolverContatoHumano,resolverCuidado57:resolverCuidado57,sessao:sessao,textoEmCasa:textoEmCasa,mensagemAprovada:mensagemAprovada};
+  root.ZeluzRespostaApp88={instalar:instalar,carregar:carregar,painel:lerPainel,abrir:abrir,abrirContatoHumano:abrirContatoHumano,registrar:registrar,resolverGrupo:resolverGrupo,resolverContatoHumano:resolverContatoHumano,resolverCuidado57:resolverCuidado57,sessao:sessao,textoEmCasa:textoEmCasa,textoTutorJaFez:textoTutorJaFez,mensagemAprovada:mensagemAprovada};
   if(root.document){if(root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',instalar,{once:true});else instalar();}
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
@@ -99613,6 +99707,21 @@ renderAtual=function(){
       }
       return out;
     }
+    async function escopoSolicitado(base,pedido){
+      pedido=pedido||{};var ks=pedido.cycleKeys,is=pedido.itemKs;
+      if(!Array.isArray(ks)||!Array.isArray(is)||!ks.length||ks.length!==is.length)throw Error('Selecione novamente o cuidado antes de registrar.');
+      var pedidos={};ks.forEach(function(k,i){k=txt(k);var item=txt(is[i]),u=k+'\u0000'+item;if(!k||!item||pedidos[u])throw Error('O cuidado selecionado não é único. Nada foi salvo.');pedidos[u]=true;});
+      var ciclos=(base&&Array.isArray(base.ciclos)?base.ciclos:[]).filter(function(c){return c&&pedidos[txt(c.cycleKey)+'\u0000'+txt(c.itemK)]===true;});
+      if(ciclos.length!==ks.length)throw Error('Presença ou prevenção mudou; atualize a lista.');
+      ciclos.sort(function(a,b){var ak=txt(a.cycleKey),bk=txt(b.cycleKey),ai=txt(a.itemK),bi=txt(b.itemK);return ak<bk?-1:ak>bk?1:ai<bi?-1:ai>bi?1:0;});
+      var cycleKeys=ciclos.map(function(c){return txt(c.cycleKey);}),itemKs=ciclos.map(function(c){return txt(c.itemK);}),groupKey=JSON.stringify(['contato_humano89',base.petId,base.tutorId,base.dia]);
+      var escopoSha=await sha(JSON.stringify([89,'contato_humano',base.dia,base.dcKey,base.pelKey,base.petId,base.tutorId,cycleKeys.map(function(k,i){return[k,itemKs[i]];})]));
+      var contatoId='ch89_'+(await sha(JSON.stringify([groupKey,escopoSha]))).slice(0,32);
+      return Object.assign({},base,{ciclos:ciclos,cycleKeys:cycleKeys,itemKs:itemKs,groupKey:groupKey,escopoSha:escopoSha,contatoId:contatoId,key:b64key(contatoId)});
+    }
+    function mesmoAlvo(a,b){return !!a&&!!b&&a.dia===b.dia&&a.dcKey===b.dcKey&&a.pelKey===b.pelKey&&a.petId===b.petId&&a.tutorId===b.tutorId&&a.groupKey===b.groupKey&&a.escopoSha===b.escopoSha&&a.contatoId===b.contatoId;}
+    function contatoMesmoEscopo(r,f){return obj(r)&&r.versao===89&&r.dia===f.dia&&r.dcKey===f.dcKey&&r.pelKey===f.pelKey&&r.petId===f.petId&&r.tutorId===f.tutorId&&r.groupKey===f.groupKey&&r.escopoSha===f.escopoSha&&JSON.stringify(r.cycleKeys)===JSON.stringify(f.cycleKeys)&&JSON.stringify(r.itemKs)===JSON.stringify(f.itemKs)&&obj(r.humano)&&txt(r.humano.id)&&txt(r.humano.nome)&&txt(r.humano.role)&&r.ts!==null&&r.ts!==undefined;}
+    function fonteDoContato(f,r){return Object.assign({},f,{estado:r&&r.tipo==='retorno_humano'?'retorno_pendente':'feito',existente:r});}
     async function resolver(row,dia,painel){
       var p=row&&row.p;if(!p||!txt(p.n)||!txt(p.tutor))return{estado:'revisao'};
       var pk=portas.pelKey(p),dk=portas.dcKey(p.n,p.tutor);if(!pk||!dk||txt(row.chave)!==dk)return{estado:'revisao'};
@@ -99656,33 +99765,36 @@ renderAtual=function(){
         return{dia:dia,estado:'pronto',itens:out};})();
       cache={dia:dia,em:Date.now(),promise:prom};return prom;
     }
-    async function marcar(alvo){
+    async function marcar(alvo,pedido){
       authorize();var dia=txt(portas.dia());if(!alvo||alvo.dia!==dia)throw Error('Atualize a lista antes de registrar.');
       var rows=portas.linhasHoje(),row=Array.isArray(rows)?rows.filter(function(x){return x&&x.chave===alvo.dcKey;})[0]:null;
       if(!row)throw Error('Presença do dia mudou; atualize a lista.');
       var fontePainel=await portas.lerPainel();var atual=await resolver(row,dia,fontePainel);
       if(atual.identidadeAmbigua)throw Error('Há mais de uma ficha possível para este peludinho. Nada foi salvo.');
-      var atuais=await enviosCorrespondentes(atual,fontePainel);if(!Array.isArray(atuais)){if(atual.identidadeAmbigua)throw Error('O alvo desta resposta não é único. Nada foi salvo.');atuais=[];}
-      if(atual.estado==='envio_aceito'||atuais.length)throw Error('Já houve contato hoje. Abra a mensagem para conferir a resposta.');
-      if(['pendente','retorno_pendente'].indexOf(atual.estado)<0||atual.escopoSha!==alvo.escopoSha||atual.contatoId!==alvo.contatoId)throw Error('Presença ou prevenção mudou; atualize a lista.');
+      var esperado=await escopoSolicitado(alvo,pedido),fonte=await escopoSolicitado(atual,pedido);if(!mesmoAlvo(esperado,fonte))throw Error('Presença ou prevenção mudou; atualize a lista.');
+      var atuais=await enviosCorrespondentes(fonte,fontePainel);if(!Array.isArray(atuais))throw Error('Não foi possível confirmar os contatos deste cuidado. Nada foi salvo.');
+      if(atuais.length)throw Error('Este cuidado já teve contato hoje. Abra a mensagem para conferir a resposta.');
       var a=portas.autor();if(!obj(a)||!txt(a.id)||!txt(a.nome)||!txt(a.role))throw Error('Sessão humana não confirmada.');
       var timestamp=portas.serverTimestamp();if(timestamp===null||timestamp===undefined)throw Error('Horário do servidor indisponível. Nada foi salvo.');
-      var registro={versao:89,tipo:'contato_humano',status:'feito',dia:dia,dcKey:atual.dcKey,pelKey:atual.pelKey,petId:atual.petId,tutorId:atual.tutorId,groupKey:atual.groupKey,cycleKeys:atual.cycleKeys,itemKs:atual.itemKs,escopoSha:atual.escopoSha,humano:{id:txt(a.id),nome:txt(a.nome),role:txt(a.role)},ts:timestamp,tsCliente:new Date().toISOString()};
-      var ref=portas.db.ref('daycare/vencimentos/'+dia+'/'+atual.dcKey+'/contatosHumanos89/'+atual.key);
-      var result=await ref.transaction(function(old){if(old!==null&&old!==undefined){if(old.versao===89&&old.tipo==='retorno_humano'&&old.status==='retorno_pendente'&&old.escopoSha===atual.escopoSha)return registro;return;}return registro;});
-      if(!result||result.committed!==true)throw Error('Este contato já foi registrado ou precisa ser conferido.');
-      cache={dia:'',em:0,promise:null};return{ok:true,registro:result.snapshot&&result.snapshot.val?result.snapshot.val():registro};
+      var registro={versao:89,tipo:'contato_humano',status:'feito',dia:dia,dcKey:fonte.dcKey,pelKey:fonte.pelKey,petId:fonte.petId,tutorId:fonte.tutorId,groupKey:fonte.groupKey,cycleKeys:fonte.cycleKeys,itemKs:fonte.itemKs,escopoSha:fonte.escopoSha,humano:{id:txt(a.id),nome:txt(a.nome),role:txt(a.role)},ts:timestamp,tsCliente:new Date().toISOString()};
+      var ref=portas.db.ref('daycare/vencimentos/'+dia+'/'+fonte.dcKey+'/contatosHumanos89/'+fonte.key);
+      var autorMudou=false,result=await ref.transaction(function(old){var aa=portas.autor();if(!obj(aa)||txt(aa.id)!==txt(a.id)||txt(aa.nome)!==txt(a.nome)||txt(aa.role)!==txt(a.role)){autorMudou=true;return;}if(old!==null&&old!==undefined){if(contatoMesmoEscopo(old,fonte)&&old.tipo==='retorno_humano'&&old.status==='retorno_pendente')return registro;return;}return registro;}),salvo=result&&result.snapshot&&result.snapshot.val?result.snapshot.val():null;
+      if(autorMudou)throw Error('A sessão mudou antes da confirmação. Nada foi atribuído.');
+      if(!result||result.committed!==true){if(!(contatoMesmoEscopo(salvo,fonte)&&salvo.tipo==='contato_humano'&&salvo.status==='feito'))throw Error('Este contato já foi registrado ou precisa ser conferido.');cache={dia:'',em:0,promise:null};return{ok:true,idempotente:true,registro:salvo,fonteContato:fonteDoContato(fonte,salvo)};}
+      salvo=salvo||registro;cache={dia:'',em:0,promise:null};return{ok:true,registro:salvo,fonteContato:fonteDoContato(fonte,salvo)};
     }
-    async function marcarRetorno(alvo){
+    async function marcarRetorno(alvo,pedido){
       authorize();var dia=txt(portas.dia());if(!alvo||alvo.dia!==dia)throw Error('Atualize a lista antes de registrar.');
       var rows=portas.linhasHoje(),row=Array.isArray(rows)?rows.filter(function(x){return x&&x.chave===alvo.dcKey;})[0]:null;if(!row)throw Error('Presença do dia mudou; atualize a lista.');
-      var fontePainel=await portas.lerPainel(),atual=await resolver(row,dia,fontePainel);if(atual.identidadeAmbigua)throw Error('Há mais de uma ficha possível para este peludinho. Nada foi salvo.');var atuais=await enviosCorrespondentes(atual,fontePainel);if(!Array.isArray(atuais)){if(atual.identidadeAmbigua)throw Error('O alvo desta resposta não é único. Nada foi salvo.');atuais=[];}
-      if(atual.estado==='envio_aceito'||atuais.length)throw Error('Já houve contato hoje. Abra a mensagem para conferir a resposta.');
-      if(['pendente','retorno_pendente'].indexOf(atual.estado)<0||atual.escopoSha!==alvo.escopoSha||atual.contatoId!==alvo.contatoId)throw Error('Presença ou prevenção mudou; atualize a lista.');
+      var fontePainel=await portas.lerPainel(),atual=await resolver(row,dia,fontePainel);if(atual.identidadeAmbigua)throw Error('Há mais de uma ficha possível para este peludinho. Nada foi salvo.');
+      var esperado=await escopoSolicitado(alvo,pedido),fonte=await escopoSolicitado(atual,pedido);if(!mesmoAlvo(esperado,fonte))throw Error('Presença ou prevenção mudou; atualize a lista.');var atuais=await enviosCorrespondentes(fonte,fontePainel);if(!Array.isArray(atuais))throw Error('Não foi possível confirmar os contatos deste cuidado. Nada foi salvo.');
+      if(atuais.length)throw Error('Este cuidado já teve contato hoje. Abra a mensagem para conferir a resposta.');
       var a=portas.autor();if(!obj(a)||!txt(a.id)||!txt(a.nome)||!txt(a.role))throw Error('Sessão humana não confirmada.');var timestamp=portas.serverTimestamp();if(timestamp===null||timestamp===undefined)throw Error('Horário do servidor indisponível. Nada foi salvo.');
-      var registro={versao:89,tipo:'retorno_humano',status:'retorno_pendente',dia:dia,dcKey:atual.dcKey,pelKey:atual.pelKey,petId:atual.petId,tutorId:atual.tutorId,groupKey:atual.groupKey,cycleKeys:atual.cycleKeys,itemKs:atual.itemKs,escopoSha:atual.escopoSha,humano:{id:txt(a.id),nome:txt(a.nome),role:txt(a.role)},ts:timestamp,tsCliente:new Date().toISOString()};
-      var ref=portas.db.ref('daycare/vencimentos/'+dia+'/'+atual.dcKey+'/contatosHumanos89/'+atual.key),result=await ref.transaction(function(old){if(old!==null&&old!==undefined){if(old.versao===89&&old.tipo==='retorno_humano'&&old.status==='retorno_pendente'&&old.escopoSha===atual.escopoSha)return old;return;}return registro;});
-      if(!result||result.committed!==true)throw Error('Este acompanhamento já mudou ou precisa ser conferido.');cache={dia:'',em:0,promise:null};return{ok:true,registro:result.snapshot&&result.snapshot.val?result.snapshot.val():registro};
+      var registro={versao:89,tipo:'retorno_humano',status:'retorno_pendente',dia:dia,dcKey:fonte.dcKey,pelKey:fonte.pelKey,petId:fonte.petId,tutorId:fonte.tutorId,groupKey:fonte.groupKey,cycleKeys:fonte.cycleKeys,itemKs:fonte.itemKs,escopoSha:fonte.escopoSha,humano:{id:txt(a.id),nome:txt(a.nome),role:txt(a.role)},ts:timestamp,tsCliente:new Date().toISOString()};
+      var ref=portas.db.ref('daycare/vencimentos/'+dia+'/'+fonte.dcKey+'/contatosHumanos89/'+fonte.key),autorMudou=false,result=await ref.transaction(function(old){var aa=portas.autor();if(!obj(aa)||txt(aa.id)!==txt(a.id)||txt(aa.nome)!==txt(a.nome)||txt(aa.role)!==txt(a.role)){autorMudou=true;return;}if(old!==null&&old!==undefined)return;return registro;}),salvo=result&&result.snapshot&&result.snapshot.val?result.snapshot.val():null;
+      if(autorMudou)throw Error('A sessão mudou antes da confirmação. Nada foi atribuído.');
+      if(!result||result.committed!==true){if(!(contatoMesmoEscopo(salvo,fonte)&&((salvo.tipo==='retorno_humano'&&salvo.status==='retorno_pendente')||(salvo.tipo==='contato_humano'&&salvo.status==='feito'))))throw Error('Este acompanhamento já mudou ou precisa ser conferido.');cache={dia:'',em:0,promise:null};return{ok:true,idempotente:true,registro:salvo,fonteContato:fonteDoContato(fonte,salvo)};}
+      salvo=salvo||registro;cache={dia:'',em:0,promise:null};return{ok:true,registro:salvo,fonteContato:fonteDoContato(fonte,salvo)};
     }
     /* Story 6.94 (AC10): refaz UMA linha, sem reler os outros presentes. `painel` (opcional) é a projeção que a tela já tem; sem ela, lê uma vez. */
     async function atualizarUm(dcKey,painel){
@@ -99884,7 +99996,7 @@ renderAtual=function(){
   function cuidadoPendente117(c){
     return !c||c.bloqueado===true||c.respostaSalva!==true||c.tarefaOrfa===true||(c.linhaObrigatoria===true&&c.linhaConfirmada!==true);
   }
-  function classificarFilas117(pets){
+  function classificarFilas117(pets,fixosResolver){
     var ordem=[],porDc={};
     (pets||[]).forEach(function(p,i){
       var dc=txt(p&&p.dcKey)||('__sem_dc_'+i),cs=Array.isArray(p&&p.cuidados)?p.cuidados:[];
@@ -99892,14 +100004,15 @@ renderAtual=function(){
       porDc[dc].cuidados=porDc[dc].cuidados.concat(cs);
     });
     var paraResolver=[],emAndamento=[];
-    ordem.forEach(function(dc){var x=porDc[dc],pendente=!x.cuidados.length||x.cuidados.some(cuidadoPendente117);(pendente?paraResolver:emAndamento).push(x.pet);});
+    ordem.forEach(function(dc){var x=porDc[dc],pendente=!!(fixosResolver&&fixosResolver[dc])||!x.cuidados.length||x.cuidados.some(cuidadoPendente117);(pendente?paraResolver:emAndamento).push(x.pet);});
     return{paraResolver:paraResolver,emAndamento:emAndamento,porDc:porDc};
   }
+  function chaveRascunho137(dcKey,cycleKey,itemK){return JSON.stringify([txt(dcKey),txt(cycleKey),txt(itemK)]);}
   return{RESPOSTAS:RESPOSTAS,FRASE_JA_NO_SNOOPY:FRASE_JA_NO_SNOOPY,FRASE_JA_APLICADO:FRASE_JA_APLICADO,FRASE_TROCA_APLICADO:FRASE_TROCA_APLICADO,
     rotuloResposta:rotuloResposta,mascara:mascara,hora:hora,quandoEnviado:quandoEnviado,retornoDepois:retornoDepois,msAte1330:msAte1330,inicio1330:inicio1330,horaDaSaida:horaDaSaida,
     grupoDoPet:grupoDoPet,resumo:resumo,rotuloGrupo:rotuloGrupo,topo:topo,ordenar:ordenar,camposDoCuidado:camposDoCuidado,ondePadrao:ondePadrao,faltaEscolher:faltaEscolher,
     podeEscolher:podeEscolher,mesclarEscolha:mesclarEscolha,decidirTroca:decidirTroca,estadoDaTarefa:estadoDaTarefa,linhaDoLancamentoConfirmada:linhaDoLancamentoConfirmada,
-    classificarFilas117:classificarFilas117};
+    classificarFilas117:classificarFilas117,chaveRascunho137:chaveRascunho137};
 });
 </script>
 <script id="zelozinha-contatos89-ui">'use strict';
@@ -99909,7 +100022,7 @@ renderAtual=function(){
 (function(){
   if(window.__zelozinhaContatos89Instalado)return;window.__zelozinhaContatos89Instalado=true;
   var T=window.ZelozinhaTela94;
-  var estado={linhas:{},api:null,alvos:[],seq:0,itens:{},grupos:[],ordemDepois:false,inFlight:null,projecao:null,resultado:null,dia:'',vet:null,sujo:true,projEm:'',salvando:{},avisos:{},msgs:{},copiaSt:{},agora94:{},presenca:{},abertos:{},diaCarregado:'',diaLendo:null,snoopyEstado:'novo',recarregarDia:true,obs:null,anexando:false,timer:null,scrollY:null,erro:''};
+  var estado={linhas:{},api:null,alvos:[],seq:0,itens:{},grupos:[],ordemDepois:false,inFlight:null,projecao:null,resultado:null,dia:'',vet:null,sujo:true,projEm:'',salvando:{},avisos:{},msgs:{},copiaSt:{},agora94:{},presenca:{},abertos:{},fixosResolver:{},datasTutor137:{},rascunhoFicha138:null,diaCarregado:'',diaLendo:null,snoopyEstado:'novo',recarregarDia:true,obs:null,anexando:false,timer:null,scrollY:null,erro:''};
   function instalarEstilo(){
     if(!document||!document.createElement||!document.head||document.getElementById&&document.getElementById('zelozinha-contatos89-style'))return;
     var st=document.createElement('style');st.id='zelozinha-contatos89-style';
@@ -99981,6 +100094,8 @@ renderAtual=function(){
   function diaAtual(){try{return typeof zPainel44Dia==='function'?txt(zPainel44Dia()):'';}catch(_){return '';}}
   function itemNome(c){if(txt(c&&c.nome))return txt(c.nome);var k=txt(c&&c.itemK),care=txt(c&&c.care);if(k==='vac_mult_p')return 'Vacina Múltipla';if(k==='vac_gripe_p')return 'Vacina de Gripe';if(k==='vac_raiva_p')return 'Vacina Antirrábica';if(k==='col_p')return 'Coleira';if(care==='vermifugo')return 'Vermífugo';if(care==='ecto')return 'Proteção contra pulgas e carrapatos';if(care==='vacina')return 'Vacina';if(care==='escova')return 'Escova dental';return 'Cuidado preventivo';}
   function dataBR(v){var s=txt(v);return /^\d{4}-\d{2}-\d{2}$/.test(s)?s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4):'';}
+  function hojeSP137(){try{var p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(agora())),x={};p.forEach(function(a){x[a.type]=a.value;});return x.year+'-'+x.month+'-'+x.day;}catch(_){return'';}}
+  function confirmacaoTutorDe137(rv){if(!rv||rv.decisao!=='autorizar'||rv.origem!=='externo')return null;try{return window.ZeluzResposta88&&typeof window.ZeluzResposta88.normalizarConfirmacaoTutor137==='function'?window.ZeluzResposta88.normalizarConfirmacaoTutor137(rv.confirmacaoTutor137,{decisao:rv.decisao,origem:rv.origem},new Date(agora()).toISOString()):null;}catch(_){return null;}}
   function cuidadoNome(c){var nome=itemNome(c),data=dataBR(c&&c.dueDate);return nome+(data?' · '+data:'');}
   function tutorNome(c){return txt(c.cadastro&&c.cadastro.tutor)||txt(c.row&&c.row.p&&c.row.p.tutor);}
   function tutorPrimeiro(c){var n=tutorNome(c);return n?n.split(/\s+/)[0]:'';}
@@ -100018,7 +100133,7 @@ renderAtual=function(){
     var vistos={},pets=[];
     estado.grupos.forEach(function(g){(g.pets||[]).forEach(function(p){var c=estado.itens[p.dcKey];if(!c||vistos[c.dcKey])return;vistos[c.dcKey]=true;pets.push({dcKey:c.dcKey,nome:nomePet(c),contato:c,cuidados:vmsDe(c).map(function(v){return cuidadoFila117(c,v);})});});});
     Object.keys(estado.itens).forEach(function(dc){var c=estado.itens[dc];if(!c||vistos[dc])return;vistos[dc]=true;pets.push({dcKey:dc,nome:nomePet(c),contato:c,cuidados:vmsDe(c).map(function(v){return cuidadoFila117(c,v);})});});
-    return T.classificarFilas117(pets);
+    return T.classificarFilas117(pets,estado.fixosResolver);
   }
   function filaDoContato(c){var f=classificacao117();return f.emAndamento.some(function(p){return p.dcKey===c.dcKey;})?'progress':'resolve';}
   function prepararRota117(c){
@@ -100157,13 +100272,14 @@ renderAtual=function(){
   function careHTML(c,v,i){
     var cy=v.cy,rv=v.atual,ck=encodeURIComponent(cy.cycleKey),travado=v.bloqueado||!!estado.salvando[c.dcKey];
     var tag=estado.agora94[c.dcKey+'|'+i]?' · registrado agora':'';
-    var detalhe=rv?(T.rotuloResposta(v.valor)||'Resposta registrada')+' · '+nomeDe(rv)+' · '+horaDe(rv)+tag:'sem resposta';
+    var confTutor=confirmacaoTutorDe137(rv),detalhe=rv?((confTutor?'Tutor já fez':T.rotuloResposta(v.valor))||'Resposta registrada')+' · '+nomeDe(rv)+' · '+horaDe(rv)+tag:'sem resposta';
     var legenda='<p class="pair zt694-leg"><span>'+esc(cuidadoNome(cy))+'</span><small><span class="zt694-care-status '+classeStatusCuidado(v)+'">'+esc(v.st.rotulo)+'</span><br>'+esc(detalhe)+'</small></p>';
     var botoes=T.RESPOSTAS.map(function(r){var aria=r[1]+' para '+cuidadoNome(cy),on=v.valor===r[0];return '<button type="button" class="btn zt694-btn" data-zt694-acao="resp" data-zt694-valor="'+r[0]+'" data-zt694-ciclo="'+i+'" aria-label="'+esc(aria)+'" aria-pressed="'+(on?'true':'false')+'"'+(travado?' disabled':'')+'>'+esc(r[1])+'</button>';}).join('');
+    var dataKey=T.chaveRascunho137(c.dcKey,cy.cycleKey,cy.itemK),dataId='zt694-tutor-fez-'+encodeURIComponent(dataKey),dataFez=Object.prototype.hasOwnProperty.call(estado.datasTutor137,dataKey)?estado.datasTutor137[dataKey]:(confTutor&&confTutor.dataAplicacao||''),atualizarFicha=confTutor?'<button type="button" class="btn zt694-acao" data-zt694-acao="atualizar-ficha" data-zt694-ciclo="'+i+'"'+(travado?' disabled':'')+'>Atualizar ficha</button>':'',fez='<div class="zt694-tutor-fez" data-zt694-tutor-fez><label class="cad-lb" for="'+esc(dataId)+'">Data real em que o tutor fez</label><div class="zt694-btns"><input class="cad-in" type="date" id="'+esc(dataId)+'" data-zt694-data-fez data-zt694-cycle-key="'+esc(encodeURIComponent(cy.cycleKey))+'" data-zt694-item-k="'+esc(encodeURIComponent(cy.itemK))+'" value="'+esc(dataFez)+'" max="'+esc(hojeSP137())+'"'+(travado?' disabled':'')+'><button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="tutor-fez" data-zt694-ciclo="'+i+'"'+(travado?' disabled':'')+'>Tutor já fez</button>'+atualizarFicha+'</div><p class="zt694-sub">'+(confTutor?'Resposta registrada. Data informada: '+esc(dataBR(confTutor.dataAplicacao))+' · Atualizar ficha — pendente. A ficha ainda não foi atualizada.':'Informe a data para registrar; a ficha não será atualizada automaticamente.')+'</p><div data-z138-editor-slot></div></div>';
     var aviso=estado.avisos[c.dcKey+'|'+i]?'<p class="zt694-aviso" data-zt694-aviso>'+esc(estado.avisos[c.dcKey+'|'+i])+'</p>':'';
     var bloq=v.bloqueado?'<p class="zt694-sub">'+(c.identidadeAmbigua?'Há mais de uma ficha possível para este peludinho. Confirme o cadastro; nenhuma resposta será salva até o alvo ficar único.':'Atualize para confirmar o vínculo deste cuidado antes de registrar.')+'</p>':'';
     var vet=/^vac_/.test(txt(cy.itemK))?'<p class="zt694-sub" data-zt694-vet>'+esc(vetTexto(c))+'</p>':'';
-    return '<div class="zt694-care" role="group" data-z89-resposta data-z104-care="'+ck+'" data-zt694-care="'+i+'" aria-label="'+esc(cuidadoNome(cy))+'">'+legenda+'<div class="zt694-btns">'+botoes+'</div>'+aviso+bloq+vet+posHTML(c,v,i)+'</div>';
+    return '<div class="zt694-care" role="group" data-z89-resposta data-z104-care="'+ck+'" data-zt694-care="'+i+'" aria-label="'+esc(cuidadoNome(cy))+'">'+legenda+'<div class="zt694-btns">'+botoes+'</div>'+fez+aviso+bloq+vet+posHTML(c,v,i)+'</div>';
   }
   function todosHTML(c,vms){
     var sem=vms.filter(function(v){return !v.valor;});
@@ -100174,12 +100290,12 @@ renderAtual=function(){
   /* Os textos «Vai fazer em casa» da linha: o da casa é o publicado e mora numa função só (`ZeluzRespostaApp88.textoEmCasa`, que a janela «Abrir resposta» também usa).
      Há duas variantes (vacina e demais cuidados) e o texto não cita o cuidado: dois cuidados com o mesmo texto dão uma caixa só. Sem o nome do tutor na ficha não há texto (e a linha daquele FILHOt nem chega a esta tela). */
   function textosEmCasaDe(c,vms){
-    var b=window.ZeluzRespostaApp88,tutor=tutorNome(c),out=[],vistos={};
+    var b=window.ZeluzRespostaApp88,tutor=tutorNome(c),pet=nomePet(c),out=[],vistos={};
     if(!b||typeof b.textoEmCasa!=='function'||!tutor)return out;
     vms.forEach(function(v){
       if(v.valor!=='autorizar_externo')return;
-      var x=b.textoEmCasa({tutor:tutor},v.cy.itemK);
-      if(x&&!vistos[x]){vistos[x]=true;out.push({texto:x,vacina:/^vac_/.test(txt(v.cy.itemK))});}
+      var fez=confirmacaoTutorDe137(v.atual),x=fez&&typeof b.textoTutorJaFez==='function'?b.textoTutorJaFez({tutor:tutor,pet:pet},v.cy.itemK,fez.dataAplicacao):b.textoEmCasa({tutor:tutor},v.cy.itemK);
+      if(x&&!vistos[x]){vistos[x]=true;out.push({texto:x,vacina:/^vac_/.test(txt(v.cy.itemK)),tutorFez:!!fez});}
     });
     return out;
   }
@@ -100200,7 +100316,7 @@ renderAtual=function(){
   }
   function caixasDe(c,vms){
     var casa=textosEmCasaDe(c,vms),ret=textosRetornoDe(c,vms),out=[];
-    casa.forEach(function(x){out.push({tipo:'casa',texto:x.texto,titulo:'Mensagem para o tutor, pronta para enviar'+(casa.length>1?(x.vacina?': vacina':': demais cuidados'):'')});});
+    casa.forEach(function(x){out.push({tipo:x.tutorFez?'tutor-fez':'casa',texto:x.texto,titulo:x.tutorFez?'Agradecimento ao tutor, pronto para copiar':'Mensagem para o tutor, pronta para enviar'+(casa.length>1?(x.vacina?': vacina':': demais cuidados'):'')});});
     ret.forEach(function(x){out.push({tipo:'retorno',texto:x.texto,titulo:x.titulo});});
     return out;
   }
@@ -100294,9 +100410,20 @@ renderAtual=function(){
   function aplicarAbertos(raiz){Array.prototype.forEach.call(raiz.querySelectorAll('details[data-zt694-aberto]'),function(d){var k=d.getAttribute('data-zt694-aberto');if(k in estado.abertos)d.open=estado.abertos[k]===true;});}
   /* a última vista da pessoa (o primeiro FILHOt que aparece na tela e onde ele está), guardada a cada rolagem: quando o app apaga o conteúdo desta tela (ele refaz o painel às 13h30 e a cada atualização geral) e a tela volta, o mesmo FILHOt volta ao mesmo lugar */
   function anotarVista(){var a=guardarAncora();if(a.linha)estado.vista=a;}
+  function capturarFicha138(){
+    var s=window.Z138_FICHA_SELECAO,ed=document.querySelector('[data-z138-editor-native]');if(!s||!ed)return estado.rascunhoFicha138;
+    var valores={};Array.prototype.forEach.call(ed.querySelectorAll('input[id],select[id],textarea[id]'),function(x){valores[x.id]=String(x.value||'');});estado.rascunhoFicha138={selecao:s,valores:valores};return estado.rascunhoFicha138;
+  }
+  function restaurarFicha138(r){
+    var s=r&&r.selecao,c=s&&estado.itens[s.dcKey],pet=s&&fichaUnica138(s.pelKey,s.dcKey);if(!s||window.Z138_FICHA_SELECAO!==s||estado.dia!==s.dia||!c||!pet)return;
+    var i=(c.ciclos||[]).findIndex(function(x){return x&&x.cycleKey===s.cycleKey&&x.itemK===s.itemK;}),art=document.querySelector('[data-zt694-pet="'+encodeURIComponent(s.dcKey)+'"]'),care=art&&art.querySelector('[data-zt694-care="'+i+'"]'),slot=care&&care.querySelector('[data-z138-editor-slot]');if(i<0||!slot)return;
+    var ed=prevEdicaoItemHTML138(pet,s.itemK,cuidadoNome(c.ciclos[i]));if(!ed||ed.ok!==true)return;slot.innerHTML=ed.html;Object.keys(r.valores||{}).forEach(function(id){var x=document.getElementById(id);if(x)x.value=r.valores[id];});
+    var dt=document.getElementById('prevT_'+s.pelKey+'_'+s.itemK),q=document.getElementById('prevQ_'+s.pelKey+'_'+s.itemK);if(dt)dt.readOnly=true;if(q)q.readOnly=true;slot.insertAdjacentHTML('afterbegin','<p role="status" class="hint" style="margin:8px 0;color:var(--z-blue)">Resposta registrada. Confira produto, regime e vencimento; a ficha só muda depois de tocar em Salvar e receber a confirmação.</p>');
+  }
   function pintar(alvos,preservar){
-    var ancora=preservar?guardarAncora():null;
+    var ancora=preservar?guardarAncora():null,rascunho=capturarFicha138();
     alvos.forEach(function(el){if(preservar)lembrarAbertos(el);el.innerHTML=montarMarkup(filaDoAlvo(el));el.setAttribute('data-zt694-ok','1');aplicarAbertos(el);});
+    restaurarFicha138(rascunho);
     if(ancora)voltarAncora(ancora);
     anotarVista();
   }
@@ -100354,7 +100481,8 @@ renderAtual=function(){
       if(!estado.api)criarApi();
       var dados=await Promise.all([estado.api.listar(true),lerProjecao(),lerVeterinaria()]),result=dados[0];
       if(req!==estado.seq)return;
-      estado.erro='';estado.linhas={};estado.resultado=result;estado.projecao=dados[1];estado.vet=dados[2];estado.dia=result&&result.dia||diaAtual();estado.projEm=pe;estado.sujo=false;estado.avisos={};estado.msgs={};estado.copiaSt={};estado.agora94={};
+      var diaLido=result&&result.dia||diaAtual();if(estado.dia&&estado.dia!==diaLido){estado.fixosResolver={};estado.datasTutor137={};estado.rascunhoFicha138=null;window.Z138_FICHA_SELECAO=null;}
+      estado.erro='';estado.linhas={};estado.resultado=result;estado.projecao=dados[1];estado.vet=dados[2];estado.dia=diaLido;estado.projEm=pe;estado.sujo=false;estado.avisos={};estado.msgs={};estado.copiaSt={};estado.agora94={};
       indexar(result);publicarHumanos();
       /* quem a lista trouxe estava na casa (check-in confirmado, sem check-out) quando ela começou a ser lida */
       estado.presenca={};(result&&result.itens||[]).forEach(function(c){if(c&&txt(c.dcKey)&&!bloqueadoTotal(c))estado.presenca[c.dcKey]={presente:true,lidoEm:t0};});
@@ -100475,15 +100603,56 @@ renderAtual=function(){
       return Object.keys(ev).some(function(k){var e=ev[k];return !!e&&(e.tipo==='confirmacao'||!e.tipo)&&!anuladas[k];});
     }catch(_){return null;}
   }
-  async function registrarGrupo(c,lista,valor,mapa){
+  function atorFicha138(){var u={};try{u=typeof usuarioAtual==='function'?(usuarioAtual()||{}):{};}catch(_){u={};}return{id:txt(u.monId||u.id||u.uid),nome:txt(u.pessoa||u.nome||u.name),papel:txt(u.role||u.papel||u.perfil)};}
+  function atorIgual138(a,b){return !!a&&!!b&&a.id===b.id&&a.nome===b.nome&&a.papel===b.papel&&!!a.id&&!!a.nome&&!!a.papel;}
+  function amanha138(d){var p=txt(d).split('-').map(Number),x=new Date(Date.UTC(p[0],p[1]-1,p[2]+1));return x.toISOString().slice(0,10);}
+  function respostaFicha138(reg,cy){var rv=null;try{rv=reg&&reg.respostasEscopo49&&reg.respostasEscopo49.porCiclo&&reg.respostasEscopo49.porCiclo[codificar(cy)];}catch(_){rv=null;}return rv&&rv.cycleKey===cy.cycleKey&&rv.itemK===cy.itemK?rv:null;}
+  function fichaUnica138(pk,dc){var a=[];try{a=(PELUDINHOS||[]).filter(function(p){return p&&txt(pelKey(p))===pk&&txt(dcKey(p.n,p.tutor))===dc;});}catch(_){a=[];}return a.length===1?a[0]:null;}
+  async function abrirFichaTutor138(c,v,i,care){
+    var conf=confirmacaoTutorDe137(v&&v.atual),inicio=atorFicha138(),pk=txt(c&&c.pelKey),dc=txt(c&&c.dcKey),cy=v&&v.cy,slot=care&&care.querySelector('[data-z138-editor-slot]');if(!conf||!pk||!dc||!cy||!slot||!atorIgual138(inicio,inicio)){avisoLinha(dc,i,'Não consegui confirmar a resposta e a sessão. Nada foi aberto.');redesenharLinha(dc);return false;}
+    var aberta=window.Z138_FICHA_SELECAO;if(aberta&&aberta.dcKey===dc&&aberta.cycleKey===cy.cycleKey&&aberta.itemK===cy.itemK&&slot.querySelector('[data-z138-editor-native]'))return true;
+    if(aberta){if(prevLanceNaoSalvo(aberta.pelKey)){avisoLinha(dc,i,'Há dados de outro cuidado ainda não salvos. Salve ou feche aquele editor antes de continuar.');redesenharLinha(dc);return false;}var outro=document.querySelector('[data-z138-editor-native]'),outroSlot=outro&&outro.closest('[data-z138-editor-slot]');if(outroSlot)outroSlot.innerHTML='';window.Z138_FICHA_SELECAO=null;estado.rascunhoFicha138=null;}
+    dizerNaLinha(dc,'Conferindo a ficha antes de abrir…');
+    try{
+      var atual=await estado.api.atualizarUm(dc,estado.projecao),pet=fichaUnica138(pk,dc),snaps=await Promise.all([DB.ref('daycare/cadastro/'+pk).once('value'),DB.ref('daycare/vencimentos/'+c.dia+'/'+dc).once('value')]),cad=snaps[0]&&snaps[0].val?snaps[0].val():null,reg=snaps[1]&&snaps[1].val?snaps[1].val():null,atorAgora=atorFicha138();
+      var ciclos=(atual&&atual.ciclos||[]).filter(function(x){return x&&x.cycleKey===cy.cycleKey&&x.itemK===cy.itemK;}),rv=respostaFicha138(reg,cy),confAtual=confirmacaoTutorDe137(rv);
+      if(!pet||!cad||cad.excluido===true||txt(cad.movido_para)||txt(cad._renomeado_de)||!atual||atual.identidadeAmbigua||ciclos.length!==1||!confAtual||confAtual.dataAplicacao!==conf.dataAplicacao||!atorIgual138(inicio,atorAgora))throw Error('A ficha, o cuidado, a resposta ou a sessão mudou. Atualize e tente novamente.');
+      var selecao={versao:138,dia:c.dia,dcKey:dc,pelKey:pk,petId:txt(c.petId),tutorId:txt(c.tutorId),cycleKey:cy.cycleKey,itemK:cy.itemK,dataAplicacao:conf.dataAplicacao,respostaId:txt(rv.respostaId),revisao:Number(rv.revisao),ator:inicio};
+      try{if(typeof dashCuidado36Limpar==='function')dashCuidado36Limpar();}catch(_){/* esta atualização foi feita fora; nunca herda uma execução da Zêluz */}
+      slot.innerHTML='';var editor=prevEdicaoItemHTML138(pet,cy.itemK,cuidadoNome(cy));if(!editor||editor.ok!==true)throw Error(editor&&editor.motivo||'Não consegui montar o formulário nativo deste cuidado.');slot.innerHTML=editor.html;
+      var campo=document.getElementById('prevT_'+pk+'_'+cy.itemK),quem=document.getElementById('prevQ_'+pk+'_'+cy.itemK);if(!campo||!quem)throw Error('O formulário nativo deste cuidado ficou incompleto. Nada foi salvo.');
+      campo.value=conf.dataAplicacao;campo.readOnly=true;quem.value='Tutor — informado por '+inicio.nome;quem.readOnly=true;window.Z138_FICHA_SELECAO=selecao;estado.rascunhoFicha138=null;prevRecalcular(pk,cy.itemK);
+      var nota=document.createElement('p');nota.setAttribute('role','status');nota.className='hint';nota.style.cssText='margin:8px 0;color:var(--z-blue)';nota.textContent='Resposta registrada. Confira produto, regime e vencimento; a ficha só muda depois de tocar em Salvar e receber a confirmação.';slot.insertBefore(nota,slot.firstChild);dizerNaLinha(dc,'');return true;
+    }catch(e){window.Z138_FICHA_SELECAO=null;if(slot)slot.innerHTML='';avisoLinha(dc,i,txt(e&&e.message)||'Não consegui conferir a ficha. Nada foi salvo.');dizerNaLinha(dc,'');redesenharLinha(dc);return false;}
+  }
+  window.zTutor138DepoisSalvar=function(s){estado.rascunhoFicha138=null;Promise.resolve(atualizarLinha(s.dcKey)).then(function(){redesenharLinha(s.dcKey);});};
+  window.zTutor138DepoisFalhar=function(s,r){if(r&&r.fichaSalva===true){dizerNaLinha(s.dcKey,'A ficha foi atualizada, mas falta confirmar o recibo. Use “Tentar confirmar de novo” neste cartão; não é preciso lançar o cuidado novamente.');return;}dizerNaLinha(s.dcKey,'A ficha não foi salva: '+(txt(r&&r.erro)||'confira os campos e tente novamente')+'. O que foi digitado continua no cartão.');};
+  function fecharFichaTutor138(c,cy,care){
+    var s=window.Z138_FICHA_SELECAO,slot=care&&care.querySelector('[data-z138-editor-slot]'),pk=txt(c&&c.pelKey);if(!slot)return;
+    var fechar=function(){if(s&&s.pelKey===pk&&s.cycleKey===cy.cycleKey&&s.itemK===cy.itemK)window.Z138_FICHA_SELECAO=null;estado.rascunhoFicha138=null;delete PREV_ED_VISTO[pk];slot.innerHTML='';};
+    if(prevLanceNaoSalvo(pk)){zEscolha('Há dados da ficha ainda não salvos.', ['Se fechar, o que foi digitado neste cuidado será descartado.'], [{t:'Descartar',cor:'#B3261E',fn:fechar},{t:'Voltar',cor:'#6b5f4b',fn:function(){}}],{corTitulo:'#234D67'});return;}fechar();
+  }
+  window.zTutor138ValidarAntes=async function(s,p,k){
+    try{
+      if(!s||s.versao!==138||diaAtual()!==s.dia||txt(k)!==s.itemK||txt(pelKey(p))!==s.pelKey||txt(dcKey(p.n,p.tutor))!==s.dcKey||!atorIgual138(s.ator,atorFicha138()))return{ok:false,motivo:'A ficha, o cuidado ou a sessão mudou.'};
+      var pet=fichaUnica138(s.pelKey,s.dcKey);if(!pet||pet!==p)return{ok:false,motivo:'A ficha atual não é única.'};
+      var snaps=await Promise.all([DB.ref('daycare/cadastro/'+s.pelKey).once('value'),DB.ref('daycare/vencimentos/'+s.dia+'/'+s.dcKey).once('value')]),cad=snaps[0]&&snaps[0].val?snaps[0].val():null,reg=snaps[1]&&snaps[1].val?snaps[1].val():null;if(!cad||cad.excluido===true||txt(cad.movido_para)||txt(cad._renomeado_de))return{ok:false,motivo:'O cadastro atual mudou.'};
+      var cy={cycleKey:s.cycleKey,itemK:s.itemK},rv=respostaFicha138(reg,cy);
+      var extra=Object.assign({},pelExtra(p)||{},cad),itens=vencItensDe(extra,amanha138(s.dia),0,s.dia,{}),achados=[];(Array.isArray(itens)?itens:[]).forEach(function(x){var item=txt(x&&x.k),vence=txt(x&&x.vence),care='';try{care=txt(window.ZeluzPrevencaoFontes&&window.ZeluzPrevencaoFontes.tipoCuidado(x));}catch(_){care='';}if(!care&&item==='escova_p')care='escova';if(item&&vence&&JSON.stringify([s.petId,s.tutorId,care,vence,item])===s.cycleKey&&item===s.itemK)achados.push(x);});
+      var validar=window.ZeluzResposta88&&window.ZeluzResposta88.validarAtualizacaoFicha138;if(typeof validar!=='function')return{ok:false,motivo:'Não consegui validar a atualização da ficha.'};
+      return validar(s,{dia:diaAtual(),fichaUnica:pet===p,cadastro:cad,ator:atorFicha138(),resposta:rv,ciclos:achados.map(function(){return{cycleKey:s.cycleKey,itemK:s.itemK};}),agora:new Date(agora()).toISOString()});
+    }catch(_){return{ok:false,motivo:'Não consegui reler as fontes da ficha. Nada foi salvo.'};}
+  };
+  async function registrarGrupo(c,lista,valor,mapa,confirmacaoTutor137){
     var bridge=window.ZeluzRespostaApp88;if(!bridge||typeof bridge.registrar!=='function')throw Error('a resposta não está disponível agora');
-    var enviada=lista[0].st.enviada,gk=lista[0].grupo;
+    var enviada=lista[0].st.enviada,gk=lista[0].grupo,fonteContato=c,pedido={cycleKeys:lista.map(function(v){return v.cy.cycleKey;}),itemKs:lista.map(function(v){return v.cy.itemK;})};
     if(!enviada){
-      if(mapa[0]==='aguardar'&&c.estado!=='feito'){if(!estado.api||typeof estado.api.marcarRetorno!=='function')throw Error('acompanhamento humano indisponível');await estado.api.marcarRetorno(c);c.estado='retorno_pendente';}
-      else if(mapa[0]!=='aguardar'&&c.estado!=='feito'){await estado.api.marcar(c);c.estado='feito';}
+      var contatoAck;if(mapa[0]==='aguardar'){if(!estado.api||typeof estado.api.marcarRetorno!=='function')throw Error('acompanhamento humano indisponível');contatoAck=await estado.api.marcarRetorno(c,pedido);}
+      else{if(!estado.api||typeof estado.api.marcar!=='function')throw Error('contato humano indisponível');contatoAck=await estado.api.marcar(c,pedido);}
+      if(!contatoAck||contatoAck.ok!==true||!contatoAck.fonteContato)throw Error('contato humano não confirmado');fonteContato=contatoAck.fonteContato;
     }
-    var itens=lista.map(function(v){return{cycleKey:v.cy.cycleKey,itemK:v.cy.itemK,decisao:mapa[0],origem:mapa[1],onde:'',baseRevision:v.atual&&Number.isInteger(v.atual.revisao)?v.atual.revisao:-1};});
-    var op=enviada?{petId:c.petId}:{petId:c.petId,contatoId:c.contatoId,fonteContato:c};op.semAtualizarPainel=true;
+    var itens=lista.map(function(v){var x={cycleKey:v.cy.cycleKey,itemK:v.cy.itemK,decisao:mapa[0],origem:mapa[1],onde:'',baseRevision:v.atual&&Number.isInteger(v.atual.revisao)?v.atual.revisao:-1};if(confirmacaoTutor137)x.confirmacaoTutor137=JSON.parse(JSON.stringify(confirmacaoTutor137));return x;});
+    var op=enviada?{petId:c.petId}:{petId:c.petId,contatoId:fonteContato.contatoId,fonteContato:fonteContato};op.semAtualizarPainel=true;
     var r=await bridge.registrar(gk,itens,op);
     if(!r||!r.ok)throw Error(r&&r.motivo||'fontes não confirmadas');
     return r;
@@ -100491,19 +100660,19 @@ renderAtual=function(){
   function marcarSalvando(c,idxs,btn){
     estado.salvando[c.dcKey]=estado.salvando[c.dcKey]||true;
     var art=document.querySelector('[data-zt694-pet="'+encodeURIComponent(c.dcKey)+'"]');
-    if(art)Array.prototype.forEach.call(art.querySelectorAll('[data-zt694-acao="resp"],[data-zt694-acao="todos"],[data-zt694-acao="esc"]'),function(b){b.disabled=true;});
+    if(art)Array.prototype.forEach.call(art.querySelectorAll('[data-zt694-acao="resp"],[data-zt694-acao="todos"],[data-zt694-acao="esc"],[data-zt694-acao="tutor-fez"],[data-zt694-acao="atualizar-ficha"],[data-zt694-data-fez]'),function(b){b.disabled=true;});
     if(btn)btn.textContent='Salvando…';
     dizerNaLinha(c.dcKey,'Salvando a resposta…');
   }
   /* A guarda de «salvando» fecha ANTES do primeiro `await` (a leitura do Snoopy, por exemplo): o segundo toque de um toque duplo cai nela e não passa. Quem sai sem ter gravado
      (barrado, cartaz cancelado, erro) solta a guarda e a linha volta a ficar tocável; quem grava a solta ao terminar (`gravarRespostas`). */
-  async function responder(c,idxs,valor,btn){
+  async function responder(c,idxs,valor,btn,extra){
     var dc=c.dcKey;if(estado.salvando[dc])return;
     var guarda={};estado.salvando[dc]=guarda;
-    try{return await responder1(c,idxs,valor,btn);}
+    try{return await responder1(c,idxs,valor,btn,extra);}
     finally{if(estado.salvando[dc]===guarda){delete estado.salvando[dc];redesenharLinha(dc,true);}}
   }
-  async function responder1(c,idxs,valor,btn){
+  async function responder1(c,idxs,valor,btn,extra){
     var dc=c.dcKey;
     var mapa=mapaDe(valor);if(!mapa)return;
     var vms=idxs.map(function(i){return vmCuidado(c,c.ciclos[i]);});
@@ -100515,20 +100684,22 @@ renderAtual=function(){
       if(v0.valor==='autorizar_loja'&&l0&&l0.id){sn=await snoopyConfirmadoDe(c,l0.item,l0.id);if(sn===null){dizerNaLinha(dc,'Não consegui conferir o Snoopy. Nada foi trocado.');return;}}
       troca=T.decidirTroca({antes:v0.valor,depois:valor,tarefa:txt(v0.tarefa&&v0.tarefa.estado),snoopyConfirmado:sn===true});
       if(troca.tipo==='barrar'){avisoLinha(dc,idxs[0],'');dizerNaLinha(dc,troca.frase);redesenharLinha(dc);return;}
-      if(troca.tipo==='anular'||troca.tipo==='completar')return trocarComAnulacao(c,v0,idxs[0],valor,{soCompletar:troca.tipo==='completar'});
+      if(troca.tipo==='anular'||troca.tipo==='completar')return trocarComAnulacao(c,v0,idxs[0],valor,{soCompletar:troca.tipo==='completar',confirmacaoTutor137:extra&&extra.confirmacaoTutor137||null});
     }
-    return gravarRespostas(c,idxs,vms,valor,mapa,btn);
+    return gravarRespostas(c,idxs,vms,valor,mapa,btn,extra);
   }
-  async function gravarRespostas(c,idxs,vms,valor,mapa,btn){
+  async function gravarRespostas(c,idxs,vms,valor,mapa,btn,extra){
     var dc=c.dcKey,antes=vms.map(function(v){return T.rotuloResposta(v.valor);}),porGrupo={},ordem=[],salvos=[],falhos=[],tarefaFalhou=false;
     vms.forEach(function(v){if(!porGrupo[v.grupo]){porGrupo[v.grupo]=[];ordem.push(v.grupo);}porGrupo[v.grupo].push(v);});
     marcarSalvando(c,idxs,btn);
     for(var g=0;g<ordem.length;g++){
       var lista=porGrupo[ordem[g]];
-      try{var r=await registrarGrupo(c,lista,valor,mapa);salvos=salvos.concat(lista);if(daLinha(valor)&&r.tarefa&&r.tarefa.ok===false)tarefaFalhou=true;}
+      try{var r=await registrarGrupo(c,lista,valor,mapa,extra&&extra.confirmacaoTutor137||null);salvos=salvos.concat(lista);if(daLinha(valor)&&r.tarefa&&r.tarefa.ok===false)tarefaFalhou=true;}
       catch(e){falhos.push({lista:lista,erro:e});}
     }
     var esperado={};salvos.forEach(function(v){esperado[v.cy.cycleKey]=valor;var lv=v.tarefa&&v.tarefa.linha;if(lv&&lv.id&&lv.item)delete estado.linhas[chaveLinha(c.dia,lv.item,lv.id)];});/* a resposta pode ter mudado a origem da linha (de bolsa para loja e o contrário): a cópia lida antes ficou velha e é lida de novo */
+    if(valor==='autorizar_externo'&&salvos.length)estado.fixosResolver[dc]=true;
+    if(extra&&extra.confirmacaoTutor137)salvos.forEach(function(v){delete estado.datasTutor137[T.chaveRascunho137(dc,v.cy.cycleKey,v.cy.itemK)];});
     await atualizarLinha(dc,esperado);
     delete estado.salvando[dc];
     var depoisRot=T.rotuloResposta(valor),c2=estado.itens[dc]||c;
@@ -100552,7 +100723,7 @@ renderAtual=function(){
     }
     var destino117=prepararRota117(c2);
     redesenharLinha(dc);
-    abrirRota117(destino117,dc);
+    if(valor!=='autorizar_externo')abrirRota117(destino117,dc);
     garantirDia(false,true);
     try{if(typeof window.zelozinha116SnoopyAtualizar==='function')window.zelozinha116SnoopyAtualizar();}catch(_){/* a aba mantém estado desconhecido até a próxima conferência */}
     /* A autorização cria somente a tarefa. Produto, dose/quantidade e local dependem
@@ -100627,12 +100798,14 @@ renderAtual=function(){
     if(!op.soCompletar&&valor==='autorizar_externo'&&tarefaPendente&&linhaPendente&&!sn){
       var ator='';try{ator=typeof quemSou==='function'?txt(quemSou()):'';}catch(_){ator='';}
       var direto=await gravarTroca(c,v,i,valor,l,{motivo:'Correção para vai fazer em casa antes da execução',por:ator||'equipe',ts:Date.now()},op,pend),okDireto=!!(direto&&direto.ok);
+      if(okDireto&&valor==='autorizar_externo')estado.fixosResolver[dc]=true;
+      if(okDireto&&op.confirmacaoTutor137)delete estado.datasTutor137[T.chaveRascunho137(dc,v.cy.cycleKey,v.cy.itemK)];
       await atualizarLinha(dc,null);
       var cDireto=estado.itens[dc]||c,rvDireto=respostaAtual(cDireto,v.cy);
       if(okDireto){var hDireto=T.hora(Number(rvDireto&&rvDireto.ts));avisoLinha(dc,i,'Trocada de '+antesRot+' para '+depoisRot+' por '+nomeDe(rvDireto)+(hDireto?' às '+hDireto:'')+'. A tarefa pendente foi retirada.');estado.agora94[dc+'|'+i]=true;}
       else dizerNaLinha(dc,String(direto&&direto.erro&&direto.erro.message||direto&&direto.erro||'A correção não foi confirmada. Nada foi declarado como concluído.'));
       if(okDireto&&typeof window.zelozinha116SnoopyAtualizar==='function')try{await window.zelozinha116SnoopyAtualizar();}catch(_){/* a linha já saiu; a aba oferece atualização se esta releitura falhar */}
-      var rotaDireta=okDireto?prepararRota117(cDireto):'resolve';redesenharLinha(dc);abrirRota117(rotaDireta,dc);return okDireto;
+      var rotaDireta=okDireto?prepararRota117(cDireto):'resolve';redesenharLinha(dc);if(valor!=='autorizar_externo')abrirRota117(rotaDireta,dc);return okDireto;
     }
     if(!cap||typeof window.corrAbrir!=='function')return parar('Esta linha já começou a ser executada ou precisa de conferência. Nada foi trocado; peça a quem tem acesso ao painel para corrigir.');
     var cascata=['A linha «'+cuidado+'» de '+nomePet(c)+' sai da lista do Day Care de hoje, do cartão do Encãotador e da TV.','A tarefa do Day Care deixa de valer.'];
@@ -100644,6 +100817,8 @@ renderAtual=function(){
       botao:op.soCompletar?'Tirar da lista':'Trocar e tirar da lista',
       gravar:function(reg){return gravarTroca(c,v,i,valor,l,reg,op,pend);}});
     var ok=!!(res&&res.ok);
+    if(ok&&valor==='autorizar_externo')estado.fixosResolver[dc]=true;
+    if(ok&&op.confirmacaoTutor137)delete estado.datasTutor137[T.chaveRascunho137(dc,v.cy.cycleKey,v.cy.itemK)];
     await atualizarLinha(dc,null);
     var c2=estado.itens[dc]||c,rv=respostaAtual(c2,v.cy);
     if(ok){var nome=nomeDe(rv),h=T.hora(Number(rv&&rv.ts));avisoLinha(dc,i,(op.soCompletar?'Tirada da lista do Day Care por ':'Trocada de '+antesRot+' para '+depoisRot+' por ')+nome+(h?' às '+h:'')+'.');estado.agora94[dc+'|'+i]=true;}
@@ -100651,7 +100826,7 @@ renderAtual=function(){
     if(ok&&typeof window.zelozinha116SnoopyAtualizar==='function')try{await window.zelozinha116SnoopyAtualizar();}catch(_){/* a linha já saiu; a aba oferece atualização se esta releitura falhar */}
     var destino117=ok?prepararRota117(c2):'resolve';
     redesenharLinha(dc);
-    abrirRota117(destino117,dc);
+    if(valor!=='autorizar_externo')abrirRota117(destino117,dc);
     return ok;
   }
   async function gravarTroca(c,v,i,valor,l,reg,op,pend){
@@ -100661,7 +100836,7 @@ renderAtual=function(){
     if(!op.soCompletar){
       try{
         var v1=vmCuidado(estado.itens[dc]||c,v.cy);
-        await registrarGrupo(estado.itens[dc]||c,[v1],valor,mapa);feitos.push('A resposta foi trocada para «'+depoisRot+'».');
+        await registrarGrupo(estado.itens[dc]||c,[v1],valor,mapa,op.confirmacaoTutor137||null);feitos.push('A resposta foi trocada para «'+depoisRot+'».');
         await lerRegistro(estado.itens[dc]||c);novaR=respostaAtual(estado.itens[dc]||c,v.cy);
         if(!novaR||novaR.decisao!=='autorizar'||novaR.origem!=='externo')throw Error('a resposta mudou durante a correção');
       }catch(e){return{ok:false,erro:/conflito/i.test(String(e&&e.message))?'Outra pessoa respondeu agora. Nada foi trocado nem tirado da lista.':'A resposta não foi trocada ('+(e&&e.message||'fontes não confirmadas')+'). Nada foi tirado da lista.'};}
@@ -100774,7 +100949,7 @@ renderAtual=function(){
   }
   function aoClicar(ev){
     var t=ev.target&&ev.target.closest?ev.target:null;if(!t)return;
-    var reler=t.closest('[data-z44-reler]');if(reler){estado.sujo=true;estado.recarregarDia=true;estado.snoopyEstado='novo';return;}
+    var reler=t.closest('[data-z44-reler]');if(reler){estado.fixosResolver={};estado.datasTutor137={};estado.rascunhoFicha138=null;window.Z138_FICHA_SELECAO=null;estado.sujo=true;estado.recarregarDia=true;estado.snoopyEstado='novo';return;}
     if(t.closest('[data-zt694-snoopy-check]'))return;
     var sn=t.closest('.zt694 [data-snoopy-item]');if(sn){ev.preventDefault();ev.stopPropagation();tratarSnoopy(sn);return;}
     var el=t.closest('[data-zt694-acao]');if(!el)return;
@@ -100787,6 +100962,15 @@ renderAtual=function(){
     if(acao==='resp'){if(cy)responder(c,[i],valor,el);return;}
     if(acao==='todos'){var vms=vmsDe(c),idxs=[];vms.forEach(function(v,k){if(!v.valor)idxs.push(k);});if(idxs.length>=2)responder(c,idxs,valor,el);return;}
     var care=el.closest('[data-zt694-care]');var ic=care?Number(care.getAttribute('data-zt694-care')):i;cy=c.ciclos&&c.ciclos[ic];
+    if(acao==='tutor-fez'){
+      var campo=care&&care.querySelector('[data-zt694-data-fez]'),data=txt(campo&&campo.value),meta={versao:137,tipo:'tutor_ja_fez',dataAplicacao:data,estado:'atualizar_ficha_pendente'};
+      try{if(!cy||!window.ZeluzResposta88||typeof window.ZeluzResposta88.normalizarConfirmacaoTutor137!=='function')throw Error('registro indisponível');window.ZeluzResposta88.normalizarConfirmacaoTutor137(meta,{decisao:'autorizar',origem:'externo'},new Date(agora()).toISOString());}
+      catch(_){avisoLinha(c.dcKey,ic,'Informe a data real em que o tutor fez o cuidado. A data não pode estar no futuro.');redesenharLinha(c.dcKey);return;}
+      responder(c,[ic],'autorizar_externo',el,{confirmacaoTutor137:meta});return;
+    }
+    if(acao==='atualizar-ficha'){if(cy)abrirFichaTutor138(c,vmCuidado(c,cy),ic,care);return;}
+    if(acao==='salvar-ficha'){var sf=window.Z138_FICHA_SELECAO;if(!cy||!sf||sf.dcKey!==c.dcKey||sf.cycleKey!==cy.cycleKey||sf.itemK!==cy.itemK){avisoLinha(c.dcKey,ic,'A resposta ou o cuidado mudou. Feche e confira novamente.');redesenharLinha(c.dcKey);return;}Promise.resolve(prevLancar(sf.pelKey,sf.itemK)).then(function(r){if(r&&r.ok===false)window.zTutor138DepoisFalhar(sf,r);});return;}
+    if(acao==='fechar-ficha'){if(cy)fecharFichaTutor138(c,cy,care);return;}
     if(acao==='esc'){if(cy)gravarEscolha(c,cy,el.getAttribute('data-zt694-campo')||'',valor,{});return;}
     if(acao==='tarefa-tentar'){if(cy){var v=vmCuidado(c,cy);responder(c,[ic],v.valor,el);}return;}
     if(acao==='completar'){if(cy){var v2=vmCuidado(c,cy);trocarComAnulacao(c,v2,ic,v2.valor,{soCompletar:true});}return;}
@@ -100797,6 +100981,13 @@ renderAtual=function(){
       if(acao==='copiar')copiarTexto(el);else abrirWhats(c,textoCaixa);return;
     }
     if(acao==='whats-vazio'){abrirWhats(c,'');return;}
+  }
+  function aoDigitarData137(ev){
+    var el=ev.target&&ev.target.closest?ev.target.closest('[data-zt694-data-fez]'):null;if(!el)return;
+    var art=el.closest('[data-zt694-pet]'),dc='',cycleKey='',itemK='';if(!art)return;
+    try{dc=decodeURIComponent(art.getAttribute('data-zt694-pet')||'');}catch(_){dc='';}
+    try{cycleKey=decodeURIComponent(el.getAttribute('data-zt694-cycle-key')||'');itemK=decodeURIComponent(el.getAttribute('data-zt694-item-k')||'');}catch(_){cycleKey='';itemK='';}
+    if(!dc||!cycleKey||!itemK)return;estado.datasTutor137[T.chaveRascunho137(dc,cycleKey,itemK)]=txt(el.value);
   }
   /* A tela inteira pode ser refeita pelo painel (a projeção do serviço mudou, a hora virou, «Atualizar envios»): o que a pessoa via volta já no mesmo quadro. */
   function instalarObservador(){
@@ -100812,6 +101003,7 @@ renderAtual=function(){
   var baseAtualizar=window.zPainel44Atualizar;if(typeof baseAtualizar==='function')window.zPainel44Atualizar=function(){var r=baseAtualizar.apply(this,arguments);Promise.resolve(r).then(function(){render(false);});return r;};
   document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.matches&&d.matches('details[data-zt694-aberto]'))estado.abertos[d.getAttribute('data-zt694-aberto')]=d.open;},true);
   document.addEventListener('click',aoClicar,true);
+  document.addEventListener('input',aoDigitarData137,true);
   document.addEventListener('change',function(ev){var el=ev.target&&ev.target.closest?ev.target.closest('[data-zt694-snoopy-check]'):null;if(el)tratarSnoopyCheck(el);},true);
   window.addEventListener('scroll',function(){
     if(!document.querySelector('[data-zt694-ok]'))return;
