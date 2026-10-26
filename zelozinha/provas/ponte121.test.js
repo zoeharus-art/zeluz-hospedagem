@@ -185,7 +185,7 @@ test('timeout produz um resultado não confirmado sem repetir o POST', async () 
 test('integração pública mantém ordem, allowlist e versão; o hub original segue com controle indisponível sem projeção 116', () => {
   const app = read(path.resolve(__dirname, '../../auaulandia/index.html'));
   const allow = read(path.resolve(__dirname, '../../.github/site-permitidos.txt'));
-  assert.match(app, /const APP_VERSAO='2026-10-25-02';/);
+  assert.match(app, /const APP_VERSAO='2026-10-25-03';/);
   const expected = ['ponte121/contrato116.js','ponte121/transporte116.js','ponte121/config-publica116.js','ponte121/inicializador116.js'];
   const hub = app.indexOf('<script data-operacao116-hub>');
   assert.ok(hub > 0);
