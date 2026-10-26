@@ -1617,7 +1617,7 @@ const gravouNaLinha = (log) => log.gravacoes.filter((x) => /^daycare\/(dashboard
 const FRASES_GUARDA = { snoopy: /Esta linha já foi lançada no Snoopy; para mudar, desfaça antes a confirmação do Snoopy\./, aplicado: /Este cuidado já está sendo aplicado ou foi aplicado; a correção é feita na ficha de Prevenção do FILHOt\./ };
 const abrirEscolhas = async (m, nome, k) => { const c = m.cuidadoSel(nome, k || 'verm_p'); await ate(() => m.ev((s) => !!document.querySelector(s + ' [data-zt694-esc]'), c), 15000); if (!(await m.ev((s) => document.querySelector(s + ' [data-zt694-esc]').open, c))) await m.page.click(c + ' [data-zt694-esc] > summary'); return c; };
 const escolher = async (m, nome, campo, valor, k) => { const c = await abrirEscolhas(m, nome, k); await m.page.click(c + ' [data-zt694-acao="esc"][data-zt694-campo="' + campo + '"][data-zt694-valor="' + valor + '"]'); await m.quieto(300); };
-prova('P32', 'com o Snoopy já confirmado, escolher não grava nada e a tela diz para desfazer antes a confirmação (AC4.8a)', async () => {
+prova('P32', 'com o Snoopy já confirmado, mudar a observação de origem não grava e pede conferência (AC4.8a)', async () => {
   const m = await mundo({ filhots: [{ n: 'Teste Guarda', tutor: 'Tutor Guarda', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] });
   try {
     await m.tocar('Teste Guarda', 'verm_p', 'autorizar_loja'); await esperaSnoopy(m, 'Teste Guarda', /Já lancei no Snoopy/);
