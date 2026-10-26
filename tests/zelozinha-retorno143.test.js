@@ -78,8 +78,8 @@ assert.equal(U.textosRetornoDe(card,[v]).length,1,'texto aprovado real, só com 
 assert.match(U.textosRetornoDe(card,[v])[0].texto,/Olá, Família!/);
 U.estado.presenca[dc]={saiu:true,lidoEm:Date.now()};assert.equal(U.textosRetornoDe(card,[v]).length,0,'texto some no checkout');
 U.estado.presenca[dc]={presente:true,lidoEm:Date.now()};
-assert.match(ui,/vencPendCarregar\(\):Promise\.resolve\(null\)/,'histórico nativo é carregado uma vez por abertura');
-assert.match(ui,/Z44_FONTE\.registros===VENC_PEND/,'cache exige fonte confirmada');
+assert.match(ui,/historicoConfirmado144\(diaPedido,manualHistorico\)/,'histórico nativo reutiliza contexto confirmado nas atualizações automáticas');
+assert.match(ui,/Z44_FONTE\.registros!==VENC_PEND/,'cache exige fonte confirmada');
 assert.match(ui,/estado\.api\.marcar\(c,pedido\)/,'decisão D2 passa pelo writer89');
 assert.match(ui,/contatoAck\.ok!==true/,'resposta depende do ACK do contato');
 assert.doesNotMatch(ui,/respostaAnterior143.*\.enviar\(/,'ponte não transporta mensagem');
