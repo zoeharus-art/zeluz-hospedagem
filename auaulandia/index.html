@@ -42495,8 +42495,11 @@ return { criar };
     // a nova. A caixa de mensagem (plano B do "copiar") mora aqui pelo mesmo motivo: ela
     // precisa existir na tela em qualquer um dos caminhos abaixo.
     var _col=prevBlocoColeiraVencendo(), _nCol=(PREV_CACHE_COLEIRA||[]).length;
+    var _qAt=prevCorrQuadroHTML(prevCorrTelaAtiva()), _nAt=prevCorrLinhas().length;
     var topo='<div id="prevMsgCaixa" class="card" style="display:none"></div>'
-      +prevCorrigeOkHTML()
+      // 26/out/2026: o verde do que acabou de ser gravado mora na seção do item (prevSecFaixaHTML), com o «Desfazer»;
+      // aqui fica o «Atualizados hoje» do dia inteiro, que também desfaz (com o motivo), recolhido.
+      +prevSecHTML('atualizados','Atualizados hoje — desfazer, se precisar', _nAt?('<span class="prev-sec-conta">'+_nAt+'</span>'):'', _qAt)
       // 26/out/2026: cada cartão vira uma seção fechada, com o nome dele no título.
       +prevSecHTML('coleira','Coleira vencendo — hora de oferecer a nova', _nCol?('<span class="prev-sec-conta">'+_nCol+' FILHOt'+(_nCol>1?'s':'')+'</span>'):'', _col)
       +prevSecHTML('escova-treino','Quem não deixa escovar — passar para treino?', '', escovaNaoDeixaCardHTML())
@@ -42651,7 +42654,7 @@ return { criar };
         var f=(o.faltas||[]).filter(function(x){ return x.k===it.k; })[0];
         if(f) linhas.push({o:o, f:f});
       });
-      if(!linhas.length) return;
+      if(!linhas.length && (busca || !prevSecFaixaHTML(it.k))) return;   // sem ninguém, mas com o verde de quem acabou de ficar em dia: fica (fora da busca)
       // O mais atrasado primeiro; depois o que não tem data; depois o que ainda vai vencer.
       linhas.sort(function(a,b){
         var oa=(ordem[a.f.tipo]==null)?9:ordem[a.f.tipo], ob=(ordem[b.f.tipo]==null)?9:ordem[b.f.tipo];
@@ -42672,9 +42675,11 @@ return { criar };
     }
     return secoes.map(function(s){
       var n=s.linhas.length, nv=s.linhas.filter(function(x){ return x.f.tipo==='venc'; }).length;
-      var conta='<span class="prev-sec-conta">'+n+' FILHOt'+(n>1?'s':'')+'</span>'
+      var conta='<span class="prev-sec-conta">'+(n?(n+' FILHOt'+(n>1?'s':'')):'em dia')+'</span>'
         +(nv?'<span class="prev-sec-conta prev-sec-venc">'+nv+' vencido'+(nv>1?'s':'')+'</span>':'');
-      var corpo=s.linhas.map(function(x){ return prevLinhaHTML(x.o, x.f, s.it, hoje, secFicha===s.it.k); }).join('');
+      var corpo='<div class="prev-sec-faixa" data-prev-faixa="'+escAttr(s.it.k)+'">'+prevSecFaixaHTML(s.it.k)+'</div>'
+        +(n?s.linhas.map(function(x){ return prevLinhaHTML(x.o, x.f, s.it, hoje, secFicha===s.it.k); }).join('')
+           :'<div class="hint" style="padding:8px 0">Ninguém mais devendo este item.</div>');
       return prevSecHTML('item_'+s.it.k, s.it.nome, conta, corpo, !!busca || PREV_FILTRO===s.it.k || secFicha===s.it.k);
     }).join('');
   }
@@ -42694,10 +42699,46 @@ return { criar };
       +(pode?('<button type="button" class="btn btn-gold" style="min-height:40px;padding:6px 14px;font-size:12.5px;font-weight:800" onclick="prevFeitoHojeNaSecao(\''+ka+'\',\''+kk+'\')">'+(gravando?'Gravando…':'Feito hoje')+'</button>'):'')
       +'<button type="button" class="btn" style="'+bt2+'" onclick="prevMsgVirar(\''+ka+'\',\''+kk+'\')">'+(msgAberta?'Fechar mensagem':'Mensagem pronta')+'</button>'
       +'</div>'
+      +((pode && f.tipo==='sem' && PREV_CORRIGE_ABERTO!==prevCorrigeAlvo(ch,k))?prevSemDataHTML(ch, k, hoje):'')
       +prevCorrigePainelHTML(ch, 'prev', hoje, origem)
       +(msgAberta?prevMsgHTML(o.p, k):'')
       +((fichaAqui && PREV_ABERTO===ch)?prevEdicaoHTML(o):'')
       +'</div>';
+  }
+  // ---- a faixa verde da seção: o que acabou de ficar em dia, com o «Desfazer» (o mesmo do «Atualizados hoje») ----
+  function prevSecFaixaHTML(k){
+    var agora=Date.now(), h='';
+    Object.keys(PREV_CORRIGE_OK||{}).forEach(function(alvo){
+      var o=PREV_CORRIGE_OK[alvo]||{};
+      if(String(alvo).split('|')[1]!==String(k) || o.gravando || (agora-(o.ts||0))>=600000) return;
+      var L=o.corrId?(PREV_CORR||{})[o.corrId]:null, des=L&&L.desfeito;
+      h+='<div role="status" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0;padding:9px 12px;border-radius:12px;'
+        +(des?'background:var(--z-cream-warm);border:1.5px solid var(--line)':'background:rgba(39,174,96,.10);border:1.5px solid rgba(39,174,96,.35)')+'">'
+        +'<span style="flex:1;min-width:180px;font-size:13.5px;font-weight:800;color:'+(des?'var(--muted);text-decoration:line-through':'var(--crm-ok)')+'">✓ '+escAttr(o.texto||'')+'</span>'
+        +(des?'<span style="font-size:12.5px;font-weight:800;color:var(--z-blue)">Desfeito — motivo: '+escAttr(des.motivo||'')+'</span>'
+          :(o.corrId && prevCorrigePode())?'<button type="button" class="btn" style="min-height:40px;padding:6px 14px;font-size:12.5px;font-weight:800;background:var(--z-white);color:var(--z-blue);border:1.5px solid var(--z-blue)" onclick="prevCorrDesfazerAbrir(\''+jsAspas(o.corrId)+'\',\'prev\')">Desfazer</button>'
+          :'<span class="hint">preparando o «Desfazer»…</span>')
+        +'</div>';
+    });
+    return h;
+  }
+  // Troca só as faixas, no lugar (a linha do «Atualizados hoje» chega do banco depois do verde).
+  function prevSecFaixasRefazer(){
+    try{ document.querySelectorAll('#prevLista [data-prev-faixa]').forEach(function(el){ el.innerHTML=prevSecFaixaHTML(el.getAttribute('data-prev-faixa')); }); }
+    catch(e){} /* silencioso de propósito: enfeite de tela — a faixa aparece no próximo redesenho */
+  }
+  // «Feito em…» na própria linha de quem está sem data: escolhe o dia no calendário e grava (a mesma porta do painel).
+  function prevSemDataHTML(ch, k, hoje){
+    var id=escAttr(ch+'_'+k);
+    return '<div class="prev-acoes" style="margin-top:8px">'
+      +'<label style="font-size:12px;font-weight:800;color:var(--muted)" for="prevCorrT_'+id+'">Feito em</label>'
+      +'<input type="date" class="cad-in" id="prevCorrT_'+id+'" style="margin:0;max-width:170px" min="2015-01-01" max="'+escAttr(hoje)+'" onkeydown="return dataSoNoCalendario(event)">'
+      +'<button type="button" class="btn" style="min-height:40px;padding:6px 14px;font-size:12.5px;font-weight:800;background:var(--z-blue);color:var(--z-cream);border:0" onclick="prevFeitoEmNaSecao(\''+jsAspas(ch)+'\',\''+jsAspas(k)+'\')">Gravar a data</button>'
+      +'</div>';
+  }
+  function prevFeitoEmNaSecao(ch, k){
+    PREV_CORRIGE_ABERTO=''; PREV_CORRIGE_ORIGEM='sec-'+k;
+    prevCorrigeFeitoEm(ch, k, 'prev');
   }
   function prevAbrirNaSecao(ch, k){
     // A ficha aberta em outra seção muda para esta (sem fechar e reabrir).
@@ -44100,7 +44141,11 @@ return { criar };
       if(grav && grav.manual) prevAuditManual(p, grav.manual.k, grav.manual.de, grav.manual.para);
       PREV_CORRIGE_OK[alvo]={ts:Date.now(), ate:para||'', texto:texto};
       if(PREV_CORRIGE_ABERTO===aP){ PREV_CORRIGE_ABERTO=''; PREV_CORRIGE_ORIGEM=''; }
-      if(grav) prevCorrRegistrarDia(p, k, grav.como, tela, grav.antes, grav.patch, grav.quem);
+      // 26/out/2026: a linha do «Atualizados hoje» que nasce aqui vai para a faixa verde da seção da Prevenção — o
+      // «Desfazer» (com o motivo) fica ao lado do FILHOt, sem ter de procurar a linha no quadro.
+      if(grav) Promise.resolve(prevCorrRegistrarDia(p, k, grav.como, tela, grav.antes, grav.patch, grav.quem)).then(function(id){
+        if(id && PREV_CORRIGE_OK[alvo] && !PREV_CORRIGE_OK[alvo].gravando){ PREV_CORRIGE_OK[alvo].corrId=id; if(tela==='prev') prevSecFaixasRefazer(); }
+      });
       // A FICHA FICOU EM DIA PELO QUADRO (25/set/2026): o cartão de Vencimentos some da lista
       // quando não há mais o que cobrar — e, com ele, o botão "Sim". Sem isto a conversa com o
       // tutor ficava aberta para sempre e voltava como "cobrar". Quem pôs a última data fecha o
