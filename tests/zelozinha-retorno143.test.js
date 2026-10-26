@@ -1,0 +1,125 @@
+'use strict';
+// D1/D2 fictícios; executa o redutor e o cartão literais, sem navegador, banco ou rede.
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const html=fs.readFileSync(path.resolve(__dirname,'../auaulandia/index.html'),'utf8');
+function script(id){const m=html.match(new RegExp('<script[^>]*id="'+id+'"[^>]*>([\\s\\S]*?)<\\/script>'));assert.ok(m,id);return m[1];}
+function scriptAttr(attr){const m=html.match(new RegExp('<script[^>]*'+attr+'[^>]*>([\\s\\S]*?)<\\/script>'));assert.ok(m,attr);return m[1];}
+const puro={};vm.createContext(puro);vm.runInContext(script('zelozinha-tela94-puro'),puro);
+const T=puro.ZelozinhaTela94;
+const d1='2026-10-22',d2='2026-10-26',dc='filhot-fixture__familia-fixture',petId='pet-fixture',tutorId='tutor-fixture',itemK='ecto_p';
+const cycleKey=JSON.stringify([petId,tutorId,'ecto','2026-10-23',itemK]),groupKey=JSON.stringify([petId,tutorId,d1]);
+function resposta(decisao='aguardar',origem=null,extra={}){return Object.assign({cycleKey,itemK,groupKey,respostaId:'resposta-d1',revisao:0,humanoId:'humano-d1',humanoNome:'Pessoa Fictícia',ts:Date.parse(d1+'T13:00:00-03:00'),decisao,origem},extra);}
+function registro(rv){return{respostasEscopo49:{porCiclo:{abc:rv}},historicoRespostas49:[{respostaId:rv.respostaId,groupKey:rv.groupKey,humanoId:rv.humanoId,ts:rv.ts,itens:[{cycleKey:rv.cycleKey,itemK:rv.itemK,decisao:rv.decisao,origem:rv.origem}]}]};}
+function indice(rv=resposta(),dia=d1){return T.retornosAnteriores143({[dia]:{[dc]:registro(rv)}},d2);}
+const card={dia:d2,dcKey:dc,pelKey:'filhot-fixture',petId,tutorId,groupKey:'contato-d2',row:{p:{n:'FILHOt Fictício',tutor:'Família Fictícia'}},cadastro:{tutor:'Família Fictícia'},ciclos:[{cycleKey,itemK,care:'ecto',dueDate:'2026-10-23'}]};
+const cy=card.ciclos[0];
+let found=T.retornoAnterior143(indice(),card,cy,false);
+assert.equal(found.tipo,'retorno_humano');assert.equal(found.dia,d1);assert.equal(found.humanoNome,'Pessoa Fictícia');assert.equal(found.revisao,0);
+assert.equal(T.retornoAnterior143(indice(),card,cy,true),null,'resposta humana de D2 prevalece');
+assert.equal(T.retornoAnterior143(indice(),Object.assign({},card,{tutorId:'outro'}),cy,false),null,'identidade exata');
+assert.equal(T.retornoAnterior143(indice(),Object.assign({},card,{identidadeAmbigua:true}),cy,false),null,'identidade ambígua');
+assert.equal(T.retornoAnterior143(indice(),card,{cycleKey:JSON.stringify([petId,tutorId,'ecto','2026-11-23',itemK]),itemK},false),null,'novo ciclo');
+assert.equal(T.retornoAnterior143(indice(resposta('autorizar','loja')),card,cy,false),null,'loja D1 não é autorização D2');
+assert.equal(T.retornoAnterior143(indice(resposta('autorizar','bolsa')),card,cy,false),null,'bolsa D1 não é autorização D2');
+assert.equal(T.retornoAnterior143(indice(resposta('autorizar','externo')),card,cy,false).tipo,'acompanhar_fora');
+const fez=resposta('autorizar','externo',{confirmacaoTutor137:{versao:137,tipo:'tutor_ja_fez',estado:'atualizar_ficha_pendente',dataAplicacao:'2026-10-22'}});
+assert.equal(T.retornoAnterior143(indice(fez),card,cy,false).tipo,'atualizar_ficha','pendência interna');
+assert.equal(T.retornoAnterior143(T.retornosAnteriores143({'2026-09-01':{[dc]:registro(resposta())}},d2),card,cy,false),null,'limite de 30 dias explícito');
+assert.equal(T.retornoAnterior143(T.retornosAnteriores143({[d2]:{[dc]:registro(resposta())}},d2),card,cy,false),null,'não lê como passado o dia atual');
+assert.equal(T.retornoAnterior143(T.retornosAnteriores143({[d1]:{[dc]:Object.assign(registro(resposta()),{historicoRespostas49:[]})}},d2),card,cy,false),null,'histórico sem prova é frio');
+assert.equal(T.retornoAnterior143(indice(resposta('aguardar',null,{revisaoOperacional:'revisar'})),card,cy,false),null,'revisão operacional barra herança');
+const realizado=registro(resposta());realizado.respostasEscopo49.tarefas57={abc:{estado:'realizado'}};
+assert.equal(T.retornoAnterior143(T.retornosAnteriores143({[d1]:{[dc]:realizado}},d2),card,cy,false),null,'cuidado realizado no D1 fecha retorno');
+const execucao=registro(resposta());execucao.respostasEscopo49.tarefas57={abc:{estado:'emexecucao'}};
+assert.equal(T.retornoAnterior143(T.retornosAnteriores143({[d1]:{[dc]:execucao}},d2),card,cy,false),null,'cuidado em execução fecha retorno');
+const futuro=registro(resposta('aguardar',null,{ts:1e20}));
+assert.doesNotThrow(()=>T.retornosAnteriores143({[d1]:{[dc]:futuro,outra:registro(resposta())}},d2),'timestamp fora do Date não derruba a lista');
+assert.equal(T.retornoAnterior143(T.retornosAnteriores143({[d1]:{[dc]:futuro,outra:registro(resposta())}},d2),card,cy,false).tipo,'retorno_humano','registro íntegro continua visível');
+const familiar=resposta('aguardar',null,{groupKey:JSON.stringify(['irmao-fixture',tutorId,d1])});
+assert.equal(T.retornoAnterior143(indice(familiar),card,cy,false).tipo,'retorno_humano','grupo familiar nativo mantém ciclo do membro exato');
+const feitoDepois=registro(resposta('aguardar',null,{respostaId:'feito-d2',groupKey:JSON.stringify([petId,tutorId,'2026-10-25']),ts:Date.parse('2026-10-25T13:00:00-03:00')}));feitoDepois.historicoRespostas49[0].respostaId='feito-d2';feitoDepois.historicoRespostas49[0].groupKey=feitoDepois.respostasEscopo49.porCiclo.abc.groupKey;feitoDepois.historicoRespostas49[0].ts=feitoDepois.respostasEscopo49.porCiclo.abc.ts;feitoDepois.respostasEscopo49.tarefas57={abc:{estado:'realizado'}};
+assert.equal(T.retornoAnterior143(T.retornosAnteriores143({[d1]:{[dc]:registro(resposta())},'2026-10-25':{[dc]:feitoDepois}},d2),card,cy,false),null,'realizado mais recente bloqueia aguardar anterior');
+const revisaoDepois=structuredClone(feitoDepois);delete revisaoDepois.respostasEscopo49.tarefas57;revisaoDepois.respostasEscopo49.porCiclo.abc.revisaoOperacional='revisar';
+assert.equal(T.retornoAnterior143(T.retornosAnteriores143({[d1]:{[dc]:registro(resposta())},'2026-10-25':{[dc]:revisaoDepois}},d2),card,cy,false),null,'revisão mais recente bloqueia aguardar anterior');
+const empate=registro(resposta('aguardar',null,{respostaId:'empate',ts:Date.parse(d1+'T13:00:00-03:00')}));empate.historicoRespostas49[0].respostaId='empate';
+const vencedor=registro(resposta('aguardar',null,{respostaId:'mais-novo',groupKey:JSON.stringify([petId,tutorId,'2026-10-25']),ts:Date.parse('2026-10-25T13:00:00-03:00')}));vencedor.historicoRespostas49[0].respostaId='mais-novo';vencedor.historicoRespostas49[0].groupKey=vencedor.respostasEscopo49.porCiclo.abc.groupKey;vencedor.historicoRespostas49[0].ts=vencedor.respostasEscopo49.porCiclo.abc.ts;
+assert.equal(T.retornoAnterior143(T.retornosAnteriores143({[d1]:{[dc]:registro(resposta()),empate},'2026-10-25':{[dc]:vencedor}},d2),card,cy,false).respostaId,'mais-novo','empate antigo não contamina resposta posterior');
+const divergente=registro(resposta('autorizar','externo'));assert.equal(T.retornoAnterior143(T.retornosAnteriores143({[d1]:{[dc]:registro(resposta()),divergente}},d2),card,cy,false),null,'mesmo id/hora com conteúdo divergente pede revisão');
+const novo=registro(resposta('autorizar','loja',{respostaId:'mais-recente',ts:Date.parse('2026-10-25T13:00:00-03:00')}));novo.historicoRespostas49[0].ts=novo.respostasEscopo49.porCiclo.abc.ts;novo.historicoRespostas49[0].respostaId='mais-recente';novo.historicoRespostas49[0].itens[0].decisao='autorizar';novo.historicoRespostas49[0].itens[0].origem='loja';novo.respostasEscopo49.porCiclo.abc.groupKey=JSON.stringify([petId,tutorId,'2026-10-25']);novo.historicoRespostas49[0].groupKey=novo.respostasEscopo49.porCiclo.abc.groupKey;
+assert.equal(T.retornoAnterior143(T.retornosAnteriores143({[d1]:{[dc]:registro(resposta())},'2026-10-25':{[dc]:novo}},d2),card,cy,false),null,'última resposta válida de loja suprime aguardar antigo');
+
+const ui=script('zelozinha-contatos89-ui'),tail=ui.indexOf('  var baseAtualizar=window.zPainel44Atualizar;');assert.ok(tail>0);
+const ctx={Intl,Date,JSON,Object,Array,Number,String,RegExp,Error,Promise,T};ctx.window=ctx;ctx.globalThis=ctx;ctx.ZelozinhaTela94=T;
+ctx.ZeluzResposta88={codificarChave:()=> 'sem-resposta-atual'};ctx.document={querySelectorAll:()=>[],querySelector:()=>null};ctx.zPainel44Dia=()=>d2;
+vm.createContext(ctx);vm.runInContext(ui.slice(0,tail)+'\nredesenharLinha=function(){};trazerLinhasFaltando=async function(){};publicarHumanos=function(){};window.__retorno143={estado:estado,vmCuidado:vmCuidado,careHTML:careHTML,petHTML:petHTML,textosRetornoDe:textosRetornoDe,pedePresenca:pedePresenca,registrarGrupo:registrarGrupo,aoClicar:aoClicar,respostaAtual:respostaAtual,abrirFichaTutor138:abrirFichaTutor138,montarMarkup:montarMarkup};})();',ctx);
+const U=ctx.__retorno143;U.estado.dia=d2;U.estado.historico143=indice();U.estado.presenca[dc]={presente:true,lidoEm:Date.now()};
+U.estado.projecao={cuidadosDia:{itens:{old:{cycleKey,petId,tutorId,itemK,statusPainel:'entrega_confirmada',motivo:'Recibo D1'}}}};
+let v=U.vmCuidado(card,cy);
+assert.equal(v.st.enviada,false,'recibo antigo não aciona fluxo enviado do D2');assert.equal(v.st.rotulo,'RETORNO HUMANO PENDENTE');assert.equal(v.grupo,card.groupKey,'writer humano usa grupo atual');
+const grupoHoje={groupKey:JSON.stringify([petId,tutorId,d2]),cycleKeys:[cycleKey],itemKs:[itemK]};
+assert.equal(U.vmCuidado(Object.assign({},card,{envios:[{grupo:grupoHoje}]}),cy).retorno143,null,'grupo real de hoje prevalece sobre contexto D1');
+assert.equal(v.valor,'','não copia resposta D1 para D2');assert.equal(U.pedePresenca(card),true);
+assert.match(U.careHTML(card,v,0),/Resposta de 22\/10\/2026/);assert.match(U.careHTML(card,v,0),/Pessoa Fictícia/);assert.doesNotMatch(U.careHTML(card,v,0),/ficou de conferir em casa|revisão 0/);
+U.estado.presenca[dc]={saiu:true,lidoEm:Date.now()};assert.equal(U.vmCuidado(card,cy).retorno143,null,'checkout retira retorno');
+U.estado.presenca[dc]={presente:true,lidoEm:Date.now()};U.estado.historico143=null;assert.equal(U.vmCuidado(card,cy).retorno143,null,'fonte fria não inventa retorno');
+U.estado.historico143=indice(fez);v=U.vmCuidado(card,cy);assert.equal(v.st.rotulo,'ATUALIZAR FICHA');assert.match(U.careHTML(card,v,0),/não cobrar o tutor de novo/);
+assert.match(U.careHTML(card,v,0),/data-zt694-acao="resp"[^>]*disabled/,'pendência interna não oferece loja/bolsa');
+assert.match(U.careHTML(card,v,0),/value="2026-10-22"/,'data antiga é rascunho visível');
+assert.match(U.careHTML(card,v,0),/Conferir data e registrar/,'ação explícita permite criar resposta D2');
+assert.doesNotMatch(U.petHTML(card),/data-zt694-acao="whats-vazio"/,'tarefa interna não abre cobrança vazia ao tutor');
+U.estado.resultado={itens:[]};U.estado.historico143=null;assert.match(U.montarMarkup('resolve'),/retornos anteriores ainda não foram confirmados/,'fonte fria não prova ausência de retorno');
+U.estado.historico143=indice();v=U.vmCuidado(card,cy);
+const appSource=scriptAttr('data-resposta88="app"'),textoA=appSource.indexOf('  var TEXTO_EM_CASA='),textoB=appSource.indexOf('\n  function mensagemAprovada(',textoA),textoFim=appSource.indexOf('\n  function caixaCopiarMensagem(',textoB);
+assert.ok(textoA>0&&textoB>textoA&&textoFim>textoB);
+const fraseCuidado=appSource.match(/  function cuidadoNaFrase\(k\)\{[\s\S]*?\n  \}/)[0];
+vm.runInContext(`window.__realMsg143=(function(){var root=window;function t(v){return typeof v==='string'?v.trim():'';}${fraseCuidado}${appSource.slice(textoA,textoB)}${appSource.slice(textoB,textoFim)}return{mensagemAprovada:mensagemAprovada};})();`,ctx);
+ctx.ZeluzRespostaApp88=ctx.__realMsg143;
+assert.equal(U.textosRetornoDe(card,[v]).length,1,'texto aprovado real, só com presença');
+assert.match(U.textosRetornoDe(card,[v])[0].texto,/Olá, Família!/);
+U.estado.presenca[dc]={saiu:true,lidoEm:Date.now()};assert.equal(U.textosRetornoDe(card,[v]).length,0,'texto some no checkout');
+U.estado.presenca[dc]={presente:true,lidoEm:Date.now()};
+assert.match(ui,/vencPendCarregar\(\):Promise\.resolve\(null\)/,'histórico nativo é carregado uma vez por abertura');
+assert.match(ui,/Z44_FONTE\.registros===VENC_PEND/,'cache exige fonte confirmada');
+assert.match(ui,/estado\.api\.marcar\(c,pedido\)/,'decisão D2 passa pelo writer89');
+assert.match(ui,/contatoAck\.ok!==true/,'resposta depende do ACK do contato');
+assert.doesNotMatch(ui,/respostaAnterior143.*\.enviar\(/,'ponte não transporta mensagem');
+(async()=>{
+  // D1 vem do CORE/REPO88 reais sobre banco fictício, não de fixture montada à mão.
+  const core={Buffer,Intl,Date,JSON,Object,Array,Number,String,RegExp,Error,Promise,TextEncoder,Uint8Array};core.window=core;core.globalThis=core;vm.createContext(core);
+  vm.runInContext(scriptAttr('data-resposta88="core"'),core);vm.runInContext(scriptAttr('data-resposta88="repositorio"'),core);
+  const sha='a'.repeat(64),session={confirmada:true,humana:true,id:'pessoa-real-fixture',nome:'Pessoa Real Fictícia',papel:'recepcao',assinatura:'sessao-fixture'};
+  const destino={confirmado:true,dia:d1,dcKey:dc,pelKey:'filhot-fixture',petId,tutorId,escopoHistoricoSha:sha,presencaCorporal:true,presencaHistorica:true,checkout:false,ciclos:[{...cy,tipo:'ecto',elegivel:true,aberto:true}]};
+  const grupo={groupKey,petId,tutorId,textoSha:sha,textoEnviado:'Mensagem fictícia',messageId:'msg-fixture',statusPainel:'entrega_pendente',acompanhamentoHumanoPendente:true,textoDisponivel:true,cycleKeys:[cycleKey],itemKs:[itemK]};
+  const painel={versao:81,detalhesEnvioVersao:104,dia:d1,assinaturaConteudo:sha,identidadesPets:{[petId]:{petId,tutorRefId:tutorId,dcKeyAtual:dc,pelKeyAtual:'filhot-fixture'}},grupos:[grupo]};
+  const memoria=new Map(),db={ref:caminho=>({once:async()=>({val:()=>structuredClone(memoria.get(caminho)||null)}),transaction:async fn=>{const anterior=structuredClone(memoria.get(caminho)||null),proximo=fn(anterior);if(proximo===undefined)return{committed:false,snapshot:{val:()=>anterior}};memoria.set(caminho,structuredClone(proximo));return{committed:true,snapshot:{val:()=>structuredClone(proximo)}};}})};
+  const repo=core.ZeluzResposta88RTDB.criar({db,lerPainel:async()=>painel,resolverAtual:async()=>destino,sessaoHumana:async()=>session,assinarTexto:()=>sha,agora:()=>d1+'T13:20:00-03:00'});
+  const ackD1=await repo.decidir({groupKey,petId,resposta:{id:'d1-core-real',itens:[{cycleKey,itemK,decisao:'aguardar',origem:null,onde:'',baseRevision:-1}]}});
+  assert.equal(ackD1.ok,true,'core/repositório real confirmam D1');
+  const salvoD1=memoria.get('daycare/vencimentos/'+d1+'/'+dc);assert.ok(salvoD1&&salvoD1.respostasEscopo49);
+  const gerado=T.retornoAnterior143(T.retornosAnteriores143({[d1]:{[dc]:salvoD1}},d2),card,cy,false);assert.equal(gerado.tipo,'retorno_humano','redutor consome payload real');
+  // O botão da pendência interna exige gesto D2, ACK do contato89 e nova resposta.
+  ctx.ZeluzResposta88.normalizarConfirmacaoTutor137=core.ZeluzResposta88.normalizarConfirmacaoTutor137;
+  U.estado.itens[dc]=card;U.estado.resultado={dia:d2,itens:[card]};U.estado.historico143=indice(fez);U.estado.presenca[dc]={presente:true,lidoEm:Date.now()};
+  let permitir=false,cliques=0,gravadas=0,persistido=null;
+  U.estado.api={marcar:async()=>{cliques++;return permitir?{ok:true,fonteContato:{contatoId:'contato-d2-ack'}}:{ok:false};},atualizarUm:async()=>card};
+  ctx.ZeluzRespostaApp88.registrar=async(_g,itens,op)=>{gravadas++;assert.equal(op.contatoId,'contato-d2-ack');assert.equal(itens[0].confirmacaoTutor137.dataAplicacao,'2026-10-21');persistido={respostasEscopo49:{porCiclo:{'sem-resposta-atual':{cycleKey,itemK,respostaId:'resposta-d2',revisao:0,decisao:'autorizar',origem:'externo',humanoId:'humano-d2',humanoNome:'Pessoa D2',ts:Date.now(),confirmacaoTutor137:itens[0].confirmacaoTutor137}}}};return{ok:true,alvoConfirmado88:{dia:d2,dcKey:dc,petId,tutorId},registro:persistido};};
+  const campo={value:'2026-10-22'},slot={innerHTML:'',firstChild:null,querySelector:()=>null,insertBefore(){}},care={querySelector:s=>s==='[data-zt694-data-fez]'?campo:s==='[data-z138-editor-slot]'?slot:null,getAttribute:()=> '0'},article={getAttribute:()=>encodeURIComponent(dc)};
+  const botao={disabled:false,textContent:'Conferir data e registrar',getAttribute:n=>n==='data-zt694-acao'?'tutor-fez':n==='data-zt694-ciclo'?'0':'',closest:s=>s==='[data-zt694-acao]'?botao:s==='[data-zt694-care]'?care:s==='[data-zt694-pet]'?article:null};
+  const tocar=()=>U.aoClicar({target:botao,preventDefault(){},stopPropagation(){}});
+  async function terminar(){for(let i=0;i<60;i++){await new Promise(setImmediate);if(!U.estado.salvando[dc])return;}throw Error('clique D2 não encerrou');}
+  tocar();await terminar();assert.equal(cliques,1);assert.equal(gravadas,0,'sem ACK não há resposta D2 otimista');assert.equal(U.respostaAtual(card,cy),null);
+  permitir=true;campo.value='2026-10-21';tocar();tocar();await terminar();assert.equal(cliques,2,'duplo clique usa uma guarda');assert.equal(gravadas,1,'novo registro só após ACK');
+  assert.equal(U.respostaAtual(card,cy).confirmacaoTutor137.dataAplicacao,'2026-10-21');
+  assert.match(U.careHTML(card,U.vmCuidado(card,cy),0),/data-zt694-acao="atualizar-ficha"/,'editor138 fica acessível pelo botão nativo');
+  U.estado.registros139={};U.estado.registros139[dc]={dia:d2,registro:structuredClone(persistido)};
+  assert.equal(U.respostaAtual(card,cy).confirmacaoTutor137.dataAplicacao,'2026-10-21','reabertura lê data D2 escolhida, não copia D1');
+  const dataNative={value:'',readOnly:false},quemNative={value:'',readOnly:false};
+  ctx.usuarioAtual=()=>({id:'humano-d2',nome:'Pessoa D2',role:'recepcao'});ctx.PELUDINHOS=[card.row.p];ctx.pelKey=()=>card.pelKey;ctx.dcKey=()=>dc;
+  ctx.DB={ref:caminho=>({once:async()=>({val:()=>caminho.indexOf('daycare/cadastro/')===0?{n:card.row.p.n,tutor:card.row.p.tutor}:structuredClone(persistido)})})};
+  ctx.prevEdicaoItemHTML138=()=>({ok:true,html:'<div data-z138-editor-native></div>'});ctx.prevRecalcular=()=>{};
+  ctx.document.getElementById=id=>id.indexOf('prevT_')===0?dataNative:id.indexOf('prevQ_')===0?quemNative:null;
+  ctx.document.createElement=()=>({setAttribute(){},style:{},className:'',textContent:''});
+  assert.equal(await U.abrirFichaTutor138(card,U.vmCuidado(card,cy),0,care),true,'editor138 nativo abre após ACK D2');
+  assert.equal(dataNative.value,'2026-10-21');assert.match(quemNative.value,/Tutor — informado por Pessoa D2/);
+  console.log('retorno143: D1/D2, identidade, fonte, recibo antigo, presença e writer nativo OK');
+})().catch(e=>{console.error(e);process.exitCode=1;});
