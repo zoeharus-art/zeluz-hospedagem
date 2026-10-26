@@ -431,6 +431,8 @@
             pagamento: pg, cancelamento: copiar(aAtual.cancelamento), projecao: copiar(aAtual.projecao),
             revisao: revisao, autorId: autor.id, autorNome: autor.nome, ts: rel.ts, quando: rel.quando, historico: hist
           };
+          if (a.cancelamento === undefined) delete a.cancelamento;
+          if (a.projecao === undefined) delete a.projecao;
           reg.valor = campos.nome + ' / ' + campos.raca; reg.hora = campos.hora;
         } else {
           a.versao = 133; a.agendaMarcia = true; a.revisao = revisao;
