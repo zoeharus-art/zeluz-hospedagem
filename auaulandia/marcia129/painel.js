@@ -38,6 +38,8 @@
 
   function estado(valor) { return ESTADOS.indexOf(valor) >= 0 ? valor : 'falha'; }
   function texto(valor) { return typeof valor === 'string' ? valor.trim() : ''; }
+  function telefoneBR(valor) { var d=texto(valor).replace(/\D/g,'');if((d.length===12||d.length===13)&&d.slice(0,2)==='55')return'+'+d;if(d.length===10||d.length===11)return'+55'+d;return''; }
+  function linkWhatsApp(valor) { var t=telefoneBR(valor);return t?'https://wa.me/'+t.slice(1):''; }
   function numero(valor) { return Number.isFinite(valor) && valor >= 0 ? valor : null; }
   function inteiro(valor) { var n = typeof valor === 'number' ? valor : Number(valor); return Number.isInteger(n) && n >= 0 ? n : 0; }
   function lista(valor) { return Array.isArray(valor) ? valor : []; }
@@ -74,7 +76,7 @@
         codigoOrigem: texto(x.codigoOrigem), hora: texto(x.hora),
         agendaMarcia:x.agendaMarcia===true, pagamento:{recebido:!!(x.pagamento&&x.pagamento.recebido===true&&x.pagamento.valorCent===8000),valorCent:x.pagamento&&x.pagamento.valorCent===8000?8000:0,quem:texto(x.pagamento&&x.pagamento.quem),quando:texto(x.pagamento&&x.pagamento.quando)},
         vacina: prevComConferencia('vacina'), vermifugo: prevComConferencia('vermifugo'), carrapaticida: prevComConferencia('carrapaticida'),
-        tutor: texto(c.tutor) || b.tutor,
+        tutor: texto(c.tutor) || b.tutor, telefone: telefoneBR(x.telefone),
         observacoes: lista(x.observacoes).map(function (o) { return { rotulo: texto(o && o.rotulo), valor: texto(o && o.valor) }; }).filter(function (o) { return o.rotulo || o.valor; }),
         conferencia: { tutor: texto(c.tutor), experiencia: texto(c.experiencia), saude: texto(c.saude), observacoes: texto(c.observacoes), revisao: inteiro(c.revisao), quem: texto(c.quem), quando: texto(c.quando), vacina: c.vacina ? prev(c.vacina) : prevComConferencia('vacina'), vermifugo: c.vermifugo ? prev(c.vermifugo) : prevComConferencia('vermifugo'), carrapaticida: c.carrapaticida ? prev(c.carrapaticida) : prevComConferencia('carrapaticida') }
       });
@@ -157,6 +159,12 @@
     return '<li><span>' + esc(rotulo) + '</span><strong class="marcia129__situacao marcia129__situacao--' + (valor.conferido ? 'conferido' : 'conferir') + '">' + (valor.conferido ? 'Conferido' : 'A conferir') + '</strong></li>';
   }
 
+  function telefoneHTML(item) {
+    var tel = telefoneBR(item && item.telefone);
+    if (!tel) return '<p class="marcia129__telefone-aviso" role="status">Telefone do tutor não informado neste registro.</p>';
+    return '<div class="marcia129__contato"><span class="marcia129__telefone-rotulo">Telefone</span><a class="marcia129__telefone" href="' + esc(linkWhatsApp(tel)) + '" target="_blank" rel="noopener noreferrer" aria-label="Abrir conversa com o tutor no WhatsApp">' + esc(tel) + '</a><button type="button" class="marcia129__copiar" data-marcia-copiar-telefone="' + esc(item.id) + '">Copiar</button></div>';
+  }
+
   function agendaHTML(bloco, dia, podeSalvar, pendentes, erros) {
     var e = estadoHTML(bloco, 'Nenhuma avaliação neste dia.');
     if (e) return e;
@@ -171,7 +179,7 @@
       }
       if (x.conferencia.quem && x.conferencia.quando) form = '<p class="marcia129__situacao marcia129__situacao--conferido" role="status">Conferência salva · ' + esc(x.conferencia.quem) + ' · ' + esc(x.conferencia.quando) + '</p>' + form;
       var prevLeitura = podeSalvar ? '' : '<ul class="marcia129__prev">' + prevHTML('Vacina', x.vacina) + prevHTML('Vermífugo', x.vermifugo) + prevHTML('Pulgas e carrapatos', x.carrapaticida) + '</ul>';
-      return '<details class="marcia129__avaliacao" data-marcia-avaliacao="' + esc(x.id) + '"><summary><span class="marcia129__hora">' + esc(x.hora || 'Horário a conferir') + '</span><span class="marcia129__avaliacao-resumo"><strong>' + esc(x.nome || 'FILHOt a conferir') + '</strong><small>' + esc(x.raca || 'Raça a conferir') + ' · ' + esc(x.tutor || 'Tutor a conferir') + '</small>' + (!completa ? '<em>Dados a conferir</em>' : '') + (x.agendaMarcia ? '<em class="'+(x.pagamento.recebido?'marcia129__pago':'marcia129__aguarda-pagamento')+'">'+(x.pagamento.recebido?'Confirmada · R$ 80,00 recebidos':'Pendente de pagamento · R$ 80,00')+'</em>' : '') + '</span><span class="marcia129__chevron" aria-hidden="true">⌄</span></summary><div class="marcia129__avaliacao-corpo">' + prevLeitura + obs + form + '</div></details>';
+      return '<details class="marcia129__avaliacao" data-marcia-avaliacao="' + esc(x.id) + '"><summary><span class="marcia129__hora">' + esc(x.hora || 'Horário a conferir') + '</span><span class="marcia129__avaliacao-resumo"><strong>' + esc(x.nome || 'FILHOt a conferir') + '</strong><small>' + esc(x.raca || 'Raça a conferir') + ' · ' + esc(x.tutor || 'Tutor a conferir') + '</small>' + (!completa ? '<em>Dados a conferir</em>' : '') + (x.agendaMarcia ? '<em class="'+(x.pagamento.recebido?'marcia129__pago':'marcia129__aguarda-pagamento')+'">'+(x.pagamento.recebido?'Confirmada · R$ 80,00 recebidos':'Pendente de pagamento · R$ 80,00')+'</em>' : '') + '</span><span class="marcia129__chevron" aria-hidden="true">⌄</span></summary><div class="marcia129__avaliacao-corpo">' + telefoneHTML(x) + prevLeitura + obs + form + '</div></details>';
     }).join('') + '</div>';
   }
 
@@ -298,9 +306,31 @@
       if (typeof off === 'function') offMes = off;
     }
 
+    function copiarTelefone(id, botao) {
+      var item = atual.agenda.itens.find(function (x) { return x.id === id; }), tel = telefoneBR(item && item.telefone), box = botao && botao.parentNode, doc = root.ownerDocument;
+      if (!tel || !box) return;
+      var copiar = typeof opcoes.copiarTexto === 'function' ? opcoes.copiarTexto : function (v) {
+        var nav = doc && doc.defaultView && doc.defaultView.navigator;
+        return nav && nav.clipboard && typeof nav.clipboard.writeText === 'function' ? nav.clipboard.writeText(v) : Promise.reject(new Error('clipboard_indisponivel'));
+      };
+      function feedback(mensagem, falhou) {
+        var antigo = box.querySelector && box.querySelector('[data-marcia-telefone-status]');
+        if (antigo && antigo.parentNode) antigo.parentNode.removeChild(antigo);
+        if (!doc || typeof doc.createElement !== 'function') return;
+        var aviso = doc.createElement(falhou ? 'label' : 'p');
+        aviso.className = falhou ? 'marcia129__telefone-fallback' : 'marcia129__telefone-status';
+        aviso.setAttribute('data-marcia-telefone-status', '');
+        aviso.textContent = mensagem;
+        if (falhou) { var input = doc.createElement('input'); input.className = 'cad-in'; input.type = 'tel'; input.readOnly = true; input.value = tel; aviso.appendChild(input); }
+        box.appendChild(aviso);
+      }
+      Promise.resolve().then(function () { return copiar(tel); }).then(function () { feedback('Telefone copiado.', false); }, function () { feedback('Não foi possível copiar automaticamente. Selecione e copie o telefone.', true); });
+    }
+
     function clique(ev) {
-      var alvo = ev.target.closest && ev.target.closest('[data-marcia-dia],[data-marcia-mes],[data-marcia-hoje],[data-marcia-tarefa]');
+      var alvo = ev.target.closest && ev.target.closest('[data-marcia-dia],[data-marcia-mes],[data-marcia-hoje],[data-marcia-tarefa],[data-marcia-copiar-telefone]');
       if (!alvo || !root.contains(alvo)) return;
+      if (alvo.hasAttribute('data-marcia-copiar-telefone')) { copiarTelefone(alvo.getAttribute('data-marcia-copiar-telefone'), alvo); return; }
       if (alvo.hasAttribute('data-marcia-dia')) { carregar(alvo.getAttribute('data-marcia-dia')); return; }
       if (alvo.hasAttribute('data-marcia-hoje')) { carregar(dataSP()); return; }
       if (alvo.hasAttribute('data-marcia-mes')) {

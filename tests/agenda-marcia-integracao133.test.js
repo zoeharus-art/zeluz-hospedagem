@@ -106,7 +106,7 @@ function createNative(db, transport) {
 
 function fields(payment) {
   return {
-    nome: 'Luna', raca: 'SRD', tutor: 'Tutor Luna', hora: '09:30',
+    nome: 'Luna', raca: 'SRD', tutor: 'Tutor Luna', telefone: '(00) 90000-0000', hora: '09:30',
     vacina: { conferido: true }, vermifugo: { conferido: false }, carrapaticida: { conferido: true },
     experiencia: 'Primeira visita', saude: '', observacoes: '', pagamento: payment || { recebido: false, valorCent: 0 }
   };

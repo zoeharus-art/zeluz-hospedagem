@@ -37,7 +37,7 @@ class Raiz {
   querySelector() { return null; }
 }
 function form(id, v = {}) {
-  const d = Object.assign({ nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', hora: '09:30',
+  const d = Object.assign({ nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', telefone: '(00) 90000-0000', hora: '09:30',
     'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
     experiencia: '', saude: '', observacoes: '', 'pagamento-recebido': false }, v);
   return { closest() { return this; }, getAttribute(n) { return n === 'data-am-form' ? id : null; },
@@ -93,7 +93,7 @@ async function executar() {
     assert(raizAgenda.innerHTML.includes('Informe o nome.') && raizAgenda.innerHTML.includes('Informe o tutor.'));
 
     // Dois submits simultâneos iguais reaproveitam o mesmo ID/transação.
-    const fNovo = form('novo', { nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', hora: '09:30',
+    const fNovo = form('novo', { nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', telefone: '(00) 90000-0000', hora: '09:30',
       'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
       observacoes: 'Resumo da chegada', 'pagamento-recebido': false });
     submit(raizAgenda, fNovo); submit(raizAgenda, fNovo);
@@ -114,7 +114,7 @@ async function executar() {
     assert(!raizAgenda.innerHTML.includes('Avaliação confirmada'), 'pendente não aparece como avaliação confirmada');
 
     // Só depois que a Consultora marca recebido, o registro e os dois painéis confirmam R$ 80.
-    submit(raizAgenda, form('row-1', { nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', hora: '09:30',
+    submit(raizAgenda, form('row-1', { nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', telefone: '(00) 90000-0000', hora: '09:30',
       'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
       observacoes: 'Resumo da chegada', 'pagamento-recebido': true }));
     await tick(); await tick();
@@ -138,7 +138,7 @@ async function executar() {
     assert.equal(projecoes.length, 1, 'segundo agendamento pendente também não espelha');
 
     // Um edit só de observações preserva o recibo e não reenvia o resumo.
-    const fEdit = form('row-1', { nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', hora: '09:30',
+    const fEdit = form('row-1', { nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', telefone: '(00) 90000-0000', hora: '09:30',
       'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
       observacoes: 'Observação revisada', 'pagamento-recebido': true });
     submit(raizAgenda, fEdit); await tick(); await tick();
@@ -146,7 +146,7 @@ async function executar() {
     assert.equal(db.valores[PAI + '/row-1'].det.avaliacao129.pagamento.recebido, true, 'editar preserva recebimento');
 
     // Mudar o resumo gera uma única pendência de edição e usa a ponte de update.
-    const fResumo = form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', hora: '10:00',
+    const fResumo = form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', telefone: '(00) 90000-0000', hora: '10:00',
       'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
       observacoes: 'Observação revisada', 'pagamento-recebido': true });
     submit(raizAgenda, fResumo); await tick(); await tick();
@@ -158,7 +158,7 @@ async function executar() {
 
     // Se a projeção de outra edição paga falha, os dados ficam salvos e a pendência fica visível.
     globalThis.dashAgendaMarciaProjetar133 = (dia,id,reg,retry) => { const p=reg.det.avaliacao129.projecao||{}; projecoes.push({dia,id,acao:p.acao,retry:retry===true,reg:clone(reg)}); return Promise.resolve({ok:false}); };
-    submit(raizAgenda, form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', hora: '10:30',
+    submit(raizAgenda, form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', telefone: '(00) 90000-0000', hora: '10:30',
       'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
       observacoes: 'Observação revisada', 'pagamento-recebido': true }));
     await tick(); await tick(); await tick();
@@ -172,7 +172,7 @@ async function executar() {
 
     // Mesmo com a projeção pendente, uma nota privada não tenta reenviar a linha-resumo.
     globalThis.dashAgendaMarciaProjetar133 = (dia,id,reg,retry) => { const p=reg.det.avaliacao129.projecao||{}; projecoes.push({dia,id,acao:p.acao,retry:retry===true,reg:clone(reg)}); return Promise.resolve({ok:true}); };
-    submit(raizAgenda, form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', hora: '10:30',
+    submit(raizAgenda, form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', telefone: '(00) 90000-0000', hora: '10:30',
       'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
       observacoes: 'Nota após falha', 'pagamento-recebido': true }));
     await tick(); await tick();
@@ -183,7 +183,7 @@ async function executar() {
     const before = clone(db.valores[PAI + '/row-1']);
     const stale = clone(before); stale.det.avaliacao129.observacoes = 'mudança concorrente'; stale.det.avaliacao129.revisao += 1;
     db.valores[PAI + '/row-1'] = stale;
-    const fStale = form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', hora: '10:30',
+    const fStale = form('row-1', { nome: 'Maya Nova', raca: 'SRD', tutor: 'Família Maya', telefone: '(00) 90000-0000', hora: '10:30',
       'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false, observacoes: 'Tentativa antiga', 'pagamento-recebido': true });
     const writesBeforeStale = db.writes.length, mirrorsBeforeStale = projecoes.length;
     submit(raizAgenda, fStale); await tick(); await tick();

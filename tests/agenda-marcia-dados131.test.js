@@ -44,7 +44,7 @@ const DIA = '2026-10-25';
 const CAMINHO = 'daycare/dashboard/' + DIA + '/avaliacao';
 function avaliacao(extra = {}) {
   return Object.assign({
-    nome: 'Luna', raca: 'SRD', tutor: 'Família Luna', hora: '09:30',
+    nome: 'Luna', raca: 'SRD', tutor: 'Família Luna', telefone: '(00) 90000-0000', hora: '09:30',
     vacina: { conferido: true }, vermifugo: { conferido: false }, carrapaticida: { conferido: true },
     experiencia: 'Primeira creche', saude: '', observacoes: 'Receber na porta'
   }, extra);
