@@ -10897,7 +10897,7 @@ return { criar };
     if(!cred || cred.tipo!=='credito'){ alert('Não achei esta falta avisada no Extrato. Atualize a tela.'); return Promise.resolve(null); }
     if(an[id]){ alert(repJaEstornadaTexto(repLancDe(L, 'est-'+id)||{})); return Promise.resolve(null); }
     var cas=repEstornarCascata(p, cred, L);
-    return corrAbrir({acao:'anular', nivel:'gestao', titulo:'Estornar a falta de '+repDataCurta(cred.data), botao:'Estornar', tituloOk:'Estornado',
+    return corrAbrir({acao:'anular', nivel:'adriana', adrianaOque:'cancela faltas lançadas', titulo:'Cancelar a falta lançada de '+repDataCurta(cred.data), botao:'Cancelar falta lançada', tituloOk:'Falta lançada cancelada',
       oque:'a falta avisada de '+repBRdata(cred.data)+' de '+pelNome(p), original:{caminho:'daycare/reposicao/'+pelKey(p)+'/lancamentos/'+id, id:String(id)},
       estado:'valendo', cascata:cas.linhas, aviso:cas.usado?repEstornoUsadoTexto(cas.livro):'',
       gravar:function(reg){ return repEstornarGravar(p, cred, reg); }}).then(function(r){
@@ -10908,6 +10908,7 @@ return { criar };
   // O estorno de sempre ({tipo:'estorno', data:hoje, motivo:'estorno', obs, estornaId}), pelo repGravar, na chave
   // fixa est-{crédito}: dois aparelhos estornando a mesma falta gravam UM estorno. «Estornado» só com o ok.
   function repEstornarGravar(p, cred, reg){
+    if(!corrRegDaAdriana(reg)) return Promise.resolve({ok:false, erro:'Só a Adriana pode cancelar uma falta lançada, com a senha dela.'});
     var mot=String(reg.motivo||'');
     var est={tipo:'estorno', data:repHojeISO(), motivo:'estorno', obs:mot, estornaId:cred._id, corr:reg};
     var feito=function(){
@@ -10927,7 +10928,7 @@ return { criar };
     var L=repLancamentos(p)||[], an=repAnulados(L), cred=repLancDe(L, id);
     var lote=(cred && cred.tipo==='credito' && !an[id])?cred.lote:'';
     var vivos=repLoteVivos(L, lote), todos=repLoteDe(L, lote);
-    if(vivos.length<2){ alert('Este lote não tem mais de um dia valendo. Use «Estornar» na linha da falta.'); return Promise.resolve(null); }
+    if(vivos.length<2){ alert('Este lote não tem mais de um dia valendo. Use «Cancelar falta lançada» na linha da falta.'); return Promise.resolve(null); }
     var mortos=todos.filter(function(l){ return an[l._id]; });
     var ests=vivos.map(function(l){ return {_id:'est-'+l._id, tipo:'estorno', estornaId:l._id}; });
     var usados=0;
@@ -10945,7 +10946,7 @@ return { criar };
     var livro=repSaldoDe(L.concat(ests)), usado=livro<0;
     var info={};
     var de=(cred.periodo&&cred.periodo.de)||vivos[0].data, ate=(cred.periodo&&cred.periodo.ate)||vivos[vivos.length-1].data;
-    return corrAbrir({acao:'anular', nivel:'gestao', titulo:'Estornar o lote ('+vivos.length+' dias)', botao:'Estornar o lote', tituloOk:'Lote estornado',
+    return corrAbrir({acao:'anular', nivel:'adriana', adrianaOque:'cancela faltas lançadas', titulo:'Cancelar faltas lançadas ('+vivos.length+' dias)', botao:'Cancelar faltas lançadas', tituloOk:'Faltas lançadas canceladas',
       oque:'o lote de faltas avisadas de '+pelNome(p)+' ('+repBRdata(de)+' a '+repBRdata(ate)+')', original:{caminho:'daycare/reposicao/'+pelKey(p)+'/lancamentos', id:String(lote)},
       estado:'valendo', cascata:linhas, aviso:usado?repLoteUsadoTexto(livro, usados):'',
       gravar:function(reg){ return repLoteEstornarGravar(p, lote, reg, vivos.map(function(l){ return l._id; }), info); }}).then(function(r){
@@ -10958,6 +10959,7 @@ return { criar };
   // abriu (corrigido ou restaurado em outro aparelho) também fica de fora, porque a Gestão não o viu ao assinar (2ª rodada,
   // REL-003). A confirmação diz os dois.
   function repLoteEstornarGravar(p, lote, reg, vistos, info){
+    if(!corrRegDaAdriana(reg)) return Promise.resolve({ok:false, erro:'Só a Adriana pode cancelar faltas lançadas, com a senha dela.'});
     var LE='E'+Date.now(), hoje=repHojeISO(), quem=(typeof quemSou==='function')?quemSou():'-', ts=Date.now(), mot=String(reg.motivo||'');
     var feito=function(ids, datas){
       repRastro('reposicao-lote-estornado', p, pelNome(p)+' — estornado o lote de '+ids.length+' faltas avisadas ('+repListaDatasE(datas)+'), assinado por '+(reg.por||'-')+': '+mot);
@@ -10993,7 +10995,7 @@ return { criar };
       motivoK:cred.motivo, obs:cred.obs||'', corrigeLote:cred.lote};
     zEscolha('LOTE ESTORNADO',
       ['Estornadas: '+repListaDatasE(info.datas||[])+'.'].concat(foraD.length?['Ficou de fora (já tinha sido estornada em outro aparelho): '+repListaDatasE(foraD)+'.']:[])
-        .concat((info.novos||[]).length?['Continua valendo (entrou no lote em outro aparelho depois que o cartaz abriu, e ninguém assinou por ela): '+repListaDatasE(info.novos)+'. Se também está errada, use «Estornar» na linha dela.']:[])
+        .concat((info.novos||[]).length?['Continua valendo (entrou no lote em outro aparelho depois que o cartaz abriu, e ninguém assinou por ela): '+repListaDatasE(info.novos)+'. Se também está errada, use «Cancelar falta lançada» na linha dela.']:[])
         .concat(['Para lançar as datas certas, toque em «Lançar o período certo»: a janela abre com '+pelNome(p)+', o modo, o motivo, a observação e as datas preenchidos. Nada é lançado sem o seu «Lançar reposição».']),
       [{t:'Lançar o período certo', cor:'#234D67', fn:function(){ repAbrirLancar(p, pre); }}, {t:'Fechar', cor:'#6b5f4b', fn:function(){}}], {corTitulo:'#234D67'});
   }
@@ -11265,12 +11267,19 @@ return { criar };
     var L=repLancamentos(p)||[], pend=[];
     try{ pend=repTrocasPendentesP(p); }catch(e){ pend=[]; } /* silencioso de propósito: sem a conta, nenhuma troca pendente */
     var anulado={}; L.forEach(function(l){ if(l.tipo==='estorno'&&l.estornaId) anulado[l.estornaId]=true; });
-    return {L:L, X:repExtratoPares(L, pend), hojeServ:repHojeServidor(), anulado:anulado, repetidas:repRepetidas(L), ehG:repEhGestao(), i:i,
+    return {L:L, X:repExtratoPares(L, pend), hojeServ:repHojeServidor(), anulado:anulado, repetidas:repRepetidas(L), ehG:repEhGestao(), i:i, chave:pelKey(p),
       pode:op.ficha?repPodeLancar():true};
   }
   var REP_BOTAO_ESTILO='border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;min-height:44px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;';
   function repBotaoLinha(fn, i, id, rot, cor){
     return '<button type="button" onclick="'+fn+'('+i+',\''+escAttr(id)+'\')" style="'+REP_BOTAO_ESTILO+'color:'+(cor||'var(--z-blue)')+'">'+esc(rot)+'</button>';
+  }
+  function repBotaoMensagemTroca(chave, id, compacto){
+    var estilo=compacto
+      ? 'border:none;background:none;padding:0 2px;min-height:44px;font:inherit;font-size:11.5px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer'
+      : REP_BOTAO_ESTILO+'color:var(--z-blue)';
+    var chamada='repTrocaMensagemAbrir('+JSON.stringify(String(chave||''))+','+JSON.stringify(String(id||''))+')';
+    return '<button type="button" onclick="'+escAttr(chamada)+'" style="'+estilo+'">Mensagem para o tutor</button>';
   }
   // O que a linha diz a mais (6.60): quem desfez, de onde voltou, o que corrigiu. Texto puro (a tela escapa).
   function repExtratoNovidades(l, c){
@@ -11306,7 +11315,8 @@ return { criar };
     var i=c.i, L=c.L, h='';
     if(l.tipo==='credito' && !c.anulado[l._id]){
       if(!repSaidaAntecipada(l)) h+=repBotaoLinha('repCorrigirAbrir', i, l._id, 'Corrigir');
-      h+=repBotaoLinha('repEstornar', i, l._id, 'Estornar', 'var(--crm-critico)');
+      h+=repBotaoLinha('repEstornar', i, l._id, 'Cancelar falta lançada', 'var(--crm-critico)');
+      if(repTrocaViva(l)) h+=repBotaoMensagemTroca(c.chave, l._id, false);
       var nl=l.lote?repLoteVivos(L, l.lote).length:0;
       if(nl>=2) h+=repBotaoLinha('repLoteEstornarAbrir', i, l._id, 'Estornar o lote ('+nl+')', 'var(--crm-critico)');
     }
@@ -15867,6 +15877,34 @@ return { criar };
         .concat(aut?['Encaixe acima do limite, autorizado por '+aut.quem+'.']:[]),
       repMensagem(p,'troca',{de:de, para:para}), repTelDe(p));
   }
+  function repTrocaDataValida(d){
+    d=String(d||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+    var a=d.split('-').map(Number), y=a[0], m=a[1], dia=a[2];
+    return y>=1000 && m>=1 && m<=12 && dia>=1 && dia<=new Date(Date.UTC(y,m,0)).getUTCDate();
+  }
+  // Reabre somente a mensagem de uma troca que ainda vale. A chave do FILHOt e o id do
+  // lançamento são conferidos de novo no cache atual: reordenar a lista não troca o destinatário,
+  // e uma troca cancelada ou remarcada não reaparece como se ainda estivesse valendo.
+  function repTrocaMensagemAbrir(chave, id){
+    chave=String(chave||''); id=String(id||'');
+    if(!repPodeLancar()){ corrBarrar('ver a mensagem de uma troca', corrQuemPode('lancar-reposicao'), {alvo:chave, id:id}); return false; }
+    var iguais=[]; try{ iguais=(PELUDINHOS||[]).filter(function(x){ return pelKey(x)===chave; }); }catch(e){ iguais=[]; }
+    var p=iguais.length===1?iguais[0]:null;
+    if(!p || !id){ alert('Não achei uma ficha única para esta troca. Atualize a tela e abra o Extrato novamente.'); return false; }
+    var L=repLancamentos(p)||[], an=repAnulados(L), l=repLancDe(L, id);
+    var de=String((l&&l.troca&&l.troca.de)||''), para=String((l&&l.troca&&l.troca.para)||'');
+    var dataOk=repTrocaDataValida(de) && repTrocaDataValida(para);
+    if(!l || an[id] || !repTrocaViva(l) || !dataOk || String(l.data||'')!==de || String(l.volta||'')!==para){
+      alert('Esta troca não está mais valendo como aparece nesta tela. Atualize o Extrato antes de copiar a mensagem.');
+      return false;
+    }
+    repMsgModal('Mensagem para o tutor',
+      ['Troca registrada: '+pelNome(p)+' não vem '+repNoDia(de)+', e vem '+repNoDia(para)+'.',
+       'Esta janela só reabre a mensagem da troca já registrada. Nada foi lançado novamente.'],
+      repMensagem(p,'troca',{de:de, para:para}), repTelDe(p));
+    return true;
+  }
   function dxVeredictoHTML(v){
     if(!v.ok) return v.motivo?('<div class="vg-ok"><span>'+esc(v.motivo)+'</span></div>'):'';
     if(v.tipo==='troca'){
@@ -16132,7 +16170,7 @@ return { criar };
         +ag.map(function(d){
           var tc=repLancamentos(o.p).filter(function(l){ return l.volta===d&&repTrocaViva(l); })[0];
           var pzD=repPrazo(d);
-          return repBRdata(d)+(tc?(' (troca, no lugar de '+repBRdata(tc.troca.de||tc.data).slice(0,5)+')'):'')+(podeDesm?(' <button type="button" onclick="repDesmarcar('+o.i+',\''+d+'\')"'
+          return repBRdata(d)+(tc?(' (troca, no lugar de '+repBRdata(tc.troca.de||tc.data).slice(0,5)+') · '+repBotaoMensagemTroca(pelKey(o.p), tc._id, true)):'')+(podeDesm?(' <button type="button" onclick="repDesmarcar('+o.i+',\''+d+'\')"'
             +' style="border:none;background:none;padding:0 2px;font:inherit;font-size:11.5px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer">desmarcar</button>'
             +(pzD.dentro?(' até as 24h de '+String(repBRdata(pzD.limite)).slice(0,5)):' (fora do prazo)')
             // 6.61 (AC7.1): «mudar o dia» da reposição marcada para um dia futuro (a troca muda pelo caminho dela)
