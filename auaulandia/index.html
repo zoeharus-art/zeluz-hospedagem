@@ -98242,6 +98242,16 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   function copia(v){return JSON.parse(JSON.stringify(v));}function falha(m){return{ok:false,status:'revisao',alterou:false,intencoes:[],motivo:m};}
   /* O Realtime Database elimina o filho nulo ao gravar (a releitura de `recusar` e `aguardar` volta sem `origem`): para comparar a resposta lida com a pedida, chave nula ou indefinida e chave ausente são a mesma coisa (6.97, AC1; o núcleo 49 já fazia isso em `canonResposta`). */
   function canon(v){if(Array.isArray(v))return '['+v.map(canon).join(',')+']';if(obj(v))return '{'+Object.keys(v).sort().filter(function(k){return v[k]!==null&&v[k]!==undefined;}).map(function(k){return JSON.stringify(k)+':'+canon(v[k]);}).join(',')+'}';return JSON.stringify(v);}
+  function diaISO(v){var s=texto(v),d=/^\d{4}-\d{2}-\d{2}$/.test(s)&&new Date(s+'T00:00:00.000Z');return !!(d&&Number.isFinite(d.getTime())&&d.toISOString().slice(0,10)===s);}
+  function diaSP(v){var p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(v)),x={};p.forEach(function(a){x[a.type]=a.value;});return x.year+'-'+x.month+'-'+x.day;}
+  function confirmacaoTutor137(v,x,agoraISO){
+    if(v===null||v===undefined)return null;
+    var permitidas={versao:1,tipo:1,dataAplicacao:1,estado:1};
+    if(!obj(v)||Object.keys(v).some(function(k){return !permitidas[k];})||v.versao!==137||v.tipo!=='tutor_ja_fez'||v.estado!=='atualizar_ficha_pendente'||!diaISO(v.dataAplicacao))throw Error('confirmação do tutor inválida');
+    if(!x||x.decisao!=='autorizar'||x.origem!=='externo')throw Error('confirmação do tutor exige acompanhamento externo');
+    if(v.dataAplicacao>diaSP(agoraISO))throw Error('data informada não pode estar no futuro');
+    return{versao:137,tipo:'tutor_ja_fez',dataAplicacao:v.dataAplicacao,estado:'atualizar_ficha_pendente'};
+  }
   function chave(v){var s=String(v),b64;if(typeof Buffer!=='undefined')b64=Buffer.from(s,'utf8').toString('base64');else b64=btoa(unescape(encodeURIComponent(s)));return'v1_'+b64.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'');}
   function grupoPainel(painel,groupKey){var grupos=painel&&painel.grupos;if(!Array.isArray(grupos))return null;var a=grupos.filter(function(g){return g&&g.groupKey===groupKey;});return a.length===1?a[0]:null;}
   function canonEstavel(c){var b=c&&c.baseOperacional88||{};return{groupKey:c&&c.groupKey,dia:c&&c.dia,dcKey:c&&c.dcKey,humano:c&&c.humano,itens:c&&c.itens,fonte:{tipo:b.tipo,groupKey:b.groupKey,textoSha:b.textoSha||null,messageId:b.messageId||null,contatoId:b.contatoId||null,escopoSha:b.escopoSha||null}};}
@@ -98291,7 +98301,9 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
         var k=x.cycleKey+'^@'+x.itemK,c=ciclos[x.cycleKey];
         if(!permitidos[k]||vistos[k])throw Error('item fora do escopo comunicado');
         vistos[k]=true;
-        return{cycleKey:x.cycleKey,itemK:x.itemK,tipo:c.tipo,decisao:x.decisao,origem:x.decisao==='autorizar'?x.origem:null,onde:texto(x.onde),baseRevision:x.baseRevision};
+        var n={cycleKey:x.cycleKey,itemK:x.itemK,tipo:c.tipo,decisao:x.decisao,origem:x.decisao==='autorizar'?x.origem:null,onde:texto(x.onde),baseRevision:x.baseRevision},ct=confirmacaoTutor137(x.confirmacaoTutor137,n,e.agora);
+        if(ct)n.confirmacaoTutor137=ct;
+        return n;
       });
       var baseRegistro=copia(r);
       if(pv.conferenciaNova){
@@ -98326,7 +98338,7 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
       }
       var semMudanca=normal.every(function(x){
         var ant=rs.porCiclo[chave(x.cycleKey)];
-        return !!ant&&ant.revisao===x.baseRevision&&ant.decisao===x.decisao&&(ant.origem||null)===(x.origem||null)&&texto(ant.onde)===texto(x.onde);
+        return !!ant&&ant.revisao===x.baseRevision&&ant.decisao===x.decisao&&(ant.origem||null)===(x.origem||null)&&texto(ant.onde)===texto(x.onde)&&canon(ant.confirmacaoTutor137||null)===canon(x.confirmacaoTutor137||null);
       });
       if(semMudanca){
         var repetidas=normal.map(function(x){var ant=rs.porCiclo[chave(x.cycleKey)];return intencao(x,ant.revisao,ant.respostaId);}).filter(Boolean);
@@ -98335,6 +98347,7 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
       var intencoes=[];
       normal.forEach(function(x){
         var ck=chave(x.cycleKey),ant=rs.porCiclo[ck],rev=ant?ant.revisao+1:0,atual={cycleKey:x.cycleKey,itemK:x.itemK,groupKey:e.groupKey,respostaId:res.id,decisao:x.decisao,origem:x.origem,onde:x.onde,humanoId:pv.sessao.id,humanoNome:pv.sessao.nome,ts:agora,revisao:rev,estado:'decidido',baseOperacional88:copia(base88)};
+        if(x.confirmacaoTutor137)atual.confirmacaoTutor137=copia(x.confirmacaoTutor137);
         if(pv.destino.revisaoOperacional&&x.decisao==='autorizar'&&(x.origem==='loja'||x.origem==='bolsa'))atual.revisaoOperacional=pv.destino.revisaoOperacional;
         rs.porCiclo[ck]=atual;
         var it=intencao(x,rev,res.id);if(it)intencoes.push(it);
@@ -98345,7 +98358,7 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
       return{ok:true,status:'registrado',alterou:true,registro:n,intencoes:intencoes,aviso:pv.destino.revisaoOperacional?'Resposta salva. A coordenação precisa revisar os dados atuais antes do próximo passo; nenhuma aplicação foi criada.':'Resposta registrada. Nenhum cuidado foi executado automaticamente.'};
     }catch(x){return falha(x.message);}
   }
-  return{decidir:decidir,codificarChave:chave,constants:{versao:88,revisaoImplementacao:95,origens:Object.keys(ORIGENS)}};
+  return{decidir:decidir,codificarChave:chave,normalizarConfirmacaoTutor137:confirmacaoTutor137,constants:{versao:88,revisaoImplementacao:95,origens:Object.keys(ORIGENS)}};
 }));
 </script>
 
@@ -98580,10 +98593,18 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
     if(!tutor||!k)return'';
     return /^vac_/.test(k)?TEXTO_EM_CASA.vacina(tutor):TEXTO_EM_CASA.geral(tutor);
   }
+  /* Rascunho 137: resposta HUMANA para copiar depois que o tutor informa que já fez.
+     Não envia, não cria aplicação Zêluz e não altera data de validade da ficha. */
+  function textoTutorJaFez(info,itemK,dataAplicacao){
+    var tutor=t(info&&info.tutor),pet=t(info&&info.pet),k=t(itemK),data=t(dataAplicacao),p=data.split('-');
+    if(!tutor||!pet||!k||p.length!==3)return'';
+    return'Obrigada por nos avisar, '+tutor+'! 💛\n\nVamos atualizar a ficha de '+pet+' com o cuidado realizado em '+p[2]+'/'+p[1]+'/'+p[0]+'.\n\nManter essas informações em dia nos ajuda a cuidar da segurança e do bem-estar de todos os nossos Aulunos.';
+  }
   function mensagemAprovada(cardInfo,ciclo,atual,destino){
     if(!atual)return'';
-    var tutor=t(cardInfo&&cardInfo.nomeTutor),pet=t(cardInfo&&cardInfo.nomePeludo);
-    if(atual.decisao==='autorizar'&&atual.origem==='externo'&&tutor)return textoEmCasa({tutor:tutor},ciclo.itemK);
+    var tutor=t(cardInfo&&cardInfo.nomeTutor),pet=t(cardInfo&&cardInfo.nomePeludo),conf=null;
+    if(atual.decisao==='autorizar'&&atual.origem==='externo'&&atual.confirmacaoTutor137)try{conf=root.ZeluzResposta88&&root.ZeluzResposta88.normalizarConfirmacaoTutor137(atual.confirmacaoTutor137,{decisao:atual.decisao,origem:atual.origem},new Date().toISOString());}catch(_){conf=null;}
+    if(atual.decisao==='autorizar'&&atual.origem==='externo'&&tutor){if(conf)return textoTutorJaFez({tutor:tutor,pet:pet},ciclo.itemK,conf.dataAplicacao);return textoEmCasa({tutor:tutor},ciclo.itemK);}
     if(atual.decisao==='aguardar'&&destino&&destino.presencaCorporal===true&&destino.checkout!==true&&tutor&&pet)return'Olá, '+tutor+'!\n\nPodemos fazer '+cuidadoNaFrase(ciclo.itemK)+' de '+pet+' hoje, enquanto está com a gente?\n\nAssim, vocês já resolvem esse cuidado sem precisar organizar outra visita e, juntos, cuidamos da segurança e do bem-estar de todos os nossos Aulunos. 💛';
     return'';
   }
@@ -98691,7 +98712,7 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   function preservarNormalizadorPainel(){var original=root.zPainel44ValidarFonte80;if(typeof original!=='function'||original.__resposta88Detalhes)return;var envolvido=function(v){var p=original(v),det=v&&Number(v.detalhesEnvioVersao);if(!p||[86,89,92,104].indexOf(det)<0||!t(v&&v.assinaturaConteudo))return null;p.detalhesEnvioVersao=det;p.assinaturaConteudo=t(v.assinaturaConteudo);return p;};envolvido.__resposta88Detalhes=true;root.zPainel44ValidarFonte80=envolvido;}
   function instalar(){if(estado.instalado||!root.document)return false;if(!root.ZeluzResposta88||!root.ZeluzResposta88RTDB||!root.ZeluzRespostaUI88)return false;estado.instalado=true;instalarPonte57();if(typeof root.zPainel44Atualizar==='function'){estado.atualizarOriginal=root.zPainel44Atualizar;root.zPainel44Atualizar=function(){var r=estado.atualizarOriginal.apply(this,arguments);programar(true);return r;};}root.document.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('[data-z44-reler]'))setTimeout(function(){carregar(true);},0);});programar(false);return true;}
   preservarNormalizadorPainel();
-  root.ZeluzRespostaApp88={instalar:instalar,carregar:carregar,painel:lerPainel,abrir:abrir,abrirContatoHumano:abrirContatoHumano,registrar:registrar,resolverGrupo:resolverGrupo,resolverContatoHumano:resolverContatoHumano,resolverCuidado57:resolverCuidado57,sessao:sessao,textoEmCasa:textoEmCasa,mensagemAprovada:mensagemAprovada};
+  root.ZeluzRespostaApp88={instalar:instalar,carregar:carregar,painel:lerPainel,abrir:abrir,abrirContatoHumano:abrirContatoHumano,registrar:registrar,resolverGrupo:resolverGrupo,resolverContatoHumano:resolverContatoHumano,resolverCuidado57:resolverCuidado57,sessao:sessao,textoEmCasa:textoEmCasa,textoTutorJaFez:textoTutorJaFez,mensagemAprovada:mensagemAprovada};
   if(root.document){if(root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',instalar,{once:true});else instalar();}
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
@@ -99922,7 +99943,7 @@ renderAtual=function(){
   function cuidadoPendente117(c){
     return !c||c.bloqueado===true||c.respostaSalva!==true||c.tarefaOrfa===true||(c.linhaObrigatoria===true&&c.linhaConfirmada!==true);
   }
-  function classificarFilas117(pets){
+  function classificarFilas117(pets,fixosResolver){
     var ordem=[],porDc={};
     (pets||[]).forEach(function(p,i){
       var dc=txt(p&&p.dcKey)||('__sem_dc_'+i),cs=Array.isArray(p&&p.cuidados)?p.cuidados:[];
@@ -99930,14 +99951,15 @@ renderAtual=function(){
       porDc[dc].cuidados=porDc[dc].cuidados.concat(cs);
     });
     var paraResolver=[],emAndamento=[];
-    ordem.forEach(function(dc){var x=porDc[dc],pendente=!x.cuidados.length||x.cuidados.some(cuidadoPendente117);(pendente?paraResolver:emAndamento).push(x.pet);});
+    ordem.forEach(function(dc){var x=porDc[dc],pendente=!!(fixosResolver&&fixosResolver[dc])||!x.cuidados.length||x.cuidados.some(cuidadoPendente117);(pendente?paraResolver:emAndamento).push(x.pet);});
     return{paraResolver:paraResolver,emAndamento:emAndamento,porDc:porDc};
   }
+  function chaveRascunho137(dcKey,cycleKey,itemK){return JSON.stringify([txt(dcKey),txt(cycleKey),txt(itemK)]);}
   return{RESPOSTAS:RESPOSTAS,FRASE_JA_NO_SNOOPY:FRASE_JA_NO_SNOOPY,FRASE_JA_APLICADO:FRASE_JA_APLICADO,FRASE_TROCA_APLICADO:FRASE_TROCA_APLICADO,
     rotuloResposta:rotuloResposta,mascara:mascara,hora:hora,quandoEnviado:quandoEnviado,retornoDepois:retornoDepois,msAte1330:msAte1330,inicio1330:inicio1330,horaDaSaida:horaDaSaida,
     grupoDoPet:grupoDoPet,resumo:resumo,rotuloGrupo:rotuloGrupo,topo:topo,ordenar:ordenar,camposDoCuidado:camposDoCuidado,ondePadrao:ondePadrao,faltaEscolher:faltaEscolher,
     podeEscolher:podeEscolher,mesclarEscolha:mesclarEscolha,decidirTroca:decidirTroca,estadoDaTarefa:estadoDaTarefa,linhaDoLancamentoConfirmada:linhaDoLancamentoConfirmada,
-    classificarFilas117:classificarFilas117};
+    classificarFilas117:classificarFilas117,chaveRascunho137:chaveRascunho137};
 });
 </script>
 <script id="zelozinha-contatos89-ui">'use strict';
@@ -99947,7 +99969,7 @@ renderAtual=function(){
 (function(){
   if(window.__zelozinhaContatos89Instalado)return;window.__zelozinhaContatos89Instalado=true;
   var T=window.ZelozinhaTela94;
-  var estado={linhas:{},api:null,alvos:[],seq:0,itens:{},grupos:[],ordemDepois:false,inFlight:null,projecao:null,resultado:null,dia:'',vet:null,sujo:true,projEm:'',salvando:{},avisos:{},msgs:{},copiaSt:{},agora94:{},presenca:{},abertos:{},diaCarregado:'',diaLendo:null,snoopyEstado:'novo',recarregarDia:true,obs:null,anexando:false,timer:null,scrollY:null,erro:''};
+  var estado={linhas:{},api:null,alvos:[],seq:0,itens:{},grupos:[],ordemDepois:false,inFlight:null,projecao:null,resultado:null,dia:'',vet:null,sujo:true,projEm:'',salvando:{},avisos:{},msgs:{},copiaSt:{},agora94:{},presenca:{},abertos:{},fixosResolver:{},datasTutor137:{},diaCarregado:'',diaLendo:null,snoopyEstado:'novo',recarregarDia:true,obs:null,anexando:false,timer:null,scrollY:null,erro:''};
   function instalarEstilo(){
     if(!document||!document.createElement||!document.head||document.getElementById&&document.getElementById('zelozinha-contatos89-style'))return;
     var st=document.createElement('style');st.id='zelozinha-contatos89-style';
@@ -100019,6 +100041,8 @@ renderAtual=function(){
   function diaAtual(){try{return typeof zPainel44Dia==='function'?txt(zPainel44Dia()):'';}catch(_){return '';}}
   function itemNome(c){if(txt(c&&c.nome))return txt(c.nome);var k=txt(c&&c.itemK),care=txt(c&&c.care);if(k==='vac_mult_p')return 'Vacina Múltipla';if(k==='vac_gripe_p')return 'Vacina de Gripe';if(k==='vac_raiva_p')return 'Vacina Antirrábica';if(k==='col_p')return 'Coleira';if(care==='vermifugo')return 'Vermífugo';if(care==='ecto')return 'Proteção contra pulgas e carrapatos';if(care==='vacina')return 'Vacina';if(care==='escova')return 'Escova dental';return 'Cuidado preventivo';}
   function dataBR(v){var s=txt(v);return /^\d{4}-\d{2}-\d{2}$/.test(s)?s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4):'';}
+  function hojeSP137(){try{var p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(agora())),x={};p.forEach(function(a){x[a.type]=a.value;});return x.year+'-'+x.month+'-'+x.day;}catch(_){return'';}}
+  function confirmacaoTutorDe137(rv){if(!rv||rv.decisao!=='autorizar'||rv.origem!=='externo')return null;try{return window.ZeluzResposta88&&typeof window.ZeluzResposta88.normalizarConfirmacaoTutor137==='function'?window.ZeluzResposta88.normalizarConfirmacaoTutor137(rv.confirmacaoTutor137,{decisao:rv.decisao,origem:rv.origem},new Date(agora()).toISOString()):null;}catch(_){return null;}}
   function cuidadoNome(c){var nome=itemNome(c),data=dataBR(c&&c.dueDate);return nome+(data?' · '+data:'');}
   function tutorNome(c){return txt(c.cadastro&&c.cadastro.tutor)||txt(c.row&&c.row.p&&c.row.p.tutor);}
   function tutorPrimeiro(c){var n=tutorNome(c);return n?n.split(/\s+/)[0]:'';}
@@ -100056,7 +100080,7 @@ renderAtual=function(){
     var vistos={},pets=[];
     estado.grupos.forEach(function(g){(g.pets||[]).forEach(function(p){var c=estado.itens[p.dcKey];if(!c||vistos[c.dcKey])return;vistos[c.dcKey]=true;pets.push({dcKey:c.dcKey,nome:nomePet(c),contato:c,cuidados:vmsDe(c).map(function(v){return cuidadoFila117(c,v);})});});});
     Object.keys(estado.itens).forEach(function(dc){var c=estado.itens[dc];if(!c||vistos[dc])return;vistos[dc]=true;pets.push({dcKey:dc,nome:nomePet(c),contato:c,cuidados:vmsDe(c).map(function(v){return cuidadoFila117(c,v);})});});
-    return T.classificarFilas117(pets);
+    return T.classificarFilas117(pets,estado.fixosResolver);
   }
   function filaDoContato(c){var f=classificacao117();return f.emAndamento.some(function(p){return p.dcKey===c.dcKey;})?'progress':'resolve';}
   function prepararRota117(c){
@@ -100195,13 +100219,14 @@ renderAtual=function(){
   function careHTML(c,v,i){
     var cy=v.cy,rv=v.atual,ck=encodeURIComponent(cy.cycleKey),travado=v.bloqueado||!!estado.salvando[c.dcKey];
     var tag=estado.agora94[c.dcKey+'|'+i]?' · registrado agora':'';
-    var detalhe=rv?(T.rotuloResposta(v.valor)||'Resposta registrada')+' · '+nomeDe(rv)+' · '+horaDe(rv)+tag:'sem resposta';
+    var confTutor=confirmacaoTutorDe137(rv),detalhe=rv?((confTutor?'Tutor já fez':T.rotuloResposta(v.valor))||'Resposta registrada')+' · '+nomeDe(rv)+' · '+horaDe(rv)+tag:'sem resposta';
     var legenda='<p class="pair zt694-leg"><span>'+esc(cuidadoNome(cy))+'</span><small><span class="zt694-care-status '+classeStatusCuidado(v)+'">'+esc(v.st.rotulo)+'</span><br>'+esc(detalhe)+'</small></p>';
     var botoes=T.RESPOSTAS.map(function(r){var aria=r[1]+' para '+cuidadoNome(cy),on=v.valor===r[0];return '<button type="button" class="btn zt694-btn" data-zt694-acao="resp" data-zt694-valor="'+r[0]+'" data-zt694-ciclo="'+i+'" aria-label="'+esc(aria)+'" aria-pressed="'+(on?'true':'false')+'"'+(travado?' disabled':'')+'>'+esc(r[1])+'</button>';}).join('');
+    var dataKey=T.chaveRascunho137(c.dcKey,cy.cycleKey,cy.itemK),dataId='zt694-tutor-fez-'+encodeURIComponent(dataKey),dataFez=Object.prototype.hasOwnProperty.call(estado.datasTutor137,dataKey)?estado.datasTutor137[dataKey]:(confTutor&&confTutor.dataAplicacao||''),fez='<div class="zt694-tutor-fez" data-zt694-tutor-fez><label class="cad-lb" for="'+esc(dataId)+'">Data real em que o tutor fez</label><div class="zt694-btns"><input class="cad-in" type="date" id="'+esc(dataId)+'" data-zt694-data-fez data-zt694-cycle-key="'+esc(encodeURIComponent(cy.cycleKey))+'" data-zt694-item-k="'+esc(encodeURIComponent(cy.itemK))+'" value="'+esc(dataFez)+'" max="'+esc(hojeSP137())+'"'+(travado?' disabled':'')+'><button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="tutor-fez" data-zt694-ciclo="'+i+'"'+(travado?' disabled':'')+'>Tutor já fez</button></div><p class="zt694-sub">'+(confTutor?'Data informada: '+esc(dataBR(confTutor.dataAplicacao))+' · Atualizar ficha — pendente.':'Informe a data para registrar; a ficha não será atualizada automaticamente.')+'</p></div>';
     var aviso=estado.avisos[c.dcKey+'|'+i]?'<p class="zt694-aviso" data-zt694-aviso>'+esc(estado.avisos[c.dcKey+'|'+i])+'</p>':'';
     var bloq=v.bloqueado?'<p class="zt694-sub">'+(c.identidadeAmbigua?'Há mais de uma ficha possível para este peludinho. Confirme o cadastro; nenhuma resposta será salva até o alvo ficar único.':'Atualize para confirmar o vínculo deste cuidado antes de registrar.')+'</p>':'';
     var vet=/^vac_/.test(txt(cy.itemK))?'<p class="zt694-sub" data-zt694-vet>'+esc(vetTexto(c))+'</p>':'';
-    return '<div class="zt694-care" role="group" data-z89-resposta data-z104-care="'+ck+'" data-zt694-care="'+i+'" aria-label="'+esc(cuidadoNome(cy))+'">'+legenda+'<div class="zt694-btns">'+botoes+'</div>'+aviso+bloq+vet+posHTML(c,v,i)+'</div>';
+    return '<div class="zt694-care" role="group" data-z89-resposta data-z104-care="'+ck+'" data-zt694-care="'+i+'" aria-label="'+esc(cuidadoNome(cy))+'">'+legenda+'<div class="zt694-btns">'+botoes+'</div>'+fez+aviso+bloq+vet+posHTML(c,v,i)+'</div>';
   }
   function todosHTML(c,vms){
     var sem=vms.filter(function(v){return !v.valor;});
@@ -100212,12 +100237,12 @@ renderAtual=function(){
   /* Os textos «Vai fazer em casa» da linha: o da casa é o publicado e mora numa função só (`ZeluzRespostaApp88.textoEmCasa`, que a janela «Abrir resposta» também usa).
      Há duas variantes (vacina e demais cuidados) e o texto não cita o cuidado: dois cuidados com o mesmo texto dão uma caixa só. Sem o nome do tutor na ficha não há texto (e a linha daquele FILHOt nem chega a esta tela). */
   function textosEmCasaDe(c,vms){
-    var b=window.ZeluzRespostaApp88,tutor=tutorNome(c),out=[],vistos={};
+    var b=window.ZeluzRespostaApp88,tutor=tutorNome(c),pet=nomePet(c),out=[],vistos={};
     if(!b||typeof b.textoEmCasa!=='function'||!tutor)return out;
     vms.forEach(function(v){
       if(v.valor!=='autorizar_externo')return;
-      var x=b.textoEmCasa({tutor:tutor},v.cy.itemK);
-      if(x&&!vistos[x]){vistos[x]=true;out.push({texto:x,vacina:/^vac_/.test(txt(v.cy.itemK))});}
+      var fez=confirmacaoTutorDe137(v.atual),x=fez&&typeof b.textoTutorJaFez==='function'?b.textoTutorJaFez({tutor:tutor,pet:pet},v.cy.itemK,fez.dataAplicacao):b.textoEmCasa({tutor:tutor},v.cy.itemK);
+      if(x&&!vistos[x]){vistos[x]=true;out.push({texto:x,vacina:/^vac_/.test(txt(v.cy.itemK)),tutorFez:!!fez});}
     });
     return out;
   }
@@ -100238,7 +100263,7 @@ renderAtual=function(){
   }
   function caixasDe(c,vms){
     var casa=textosEmCasaDe(c,vms),ret=textosRetornoDe(c,vms),out=[];
-    casa.forEach(function(x){out.push({tipo:'casa',texto:x.texto,titulo:'Mensagem para o tutor, pronta para enviar'+(casa.length>1?(x.vacina?': vacina':': demais cuidados'):'')});});
+    casa.forEach(function(x){out.push({tipo:x.tutorFez?'tutor-fez':'casa',texto:x.texto,titulo:x.tutorFez?'Agradecimento ao tutor, pronto para copiar':'Mensagem para o tutor, pronta para enviar'+(casa.length>1?(x.vacina?': vacina':': demais cuidados'):'')});});
     ret.forEach(function(x){out.push({tipo:'retorno',texto:x.texto,titulo:x.titulo});});
     return out;
   }
@@ -100392,7 +100417,8 @@ renderAtual=function(){
       if(!estado.api)criarApi();
       var dados=await Promise.all([estado.api.listar(true),lerProjecao(),lerVeterinaria()]),result=dados[0];
       if(req!==estado.seq)return;
-      estado.erro='';estado.linhas={};estado.resultado=result;estado.projecao=dados[1];estado.vet=dados[2];estado.dia=result&&result.dia||diaAtual();estado.projEm=pe;estado.sujo=false;estado.avisos={};estado.msgs={};estado.copiaSt={};estado.agora94={};
+      var diaLido=result&&result.dia||diaAtual();if(estado.dia&&estado.dia!==diaLido){estado.fixosResolver={};estado.datasTutor137={};}
+      estado.erro='';estado.linhas={};estado.resultado=result;estado.projecao=dados[1];estado.vet=dados[2];estado.dia=diaLido;estado.projEm=pe;estado.sujo=false;estado.avisos={};estado.msgs={};estado.copiaSt={};estado.agora94={};
       indexar(result);publicarHumanos();
       /* quem a lista trouxe estava na casa (check-in confirmado, sem check-out) quando ela começou a ser lida */
       estado.presenca={};(result&&result.itens||[]).forEach(function(c){if(c&&txt(c.dcKey)&&!bloqueadoTotal(c))estado.presenca[c.dcKey]={presente:true,lidoEm:t0};});
@@ -100513,14 +100539,14 @@ renderAtual=function(){
       return Object.keys(ev).some(function(k){var e=ev[k];return !!e&&(e.tipo==='confirmacao'||!e.tipo)&&!anuladas[k];});
     }catch(_){return null;}
   }
-  async function registrarGrupo(c,lista,valor,mapa){
+  async function registrarGrupo(c,lista,valor,mapa,confirmacaoTutor137){
     var bridge=window.ZeluzRespostaApp88;if(!bridge||typeof bridge.registrar!=='function')throw Error('a resposta não está disponível agora');
     var enviada=lista[0].st.enviada,gk=lista[0].grupo;
     if(!enviada){
       if(mapa[0]==='aguardar'&&c.estado!=='feito'){if(!estado.api||typeof estado.api.marcarRetorno!=='function')throw Error('acompanhamento humano indisponível');await estado.api.marcarRetorno(c);c.estado='retorno_pendente';}
       else if(mapa[0]!=='aguardar'&&c.estado!=='feito'){await estado.api.marcar(c);c.estado='feito';}
     }
-    var itens=lista.map(function(v){return{cycleKey:v.cy.cycleKey,itemK:v.cy.itemK,decisao:mapa[0],origem:mapa[1],onde:'',baseRevision:v.atual&&Number.isInteger(v.atual.revisao)?v.atual.revisao:-1};});
+    var itens=lista.map(function(v){var x={cycleKey:v.cy.cycleKey,itemK:v.cy.itemK,decisao:mapa[0],origem:mapa[1],onde:'',baseRevision:v.atual&&Number.isInteger(v.atual.revisao)?v.atual.revisao:-1};if(confirmacaoTutor137)x.confirmacaoTutor137=JSON.parse(JSON.stringify(confirmacaoTutor137));return x;});
     var op=enviada?{petId:c.petId}:{petId:c.petId,contatoId:c.contatoId,fonteContato:c};op.semAtualizarPainel=true;
     var r=await bridge.registrar(gk,itens,op);
     if(!r||!r.ok)throw Error(r&&r.motivo||'fontes não confirmadas');
@@ -100529,19 +100555,19 @@ renderAtual=function(){
   function marcarSalvando(c,idxs,btn){
     estado.salvando[c.dcKey]=estado.salvando[c.dcKey]||true;
     var art=document.querySelector('[data-zt694-pet="'+encodeURIComponent(c.dcKey)+'"]');
-    if(art)Array.prototype.forEach.call(art.querySelectorAll('[data-zt694-acao="resp"],[data-zt694-acao="todos"],[data-zt694-acao="esc"]'),function(b){b.disabled=true;});
+    if(art)Array.prototype.forEach.call(art.querySelectorAll('[data-zt694-acao="resp"],[data-zt694-acao="todos"],[data-zt694-acao="esc"],[data-zt694-acao="tutor-fez"],[data-zt694-data-fez]'),function(b){b.disabled=true;});
     if(btn)btn.textContent='Salvando…';
     dizerNaLinha(c.dcKey,'Salvando a resposta…');
   }
   /* A guarda de «salvando» fecha ANTES do primeiro `await` (a leitura do Snoopy, por exemplo): o segundo toque de um toque duplo cai nela e não passa. Quem sai sem ter gravado
      (barrado, cartaz cancelado, erro) solta a guarda e a linha volta a ficar tocável; quem grava a solta ao terminar (`gravarRespostas`). */
-  async function responder(c,idxs,valor,btn){
+  async function responder(c,idxs,valor,btn,extra){
     var dc=c.dcKey;if(estado.salvando[dc])return;
     var guarda={};estado.salvando[dc]=guarda;
-    try{return await responder1(c,idxs,valor,btn);}
+    try{return await responder1(c,idxs,valor,btn,extra);}
     finally{if(estado.salvando[dc]===guarda){delete estado.salvando[dc];redesenharLinha(dc,true);}}
   }
-  async function responder1(c,idxs,valor,btn){
+  async function responder1(c,idxs,valor,btn,extra){
     var dc=c.dcKey;
     var mapa=mapaDe(valor);if(!mapa)return;
     var vms=idxs.map(function(i){return vmCuidado(c,c.ciclos[i]);});
@@ -100553,20 +100579,22 @@ renderAtual=function(){
       if(v0.valor==='autorizar_loja'&&l0&&l0.id){sn=await snoopyConfirmadoDe(c,l0.item,l0.id);if(sn===null){dizerNaLinha(dc,'Não consegui conferir o Snoopy. Nada foi trocado.');return;}}
       troca=T.decidirTroca({antes:v0.valor,depois:valor,tarefa:txt(v0.tarefa&&v0.tarefa.estado),snoopyConfirmado:sn===true});
       if(troca.tipo==='barrar'){avisoLinha(dc,idxs[0],'');dizerNaLinha(dc,troca.frase);redesenharLinha(dc);return;}
-      if(troca.tipo==='anular'||troca.tipo==='completar')return trocarComAnulacao(c,v0,idxs[0],valor,{soCompletar:troca.tipo==='completar'});
+      if(troca.tipo==='anular'||troca.tipo==='completar')return trocarComAnulacao(c,v0,idxs[0],valor,{soCompletar:troca.tipo==='completar',confirmacaoTutor137:extra&&extra.confirmacaoTutor137||null});
     }
-    return gravarRespostas(c,idxs,vms,valor,mapa,btn);
+    return gravarRespostas(c,idxs,vms,valor,mapa,btn,extra);
   }
-  async function gravarRespostas(c,idxs,vms,valor,mapa,btn){
+  async function gravarRespostas(c,idxs,vms,valor,mapa,btn,extra){
     var dc=c.dcKey,antes=vms.map(function(v){return T.rotuloResposta(v.valor);}),porGrupo={},ordem=[],salvos=[],falhos=[],tarefaFalhou=false;
     vms.forEach(function(v){if(!porGrupo[v.grupo]){porGrupo[v.grupo]=[];ordem.push(v.grupo);}porGrupo[v.grupo].push(v);});
     marcarSalvando(c,idxs,btn);
     for(var g=0;g<ordem.length;g++){
       var lista=porGrupo[ordem[g]];
-      try{var r=await registrarGrupo(c,lista,valor,mapa);salvos=salvos.concat(lista);if(daLinha(valor)&&r.tarefa&&r.tarefa.ok===false)tarefaFalhou=true;}
+      try{var r=await registrarGrupo(c,lista,valor,mapa,extra&&extra.confirmacaoTutor137||null);salvos=salvos.concat(lista);if(daLinha(valor)&&r.tarefa&&r.tarefa.ok===false)tarefaFalhou=true;}
       catch(e){falhos.push({lista:lista,erro:e});}
     }
     var esperado={};salvos.forEach(function(v){esperado[v.cy.cycleKey]=valor;var lv=v.tarefa&&v.tarefa.linha;if(lv&&lv.id&&lv.item)delete estado.linhas[chaveLinha(c.dia,lv.item,lv.id)];});/* a resposta pode ter mudado a origem da linha (de bolsa para loja e o contrário): a cópia lida antes ficou velha e é lida de novo */
+    if(valor==='autorizar_externo'&&salvos.length)estado.fixosResolver[dc]=true;
+    if(extra&&extra.confirmacaoTutor137)salvos.forEach(function(v){delete estado.datasTutor137[T.chaveRascunho137(dc,v.cy.cycleKey,v.cy.itemK)];});
     await atualizarLinha(dc,esperado);
     delete estado.salvando[dc];
     var depoisRot=T.rotuloResposta(valor),c2=estado.itens[dc]||c;
@@ -100590,7 +100618,7 @@ renderAtual=function(){
     }
     var destino117=prepararRota117(c2);
     redesenharLinha(dc);
-    abrirRota117(destino117,dc);
+    if(valor!=='autorizar_externo')abrirRota117(destino117,dc);
     garantirDia(false,true);
     try{if(typeof window.zelozinha116SnoopyAtualizar==='function')window.zelozinha116SnoopyAtualizar();}catch(_){/* a aba mantém estado desconhecido até a próxima conferência */}
     /* A autorização cria somente a tarefa. Produto, dose/quantidade e local dependem
@@ -100665,12 +100693,14 @@ renderAtual=function(){
     if(!op.soCompletar&&valor==='autorizar_externo'&&tarefaPendente&&linhaPendente&&!sn){
       var ator='';try{ator=typeof quemSou==='function'?txt(quemSou()):'';}catch(_){ator='';}
       var direto=await gravarTroca(c,v,i,valor,l,{motivo:'Correção para vai fazer em casa antes da execução',por:ator||'equipe',ts:Date.now()},op,pend),okDireto=!!(direto&&direto.ok);
+      if(okDireto&&valor==='autorizar_externo')estado.fixosResolver[dc]=true;
+      if(okDireto&&op.confirmacaoTutor137)delete estado.datasTutor137[T.chaveRascunho137(dc,v.cy.cycleKey,v.cy.itemK)];
       await atualizarLinha(dc,null);
       var cDireto=estado.itens[dc]||c,rvDireto=respostaAtual(cDireto,v.cy);
       if(okDireto){var hDireto=T.hora(Number(rvDireto&&rvDireto.ts));avisoLinha(dc,i,'Trocada de '+antesRot+' para '+depoisRot+' por '+nomeDe(rvDireto)+(hDireto?' às '+hDireto:'')+'. A tarefa pendente foi retirada.');estado.agora94[dc+'|'+i]=true;}
       else dizerNaLinha(dc,String(direto&&direto.erro&&direto.erro.message||direto&&direto.erro||'A correção não foi confirmada. Nada foi declarado como concluído.'));
       if(okDireto&&typeof window.zelozinha116SnoopyAtualizar==='function')try{await window.zelozinha116SnoopyAtualizar();}catch(_){/* a linha já saiu; a aba oferece atualização se esta releitura falhar */}
-      var rotaDireta=okDireto?prepararRota117(cDireto):'resolve';redesenharLinha(dc);abrirRota117(rotaDireta,dc);return okDireto;
+      var rotaDireta=okDireto?prepararRota117(cDireto):'resolve';redesenharLinha(dc);if(valor!=='autorizar_externo')abrirRota117(rotaDireta,dc);return okDireto;
     }
     if(!cap||typeof window.corrAbrir!=='function')return parar('Esta linha já começou a ser executada ou precisa de conferência. Nada foi trocado; peça a quem tem acesso ao painel para corrigir.');
     var cascata=['A linha «'+cuidado+'» de '+nomePet(c)+' sai da lista do Day Care de hoje, do cartão do Encãotador e da TV.','A tarefa do Day Care deixa de valer.'];
@@ -100682,6 +100712,8 @@ renderAtual=function(){
       botao:op.soCompletar?'Tirar da lista':'Trocar e tirar da lista',
       gravar:function(reg){return gravarTroca(c,v,i,valor,l,reg,op,pend);}});
     var ok=!!(res&&res.ok);
+    if(ok&&valor==='autorizar_externo')estado.fixosResolver[dc]=true;
+    if(ok&&op.confirmacaoTutor137)delete estado.datasTutor137[T.chaveRascunho137(dc,v.cy.cycleKey,v.cy.itemK)];
     await atualizarLinha(dc,null);
     var c2=estado.itens[dc]||c,rv=respostaAtual(c2,v.cy);
     if(ok){var nome=nomeDe(rv),h=T.hora(Number(rv&&rv.ts));avisoLinha(dc,i,(op.soCompletar?'Tirada da lista do Day Care por ':'Trocada de '+antesRot+' para '+depoisRot+' por ')+nome+(h?' às '+h:'')+'.');estado.agora94[dc+'|'+i]=true;}
@@ -100689,7 +100721,7 @@ renderAtual=function(){
     if(ok&&typeof window.zelozinha116SnoopyAtualizar==='function')try{await window.zelozinha116SnoopyAtualizar();}catch(_){/* a linha já saiu; a aba oferece atualização se esta releitura falhar */}
     var destino117=ok?prepararRota117(c2):'resolve';
     redesenharLinha(dc);
-    abrirRota117(destino117,dc);
+    if(valor!=='autorizar_externo')abrirRota117(destino117,dc);
     return ok;
   }
   async function gravarTroca(c,v,i,valor,l,reg,op,pend){
@@ -100699,7 +100731,7 @@ renderAtual=function(){
     if(!op.soCompletar){
       try{
         var v1=vmCuidado(estado.itens[dc]||c,v.cy);
-        await registrarGrupo(estado.itens[dc]||c,[v1],valor,mapa);feitos.push('A resposta foi trocada para «'+depoisRot+'».');
+        await registrarGrupo(estado.itens[dc]||c,[v1],valor,mapa,op.confirmacaoTutor137||null);feitos.push('A resposta foi trocada para «'+depoisRot+'».');
         await lerRegistro(estado.itens[dc]||c);novaR=respostaAtual(estado.itens[dc]||c,v.cy);
         if(!novaR||novaR.decisao!=='autorizar'||novaR.origem!=='externo')throw Error('a resposta mudou durante a correção');
       }catch(e){return{ok:false,erro:/conflito/i.test(String(e&&e.message))?'Outra pessoa respondeu agora. Nada foi trocado nem tirado da lista.':'A resposta não foi trocada ('+(e&&e.message||'fontes não confirmadas')+'). Nada foi tirado da lista.'};}
@@ -100812,7 +100844,7 @@ renderAtual=function(){
   }
   function aoClicar(ev){
     var t=ev.target&&ev.target.closest?ev.target:null;if(!t)return;
-    var reler=t.closest('[data-z44-reler]');if(reler){estado.sujo=true;estado.recarregarDia=true;estado.snoopyEstado='novo';return;}
+    var reler=t.closest('[data-z44-reler]');if(reler){estado.fixosResolver={};estado.datasTutor137={};estado.sujo=true;estado.recarregarDia=true;estado.snoopyEstado='novo';return;}
     if(t.closest('[data-zt694-snoopy-check]'))return;
     var sn=t.closest('.zt694 [data-snoopy-item]');if(sn){ev.preventDefault();ev.stopPropagation();tratarSnoopy(sn);return;}
     var el=t.closest('[data-zt694-acao]');if(!el)return;
@@ -100825,6 +100857,12 @@ renderAtual=function(){
     if(acao==='resp'){if(cy)responder(c,[i],valor,el);return;}
     if(acao==='todos'){var vms=vmsDe(c),idxs=[];vms.forEach(function(v,k){if(!v.valor)idxs.push(k);});if(idxs.length>=2)responder(c,idxs,valor,el);return;}
     var care=el.closest('[data-zt694-care]');var ic=care?Number(care.getAttribute('data-zt694-care')):i;cy=c.ciclos&&c.ciclos[ic];
+    if(acao==='tutor-fez'){
+      var campo=care&&care.querySelector('[data-zt694-data-fez]'),data=txt(campo&&campo.value),meta={versao:137,tipo:'tutor_ja_fez',dataAplicacao:data,estado:'atualizar_ficha_pendente'};
+      try{if(!cy||!window.ZeluzResposta88||typeof window.ZeluzResposta88.normalizarConfirmacaoTutor137!=='function')throw Error('registro indisponível');window.ZeluzResposta88.normalizarConfirmacaoTutor137(meta,{decisao:'autorizar',origem:'externo'},new Date(agora()).toISOString());}
+      catch(_){avisoLinha(c.dcKey,ic,'Informe a data real em que o tutor fez o cuidado. A data não pode estar no futuro.');redesenharLinha(c.dcKey);return;}
+      responder(c,[ic],'autorizar_externo',el,{confirmacaoTutor137:meta});return;
+    }
     if(acao==='esc'){if(cy)gravarEscolha(c,cy,el.getAttribute('data-zt694-campo')||'',valor,{});return;}
     if(acao==='tarefa-tentar'){if(cy){var v=vmCuidado(c,cy);responder(c,[ic],v.valor,el);}return;}
     if(acao==='completar'){if(cy){var v2=vmCuidado(c,cy);trocarComAnulacao(c,v2,ic,v2.valor,{soCompletar:true});}return;}
@@ -100835,6 +100873,13 @@ renderAtual=function(){
       if(acao==='copiar')copiarTexto(el);else abrirWhats(c,textoCaixa);return;
     }
     if(acao==='whats-vazio'){abrirWhats(c,'');return;}
+  }
+  function aoDigitarData137(ev){
+    var el=ev.target&&ev.target.closest?ev.target.closest('[data-zt694-data-fez]'):null;if(!el)return;
+    var art=el.closest('[data-zt694-pet]'),dc='',cycleKey='',itemK='';if(!art)return;
+    try{dc=decodeURIComponent(art.getAttribute('data-zt694-pet')||'');}catch(_){dc='';}
+    try{cycleKey=decodeURIComponent(el.getAttribute('data-zt694-cycle-key')||'');itemK=decodeURIComponent(el.getAttribute('data-zt694-item-k')||'');}catch(_){cycleKey='';itemK='';}
+    if(!dc||!cycleKey||!itemK)return;estado.datasTutor137[T.chaveRascunho137(dc,cycleKey,itemK)]=txt(el.value);
   }
   /* A tela inteira pode ser refeita pelo painel (a projeção do serviço mudou, a hora virou, «Atualizar envios»): o que a pessoa via volta já no mesmo quadro. */
   function instalarObservador(){
@@ -100850,6 +100895,7 @@ renderAtual=function(){
   var baseAtualizar=window.zPainel44Atualizar;if(typeof baseAtualizar==='function')window.zPainel44Atualizar=function(){var r=baseAtualizar.apply(this,arguments);Promise.resolve(r).then(function(){render(false);});return r;};
   document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.matches&&d.matches('details[data-zt694-aberto]'))estado.abertos[d.getAttribute('data-zt694-aberto')]=d.open;},true);
   document.addEventListener('click',aoClicar,true);
+  document.addEventListener('input',aoDigitarData137,true);
   document.addEventListener('change',function(ev){var el=ev.target&&ev.target.closest?ev.target.closest('[data-zt694-snoopy-check]'):null;if(el)tratarSnoopyCheck(el);},true);
   window.addEventListener('scroll',function(){
     if(!document.querySelector('[data-zt694-ok]'))return;
