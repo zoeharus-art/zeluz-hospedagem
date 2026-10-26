@@ -34,6 +34,14 @@ let seq=0;ctx.__repo139=repo;ctx.__resolve139=async()=>structuredClone(destino);
 vm.runInContext(`window.__bridge139=(function(){var estado={cache:null},root=window;function t(v){return typeof v==='string'?v.trim():'';}function cp(v){return v==null?v:JSON.parse(JSON.stringify(v));}function snap(s){return s.val();}function repo(){return window.__repo139;}async function idResposta(){return window.__next139();}async function resolverGrupo(){return window.__resolve139();}async function resolverContatoHumano(){return window.__resolve139();}async function materializar(){return window.__material139();}${appSource.slice(a,b)}${fraseCuidado}${appSource.slice(textoA,textoB)}${mensagemSource}return{registrar:registrar,textoEmCasa:textoEmCasa,textoTutorJaFez:textoTutorJaFez,mensagemAprovada:mensagemAprovada};})();`,ctx);
 ctx.ZeluzRespostaApp88=ctx.__bridge139;
 (async()=>{
+  const nomeCompleto='  Aurora   Família Sintética  ',infoNome={tutor:nomeCompleto,pet:'FILHOt Sintético'};
+  for(const k of ['ecto_p','vac_raiva_p'])assert.ok(ctx.__bridge139.textoEmCasa(infoNome,k).startsWith('Combinado, Aurora!'),'mensagem de casa usa somente primeiro nome');
+  assert.ok(ctx.__bridge139.textoTutorJaFez(infoNome,'ecto_p','2026-10-24').startsWith('Obrigada por nos avisar, Aurora!'));
+  const retornoNome=ctx.__bridge139.mensagemAprovada({nomeTutor:nomeCompleto,nomePeludo:infoNome.pet},cy,{decisao:'aguardar'},destino);
+  assert.ok(retornoNome.startsWith('Olá, Aurora!\n\n'),'retorno humano usa primeiro nome e preserva parágrafos');
+  assert.doesNotMatch(retornoNome,/Família Sintética/);assert.equal(infoNome.tutor,nomeCompleto,'saudação não modifica o nome do cadastro');
+  assert.equal(ctx.__bridge139.textoEmCasa({tutor:'  '},'ecto_p'),'','sem nome não inventa destinatário');
+  assert.ok(ctx.__bridge139.textoEmCasa({tutor:'Aurora/Outra Pessoa'},'ecto_p').startsWith('Combinado, Aurora!'));
   const input={cycleKey:key,itemK:'ecto_p',decisao:'autorizar',origem:'externo',onde:'',baseRevision:-1};
   const saved=await repo.decidir({groupKey,petId,resposta:{id:'primeira-sintetica',itens:[input]}});assert.equal(saved.ok,true);
   const loaded=await ui.lerRegistro(card);
