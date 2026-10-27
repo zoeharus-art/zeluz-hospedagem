@@ -56,6 +56,7 @@
     var saida = {
       dia: dataValida(dia) ? dia : dataSP(), atualizadoEm: texto(s.atualizadoEm),
       agenda: { estado: estado(agenda.estado), itens: [] },
+      entrevistas: { estado: estado(s.entrevistas&&s.entrevistas.estado), itens: lista(s.entrevistas&&s.entrevistas.itens).filter(function(x){return x&&x.cancelada!==true;}).map(function(x){return {id:texto(x.id).indexOf('entrevista:')===0?texto(x.id):'entrevista:'+texto(x.id),nome:texto(x.nome),vaga:texto(x.vaga),hora:texto(x.hora),telefone:telefoneBR(x.telefone)};}) },
       quantidades: { estado: estado(q.estado), matriculados: numero(q.matriculados), avulsos: numero(q.avulsos), reposicoes: numero(q.reposicoes), total: numero(q.total), hospedes: numero(q.hospedes), presentes: numero(q.presentes) },
       tarefas: { estado: 'falha', itens: [] }
     };
@@ -165,6 +166,11 @@
     return '<div class="marcia129__contato"><span class="marcia129__telefone-rotulo">Telefone</span><a class="marcia129__telefone" href="' + esc(linkWhatsApp(tel)) + '" target="_blank" rel="noopener noreferrer" aria-label="Abrir conversa com o tutor no WhatsApp">' + esc(tel) + '</a><button type="button" class="marcia129__copiar" data-marcia-copiar-telefone="' + esc(item.id) + '">Copiar</button></div>';
   }
 
+  function entrevistasHTML(bloco) {
+    var status=estadoHTML(bloco,'Nenhuma entrevista neste dia.');
+    return '<details class="pm-card marcia129__entrevistas" data-marcia-secao="entrevistas"><summary><span>Entrevistas do dia ('+(bloco.estado==='pronto'?bloco.itens.length:'—')+')</span><span aria-hidden="true">⌄</span></summary>'+(status||'<div class="marcia129__avaliacoes">'+bloco.itens.slice().sort(function(a,b){return a.hora.localeCompare(b.hora)}).map(function(x){return '<article class="marcia129__avaliacao"><strong>'+esc(x.hora)+' · '+esc(x.nome)+'</strong><p>'+esc(x.vaga)+'</p>'+telefoneHTML(x).replace('Telefone do tutor não informado','Telefone não informado').replace('conversa com o tutor no WhatsApp','conversa no WhatsApp')+'</article>'}).join('')+'</div>')+'</details>';
+  }
+
   function agendaHTML(bloco, dia, podeSalvar, pendentes, erros) {
     var e = estadoHTML(bloco, 'Nenhuma avaliação neste dia.');
     if (e) return e;
@@ -242,7 +248,7 @@
     }).join('');
     var atualizado = s.atualizadoEm ? '<p class="marcia129__atualizado">Atualizado em ' + esc(s.atualizadoEm) + '</p>' : '';
     var agendaContagem = s.agenda.estado === 'pronto' ? s.agenda.itens.length : '—';
-    return '<div class="marcia129" data-marcia-dia-atual="' + s.dia + '"><header class="marcia129__cabecalho"><div><p class="marcia129__sobretitulo">Márcia · Gestão</p><h2>' + esc(nomeData(s.dia)) + '</h2>' + atualizado + '</div><button type="button" class="marcia129__hoje" data-marcia-hoje>Hoje</button></header><section class="pm-card marcia129__agenda" aria-labelledby="marcia129-agenda"><div class="marcia129__titulo"><h2 class="pm-tit" id="marcia129-agenda">Agenda da Márcia</h2><span class="marcia129__badge">Avaliações do dia (' + agendaContagem + ')</span></div><div class="dcal marcia129__cal"><div class="dcal-top"><button type="button" class="dcal-nav" data-marcia-mes="-1" aria-label="mês anterior">‹</button><span class="dcal-mes">' + esc(mesNome) + (mm.estado === 'carregando' ? '<small class="dcal-mes-estado" role="status"> atualizando</small>' : mm.estado === 'falha' ? '<small class="dcal-mes-estado" role="status"> marcações indisponíveis</small>' : '') + '</span><button type="button" class="dcal-nav" data-marcia-mes="1" aria-label="próximo mês">›</button></div><div class="dcal-grade">' + semana + dias + '</div></div><div class="marcia129__agenda-lista">' + agendaHTML(s.agenda, s.dia, ui.podeSalvarAvaliacao, ui.avaliacoesPendentes, ui.avaliacoesErros) + '</div></section><section class="pm-card marcia129__todo" aria-labelledby="marcia129-todo"><h2 class="pm-tit" id="marcia129-todo">O que fazer hoje</h2>' + tarefasHTML(s.tarefas, ui.pendentes, ui.erros) + '</section><section class="marcia129__quantidades" aria-labelledby="marcia129-quantidades"><h2 class="pm-tit" id="marcia129-quantidades">Visão do dia</h2>' + quantidadesHTML(s.quantidades) + '</section><section class="marcia129__detalhes" aria-label="Detalhes do dia">' + accordions + '</section></div>';
+    return '<div class="marcia129" data-marcia-dia-atual="' + s.dia + '"><header class="marcia129__cabecalho"><div><p class="marcia129__sobretitulo">Márcia · Gestão</p><h2>' + esc(nomeData(s.dia)) + '</h2>' + atualizado + '</div><button type="button" class="marcia129__hoje" data-marcia-hoje>Hoje</button></header><section class="pm-card marcia129__agenda" aria-labelledby="marcia129-agenda"><div class="marcia129__titulo"><h2 class="pm-tit" id="marcia129-agenda">Agenda da Márcia</h2><span class="marcia129__badge">Avaliações do dia (' + agendaContagem + ')</span></div><div class="dcal marcia129__cal"><div class="dcal-top"><button type="button" class="dcal-nav" data-marcia-mes="-1" aria-label="mês anterior">‹</button><span class="dcal-mes">' + esc(mesNome) + (mm.estado === 'carregando' ? '<small class="dcal-mes-estado" role="status"> atualizando</small>' : mm.estado === 'falha' ? '<small class="dcal-mes-estado" role="status"> marcações indisponíveis</small>' : '') + '</span><button type="button" class="dcal-nav" data-marcia-mes="1" aria-label="próximo mês">›</button></div><div class="dcal-grade">' + semana + dias + '</div></div><div class="marcia129__agenda-lista">' + agendaHTML(s.agenda, s.dia, ui.podeSalvarAvaliacao, ui.avaliacoesPendentes, ui.avaliacoesErros) + '</div></section>' + entrevistasHTML(s.entrevistas) + '<section class="pm-card marcia129__todo" aria-labelledby="marcia129-todo"><h2 class="pm-tit" id="marcia129-todo">O que fazer hoje</h2>' + tarefasHTML(s.tarefas, ui.pendentes, ui.erros) + '</section><section class="marcia129__quantidades" aria-labelledby="marcia129-quantidades"><h2 class="pm-tit" id="marcia129-quantidades">Visão do dia</h2>' + quantidadesHTML(s.quantidades) + '</section><section class="marcia129__detalhes" aria-label="Detalhes do dia">' + accordions + '</section></div>';
   }
 
   function montar(root, opcoes) {
@@ -307,7 +313,7 @@
     }
 
     function copiarTelefone(id, botao) {
-      var item = atual.agenda.itens.find(function (x) { return x.id === id; }), tel = telefoneBR(item && item.telefone), box = botao && botao.parentNode, doc = root.ownerDocument;
+      var item = atual.agenda.itens.concat(atual.entrevistas.itens).find(function (x) { return x.id === id; }), tel = telefoneBR(item && item.telefone), box = botao && botao.parentNode, doc = root.ownerDocument;
       if (!tel || !box) return;
       var copiar = typeof opcoes.copiarTexto === 'function' ? opcoes.copiarTexto : function (v) {
         var nav = doc && doc.defaultView && doc.defaultView.navigator;

@@ -69,6 +69,8 @@ nao-e-arquivo auaulandia/foto-do-corpo.jpg
 
 # Agenda Márcia: agendamento completo separado do resumo diário.
 auaulandia/agenda-marcia/dados.js
+auaulandia/agenda-marcia/entrevistas.js
+auaulandia/agenda-marcia/composta.js
 auaulandia/agenda-marcia/painel.js
 auaulandia/agenda-marcia/painel.css
 auaulandia/agenda-marcia/app.js

@@ -7,7 +7,7 @@ function bloco(itens = []) { return { estado: 'pronto', itens }; }
 function snap(dia = '2026-10-24', extras = {}) {
   return Object.assign({
     dia,
-    agenda: bloco([]),
+    agenda: bloco([]), entrevistas: bloco([]),
     quantidades: { estado: 'pronto', matriculados: 12, avulsos: 2, reposicoes: 1, total: 15, hospedes: 3, presentes: 13 },
     faltas: bloco([]), novatos: bloco([]), comida: bloco([]), saude: bloco([]), tempos: bloco([]), tarefas: bloco([])
   }, extras);
@@ -93,7 +93,10 @@ async function executar() {
   ['Agenda da Márcia', 'Avaliações do dia (0)', 'O que fazer hoje', 'Matriculados previstos', 'Avulsos', 'Reposições', 'Total Day Care', 'Hóspedes', 'Faltas', 'Novatos', 'Quem não comeu — Day Care', 'Quem não comeu — Hóspedes', 'Questões do check-in', 'Tempo nas atividades'].forEach(t => assert(oito.includes(t), t));
   assert(!oito.includes('Quem não comeu — grupo a conferir'), 'grupo a conferir vazio não ocupa a tela');
   assert(oito.includes('pm-tile'));
-  assert.equal((oito.match(/<details/g) || []).length, 6, 'seções são accordions nativos');
+  assert.equal((oito.match(/<details/g) || []).length, 7, 'seções são accordions nativos');
+  assert.match(oito, /<details class="pm-card marcia129__entrevistas" data-marcia-secao="entrevistas"><summary>/, 'entrevistas começam recolhidas');
+  const falhaRH=M.desenhar(snap('2026-10-24',{agenda:bloco([avaliacao('s','FILHOt fictício')]),entrevistas:{estado:'falha',itens:[]}}),{dia:'2026-10-24'});
+  assert(falhaRH.includes('FILHOt fictício') && falhaRH.includes('Informação indisponível'), 'falha RH preserva avaliações');
   const alimentacao = M.desenhar(snap('2026-10-24', { faltas: bloco([{ id: 'f', nome: 'Falta 1' }, { id: 'f2', nome: 'Falta 2' }]), comida: bloco([{ id: 'd', nome: 'Day', grupo: 'daycare' }, { id: 'h', nome: 'Hosp', grupo: 'hospede' }, { id: 'u', nome: 'Sem grupo', grupo: '' }]) }), { dia: '2026-10-24' });
   assert(alimentacao.includes('marcia129__secao-badge--critico">2</strong>'), 'faltas usam contador crítico');
   assert(alimentacao.includes('Quem não comeu — Day Care'));
@@ -245,4 +248,4 @@ async function executar() {
   console.log('marcia-dashboard129: OK');
 }
 
-executar().catch(err => { console.error(err); process.exitCode = 1; });
+module.exports=executar();if(require.main===module)module.exports.catch(e=>{console.error(e);process.exitCode=1;});
