@@ -1176,6 +1176,46 @@
   /* ordem cronologica do ciclo de plantao: Noite (fecha) -> Dia -> Jantar (abre o proximo) */
   .rel-stack{display:flex;flex-direction:column}
   #card-noite{order:1}#card-dia{order:2}#card-inicio{order:3}
+  /* A FICHA EM TÓPICOS (Adriana, 27/out/2026): cada tópico diz no cabeçalho o número e o que falta;
+     o que é obrigado a abrir pisca até ser feito. Letra maior: quem lê está de pé, no celular. */
+  .tp-card .rel-head,#card-dia .rel-head,#card-inicio .rel-head,#card-noite .rel-head{min-height:48px;flex-wrap:wrap}
+  .tp-card .rel-head h2,#card-dia .rel-head h2,#card-inicio .rel-head h2,#card-noite .rel-head h2{font-size:19px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
+  .tp-n{display:inline-grid;place-items:center;min-width:34px;height:34px;padding:0 9px;margin-left:6px;border-radius:999px;background:var(--z-gold);color:var(--z-blue);font-size:19px;font-weight:800;line-height:1;vertical-align:middle;letter-spacing:0}
+  .tp-est{font-size:13.5px;font-weight:800;white-space:nowrap}
+  .tp-sub{font-size:14.5px;font-weight:600;color:var(--z-blue-soft);margin-top:4px;line-height:1.35}
+  .tp-pisca{border:3px solid var(--crm-critico) !important;animation:piscaAlerta 1.5s ease-in-out infinite}
+  .tp-pisca .tp-n{background:var(--crm-critico);color:#fff}
+  .tp-pisca .tp-est{color:var(--crm-critico)}
+  .tp-ok{border:2px solid var(--crm-ok) !important}
+  .tp-ok .tp-n{background:var(--crm-ok);color:#fff}
+  .tp-ok .tp-est{color:var(--crm-ok)}
+  .tp-zero .tp-n{background:#dcd7c9;color:var(--muted)}
+  .tp-zero .rel-head h2{color:var(--muted)}
+  .tp-card .rel-body .hint{font-size:14px}
+  .tp-comeu .q{font-size:16px;font-weight:800}
+  .tp-comeu .seg button{font-size:15px;min-height:44px}
+  body[data-role="plantonista"] #tp-cad{display:none !important}
+  @media (prefers-reduced-motion:reduce){ .tp-pisca{animation:none;border-width:5px !important} }
+  /* A medicação de hoje por horário: a hora manda, o nome e a quantidade vêm grandes. */
+  .mag-hora{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:24px;font-weight:800;color:var(--z-blue);margin:16px 0 6px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .mag-hora.atrasada{color:var(--crm-critico)}
+  .mag-hora-tag{font-size:13px;font-weight:800;letter-spacing:.04em;padding:3px 10px;border-radius:7px;background:var(--crm-critico);color:#fff}
+  .mag-hora.proxima .mag-hora-tag{background:var(--z-gold);color:var(--z-blue)}
+  .mag-dose.a-vir{border-color:var(--line);background:var(--z-white)}
+  .mag-dose-nome{font-size:20px;font-weight:800;color:var(--z-blue);line-height:1.2}
+  .mag-dose-qtd{display:inline-block;margin-top:5px;font-size:18px;font-weight:800;color:var(--z-blue);background:rgba(222,180,40,.28);border-radius:8px;padding:2px 10px}
+  .mag-dose-como{font-size:15px;font-weight:700;color:var(--z-blue);margin-top:5px;line-height:1.3}
+  .mag-hora-linha{width:100%;text-align:left;cursor:pointer;font-family:var(--font-ui);min-height:48px;margin:12px 0 0}
+  .mag-hora-linha .mag-dose-ok{font-size:15px}
+  /* ALERTA — o motivo em letra grande, quem anotou embaixo */
+  .alerta-item{background:rgba(192,57,43,.07);border-left:5px solid var(--crm-critico);border-radius:10px;padding:12px 14px;margin-top:10px}
+  .alerta-txt{font-size:19px;font-weight:800;color:var(--z-blue-deep);line-height:1.25}
+  .alerta-por{font-size:13.5px;font-weight:600;color:var(--z-blue-soft);margin-top:4px}
+  .alerta-form{background:var(--z-cream-warm);border:1.5px solid var(--line);border-radius:11px;padding:12px 12px 4px;margin:8px 0 12px}
+  .alerta-form .seg{flex-wrap:wrap}
+  .alerta-form .seg button{min-height:44px}
+  .alerta-q{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid #f1ebde}
+  .alerta-q .q{font-size:16px;font-weight:800;color:var(--z-blue)}
   .rel-status{text-align:center;font-size:13px;font-weight:700;margin-top:8px;min-height:18px}
   /* Resumo da Gestora */
   .gest-card{border-left:5px solid var(--z-gold)}
@@ -2651,8 +2691,8 @@
 .z-painel44{--p44-blue:#234d67;--p44-soft:#3a6a85;--p44-cream:#fffdf6;--p44-warm:#faf5e9;--p44-gold:#deb428;--p44-line:#e7e0d2;--p44-muted:#7c8a93;box-sizing:border-box;max-width:1160px;padding:24px 38px 52px;background:var(--p44-cream);color:var(--p44-blue);font-family:Inter,Poppins,system-ui,sans-serif}.z-painel44 *{box-sizing:border-box}.z-painel44 [hidden]{display:none!important}.z-painel44 button{font:inherit}.z-painel44 button:focus-visible{outline:3px solid rgba(222,180,40,.55);outline-offset:3px}.z-painel44__topo{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.z-painel44__saudacao .pm-saud1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.12;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2{margin:8px 0 0;font-size:16px;font-weight:600;line-height:1.45;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2 b{font-size:21px;font-weight:800;color:#a57a00}.z-painel44__saudacao .pm-saud3{max-width:54ch;margin:5px 0 0;color:var(--p44-soft);font-size:15px;font-weight:500;font-style:italic;line-height:1.5}.z-painel44__saudacao .pm-traco{display:block;width:40px;height:3px;margin-top:13px;border-radius:2px;background:linear-gradient(90deg,var(--p44-gold),#a57a00)}.z-painel44__saudacao .pm-data{margin-top:14px;color:var(--p44-muted);font-size:12px;font-weight:600}.z-painel44__selo{flex:0 0 auto;padding:8px 11px;border:1px solid var(--p44-line);border-radius:999px;background:#fff;color:var(--p44-blue);font-size:12px;font-weight:700}.z-painel44__selo:before{content:'•';margin-right:5px;color:var(--p44-gold);font-size:18px}.z-painel44__sticker{display:block;width:62px;max-width:90px;height:68px;max-height:80px;object-fit:contain;margin:4px auto 0}.z-painel44__bem-estar{display:block;width:100%;margin-bottom:18px}.z-painel44__bem-estar>*{width:100%}.z-painel44__abas{display:flex;gap:7px;margin:0 0 16px}.z-painel44__abas button{padding:10px 14px;border:1px solid var(--p44-line);border-radius:10px;background:#fff;color:var(--p44-blue);font-size:14px;font-weight:700;cursor:pointer}.z-painel44__abas button[aria-selected=true]{border-color:var(--p44-blue);background:var(--p44-blue);color:var(--p44-cream)}.z-painel44__intro{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:12px 0}.z-painel44__intro h2,.z-painel44__equipe h2{margin:0;font-size:20px}.z-painel44__intro p,.z-painel44__equipe>p{margin:5px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__contagem{color:var(--p44-muted);font-size:12px;font-weight:700}.z-painel44__temas{display:grid;gap:9px}.z-painel44__tema{overflow:hidden;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__tema-cabeca{display:grid;grid-template-columns:36px 1fr auto 20px;align-items:center;gap:10px;width:100%;padding:14px 15px;border:0;background:transparent;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__tema-icone{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--p44-warm);font-size:17px}.z-painel44__tema-titulo,.z-painel44__tema-passo{display:block}.z-painel44__tema-titulo{font-size:15px;font-weight:800}.z-painel44__tema-passo{margin-top:3px;color:var(--p44-muted);font-size:12px}.z-painel44__pill{padding:4px 8px;border-radius:999px;background:#e9f5f7;color:#226477;font-size:11px;font-weight:800}.z-painel44__seta{color:var(--p44-soft);font-size:18px;transition:transform .16s}.z-painel44__tema.aberto .z-painel44__seta{transform:rotate(90deg)}.z-painel44__tema-corpo{margin:0 12px 12px;padding:14px 15px;border-top:1px solid var(--p44-line);background:var(--p44-warm)}.z-painel44__equipe{padding:18px;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__pessoas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}.z-painel44__pessoa{display:flex;align-items:center;gap:11px;width:100%;padding:13px;border:1px solid var(--p44-line);border-radius:12px;background:#fff;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__avatar{display:grid;place-items:center;width:39px;height:39px;flex:0 0 auto;border-radius:50%;background:var(--p44-blue);color:var(--p44-cream);font-size:12px;font-weight:800}.z-painel44__pessoa-info{min-width:0}.z-painel44__pessoa strong,.z-painel44__pessoa small{display:block}.z-painel44__pessoa strong{font-size:14px}.z-painel44__pessoa small{overflow:hidden;margin-top:3px;color:var(--p44-muted);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.z-painel44__pessoa-seta{margin-left:auto;color:#a57a00;font-size:18px}.z-painel44__pessoa-detalhe{margin-top:15px}.z-painel44__pessoa-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__pessoa-secao h3{margin:0;font-size:14px}.z-painel44__pessoa-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}.z-painel44__vazio{margin:15px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__zelozinha{display:block;width:100%;margin-top:16px;padding:12px;border:1px dashed var(--p44-gold);border-radius:11px;background:var(--p44-warm);color:#805d00;text-align:left;cursor:pointer}.z-painel44__zelozinha-titulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.z-painel44__canal{padding:3px 7px;border-radius:999px;background:#fff;color:var(--p44-muted);font-size:11px}.z-painel44__zelozinha-aviso{display:block;margin-top:7px;font-size:12px;line-height:1.45}.z-painel44__perfil{margin-top:15px}.z-painel44__voltar{margin-bottom:12px;padding:8px 11px;border:1px solid var(--p44-line);border-radius:9px;background:#fff;color:var(--p44-blue);font-size:13px;font-weight:700;cursor:pointer}.z-painel44__perfil-subtitulo{margin:4px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__perfil-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__perfil-secao h3{margin:0;font-size:14px}.z-painel44__perfil-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}@media(max-width:760px){.z-painel44{padding:18px}.z-painel44__topo,.z-painel44__intro{display:block}.z-painel44__selo{display:inline-block;margin-top:13px}.z-painel44__contagem{display:block;margin-top:8px}.z-painel44__tema-cabeca{grid-template-columns:32px 1fr auto 16px;padding:12px}.z-painel44__tema-corpo{margin:0 8px 8px;padding:12px}.z-painel44__pessoas,.z-painel44__perfil-conteudo,.z-painel44__pessoa-conteudo{grid-template-columns:1fr}}
 
 </style>
-<link rel="stylesheet" href="marcia129/painel.css?v=2026-10-27-05">
-<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-10-27-05">
+<link rel="stylesheet" href="marcia129/painel.css?v=2026-10-27-06">
+<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-10-27-06">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -3318,8 +3358,6 @@
           <button type="button" onclick="reemitirFichaAtual()" style="margin-top:8px;background:var(--z-gold);color:var(--z-blue);border:none;border-radius:10px;padding:8px 14px;font-weight:800;font-size:12.5px;cursor:pointer">🖨️ Reemitir ficha de check-in (PDF)</button>
           <span id="hf-mcr"></span>
           <div id="hf-pills"></div>
-          <div id="hf-obsgeral"></div>
-          <div id="hf-vet-instr"></div>
           <div id="hf-alergia-block"></div>
           <!-- Status da gravação da alergia/restrição. Fica FORA do hf-alergia-block de propósito:
                renderHospAlergiaBlock() reescreve aquele bloco e apagaria o aviso na hora. -->
@@ -3357,16 +3395,22 @@
       </div>
       <datalist id="racasList"></datalist>
 
-      <div class="card" id="card-medagenda">
-        <h2 style="font-size:19px">💊 Agenda de Medicação e Suplementação</h2>
-        <div class="hint">Cadastre o medicamento ou suplemento e os horários fixos (ex.: colírio às 10:30, 16:30, 22:30 e 04:30). Salva sozinho — não precisa abrir o relatório do plantão nem assinar.</div>
-        <div id="magSoLeituraAviso" class="hint" style="background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-weight:700;color:var(--z-blue)">🔒 Você só registra as doses abaixo (Dei agora / dose avulsa). Acrescentar, alterar ou remover medicamento é papel da Consultora, da Gestão/Supervisão ou da Veterinária.</div>
-        <div id="magItens"></div>
-        <button type="button" class="med-add so-medadmin" onclick="magAddNovoItem()">+ Acrescentar medicamento ou suplemento</button>
-        <div class="actions so-medadmin" style="margin-top:12px"><button class="btn btn-primary" onclick="salvarMedAgenda()">Salvar agenda</button></div>
-        <div id="mag-status" class="rel-status"></div>
+      <!-- A FICHA EM TÓPICOS — Adriana, 27/out/2026: «Clicou no nome do peludinho, aparecem as
+           coisas dele. Os tópicos dentro de cada ficha — para abrir, fazer e aplicar. O que tem
+           medicamento fica piscando, tudo que é obrigado a abrir pisca. Se não tem medicamento,
+           escrever MEDICAMENTO 0. Se tem 5, colocar o número na frente.»
+           Cada tópico é o mesmo cartão que abre e fecha dos relatórios (.rel-card); o número, o
+           pisca e o resumo do cabeçalho vêm de fichaTopicosPintar(). Os ids de dentro não mudaram. -->
+      <div class="card rel-card collapsed tp-card" id="tp-alerta">
+        <div class="rel-head" onclick="toggleRel('tp-alerta')"><h2>Alerta <span class="tp-n" id="tpn-alerta">0</span></h2><span class="tp-est" id="tpe-alerta"></span><span class="rel-caret">▾</span></div>
+        <div class="tp-sub" id="tps-alerta"></div>
+        <div class="rel-body"><div id="hf-alertas"></div></div>
+      </div>
 
-        <h3 class="cad-sub" style="margin-top:18px">Horários de hoje</h3>
+      <div class="card rel-card collapsed tp-card" id="tp-med">
+        <div class="rel-head" onclick="toggleRel('tp-med')"><h2>Medicamento <span class="tp-n" id="tpn-med">0</span></h2><span class="tp-est" id="tpe-med"></span><span class="rel-caret">▾</span></div>
+        <div class="tp-sub" id="tps-med"></div>
+        <div class="rel-body">
         <div class="hint">Toque em "Dei agora" na hora certa — a plantonista de qualquer aparelho vê que já foi dado.</div>
         <div id="magHoje"></div>
 
@@ -3402,6 +3446,29 @@
         </div>
         <div class="actions" style="margin-top:12px"><button class="btn btn-gold" onclick="registrarDoseAvulsa()">Registrar dose dada agora</button></div>
         <div id="mag-avulsa-status" class="rel-status"></div>
+        </div>
+      </div>
+
+      <div class="card rel-card collapsed tp-card" id="tp-alim">
+        <div class="rel-head" onclick="toggleRel('tp-alim')"><h2>Alimentação</h2><span class="tp-est" id="tpe-alim"></span><span class="rel-caret">▾</span></div>
+        <div class="tp-sub" id="tps-alim"></div>
+        <div class="rel-body">
+          <!-- Adriana, 27/out/2026: «Alimentação, coloque 3 opções: comeu / somente metade / não
+               comeu. Para clicar. Essa informação é muito importante para a gestão.» Grava na hora
+               em auaulandia/comeu/<dia>/<FILHOt> (fichaComeuMarcar) e acende o «NÃO COMEU» do card. -->
+          <div class="obsline tp-comeu"><span class="q">Como comeu?</span><div class="seg" id="hfComeuSeg"><button type="button" data-tone="ok" onclick="fichaComeuMarcar('comeu',this)">Comeu</button><button type="button" data-tone="warn" onclick="fichaComeuMarcar('metade',this)">Somente metade</button><button type="button" data-tone="bad" onclick="fichaComeuMarcar('nao',this)">Não comeu</button></div></div>
+          <div id="hf-comeu-st" class="rel-status"></div>
+          <div id="hf-alim-info"></div>
+        </div>
+      </div>
+
+      <div class="card rel-card collapsed tp-card" id="tp-obs">
+        <div class="rel-head" onclick="toggleRel('tp-obs')"><h2>Observações <span class="tp-n" id="tpn-obs">0</span></h2><span class="tp-est" id="tpe-obs"></span><span class="rel-caret">▾</span></div>
+        <div class="tp-sub" id="tps-obs"></div>
+        <div class="rel-body">
+          <div id="hf-obsgeral"></div>
+          <div id="hf-vet-instr"></div>
+        </div>
       </div>
 
       <div class="checklist-note">📋 O Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
@@ -3413,6 +3480,8 @@
         <div class="rel-body">
         <div class="hint">Como foi o Dia dos nossos FILHOts no Day Care? — o Monitor relata como foi o dia. Toque para marcar.</div>
         <div class="lock-note">🔒 Somente leitura — este relatório é da Monitora</div>
+        <!-- ALERTA para o plantão (27/out/2026): a Monitora lança aqui; salva à parte do relatório. -->
+        <div class="so-equipe" id="hfAlertaDiaBox"></div>
         <div class="obsline"><span class="q">Gastou energia?</span><div class="seg" data-single><button data-tone="warn" onclick="pick(this)">Pouco</button><button data-tone="ok" onclick="pick(this)">Bastante</button><button data-tone="ok" onclick="pick(this)">Muito</button></div></div>
         <div class="obsline"><span class="q">Tomou café da manhã?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
         <div class="obsline"><span class="q">Almoçou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button><button data-tone="warn" onclick="pick(this)">Metade</button><button data-tone="warn" onclick="pick(this)">Não se aplica</button></div></div>
@@ -3520,6 +3589,21 @@
       </div>
 
       </div><!-- /rel-stack -->
+
+      <!-- O cadastro da medicação sai da frente de quem só dá o remédio (a plantonista nem vê este
+           tópico — regra do CSS abaixo do .tp-card). Os ids continuam os mesmos de antes. -->
+      <div class="card rel-card collapsed tp-card" id="tp-cad">
+        <div class="rel-head" onclick="toggleRel('tp-cad')"><h2>Cadastro da medicação 🔒</h2><span class="rel-tag">Gestão</span><span class="rel-caret">▾</span></div>
+        <div class="tp-sub">Acrescentar, alterar ou remover remédio — Consultora, Gestão/Supervisão ou Veterinária.</div>
+        <div class="rel-body" id="card-medagenda">
+        <div class="hint">Cadastre o medicamento ou suplemento e os horários fixos (ex.: colírio às 10:30, 16:30, 22:30 e 04:30). Salva sozinho — não precisa abrir o relatório do plantão nem assinar.</div>
+        <div id="magSoLeituraAviso" class="hint" style="background:var(--z-cream-warm);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-weight:700;color:var(--z-blue)">🔒 Você só registra as doses abaixo (Dei agora / dose avulsa). Acrescentar, alterar ou remover medicamento é papel da Consultora, da Gestão/Supervisão ou da Veterinária.</div>
+        <div id="magItens"></div>
+        <button type="button" class="med-add so-medadmin" onclick="magAddNovoItem()">+ Acrescentar medicamento ou suplemento</button>
+        <div class="actions so-medadmin" style="margin-top:12px"><button class="btn btn-primary" onclick="salvarMedAgenda()">Salvar agenda</button></div>
+        <div id="mag-status" class="rel-status"></div>
+        </div>
+      </div>
       <div class="checklist-note">📋 Antes de assinar — o Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
 
       <div class="card" id="card-texto">
@@ -7982,6 +8066,12 @@ return { criar };
       DB.ref('auaulandia/vet-reavaliacao').on('value', s=>{ VET_REAVAL_CACHE=s.val()||{};
         try{ if(typeof checarReavaliacoesHoje==='function') checarReavaliacoesHoje(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
         try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      });
+      // ALERTA para o plantão (27/out/2026): nó pequeno, em tempo real — a tarja do card e o tópico
+      // ALERTA da ficha acendem no aparelho da plantonista assim que a Monitora salva.
+      DB.ref('auaulandia/alertas').on('value', s=>{ ALERTAS_CACHE=s.val()||{};
+        try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        try{ if(typeof fichaAlertasRender==='function') fichaAlertasRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       });
       // Item 4 — remédio PRESCRITO PELA VET que chegou na data de término. A agenda inteira fica em
       // memória (só muda quando alguém prescreve/altera — não é o log de doses), para o aviso valer
@@ -17704,13 +17794,16 @@ return { criar };
         // Onda 5 — 3º risco que precisa gritar no card, junto com alergia e medicação: NÃO COMEU hoje
         // (não almoçou ou não jantou, pelo relatório de hoje). A moradora Repolho fica de fora, igual
         // ao painel da Gestora (ver alerta-moradora, 23/jun).
-        const naoComeuFoto = (!h.mascote && NAOCOMEU_HOJE[cadKey(h)]) ? '<span class="mini-naocomeu">NÃO COMEU</span>' : '';
+        // 27/out/2026: o «Como comeu? → Não comeu» da ficha também acende o selo.
+        const naoComeuFoto = (!h.mascote && (NAOCOMEU_HOJE[cadKey(h)] || (COMEU_HOJE&&COMEU_HOJE[cadKey(h)]&&COMEU_HOJE[cadKey(h)].v==='nao'))) ? '<span class="mini-naocomeu">NÃO COMEU</span>' : '';
+        // ALERTA (27/out/2026): a tarja vermelha sobre a foto, no mesmo lugar da de alergia.
+        const alertaVivoFoto = (!h.mascote && alertasAtivosDe(h).length) ? '<span class="mini-alert">ALERTA</span>' : '';
         // O "×" de cancelar saiu do card (risco de apertar sem querer). A ação de deletar a pernoite
         // do dia agora vive DENTRO da ficha do hóspede, na "Zona de risco" (só equipe, com dupla
         // confirmação) — ver cancelarPernoiteFicha().
         const delBtn=(_podeRemHosp && !h.mascote) ? `<button type="button" class="hosp-del" title="Remover do Plantão de hoje" onclick="event.stopPropagation();removerHospedeCard(${i},this)">&#10005;</button>` : '';
         return `<div class="pet" onclick="abrirPlantao(${i})">
-          ${delBtn}${ph}${alertaFoto}${medFoto}${recFoto}${naoComeuFoto}
+          ${delBtn}${ph}${alertaVivoFoto}${alertaFoto}${medFoto}${recFoto}${naoComeuFoto}
           <div class="nm">${cad.nome||h.nome}</div>
           <div class="br">${raca}</div>
           <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':(tutorShow?'Tutor: '+tutorShow:'Tutor a confirmar')}</div>
@@ -17931,6 +18024,237 @@ return { criar };
     updateDateLabel(); // sincroniza o navegador de dia dentro da ficha
     carregarFicha();
     window.scrollTo({top:0,behavior:'smooth'});
+  }
+  // ===== A FICHA EM TÓPICOS — Adriana, 27/out/2026 ===================================
+  // «Clicou no nome do peludinho, aparecem as coisas dele. Os tópicos dentro de cada ficha —
+  //  para abrir, fazer e aplicar. O que tem medicamento fica piscando, tudo que é obrigado a
+  //  abrir pisca. Se não tem medicamento, escrever MEDICAMENTO 0. Se tem 5, colocar o número
+  //  na frente.» O cabeçalho de cada tópico diz o número e o que falta, sem precisar abrir.
+  // Pisca só no dia de hoje, e só o que a pessoa da vez precisa fazer.
+  var MAG_RESUMO={carregando:true};   // preenchido por renderMedAgendaHoje: remédios de hoje, doses pendentes, atrasadas, próxima
+  var MAG_HORA_ABERTA={};             // horário já todo dado que a pessoa abriu para conferir
+  function magHoraAbrir(h){ MAG_HORA_ABERTA=MAG_HORA_ABERTA||{}; MAG_HORA_ABERTA[h]=!MAG_HORA_ABERTA[h]; try{ renderMedAgendaHoje(); }catch(e){ _logFalhaGrav('magHoraAbrir', e); } }
+  function fichaHoraAgora(){ var d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+  function fichaEhHoje(){ try{ return dataKeyAtual()===zHojeISO(); }catch(e){ return true; } }
+  function fichaTopicoPintar(id, o){
+    var c=document.getElementById(id); if(!c) return;
+    c.classList.toggle('tp-pisca', o.estado==='pisca');
+    c.classList.toggle('tp-ok', o.estado==='ok');
+    c.classList.toggle('tp-zero', o.estado==='zero');
+    var k=id.replace(/^(tp|card)-/,'');
+    // Os relatórios já existiam sem o estado no cabeçalho: ganha as duas peças na 1ª pintura.
+    var head=c.querySelector('.rel-head');
+    if(head && !document.getElementById('tpe-'+k)){
+      var sp=document.createElement('span'); sp.className='tp-est'; sp.id='tpe-'+k;
+      var car=head.querySelector('.rel-caret'); head.insertBefore(sp, car||null);
+      var sb=document.createElement('div'); sb.className='tp-sub'; sb.id='tps-'+k;
+      head.parentNode.insertBefore(sb, head.nextSibling);
+    }
+    var n=document.getElementById('tpn-'+k); if(n && o.n!=null) n.textContent=String(o.n);
+    var e=document.getElementById('tpe-'+k); if(e) e.textContent=o.est||'';
+    var s=document.getElementById('tps-'+k); if(s) s.textContent=o.sub||'';
+  }
+  function fichaTopicosPintar(){
+    var f=document.getElementById('hosp-ficha'); if(!f || f.style.display==='none' || !currentHosp) return;
+    var hoje=fichaEhHoje(), hora=fichaHoraAgora(), papel=(document.body.dataset.role||'');
+    // ALERTA
+    var al=alertasAtivosDe(currentHosp);
+    fichaTopicoPintar('tp-alerta', al.length
+      ? {estado:'pisca', n:al.length, est:'⚠ LER', sub:String(al[0].txt||'')+(al.length>1?(' · e mais '+(al.length-1)):'')}
+      : {estado:'zero', n:0, est:'', sub:'Nenhum alerta'});
+    // MEDICAMENTO
+    var m=MAG_RESUMO||{};
+    if(m.carregando) fichaTopicoPintar('tp-med', {estado:'', n:'…', est:'', sub:'Carregando a agenda…'});
+    else if(!m.itens) fichaTopicoPintar('tp-med', {estado:'zero', n:0, est:'', sub:'Nenhum remédio hoje'});
+    else if(m.pend>0 && hoje){
+      var sub=[]; if(m.proxima) sub.push('próxima '+m.proxima); if(m.atrasadas) sub.push(m.atrasadas+(m.atrasadas>1?' atrasadas':' atrasada'));
+      if(!sub.length) sub.push(m.pend+(m.pend>1?' doses para dar':' dose para dar'));
+      fichaTopicoPintar('tp-med', {estado:'pisca', n:m.itens, est:'⚠ DAR', sub:sub.join(' · ')});
+    }
+    else if(m.pend>0) fichaTopicoPintar('tp-med', {estado:'', n:m.itens, est:'', sub:m.pend+(m.pend>1?' doses não registradas':' dose não registrada')});
+    else fichaTopicoPintar('tp-med', {estado:'ok', n:m.itens, est:'✅ tudo dado', sub:'Todas as doses do dia foram registradas'});
+    // ALIMENTAÇÃO — «Como comeu?» é o que a Gestão precisa saber
+    var cm=FICHA_COMEU;
+    if(cm && cm.v) fichaTopicoPintar('tp-alim', {estado:'ok', est:'✅', sub:(COMEU_TXT[cm.v]||cm.v)+(cm.quem&&cm.quem!=='-'?(' · marcado por '+cm.quem):'')});
+    else if(hoje && hora>='18:00') fichaTopicoPintar('tp-alim', {estado:'pisca', est:'⚠ MARCAR', sub:'Falta marcar como comeu'});
+    else fichaTopicoPintar('tp-alim', {estado:'', est:'', sub:'Como comeu ainda não marcado'});
+    // OBSERVAÇÕES
+    var ob=0; try{ var og=document.getElementById('hf-obsgeral'); if(og) ob+=og.children.length; var vi=document.getElementById('hf-vet-instr'); if(vi) ob+=vi.querySelectorAll('.vet-instr-box').length; }catch(e){} /* silencioso de propósito: contagem de tela */
+    fichaTopicoPintar('tp-obs', ob ? {estado:'', n:ob, est:'', sub:ob+(ob>1?' recados':' recado')} : {estado:'zero', n:0, est:'', sub:'Nenhum recado'});
+    // OS TRÊS RELATÓRIOS — o Dia pisca até a plantonista ler e confirmar; o Jantar a partir das 18h;
+    // a Noite de manhã (é preenchida às 7h, sobre a noite que passou).
+    var R=(typeof RELSTATE!=='undefined'&&RELSTATE)||{};
+    var d=R.dia||{};
+    if(d.recebeu) fichaTopicoPintar('card-dia', {estado:'ok', est:'✅ recebido', sub:'Recebido por '+d.recebeu});
+    else if(d.passou) fichaTopicoPintar('card-dia', {estado:hoje?'pisca':'', est:hoje?'⚠ CONFIRMAR':'', sub:'Passado por '+d.passou+' — falta ler e confirmar o recebimento'});
+    else fichaTopicoPintar('card-dia', {estado:(hoje&&papel==='monitor')?'pisca':'', est:(hoje&&papel==='monitor')?'⚠ FAZER':'', sub:'A Monitora ainda não passou o plantão do dia'});
+    var j=R.inicio||{};
+    if(j.passou) fichaTopicoPintar('card-inicio', {estado:'ok', est:'✅ salvo', sub:'Feito por '+j.passou});
+    else fichaTopicoPintar('card-inicio', {estado:(hoje&&hora>='18:00')?'pisca':'', est:(hoje&&hora>='18:00')?'⚠ FAZER':'', sub:'Falta salvar o jantar'});
+    var nt=R.noite||{};
+    var manha=(hoje && hora>='05:00' && hora<'12:00' && papel==='plantonista');
+    if(nt.passou) fichaTopicoPintar('card-noite', {estado:'ok', est:'✅ salvo', sub:'Feito por '+nt.passou});
+    else fichaTopicoPintar('card-noite', {estado:manha?'pisca':'', est:manha?'⚠ FAZER':'', sub:'Preencher de manhã (7h), sobre a noite que passou'});
+  }
+
+  // ===== ALERTA — Adriana, 27/out/2026 ===============================================
+  // «Talvez esteja afastado por uma suspeita de vírus, ou porque não dorme junto com todos
+  //  porque não aceita... ou porque só dorme com o irmão e é ciumenta. [...] Pode criar o campo
+  //  alerta. Ele vai para o cadastro do dia [...] e na área de pernoite que as monitoras podem
+  //  adicionar.» Mora em auaulandia/alertas/<FILHOt>/<id>, fora do relatório do dia, porque um
+  //  alerta pode valer por mais de um dia. Tirar não apaga: marca quem tirou e quando.
+  var ALERTAS_CACHE={};
+  var ALERTA_MOTIVOS=[['afast','Afastado dos outros'],['virose','Suspeita de virose / doença'],['naodorme','Não dorme com os outros'],['irmao','Só dorme com o irmão'],['ciume','Ciumento(a)'],['repouso','Não pode brincar / repouso']];
+  function alertaPodeMexer(){ var r=(document.body.dataset.role||''); return r==='gestao'||r==='supervisor'||r==='diretoria'||r==='monitor'; }
+  // Fim do alerta: meio-dia do dia seguinte ao último (a noite do plantão atravessa a meia-noite).
+  function alertaFimTs(diaISO, noites){
+    var m=String(diaISO||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); if(!m) return 0;
+    return new Date(+m[1], +m[2]-1, +m[3]+(noites||1), 12, 0, 0).getTime();
+  }
+  function alertaVale(a, agoraTs, hojeISO){
+    if(!a || typeof a!=='object' || a.tirado) return false;
+    if(!String(a.txt||'').trim()) return false;
+    if(a.desde && hojeISO && hojeISO<a.desde) return false;
+    if(a.ateTs && agoraTs>a.ateTs) return false;
+    return true;
+  }
+  function alertasAtivosDe(h){
+    if(!h) return [];
+    var k=cadKey(h), L=(k&&ALERTAS_CACHE&&ALERTAS_CACHE[k])||{}, agora=Date.now(), hoje=zHojeISO();
+    return Object.keys(L).map(function(id){ var a=L[id]; return (a&&typeof a==='object')?Object.assign({_id:id},a):null; })
+      .filter(function(a){ return alertaVale(a, agora, hoje); })
+      .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  }
+  function fichaAlertasRender(){
+    var el=document.getElementById('hf-alertas'); if(!el) return;
+    if(!currentHosp){ el.innerHTML=''; return; }
+    var L=alertasAtivosDe(currentHosp), pode=alertaPodeMexer();
+    el.innerHTML=L.length ? L.map(function(a){
+      var quando=a.ts?new Date(a.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+      var ate=a.ate==='tirar'?'até alguém tirar':(a.ate==='pernoite'?'durante o pernoite':'só hoje');
+      return '<div class="alerta-item"><div class="alerta-txt">'+escAttr(a.txt)+'</div>'
+        +'<div class="alerta-por">'+escAttr(a.quem||'—')+(quando?(' · '+escAttr(quando)):'')+' · '+ate+'</div>'
+        +(pode?'<div style="margin-top:8px"><button type="button" class="btn" style="min-height:44px;background:var(--z-white);color:var(--crm-critico);border:2px solid var(--crm-critico)" onclick="alertaTirar(\''+jsAspas(a._id)+'\',this)">Tirar alerta</button></div>':'')
+        +'</div>';
+    }).join('') : '<div class="hint" style="margin:0">Nenhum alerta ativo. A Monitora lança o alerta no Relatório do Dia ou no Adicionar pernoite.</div>';
+    try{ fichaTopicosPintar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+  }
+  function alertaTirar(id, btn){
+    if(!currentHosp || !alertaPodeMexer()) return;
+    // Dois toques, como o «Dei agora»: o 1º arma, o 2º tira. Nunca janela nativa.
+    if(btn && btn.dataset.armed!=='1'){
+      btn.dataset.armed='1'; btn.dataset.label=btn.textContent; btn.textContent='Confirmar — tirar este alerta';
+      clearTimeout(btn._armT); btn._armT=setTimeout(function(){ try{ btn.dataset.armed=''; btn.textContent=btn.dataset.label||'Tirar alerta'; }catch(e){} /* silencioso de propósito: botão voltando ao normal */ }, 4000);
+      return;
+    }
+    var k=cadKey(currentHosp); if(!k||!DB){ if(btn) btn.textContent='Banco conectando… toque de novo'; return; }
+    var nome=currentHosp.nome||'';
+    if(btn){ btn.disabled=true; btn.textContent='Tirando…'; }
+    DB.ref('auaulandia/alertas/'+k+'/'+id+'/tirado').set({quem:quemSou(), ts:Date.now()}).then(function(){
+      try{ if(typeof audit==='function') audit('alerta-tirado', 'tirou um alerta de '+nome, {pet:nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    }).catch(function(e){ if(btn){ btn.disabled=false; btn.textContent='Não deu — toque de novo'; } _logFalhaGrav('alertaTirar', e); });
+  }
+  // O formulário do alerta (Relatório do Dia e Adicionar pernoite). Fica FORA das .obsline:
+  // o relatório lê as .obsline como perguntas obrigatórias, e o alerta é à parte.
+  function alertaFormHTML(px, ates, comBotao){
+    return '<div class="alerta-q"><span class="q">Tem algum alerta para o plantão?</span><div class="seg" id="'+px+'AlQ">'
+      +'<button type="button" class="on t-ok" onclick="alertaFormSimNao(\''+px+'\',false)">Não</button>'
+      +'<button type="button" onclick="alertaFormSimNao(\''+px+'\',true)">Sim</button></div></div>'
+      +'<div class="alerta-form" id="'+px+'AlForm" style="display:none">'
+      +'<div class="field"><label>O que acontece? Toque no que vale</label><div class="seg" id="'+px+'AlMot">'
+      +ALERTA_MOTIVOS.map(function(m){ return '<button type="button" data-m="'+m[0]+'" onclick="alertaFormMotivo(\''+px+'\',this)">'+m[1]+'</button>'; }).join('')+'</div></div>'
+      +'<div class="field"><label for="'+px+'AlTxt">Explique em uma frase</label><input class="cad-in" id="'+px+'AlTxt" maxlength="140" autocomplete="off" placeholder="Ex.: afastado por suspeita de virose — não colocar com os outros"></div>'
+      +'<div class="field"><label>Vale até</label><div class="seg" id="'+px+'AlAte">'
+      +ates.map(function(o,i){ return '<button type="button" data-ate="'+o[0]+'"'+(i===0?' class="on"':'')+' onclick="alertaFormAte(\''+px+'\',this)">'+o[1]+'</button>'; }).join('')+'</div></div>'
+      +(comBotao?'<div class="actions"><button type="button" class="btn btn-primary" onclick="alertaSalvarDoDia(this)">Salvar alerta</button></div><div class="rel-status" id="'+px+'AlSt"></div>':'')
+      +'</div>';
+  }
+  function alertaFormSimNao(px, sim){
+    var q=document.getElementById(px+'AlQ'); if(q) q.querySelectorAll('button').forEach(function(b,i){ var on=(i===1)===sim; b.classList.toggle('on',on); b.classList.remove('t-ok','t-bad'); if(on) b.classList.add(sim?'t-bad':'t-ok'); });
+    var f=document.getElementById(px+'AlForm'); if(f) f.style.display=sim?'block':'none';
+  }
+  function alertaFormMotivo(px, btn){
+    btn.classList.toggle('on');
+    var t=document.getElementById(px+'AlTxt'); if(!t) return;
+    var auto=Array.prototype.map.call(document.querySelectorAll('#'+px+'AlMot button.on'), function(b){ return b.textContent.trim(); }).join(' — ');
+    // A frase acompanha os botões enquanto a pessoa não escreveu a dela.
+    if(!t.value.trim() || t.value===(t.dataset.auto||'')){ t.value=auto; t.dataset.auto=auto; }
+  }
+  function alertaFormAte(px, btn){ var g=document.getElementById(px+'AlAte'); if(g) g.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b===btn); }); }
+  function alertaFormLer(px){
+    var q=document.getElementById(px+'AlQ'); var sim=!!(q && q.querySelectorAll('button')[1] && q.querySelectorAll('button')[1].classList.contains('on'));
+    if(!sim) return {sim:false};
+    var t=document.getElementById(px+'AlTxt'), txt=((t&&t.value)||'').trim();
+    var mot=Array.prototype.map.call(document.querySelectorAll('#'+px+'AlMot button.on'), function(b){ return b.dataset.m; });
+    var a=document.querySelector('#'+px+'AlAte button.on'), ate=(a&&a.dataset.ate)||'hoje';
+    return {sim:true, txt:txt, motivos:mot, ate:ate};
+  }
+  function fichaAlertaFormPintar(){
+    var box=document.getElementById('hfAlertaDiaBox'); if(!box) return;
+    box.innerHTML=alertaPodeMexer()?alertaFormHTML('hfd', [['hoje','Só hoje'],['tirar','Até alguém tirar']], true):'';
+  }
+  function alertaSalvarDoDia(btn){
+    if(!currentHosp || !alertaPodeMexer()) return;
+    var st=document.getElementById('hfdAlSt'), v=alertaFormLer('hfd');
+    if(!v.sim) return;
+    if(!v.txt){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ Escreva em uma frase o que a plantonista precisa saber.'; } try{ document.getElementById('hfdAlTxt').focus(); }catch(e){} /* silencioso de propósito: foco */ return; }
+    var hoje=zHojeISO();
+    if(dataKeyAtual()!==hoje){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='✋ O alerta se lança no dia de hoje — volte a ficha para Hoje.'; } return; }
+    var k=cadKey(currentHosp); if(!k||!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando… toque de novo.'; } return; }
+    var reg={txt:v.txt, motivos:v.motivos, ate:v.ate, desde:hoje, ateTs:v.ate==='tirar'?0:alertaFimTs(hoje,1), quem:quemSou(), ts:Date.now(), origem:'dia'};
+    var nome=currentHosp.nome||'';
+    if(btn) btn.disabled=true; if(st){ st.style.color='var(--muted)'; st.textContent='Salvando…'; }
+    DB.ref('auaulandia/alertas/'+k).push(reg).then(function(){
+      if(btn) btn.disabled=false;
+      // O formulário fica pronto para outro alerta: frase e botões limpos; o aviso de salvo fica à vista.
+      try{ var t2=document.getElementById('hfdAlTxt'); if(t2){ t2.value=''; t2.dataset.auto=''; } document.querySelectorAll('#hfdAlMot button.on').forEach(function(b){ b.classList.remove('on'); }); }catch(e){} /* silencioso de propósito: limpeza de tela */
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Alerta salvo — a plantonista já vê no tópico ALERTA.'; }
+      try{ if(typeof audit==='function') audit('alerta', 'lançou alerta de '+nome+': '+reg.txt, {pet:nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    }).catch(function(e){ if(btn) btn.disabled=false; if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Não salvou: '+((e&&e.message)||e)+' — toque de novo.'; } _logFalhaGrav('alertaSalvarDoDia', e); });
+  }
+
+  // ===== «COMO COMEU?» — Adriana, 27/out/2026 ========================================
+  // «Alimentação, coloque 3 opções: comeu / somente metade / não comeu. Para clicar. Essa
+  //  informação é muito importante para a gestão.» Grava na hora em auaulandia/comeu/<dia>/<FILHOt>
+  //  (o dia da ficha). O «Não comeu» acende o selo NÃO COMEU do card, como o relatório já fazia.
+  var FICHA_COMEU=null;
+  var COMEU_HOJE={};   // auaulandia/comeu/<hoje>, lido junto com o risco de não comer
+  var COMEU_TXT={comeu:'Comeu', metade:'Somente metade', nao:'Não comeu'};
+  function fichaComeuCaminho(){ if(!currentHosp) return ''; var k=cadKey(currentHosp); return k?('auaulandia/comeu/'+dataKeyAtual()+'/'+k):''; }
+  function fichaComeuPintar(){
+    var g=document.getElementById('hfComeuSeg'); if(!g) return;
+    var v=(FICHA_COMEU&&FICHA_COMEU.v)||'';
+    var ord=['comeu','metade','nao'];
+    g.querySelectorAll('button').forEach(function(b,i){ var on=ord[i]===v; b.classList.remove('on','t-ok','t-bad','t-warn'); if(on){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone); } });
+  }
+  function fichaComeuCarregar(){
+    FICHA_COMEU=null; fichaComeuPintar();
+    var st=document.getElementById('hf-comeu-st'); if(st) st.textContent='';
+    var c=fichaComeuCaminho(); if(!c||!DB) return;
+    var alvo=currentHosp, dia=dataKeyAtual();
+    DB.ref(c).once('value').then(function(s){
+      if(currentHosp!==alvo || dataKeyAtual()!==dia) return;
+      FICHA_COMEU=s.val()||null; fichaComeuPintar(); fichaTopicosPintar();
+    }).catch(function(e){ _logLeituraFalhou('auaulandia/comeu (ficha)', e); });
+  }
+  function fichaComeuMarcar(v, btn){
+    if(!currentHosp || !COMEU_TXT[v]) return;
+    var st=document.getElementById('hf-comeu-st'), c=fichaComeuCaminho();
+    if(!c) return;
+    if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando… toque de novo.'; } return; }
+    var reg={v:v, quem:quemSou(), ts:Date.now()}, alvo=currentHosp, k=cadKey(currentHosp), dia=dataKeyAtual(), nome=currentHosp.nome||'';
+    if(st){ st.style.color='var(--muted)'; st.textContent='Salvando…'; }
+    DB.ref(c).set(reg).then(function(){
+      if(dia===zHojeISO()){ COMEU_HOJE=COMEU_HOJE||{}; COMEU_HOJE[k]=reg; try{ renderHosp(); }catch(e){} /* silencioso de propósito: redesenho de tela */ }
+      if(currentHosp!==alvo) return;
+      FICHA_COMEU=reg; fichaComeuPintar(); fichaTopicosPintar();
+      if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Salvo: '+COMEU_TXT[v]+'.'; }
+      // O mesmo dado no «Jantou?» do relatório do jantar, quando ainda não foi respondido.
+      try{ document.querySelectorAll('#card-inicio .obsline').forEach(function(l){ var q=l.querySelector('.q'); if(!q || q.textContent.trim()!=='Jantou?' || l.querySelector('button.on')) return;
+        var alvoTxt={comeu:'Sim', metade:'Metade', nao:'Não'}[v];
+        l.querySelectorAll('button').forEach(function(b){ if(b.textContent.trim()===alvoTxt){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone); } }); }); }catch(e){} /* silencioso de propósito: atalho de tela — o relatório continua pedindo a resposta */
+      try{ if(typeof audit==='function') audit('comeu', nome+': '+COMEU_TXT[v], {pet:nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+    }).catch(function(e){ if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Não salvou — toque de novo.'; } _logFalhaGrav('fichaComeuMarcar', e); });
   }
   function onPhoto(e){
     const f=e.target.files&&e.target.files[0]; if(!f||!currentHosp) return;
@@ -21399,13 +21723,14 @@ return { criar };
     const el=document.getElementById('magHoje'); if(!el) return;
     // Estoque de entrada não interessa a quem só dá o remédio (plantonista): esconde pra ela.
     const _magRole=(document.body.dataset.role||''); const estoqueHTML=(_magRole==='plantonista')?'':renderEstoqueResumo();
-    const rows=[];
+    const rows=[]; let _itensVivos=0;   // _itensVivos: o número do tópico MEDICAMENTO (27/out/2026)
     Object.keys(MED_AGENDA_ITENS).forEach(function(id){
       const it=MED_AGENDA_ITENS[id]||{};
       if(it.suspenso) return; // Onda 3: suspensa pela vet — não pede dose nem entra no placar do dia
       if(!medVigenteEm(it)) return; // fora da janela início→fim (ou uso encerrado) — não pede dose hoje
       // 6.58: o remédio «lançado por engano» não pede dose — só as doses já registradas hoje aparecem
       const remAnulado=medItemAnulado(it);
+      if(!remAnulado) _itensVivos++;
       (it.horarios||[]).forEach(function(h){
         const doseId=magDoseId(id,h); const log=MED_AGENDA_LOG[doseId];
         if(remAnulado && !log) return;
@@ -21424,7 +21749,10 @@ return { criar };
     Object.keys(MED_AGENDA_LOG).forEach(function(doseId){
       const log=MED_AGENDA_LOG[doseId]; if(log&&log.avulso) rows.push({id:null,doseId:doseId,nome:log.nome,q:log.q,u:log.u,local:log.local||'',obs:log.motivo||'',h:log.horario,feito:medDoseValendo(log),quem:log.quem,ts:log.ts,avulso:true,reg:log,anulada:!!log.anulada});
     });
-    if(!rows.length){ el.innerHTML=estoqueHTML+placarHTML+'<div class="hint">Nenhum horário agendado para hoje.</div>'; return; }
+    if(!rows.length){ el.innerHTML=estoqueHTML+placarHTML+'<div class="hint">Nenhum horário agendado para hoje.</div>';
+      MAG_RESUMO={itens:_itensVivos, pend:0, atrasadas:0, proxima:''};
+      try{ fichaTopicosPintar(); }catch(e){} /* silencioso de propósito: o cabeçalho dos tópicos é redesenho de tela */
+      return; }
     // ANTI-DUPLICAÇÃO: se a agenda tem itens repetidos (mesmo nome+dose no mesmo horário), mostra
     // UMA linha só. Se qualquer cópia já foi dada, a linha aparece como "dado" (prefere o registro feito).
     // O LOCAL entra na chave: o Romeo toma Cortavance às 14:00 nos OUVIDOS e às 14:00 nas
@@ -21436,15 +21764,25 @@ return { criar };
       vistos[k]=unicas.length; unicas.push(r);
     });
     unicas.sort(function(a,b){ return (a.h||'').localeCompare(b.h||''); });
-    el.innerHTML=estoqueHTML+placarHTML+unicas.map(function(r){
+    // A FICHA EM TÓPICOS (27/out/2026): «o nome do remédio, horário e quantidade têm que vir em
+    // destaque». A hora vira o título do bloco; o horário todo dado fecha numa linha verde (toque
+    // abre para conferir); a dose de hora passada e não dada fica vermelha, a que ainda vai chegar
+    // fica neutra, e a próxima ganha a etiqueta PRÓXIMA DOSE.
+    const _hojeMag=fichaEhHoje(), _agoraMag=fichaHoraAgora();
+    const _daVez=function(r){ return !r.feito && !r.avulso && r.id && !r.semDar; };
+    const _pend=unicas.filter(_daVez);
+    const _prox=_hojeMag?(_pend.map(function(r){ return r.h||''; }).filter(function(h){ return h>=_agoraMag; }).sort()[0]||''):'';
+    MAG_RESUMO={itens:_itensVivos, pend:_pend.length, atrasadas:_hojeMag?_pend.filter(function(r){ return (r.h||'')<_agoraMag; }).length:0, proxima:_prox};
+    const _linha=function(r){
       const dose=(typeof medDoseTxt==='function')?medDoseTxt({nome:r.nome,q:r.q,u:r.u,local:r.local}):fmtQtd(r.q,r.u);
-      return '<div class="mag-dose'+(r.feito?' feito':'')+'">'
+      const aVir=_daVez(r) && _hojeMag && (r.h||'')>=_agoraMag;
+      return '<div class="mag-dose'+(r.feito?' feito':(aVir?' a-vir':''))+'">'
         +'<div class="mag-dose-info" style="flex:1;min-width:0">'
-          +'<div style="font-size:11px;font-weight:800;color:var(--muted)">'+escAttr(r.h||'--:--')+(r.avulso?' · avulsa':'')+'</div>'
-          +'<div style="font-size:17px;font-weight:800;color:var(--z-blue);line-height:1.2">'+escAttr(r.nome||'')+'</div>'
-          +(dose?'<div style="font-size:14px;font-weight:700;color:var(--z-gold-deep)">'+escAttr(dose)+'</div>':'')
-          +(function(){ var per=(typeof medPeriodoTxt==='function')?medPeriodoTxt(r):''; return per?'<div style="font-size:12.5px;font-weight:700;color:var(--muted)">'+escAttr(per)+'</div>':''; })()
-          +(r.obs?'<div style="font-size:13.5px;font-weight:700;color:var(--z-blue);margin-top:3px;line-height:1.25">▸ '+escAttr(r.obs)+'</div>':'')
+          +(r.avulso?'<div style="font-size:12px;font-weight:800;color:var(--muted)">'+escAttr(r.h||'--:--')+' · avulsa</div>':'')
+          +'<div class="mag-dose-nome">'+escAttr(r.nome||'')+'</div>'
+          +(dose?'<div class="mag-dose-qtd">'+escAttr(dose)+'</div>':'')
+          +(function(){ var per=(typeof medPeriodoTxt==='function')?medPeriodoTxt(r):''; return per?'<div style="font-size:13px;font-weight:700;color:var(--muted);margin-top:3px">'+escAttr(per)+'</div>':''; })()
+          +(r.obs?'<div class="mag-dose-como">▸ '+escAttr(r.obs)+'</div>':'')
         +'</div>'
         +(r.feito
           ? '<div class="mag-dose-ok">✅ Dado por '+escAttr(r.quem||'?')+(r.ts?' às '+new Date(r.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'')+'</div>'
@@ -21452,7 +21790,22 @@ return { criar };
             :(r.anulada?'<span class="mag-dose-ok" style="color:var(--muted)">anulada</span>':'<span class="mag-dose-ok" style="color:var(--muted)">registrada</span>')))
         +medDoseAcoesHTML(r)
       +'</div>';
+    };
+    const _grupos=[], _gi={};
+    unicas.forEach(function(r){ const h=r.h||'--:--'; if(_gi[h]==null){ _gi[h]=_grupos.length; _grupos.push({h:h, rows:[]}); } _grupos[_gi[h]].rows.push(r); });
+    el.innerHTML=estoqueHTML+placarHTML+_grupos.map(function(g){
+      const tudo=g.rows.every(function(r){ return r.feito; });
+      if(tudo && !(MAG_HORA_ABERTA||{})[g.h]){
+        const quem=(g.rows[g.rows.length-1]||{}).quem||'?';
+        return '<button type="button" class="mag-dose feito mag-hora-linha" onclick="magHoraAbrir(\''+jsAspas(g.h)+'\')"><span class="mag-dose-ok">✅ '+escAttr(g.h)+' — '+g.rows.length+(g.rows.length>1?' remédios dados':' remédio dado')+' · '+escAttr(quem)+' ▾</span></button>';
+      }
+      const atrasada=_hojeMag && g.h<_agoraMag && g.rows.some(_daVez);
+      const proxima=!!_prox && g.h===_prox;
+      const tag=atrasada?'<span class="mag-hora-tag">ATRASADA</span>':(proxima?'<span class="mag-hora-tag">PRÓXIMA DOSE</span>':'');
+      const fechar=tudo?'<button type="button" class="btn" style="min-height:40px;padding:6px 12px;font-size:13px;background:var(--z-white);color:var(--z-blue);border:1.5px solid var(--line)" onclick="magHoraAbrir(\''+jsAspas(g.h)+'\')">fechar ▴</button>':'';
+      return '<div class="mag-hora'+(atrasada?' atrasada':'')+(proxima?' proxima':'')+'">'+escAttr(g.h)+tag+fechar+'</div>'+g.rows.map(_linha).join('');
     }).join('');
+    try{ fichaTopicosPintar(); }catch(e){} /* silencioso de propósito: o cabeçalho dos tópicos é redesenho de tela */
   }
   // 6.58 (AC1.1, AC1.7, AC2): os botões da dose registrada e o riscado da anulada, numa linha inteira dentro da
   // linha da dose (a .mag-dose quebra a linha). «Desfazer esta dose» em toda dose dada (agendada ou avulsa),
@@ -22602,7 +22955,8 @@ return { criar };
     c.classList.toggle('receb-done', temBox && !!st.recebeu);
     const sr=document.getElementById('status-receb-'+tipo);
     if(sr){ if(st.recebeu){ sr.style.color='var(--crm-ok)'; sr.textContent='✅ Recebimento assinado por '+st.recebeu+'.'; } else sr.textContent=''; }
-    sincTravaLeitura(tipo); }
+    sincTravaLeitura(tipo);
+    try{ fichaTopicosPintar(); }catch(e){} /* silencioso de propósito: o cabeçalho dos tópicos é redesenho de tela */ }
   async function confirmarRecebimento(tipo){ if(!currentHosp) return; const st=document.getElementById('status-receb-'+tipo);
     const el=document.getElementById('recebeu-'+tipo); const nome=((el&&el.value)||'').trim();
     const quemPassou=(RELSTATE[tipo]||{}).passou||'';
@@ -22665,6 +23019,15 @@ return { criar };
   function carregarFicha(){
     carregarCadastro();
     carregarMedAgenda();
+    // A ficha em tópicos (27/out/2026): alerta, «Como comeu?» e o resumo da alimentação do dia da ficha.
+    // Os tópicos começam fechados a cada FILHOt (e a cada dia), e a agenda do anterior não vale aqui.
+    MAG_RESUMO={carregando:true}; MAG_HORA_ABERTA={};
+    try{ ['tp-alerta','tp-med','tp-alim','tp-obs','tp-cad'].forEach(function(id){ var c=document.getElementById(id); if(c) c.classList.add('collapsed'); }); }catch(e){} /* silencioso de propósito: os tópicos começam fechados — falhar só deixa um aberto */
+    // O quadro do jantar é o mesmo do relatório do jantar: jantaSlotRender desenha lá e o tópico copia.
+    try{ fichaAlertaFormPintar(); fichaAlertasRender(); fichaComeuCarregar();
+      var _ai=document.getElementById('hf-alim-info'), _js=document.getElementById('janta-slot-inicio');
+      if(_ai){ jantaSlotRender(); var _ah=(_js&&_js.innerHTML)||''; _ai.innerHTML=_ah+(_ah?'<div class="hint" style="margin-top:6px">O que foi servido se escreve no Relatório do Jantar.</div>':''); }
+      fichaTopicosPintar(); }catch(e){ _logFalhaGrav('carregarFicha (tópicos)', e); }
     medHistEstadia={tinha:false}; renderMedHistBanner();
     ['dia','inicio','noite'].forEach(tp=>{ const c=document.getElementById('card-'+tp); if(c) c.classList.add('collapsed'); });
     if(!DB){ ['dia','inicio','noite'].forEach(tp=>aplicarCard('card-'+tp,{})); return; }
@@ -23635,6 +23998,9 @@ return { criar };
   function carregarRiscoNaoComer(){
     const reais=(hospedes||[]).filter(h=>!h.mascote);
     if(!DB||!reais.length){ NAOCOMEU_HOJE={}; return; }
+    // 27/out/2026: o «Como comeu?» da ficha — um nó pequeno por dia, lido uma vez junto com os relatórios.
+    DB.ref('auaulandia/comeu/'+zHojeISO()).once('value').then(function(s){ COMEU_HOJE=s.val()||{}; try{ renderHosp(); }catch(e){} /* silencioso de propósito: redesenho de tela */ })
+      .catch(function(e){ _logLeituraFalhou('auaulandia/comeu (risco de não comer)', e); });
     Promise.all(reais.map(h=>{
       const base='auaulandia/relatorios/'+fichaKeyDe(h,new Date());
       return Promise.all([
@@ -30297,7 +30663,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-27-05';
+  const APP_VERSAO='2026-10-27-06';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -32851,6 +33217,9 @@ return { criar };
       +'<label style="font-size:12px;font-weight:700;color:var(--muted)">O que dar e quanto<br><input class="cad-in" id="pfComida" value="'+escAttr(sug)+'" placeholder="ex.: Ração 50g · Comida natural 100g"></label>'
       +'<label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-top:8px">Onde fica a comida<br><input class="cad-in" id="pfOnde" value="'+escAttr((a&&a.extra)||'')+'" placeholder="ex.: Comida natural na GELADEIRA"></label>'
       +'<label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-top:8px">Recado para quem vai receber (opcional)<br><input class="cad-in" id="pfObs" placeholder="ex.: o tutor opera de manhã, busca no fim da tarde"></label>'
+      // ALERTA para o plantão (27/out/2026) — o mesmo campo do Relatório do Dia; grava junto com o pernoite.
+      +'<div style="font-size:13.5px;font-weight:700;color:var(--z-blue);margin:14px 0 0">Alerta para o plantão</div>'
+      +alertaFormHTML('pf', [['pernoite','Só nesse pernoite'],['tirar','Até alguém tirar']], false)
       +'<div style="display:flex;gap:8px;margin-top:16px">'
       +'<button class="btn btn-primary" style="flex:1" onclick="salvarPernAgendado()">Salvar pernoite</button>'
       +'<button class="btn" onclick="fecharPernForm()">Voltar</button>'
@@ -32876,12 +33245,21 @@ return { criar };
     if(zFalta1('pfData', !dia
         ? ('Falta dizer em que dia '+(PERN_PEND.nome||'ele')+' entra.')
         : ((hoje&&dia<hoje)?'Essa data já passou. Um pernoite só entra para hoje ou para um dia à frente.':''))) return;
+    const _al=alertaFormLer('pf');
+    if(_al.sim && zFalta1('pfAlTxt', _al.txt?'':'Escreva em uma frase o alerta para o plantão — ou marque «Não».')) return;
     if(!DB){ alert('Sem conexão com o banco agora — o pernoite não foi lançado. Tente de novo em instantes.'); return; }
     const reg=Object.assign({},PERN_PEND,{ janta:true, noites:noites,
       criadoPor:(typeof quemSou==='function'?quemSou():'-'), criadoTs:Date.now() });
     if(comida||onde) reg.jantar={comida:comida, onde:onde};
     if(obs) reg.obs=obs;
+    const _alKey=_al.sim?cadKey(PERN_PEND):'';
     DB.ref('auaulandia/manuais/'+dia).push(reg).then(function(){
+      if(_al.sim && _alKey){
+        DB.ref('auaulandia/alertas/'+_alKey).push({txt:_al.txt, motivos:_al.motivos, ate:_al.ate, desde:dia,
+          ateTs:_al.ate==='tirar'?0:alertaFimTs(dia, noites), quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), origem:'pernoite'})
+          .then(function(){ try{ if(typeof audit==='function') audit('alerta', 'lançou alerta de '+(reg.nome||'')+' no pernoite: '+_al.txt, {pet:reg.nome||''}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */ })
+          .catch(function(e){ _logFalhaGrav('alerta do pernoite', e); alert('O pernoite entrou, mas o ALERTA não foi salvo: '+((e&&e.message)||e)+'\n\nAbra a ficha dele e lance o alerta no Relatório do Dia.'); });
+      }
       if(typeof audit==='function') audit('pernoite-agendado','lançou pernoite de '+(reg.nome||'')+' para '+dia+' ('+noites+' noite'+(noites>1?'s':'')+')',{pet:reg.nome||''});
       const qdo=(dia===hoje)?'hoje à noite':('no dia '+((typeof orcBR==='function')?orcBR(dia):dia));
       fecharPernForm(); fecharHospBuscaModal();
@@ -99461,14 +99839,14 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',tentar,{once:true});else tentar();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
-<script src="agenda-marcia/dados.js?v=2026-10-27-05"></script>
-<script src="agenda-marcia/entrevistas.js?v=2026-10-27-05"></script>
-<script src="agenda-marcia/composta.js?v=2026-10-27-05"></script>
-<script src="agenda-marcia/painel.js?v=2026-10-27-05"></script>
-<script src="marcia129/painel.js?v=2026-10-27-05"></script>
-<script src="marcia129/dados.js?v=2026-10-27-05"></script>
-<script src="marcia129/app.js?v=2026-10-27-05"></script>
-<script src="agenda-marcia/app.js?v=2026-10-27-05"></script>
+<script src="agenda-marcia/dados.js?v=2026-10-27-06"></script>
+<script src="agenda-marcia/entrevistas.js?v=2026-10-27-06"></script>
+<script src="agenda-marcia/composta.js?v=2026-10-27-06"></script>
+<script src="agenda-marcia/painel.js?v=2026-10-27-06"></script>
+<script src="marcia129/painel.js?v=2026-10-27-06"></script>
+<script src="marcia129/dados.js?v=2026-10-27-06"></script>
+<script src="marcia129/app.js?v=2026-10-27-06"></script>
+<script src="agenda-marcia/app.js?v=2026-10-27-06"></script>
 </body>
 <script>
 (function(raiz, fabrica){
