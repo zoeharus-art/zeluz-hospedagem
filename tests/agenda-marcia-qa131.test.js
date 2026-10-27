@@ -3,6 +3,8 @@
 // Integração real App → Dados → Painel usando apenas um banco falso.
 const assert = require('node:assert/strict');
 const Agenda = require('../auaulandia/agenda-marcia/dados.js');
+const Entrevistas = require('../auaulandia/agenda-marcia/entrevistas.js');
+const Composta = require('../auaulandia/agenda-marcia/composta.js');
 const Painel = require('../auaulandia/agenda-marcia/painel.js');
 const App = require('../auaulandia/agenda-marcia/app.js');
 
@@ -14,7 +16,9 @@ class BancoFalso {
   constructor() { this.valores = {}; this.listeners = {}; this.referencias = []; this.writes = []; this.queries = []; this.pushCount = 0; this.offCount = 0; this.antesTx = null; }
   ref(path) { this.referencias.push(path); const db = this; return {
     orderByKey() { this.ordenada=true; return this; },
-    limitToFirst(n) { assert.equal(this.ordenada,true); assert.equal(n,1); db.queries.push({path,limit:n}); return this; },
+    startAt(v) { this.inicio=v; return this; },
+    endAt(v) { this.fim=v; return this; },
+    limitToFirst(n) { assert.equal(this.ordenada,true); assert.equal(n,path==='daycare/agenda-marcia/entrevistas'?31:1); db.queries.push({path,limit:n,inicio:this.inicio,fim:this.fim}); return this; },
     push() { db.pushCount += 1; return { key: 'row-' + db.pushCount }; },
     on(tipo, ok, erro) { assert.equal(tipo, 'value'); (db.listeners[path] || (db.listeners[path] = [])).push({ ok, erro }); queueMicrotask(() => ok(snap(db.valor(path)))); },
     once(tipo) { assert.equal(tipo, 'value'); return Promise.resolve(snap(db.valor(path))); },
@@ -51,8 +55,9 @@ async function executar() {
   let permissao = true;
   const usuario = { id: 'consultora-1', nome: 'Consultora Ana', role: 'recepcao' };
   const globalAntes = {};
-  ['DB', 'usuarioAtual', 'papelDoCorpo', 'telaVemDoPapel', 'paginaConcedida', 'PELUDINHOS', 'pelInativo', 'pelGet', 'RACAS', 'RACAS_CADASTRO', 'orcRacasAtualizar', 'racaCanonica', 'dashAgendaMarciaProjetar133'].forEach(k => { globalAntes[k] = globalThis[k]; });
+  ['entrevistas155Pode', 'DB', 'usuarioAtual', 'papelDoCorpo', 'telaVemDoPapel', 'paginaConcedida', 'PELUDINHOS', 'pelInativo', 'pelGet', 'RACAS', 'RACAS_CADASTRO', 'orcRacasAtualizar', 'racaCanonica', 'dashAgendaMarciaProjetar133'].forEach(k => { globalAntes[k] = globalThis[k]; });
   globalThis.DB = db;
+  globalThis.entrevistas155Pode = () => true;
   globalThis.usuarioAtual = () => usuario;
   globalThis.papelDoCorpo = () => usuario.role;
   globalThis.telaVemDoPapel = (page, role) => permissao && page === 'agendamarcia' && role === 'recepcao';
@@ -75,7 +80,7 @@ async function executar() {
       if (id === 'v-agendamarcia') return { classList: { contains() { return false; } } };
       return id === 'agendaMarciaRoot' ? raizAgenda : null;
     }
-  }, ZeluzAgendaMarcia: Agenda, ZeluzAgendaMarciaPainel: Painel, ZeluzMarcia129: { dataSP: () => DIA } };
+  }, ZeluzAgendaMarcia: Agenda, ZeluzAgendaMarciaEntrevistas: Entrevistas, ZeluzAgendaComposta150: Composta, ZeluzAgendaMarciaPainel: Painel, ZeluzMarcia129: { dataSP: () => DIA } };
 
   try {
     App.instalar(root);
@@ -83,8 +88,9 @@ async function executar() {
     await tick(); await tick();
     assert(raizAgenda.innerHTML.includes('Agenda Márcia'));
     assert.deepEqual(db.referencias.filter(x => x === PAI), [PAI,PAI], 'fonte do dia e consulta limitada do calendário, sem once duplicado');
-    assert.equal(db.queries.length,31,'calendário limita a uma avaliação por dia do mês visível');
-    assert.equal(db.referencias.length,32,'31 consultas pequenas e uma fonte diária completa');
+    assert.equal(db.queries.filter(x=>x.limit===1).length,31,'calendário limita a uma avaliação por dia do mês visível');
+    assert.deepEqual(db.queries.filter(x=>x.limit===31),[{path:'daycare/agenda-marcia/entrevistas',limit:31,inicio:'2026-10-01',fim:'2026-10-31'}], 'entrevistas usam uma consulta mensal delimitada');
+    assert.equal(db.referencias.length,34,'avaliações e entrevistas observadas no dia e no mês');
 
     // Campos obrigatórios faltando não chegam ao provider nem ao banco.
     submit(raizAgenda, form('novo', { nome: '', raca: '', tutor: '', hora: '', 'vacina-conferido': false }));
@@ -193,16 +199,16 @@ async function executar() {
     assert(raizAgenda.innerHTML.includes('Não foi possível salvar.'), 'a interface informa o conflito e mantém o rascunho');
 
     // A consulta à rota não encosta em namespaces de cuidados clínicos ou cobrança.
-    assert(db.referencias.every(p => /^daycare\/dashboard\/2026-10-\d{2}\/avaliacao(?:\/row-\d+)?$/.test(p)), 'só avaliações diárias são consultadas; não há leitura do dashboard mensal inteiro');
+    assert(db.referencias.every(p => /^daycare\/dashboard\/2026-10-\d{2}\/avaliacao(?:\/row-\d+)?$/.test(p) || /^daycare\/agenda-marcia\/entrevistas(?:\/2026-10-\d{2})?$/.test(p)), 'só avaliações diárias são consultadas; não há leitura do dashboard mensal inteiro');
     assert(db.referencias.every(p => !/vet|medicacao|cobranca|pagamento\/gateway/i.test(p)));
     root.agendaMarciaFechar();
     assert.equal(Object.keys(raizAgenda.handlers).length, 0, 'fechar remove listeners da UI');
-    assert.equal(db.offCount,32,'fechar remove a fonte diária e as 31 consultas limitadas');
+    assert.equal(db.offCount,34,'fechar remove as fontes diárias e consultas mensais');
     assert(Object.values(db.listeners).every(x=>x.length===0),'nenhuma assinatura fica ativa depois de fechar');
     console.log('agenda-marcia-qa131: OK');
   } finally {
     try { root.agendaMarciaFechar(); } catch (_) {}
-    ['DB', 'usuarioAtual', 'papelDoCorpo', 'telaVemDoPapel', 'paginaConcedida', 'PELUDINHOS', 'pelInativo', 'pelGet', 'RACAS', 'RACAS_CADASTRO', 'orcRacasAtualizar', 'racaCanonica', 'dashAgendaMarciaProjetar133'].forEach(k => {
+    ['entrevistas155Pode', 'DB', 'usuarioAtual', 'papelDoCorpo', 'telaVemDoPapel', 'paginaConcedida', 'PELUDINHOS', 'pelInativo', 'pelGet', 'RACAS', 'RACAS_CADASTRO', 'orcRacasAtualizar', 'racaCanonica', 'dashAgendaMarciaProjetar133'].forEach(k => {
       if (globalAntes[k] === undefined) delete globalThis[k]; else globalThis[k] = globalAntes[k];
     });
   }

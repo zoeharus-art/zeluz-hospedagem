@@ -19,7 +19,7 @@
       if(!permitido()){raiz.textContent='Entre com um perfil autorizado para usar a Agenda Márcia.';return false;}
       if(!op.db()||!op.dados||!op.painel){raiz.textContent='A agenda ainda está carregando. Abra novamente em instantes.';return false;}
       var a=op.autor();sessao={id:a.id,nome:a.nome};
-      fonte=op.dados.criar({db:op.db(),pode:permitido,autor:op.autor,agora:op.agora,aoSalvar:op.aoSalvar});
+      fonte=op.dados.criar({db:op.db(),pode:permitido,podeEntrevista:function(){return permitido()&&typeof op.podeEntrevista==='function'&&op.podeEntrevista()===true;},autor:op.autor,agora:op.agora,aoSalvar:op.aoSalvar});
       var dados=fonte;
       function carregar(dia){
         if(off){off();off=null;}
@@ -36,7 +36,7 @@
           });}catch(e){reject(e);}
         });
       }
-      painel=op.painel.montar(raiz,{dia:op.dia(),clientes:op.clientes(),racas:op.racas,canonizarRaca:op.canonizarRaca,carregar:carregar,
+      painel=op.painel.montar(raiz,{podeEntrevista:typeof op.podeEntrevista==='function'&&op.podeEntrevista()===true,dia:op.dia(),clientes:op.clientes(),racas:op.racas,canonizarRaca:op.canonizarRaca,carregar:carregar,
         observarMes:function(mes,cb){if(!permitido()||dados!==fonte||typeof dados.observarMes!=='function'){cb({mes:mes,estado:'falha',dias:{}});return function(){};}return dados.observarMes(mes,function(s){if(dados===fonte&&permitido())cb(s);});},
         observar:function(dia,cb){if(ultimo&&ultimo.dia===dia){receber=cb;cb(ultimo);}return function(){if(receber===cb)receber=null;};},
         reenviarProjecao:function(cmd){if(!permitido()||dados!==fonte||typeof op.reenviarProjecao!=='function')return Promise.reject(new Error('SEM_PERMISSAO'));return op.reenviarProjecao(cmd);},
@@ -71,10 +71,10 @@
     root.agendaMarciaAbrir=function(){
       root.agendaMarciaFechar();
       atual=criar({raiz:function(){return root.document.getElementById('agendaMarciaRoot');},db:function(){return typeof DB!=='undefined'?DB:null;},
-        pode:pode,autor:autor,clientes:clientes,racas:function(){
+        pode:pode,podeEntrevista:function(){return typeof entrevistas155Pode==='function'&&entrevistas155Pode();},autor:autor,clientes:clientes,racas:function(){
           if(typeof orcRacasAtualizar==='function')orcRacasAtualizar();
           return (typeof RACAS!=='undefined'&&Array.isArray(RACAS)?RACAS:[]).concat(typeof RACAS_CADASTRO!=='undefined'&&Array.isArray(RACAS_CADASTRO)?RACAS_CADASTRO:[]);
-        },canonizarRaca:function(v){return typeof racaCanonica==='function'?racaCanonica(v):'';},dados:root.ZeluzAgendaMarcia,painel:root.ZeluzAgendaMarciaPainel,
+        },canonizarRaca:function(v){return typeof racaCanonica==='function'?racaCanonica(v):'';},dados:typeof root.ZeluzAgendaComposta150==='function'&&root.ZeluzAgendaMarciaEntrevistas?root.ZeluzAgendaComposta150(root.ZeluzAgendaMarcia,root.ZeluzAgendaMarciaEntrevistas):null,painel:root.ZeluzAgendaMarciaPainel,
         dia:function(){return root.ZeluzMarcia129.dataSP();},agora:function(){return Date.now();},aoSalvar:espelhar,reenviarProjecao:function(cmd){
           if(!pode()||!autor()||!cmd||!/^\d{4}-\d{2}-\d{2}$/.test(cmd.dia)||!cmd.id||/[.#$\[\]\/]/.test(cmd.id))return Promise.reject(new Error('SEM_PERMISSAO'));
           return DB.ref('daycare/dashboard/'+cmd.dia+'/avaliacao/'+cmd.id).once('value').then(function(s){
@@ -82,7 +82,7 @@
             return dashAgendaMarciaProjetar133(cmd.dia,cmd.id,reg,true).then(function(r){return {ok:r.ok===true,dia:cmd.dia,id:cmd.id,espelhoOk:r.ok===true};});
           });
         }});
-      var abriu=atual.abrir();
+      var abriu=atual.abrir();if(abriu&&typeof entrevistas155Pode==='function'){var u=typeof usuarioAtual==='function'?usuarioAtual():null;root.entrevistas155Ultimo=entrevistas155Pode()+'|'+String(u&&u.monId||u&&u.id||'')+'|'+String(u&&u.pessoa||u&&u.nome||'');}
       if(abriu&&typeof root.MutationObserver==='function'){observador=new root.MutationObserver(function(){if(!atual||!atual.sessaoValida())root.agendaMarciaFechar();});observador.observe(root.document.body,{attributes:true,attributeFilter:['data-role']});}
       return abriu;
     };

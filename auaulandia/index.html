@@ -7630,6 +7630,7 @@ return { criar };
   function catalogoPronto(){return tentar();}
   function atorMudou(u){estado.ator=u&&typeof u==='object'?u:null;return tentar();}
   function logout(){
+    if(typeof window.entrevistas155Fechar==='function')window.entrevistas155Fechar();
     estado.ator=null;
     if(estado.api){estado.api.invalidar();estado.api=null;}
   }
@@ -7955,7 +7956,7 @@ return { criar };
         try{ if(despNaTela&&despBaixa[despNaTela]) fecharDespertador(null); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ });
       DB.ref('daycare/almoco-cad').on('value', s=>{ almCadCache=s.val()||{}; try{ if(typeof renderAlmStep==='function'&&dcAtiv==='almoco') renderAlmStep(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ });
       DB.ref('daycare/config/auditoria').on('value', s=>{ const v=s.val(); if(v&&typeof v==='object'){ try{ AUDIT_CFG=Object.assign({},AUDIT_CFG,v); }catch(e){} /* silencioso de propósito: guarda defensiva — se o valor não vier, o anterior continua valendo */ } });   /* o Painel do Dia foi dissolvido em 08/set/2026: quem lê o AUDIT_CFG agora é o quadro de protocolos, redesenhado ao abrir o dashboard */
-      DB.ref('daycare/config/monitores').on('value', s=>{ timeDoBanco(s.val()); try{ if(typeof renderSenhas==='function') renderSenhas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ if(typeof renderMonitores==='function') renderMonitores(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ if(typeof permReaplicarDoTime==='function') permReaplicarDoTime(); }catch(e){} /* silencioso de propósito: o menu fica como estava — a próxima entrada com a senha aplica de novo */ });   /* nada de redesenhar o Painel do Dia: ele foi dissolvido em 08/set/2026 */
+      DB.ref('daycare/config/monitores').on('value', s=>{ timeDoBanco(s.val()); try{if(typeof window.entrevistas155Atualizar==='function')window.entrevistas155Atualizar();}catch(e){} try{ if(typeof renderSenhas==='function') renderSenhas(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ if(typeof renderMonitores==='function') renderMonitores(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ try{ if(typeof permReaplicarDoTime==='function') permReaplicarDoTime(); }catch(e){} /* silencioso de propósito: o menu fica como estava — a próxima entrada com a senha aplica de novo */ });   /* nada de redesenhar o Painel do Dia: ele foi dissolvido em 08/set/2026 */
       // 6.76 (AC5): as senhas fixas trocadas (três registros miúdos, só hash e sal) e (AC6.5) o «revogado» do próprio celular.
       DB.ref('daycare/config/senhas-fixas').on('value', s=>{ try{ senhasFixasDoBanco(s.val()); }catch(e){ _logLeituraFalhou('daycare/config/senhas-fixas (ouvinte)', e); } });
       try{ aparelhoRevogadoOuvir(); }catch(e){ _logLeituraFalhou('auaulandia/aparelhos/revogado (ouvinte)', e); }
@@ -31507,6 +31508,11 @@ return { criar };
     const arr=monPaginasSet(m).slice(); const idx=arr.indexOf(key);
     if(idx>=0) arr.splice(idx,1); else arr.push(key);
     m.paginas=arr; monMarcarPendente(); const w=document.getElementById('monPerm-'+i); if(w) w.innerHTML=permEditInner(i,m); }
+  function entrevistas155Padrao(role){return ['consultora','consultor','recepcao','gestao','diretoria'].indexOf(String(role||''))>=0;}
+  function entrevistas155Pode(){var u=usuarioAtual();if(!u||_appTrancado||ACESSO_TRAVA)return false;var role=String(u.role||''),pessoa=null;if(u.monId&&Array.isArray(MON_BANCO))pessoa=MON_BANCO.filter(function(m){return m&&String(m.id||m._idDado||'')===String(u.monId)&&m.ativo!==false;})[0];if(u.monId&&!pessoa)return false;if(pessoa)role=String(pessoa.role||'monitor');if(role==='gestao'||role==='diretoria')return true;return pessoa&&typeof pessoa.entrevistas155==='boolean'?pessoa.entrevistas155:entrevistas155Padrao(role);}
+  window.entrevistas155Fechar=function(){if(typeof window.agendaMarciaFechar==='function')window.agendaMarciaFechar();if(typeof window.marcia129Fechar==='function')window.marcia129Fechar();window.entrevistas155Ultimo=null;};
+  window.entrevistas155Atualizar=function(){var u=usuarioAtual(),atual=entrevistas155Pode(),chave=atual+'|'+String(u&&u.monId||u&&u.id||'')+'|'+String(u&&u.pessoa||u&&u.nome||'');if(window.entrevistas155Ultimo===chave)return;window.entrevistas155Ultimo=chave;var a=document.getElementById('v-agendamarcia'),m=document.getElementById('v-gestaomarcia');if(a&&a.classList.contains('active')&&typeof window.agendaMarciaAbrir==='function')window.agendaMarciaAbrir();if(m&&m.classList.contains('active')&&typeof window.marcia129Abrir==='function')window.marcia129Abrir();};
+  function toggleMonEntrevistas155(i){var m=MONITORES[i];if(!m)return;var atual=typeof m.entrevistas155==='boolean'?m.entrevistas155:entrevistas155Padrao(m.role);m.entrevistas155=!atual;monMarcarPendente();var w=document.getElementById('monPerm-'+i);if(w)w.innerHTML=permEditInner(i,m);}
   function monAtividadesSet(m){ return Array.isArray(m.atividades)?m.atividades:[]; } // padrão: NADA (a Gestão concede)
   function toggleMonAtividade(i,slug){ const m=MONITORES[i]; if(!m) return;
     const arr=monAtividadesSet(m).slice(); const idx=arr.indexOf(slug);
@@ -31536,6 +31542,8 @@ return { criar };
     // (QA da 6.19, achado 3 — pendência registrada na story): o aviso evita marcar em vão.
     if(['vet','conferencia','plantonista'].indexOf(String(m.role||''))>=0)
       h+='<div class="hint" style="margin-top:4px">Veterinária, Conferência e Plantonista ainda não veem as atividades do Day Care no menu, mesmo marcadas.</div>';
+    var ent=typeof m.entrevistas155==='boolean'?m.entrevistas155:entrevistas155Padrao(m.role);
+    h+='<div style="margin-top:8px"><span class="dia'+(ent?' on':'')+' clic" onclick="toggleMonEntrevistas155('+i+')">Entrevistas</span></div>';
     return h; };
     NAV_PAGINAS_ALL.forEach(function(g){
       if(g.atividades){ h+=ativHTML(); return; }
@@ -32124,6 +32132,7 @@ return { criar };
   function aplicarLogin(u){
     try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */ try{if(typeof zelozinha45AtorMudou==='function')zelozinha45AtorMudou(u);}catch(e){} // fonte única do escopo (montarSubnav/abrirAtividade leem daqui)
     document.body.dataset.role=u.role;
+    try{if(typeof window.entrevistas155Atualizar==='function')window.entrevistas155Atualizar();}catch(e){}
     if(u.abertura) document.body.dataset.abertura='1'; else document.body.removeAttribute('data-abertura');
     // Quando a senha é de posto, quem aparece é a PESSOA que escreveu o nome na entrada.
     document.getElementById('whoName').textContent=(u.pessoa||u.nome);
@@ -32282,6 +32291,7 @@ return { criar };
   function inatLogado(){ try{ return !!JSON.parse(sessionStorage.getItem('zeluz_login')||'null'); }catch(e){ return false; } }
   function trancarApp(){
     if(_appTrancado || !inatLogado()) return;
+    if(typeof window.entrevistas155Fechar==='function')window.entrevistas155Fechar();
     _appTrancado=true;
     try{ var _av=document.getElementById('lockAviso'); if(_av && !ACESSO_TRAVA) _av.textContent=''; }catch(e2){} /* silencioso de propósito: enfeite de tela — o estado da trava continua certo */
     var u=(typeof usuarioAtual==='function'?usuarioAtual():null)||{};
@@ -32313,7 +32323,8 @@ return { criar };
     if(inp) inp.value=''; if(err) err.textContent='';
     _appTrancado=false;
     var el=document.getElementById('lockScreen'); if(el) el.style.display='none';
-    try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */
+    try{ sessionStorage.setItem('zeluz_login', JSON.stringify(u)); }catch(e){}
+    try{if(typeof window.entrevistas155Atualizar==='function')window.entrevistas155Atualizar();}catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */
     // DESTRANCAR NÃO É ENTRAR DE NOVO (Adriana, 08/ago/2026: "o almoço reiniciava").
     // Antes chamávamos aplicarLogin() sempre — e aplicarLogin joga quem tem escopo de atividade
     // direto em abrirAtividade(), que remonta a tela do zero. No almoço de 07/08 a tela trancou 4x
@@ -91564,6 +91575,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
   // Quem perde o acesso tem a tela trancada — nunca a sessão encerrada: o alarme do remédio continua por cima.
   function acessoTrancar(frase, trava){
     if(!inatLogado()) return false;
+    if(typeof window.entrevistas155Fechar==='function')window.entrevistas155Fechar();
     var mesma=!!(ACESSO_TRAVA && trava && ACESSO_TRAVA.tipo===trava.tipo);
     ACESSO_TRAVA=trava||{tipo:'acesso'};
     if(!_appTrancado){
@@ -91672,7 +91684,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
   }
   // ---- os campos que a tela muda, e como cada um aparece no antes → depois (a senha, NUNCA com os dígitos)
   var TIME_CAMPOS=[['nome','Nome'],['role','Papel'],['senha','Senha'],['entrada','Entrada (seg a sex)'],['saida','Saída (seg a sex)'],
-    ['entradaSab','Entrada no sábado'],['saidaSab','Saída no sábado'],['dias','Dias que trabalha'],['paginas','Telas'],['atividades','Atividades do Day Care']];
+    ['entradaSab','Entrada no sábado'],['saidaSab','Saída no sábado'],['dias','Dias que trabalha'],['paginas','Telas'],['atividades','Atividades do Day Care'],['entrevistas155','Entrevistas']];
   function timeValorNorm(campo, v){
     if(campo==='dias' || campo==='paginas' || campo==='atividades') return Array.isArray(v)?v.map(String).slice().sort():[];
     if(campo==='role') return String(v||'monitor').trim()||'monitor';
@@ -99447,6 +99459,8 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
 <script src="agenda-marcia/dados.js?v=2026-10-27-01"></script>
+<script src="agenda-marcia/entrevistas.js"></script>
+<script src="agenda-marcia/composta.js"></script>
 <script src="agenda-marcia/painel.js?v=2026-10-27-01"></script>
 <script src="marcia129/painel.js?v=2026-10-27-01"></script>
 <script src="marcia129/dados.js?v=2026-10-27-01"></script>

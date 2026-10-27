@@ -5,11 +5,13 @@
 })(typeof window!=='undefined'?window:null,function(){
   'use strict';
   function criar(op){
-    var painel=null,dados=null,calendarioDados=null,parar=null,geracao=0,removerCaches=null,sessaoId='',sessaoNome='';
+    var painel=null,dados=null,calendarioDados=null,entrevistaDados=null,parar=null,pararEntrevista=null,geracao=0,removerCaches=null,sessaoId='',sessaoNome='';
     function permitido(){try{var a=op.autor();return op.pode()===true&&!!a&&(!sessaoId||a.id===sessaoId&&a.nome===sessaoNome);}catch(_){return false;}}
     function fechar(){
       geracao+=1;
       if(parar){parar();parar=null;}
+      if(pararEntrevista){pararEntrevista();pararEntrevista=null;}
+      if(entrevistaDados){entrevistaDados.fechar();entrevistaDados=null;}
       if(removerCaches){removerCaches();removerCaches=null;}
       if(dados){dados.fechar();dados=null;}
       if(calendarioDados){calendarioDados.fechar();calendarioDados=null;}
@@ -25,24 +27,16 @@
       dados=op.dados.criar({db:op.db(),pode:permitido,autor:op.autor,fontesCadastro:op.fontesCadastro,helpers:op.helpers,
         ZeluzHospedesAtividades:op.hospedes,Presenca96:op.presenca,agora:op.agora});
       var fonte=dados;
-      if(op.agendaDados)calendarioDados=op.agendaDados.criar({db:op.db(),pode:permitido,autor:op.autor,agora:op.agora});
+      if(op.entrevistaDados&&typeof op.podeEntrevista==='function'&&op.podeEntrevista())entrevistaDados=op.entrevistaDados.criar({db:op.db(),pode:function(){return permitido()&&op.podeEntrevista()===true;},autor:op.autor,agora:op.agora});
+      if(op.agendaDados)calendarioDados=op.agendaDados.criar({db:op.db(),pode:permitido,podeEntrevista:function(){return permitido()&&typeof op.podeEntrevista==='function'&&op.podeEntrevista()===true;},autor:op.autor,agora:op.agora});
       var calendario=calendarioDados;
       function carregar(dia){
-        if(parar){parar();parar=null;}
-        var minha=++geracao;
-        return new Promise(function(resolve,reject){
-          var respondeu=false;
-          try{
-            parar=fonte.observar(dia,function(snapshot){
-              if(minha!==geracao)return;
-              if(!permitido()){fechar();return;}
-              // A observação já faz a primeira leitura; não duplicar com once().
-              if(painel)painel.atualizar(snapshot);
-              if(!respondeu&&snapshot.agenda&&snapshot.agenda.estado!=='carregando'){
-                respondeu=true;resolve(snapshot);
-              }
-            });
-          }catch(e){reject(e);}
+        if(parar){parar();parar=null;}if(pararEntrevista){pararEntrevista();pararEntrevista=null;}
+        var minha=++geracao, principal=null, entrevistas={estado:entrevistaDados?'carregando':'falha',itens:[]};
+        return new Promise(function(resolve,reject){var respondeu=false;
+          function publicar(){if(minha!==geracao||!principal)return;if(!permitido()){fechar();return;}var unido=Object.assign({},principal,{entrevistas:entrevistas});if(painel)painel.atualizar(unido);if(!respondeu&&principal.agenda&&principal.agenda.estado!=='carregando'){respondeu=true;resolve(unido)}}
+          if(entrevistaDados){try{pararEntrevista=entrevistaDados.observar(dia,function(s){if(minha!==geracao)return;entrevistas=s;publicar()})}catch(_){entrevistas={estado:'falha',itens:[]}}}
+          try{parar=fonte.observar(dia,function(s){if(minha!==geracao)return;principal=s;publicar()})}catch(e){reject(e)}
         });
       }
       painel=op.painel.montar(raiz,{dia:op.dia(),carregar:carregar,observarMes:function(mes,cb){
@@ -122,14 +116,14 @@
     root.marcia129Abrir=function(){
       root.marcia129Fechar();
       atual=criar({raiz:function(){return root.document.getElementById('marcia129Root');},db:function(){return typeof DB!=='undefined'?DB:null;},
-        pode:pode,autor:autor,fontesCadastro:fontesCadastro,observarCaches:observarCaches,
-        dados:root.ZeluzMarciaDados129,painel:root.ZeluzMarcia129,agendaDados:root.ZeluzAgendaMarcia,hospedes:root.ZeluzHospedesAtividades,presenca:root.ZeluzPresenca96Core,
+        pode:pode,podeEntrevista:function(){return typeof entrevistas155Pode==='function'&&entrevistas155Pode();},autor:autor,fontesCadastro:fontesCadastro,observarCaches:observarCaches,
+        dados:root.ZeluzMarciaDados129,painel:root.ZeluzMarcia129,agendaDados:root.ZeluzAgendaComposta150&&root.ZeluzAgendaMarciaEntrevistas?root.ZeluzAgendaComposta150(root.ZeluzAgendaMarcia,root.ZeluzAgendaMarciaEntrevistas):root.ZeluzAgendaMarcia,entrevistaDados:root.ZeluzAgendaMarciaEntrevistas,hospedes:root.ZeluzHospedesAtividades,presenca:root.ZeluzPresenca96Core,
         helpers:{pelDias:typeof pelDias==='function'?pelDias:null,pelGet:typeof pelGet==='function'?pelGet:null,pelExtra:typeof pelExtra==='function'?pelExtra:null,
           dcKey:typeof dcKey==='function'?dcKey:null,pelInativo:typeof pelInativo==='function'?pelInativo:null,ehMoradorZeluz:typeof ehMoradorZeluz==='function'?ehMoradorZeluz:null,
           pelKey:typeof pelKey==='function'?pelKey:null,diffMin:typeof diffMin==='function'?diffMin:null,
           atividadeNome:function(slug){var itens=typeof ATIVS_DC!=='undefined'&&Array.isArray(ATIVS_DC)?ATIVS_DC:[];var item=itens.filter(function(x){return x.s===slug;})[0];return item?item.t:slug;}},
         dia:function(){return root.ZeluzMarcia129.dataSP();},agora:function(){return Date.now();}});
-      var abriu=atual.abrir();
+      var abriu=atual.abrir();if(abriu&&typeof entrevistas155Pode==='function'){var u=typeof usuarioAtual==='function'?usuarioAtual():null;root.entrevistas155Ultimo=entrevistas155Pode()+'|'+String(u&&u.monId||u&&u.id||'')+'|'+String(u&&u.pessoa||u&&u.nome||'');}
       if(abriu&&typeof root.MutationObserver==='function'){
         observador=new root.MutationObserver(function(){if(!atual||!atual.sessaoValida())root.marcia129Fechar();});
         observador.observe(root.document.body,{attributes:true,attributeFilter:['data-role']});
