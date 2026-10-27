@@ -196,7 +196,7 @@ async function executar() {
   raiz7.handlers.submit({ target: formAvaliacao('av1', { expectedRevision: '1', 'vacina-conferido': false }), preventDefault() {} });
   await adiar(); await adiar();
   assert.equal(enviosAvaliacao[1].expectedRevision, 1, 'segunda edição envia revisão 1');
-  assert.equal(enviosAvaliacao[1].vacina.conferido, false, 'check pode ser desmarcado e salvo rapidamente');
+  assert.equal(enviosAvaliacao[1].vacina.conferido, true, 'cuidados somente leitura preservam conferência existente');
 
   const raiz8 = new RaizFake();
   M.montar(raiz8, { dia: '2026-10-24', carregar() { return Promise.resolve(snap('2026-10-24', { agenda: bloco([avaliacao('av2')]) })); }, salvarTarefa() { return Promise.reject(); }, salvarAvaliacao() { return Promise.resolve({ id: 'errado' }); } });
