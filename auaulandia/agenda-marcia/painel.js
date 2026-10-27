@@ -10,7 +10,7 @@
   function diaValido(v) { if (!/^\d{4}-\d{2}-\d{2}$/.test(String(v||''))) return false; var p=v.split('-').map(Number), d=new Date(Date.UTC(p[0],p[1]-1,p[2],12)); return d.getUTCFullYear()===p[0]&&d.getUTCMonth()===p[1]-1&&d.getUTCDate()===p[2]; }
   function hoje() { var a=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()),p={}; a.forEach(function(x){p[x.type]=x.value;}); return p.year+'-'+p.month+'-'+p.day; }
   function inteiro(v) { var n=Number(v); return Number.isInteger(n)&&n>=0?n:0; }
-  function prev(v) { return {conferido:!!(v&&v.conferido===true)}; }
+  function prev(v) { var r={conferido:!!(v&&v.conferido===true)};if(v&&['em_dia','antes','na_zeluz','a_conferir'].indexOf(v.plano)>=0){r.plano=v.plano;r.detalhe=txt(v.detalhe,300);}return r; }
   function promessaSegura(fn) { try { return Promise.resolve(fn()); } catch (e) { return Promise.reject(e); } }
   function telefoneBR(v) { var d=String(v==null?'':v).replace(/\D/g,'');if((d.length===12||d.length===13)&&d.slice(0,2)==='55')return'+'+d;if(d.length===10||d.length===11)return'+55'+d;return''; }
   function whatsapp(v) { var t=telefoneBR(v);return t?'https://wa.me/'+t.slice(1):''; }
@@ -52,6 +52,7 @@
     var raca=txt(v.raca,60),canonica='';try{canonica=typeof canonizarRaca==='function'?txt(canonizarRaca(raca),60):'';}catch(e){}if(canonica)raca=canonica;
     var informadoTelefone=txt(v.telefone,30),limpo={hora:txt(v.hora,5),nome:txt(v.nome,60),raca:raca,tutor:txt(v.tutor,80),telefone:telefoneBR(v.telefone),vacina:prev(v.vacina),vermifugo:prev(v.vermifugo),carrapaticida:prev(v.carrapaticida),experiencia:txt(v.experiencia,300),saude:txt(v.saude,300),observacoes:txt(v.observacoes,500),pagamento:{recebido:!!(v.pagamento&&v.pagamento.recebido===true),valorCent:v.pagamento&&v.pagamento.recebido===true?8000:0}};
     var e=[]; if(!limpo.nome)e.push('Informe o nome.'); if(!limpo.raca)e.push('Informe a raça.'); if(!limpo.tutor)e.push('Informe o tutor.'); if(!limpo.telefone)e.push(informadoTelefone?'Informe um telefone válido com DDD.':'Informe o telefone do tutor.'); if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(limpo.hora))e.push('Informe um horário válido.');
+    if((limpo.vacina.plano==='antes'||limpo.vacina.plano==='na_zeluz')&&!limpo.vacina.detalhe)e.push('Informe quais vacinas estão previstas.');
     return {valido:!e.length,erros:e,valor:limpo};
   }
   function cliente(v) { v=v&&typeof v==='object'?v:{}; return {id:txt(v.id,100),nome:txt(v.nome,60),raca:txt(v.raca,60),tutor:txt(v.tutor,80),telefone:telefoneBR(v.telefone)}; }
@@ -60,12 +61,12 @@
   function formHTML(d,id,erro,ocupado,podeEntrevista) {
     d=d||{}; var suf=id||'novo', pg=!!(d.pagamento&&d.pagamento.recebido===true);
     function campo(n,rot,ob,max,tipo){return '<label class="cad-lb" for="am-'+n+'-'+esc(suf)+'">'+rot+(ob?' *':'')+'</label><input class="cad-in" id="am-'+n+'-'+esc(suf)+'" name="'+n+'" '+(n==='raca'?'list="am-racas" ':'')+(ob?'required ':'')+'maxlength="'+max+'" type="'+(tipo||'text')+'" value="'+esc(d[n]||'')+'">';}
-    function check(n,rot){return '<label class="am131__check"><input name="'+n+'-conferido" type="checkbox"'+(d[n]&&d[n].conferido?' checked':'')+'><span>'+rot+'</span></label>';}
+    function check(n,rot){var v=d[n]||{},plano=v.plano||(v.conferido?'em_dia':'a_conferir'),ops=[['em_dia','Em dia'],['antes','Vai fazer antes da avaliação'],['na_zeluz','Vai fazer na Zêluz'],['a_conferir','A conferir']];return '<div><label class="cad-lb" for="am-'+n+'-plano-'+esc(suf)+'">'+rot+'</label><select class="cad-in" id="am-'+n+'-plano-'+esc(suf)+'" name="'+n+'-plano"'+(id&&!v.plano?' data-plano-legado="'+plano+'"':'')+'>'+ops.map(function(o){return '<option value="'+o[0]+'"'+(plano===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select><label class="cad-lb" for="am-'+n+'-detalhe-'+esc(suf)+'">'+(n==='vacina'?'Quais vacinas?':'Produto previsto (opcional)')+'</label><input class="cad-in" id="am-'+n+'-detalhe-'+esc(suf)+'" name="'+n+'-detalhe" maxlength="300" value="'+esc(v.detalhe||'')+'"></div>'; }
     var contato=id?contatoHTML(d.telefone,id,d.tipo):'';
     var seletor=id?'<input type="hidden" name="tipo" value="'+(d.tipo==='entrevista'?'entrevista':'avaliacao')+'">':'<label class="cad-lb" for="am-tipo-novo">Tipo de agendamento</label><select class="cad-in" id="am-tipo-novo" name="tipo"><option value="avaliacao"'+(d.tipo!=='entrevista'?' selected':'')+'>Avaliação</option>'+(podeEntrevista!==false?'<option value="entrevista"'+(d.tipo==='entrevista'?' selected':'')+'>Entrevista de emprego</option>':'')+'</select>';
     if(d.tipo==='entrevista')return '<fieldset class="am131__campos"'+(ocupado?' disabled':'')+'>'+seletor+'<div class="am131__grade">'+campo('nome','Nome do candidato',true,60)+campo('vaga','Vaga',true,140)+campo('telefone','Telefone do candidato',true,24,'tel')+campo('hora','Horário',true,5,'time')+'</div>'+contato+(erro?'<p class="am131__erro" role="alert">'+esc(erro)+'</p>':'')+'<button class="btn btn-primary am131__salvar" type="submit">'+(ocupado?'Salvando…':id?'Salvar alterações':'Agendar entrevista')+'</button></fieldset>';
     return '<fieldset class="am131__campos"'+(ocupado?' disabled':'')+'>'+seletor+'<div class="am131__grade">'+campo('nome','Nome',true,60)+campo('raca','Raça',true,60)+campo('tutor','Tutor',true,80)+campo('telefone','Telefone do tutor',true,24,'tel')+campo('hora','Horário',true,5,'time')+'</div>'+contato
-      +'<div class="am131__prev">'+check('vacina','Vacina conferida')+check('vermifugo','Vermífugo conferido')+check('carrapaticida','Carrapaticida conferido')+'</div>'
+      +'<div class="am131__prev">'+check('vacina','Vacina')+check('vermifugo','Vermífugo')+check('carrapaticida','Carrapaticida')+'</div><p class="hint">Previsto na Zêluz não significa aplicado; o cuidado realizado tem seu próprio registro.</p>'
       +'<label class="cad-lb" for="am-experiencia-'+esc(suf)+'">Experiência anterior em creche (opcional)</label><textarea class="cad-in" id="am-experiencia-'+esc(suf)+'" name="experiencia" maxlength="300" rows="2">'+esc(d.experiencia||'')+'</textarea>'
       +'<label class="cad-lb" for="am-saude-'+esc(suf)+'">Saúde — informação útil para a avaliação (opcional)</label><textarea class="cad-in" id="am-saude-'+esc(suf)+'" name="saude" maxlength="300" rows="2">'+esc(d.saude||'')+'</textarea>'
       +'<label class="cad-lb" for="am-observacoes-'+esc(suf)+'">Observações (opcional)</label><textarea class="cad-in" id="am-observacoes-'+esc(suf)+'" name="observacoes" maxlength="500" rows="2">'+esc(d.observacoes||'')+'</textarea>'
@@ -73,7 +74,7 @@
       +(erro?'<p class="am131__erro" role="alert">'+esc(erro)+'</p>':'')
       +'<button class="btn btn-primary am131__salvar" type="submit">'+(ocupado?'Salvando…':id?'Salvar alterações':'Agendar avaliação')+'</button></fieldset>';
   }
-  function lerForm(f) { function q(n){return f.querySelector('[name="'+n+'"]')||{value:'',checked:false};} var tipo=q('tipo');if(tipo&&tipo.value==='entrevista')return {tipo:'entrevista',nome:q('nome').value,vaga:q('vaga')?q('vaga').value:'',telefone:q('telefone').value,hora:q('hora').value}; return {nome:q('nome').value,raca:q('raca').value,tutor:q('tutor').value,telefone:q('telefone').value,hora:q('hora').value,vacina:{conferido:q('vacina-conferido').checked},vermifugo:{conferido:q('vermifugo-conferido').checked},carrapaticida:{conferido:q('carrapaticida-conferido').checked},experiencia:q('experiencia').value,saude:q('saude').value,observacoes:q('observacoes').value,pagamento:{recebido:q('pagamento-recebido').checked,valorCent:q('pagamento-recebido').checked?8000:0}}; }
+  function lerForm(f) { function q(n){return f.querySelector('[name="'+n+'"]')||{value:'',checked:false};} function cuidado(n){var el=f.querySelector('[name="'+n+'-plano"]');if(!el)return {conferido:q(n+'-conferido').checked};var p=el.value,det=q(n+'-detalhe').value,legado=typeof el.getAttribute==='function'?el.getAttribute('data-plano-legado'):null;if(legado===p&&!txt(det,300))return {conferido:p==='em_dia'};return {conferido:p==='em_dia',plano:p,detalhe:det};} var tipo=q('tipo');if(tipo&&tipo.value==='entrevista')return {tipo:'entrevista',nome:q('nome').value,vaga:q('vaga')?q('vaga').value:'',telefone:q('telefone').value,hora:q('hora').value}; return {nome:q('nome').value,raca:q('raca').value,tutor:q('tutor').value,telefone:q('telefone').value,hora:q('hora').value,vacina:cuidado('vacina'),vermifugo:cuidado('vermifugo'),carrapaticida:cuidado('carrapaticida'),experiencia:q('experiencia').value,saude:q('saude').value,observacoes:q('observacoes').value,pagamento:{recebido:q('pagamento-recebido').checked,valorCent:q('pagamento-recebido').checked?8000:0}}; }
   function ackValido(a,pedido) {
     if(!a||a.ok!==true||a.acao!==pedido.acao||a.dia!==pedido.dia||!txt(a.id,100)||!Number.isInteger(a.revisao)||a.revisao<1||!txt(a.quem,80)||!txt(a.quando,80)||!a.item)return false;
     var x=item(a.item); if(x.id!==txt(a.id,100)||x.dia!==pedido.dia||x.revisao!==a.revisao||!x.fingerprint)return false;
@@ -81,7 +82,7 @@
     var v=pedido.avaliacao;
     if(v.tipo==='entrevista')return x.tipo==='entrevista'&&x.nome===v.nome&&x.vaga===v.vaga&&x.telefone===v.telefone&&x.hora===v.hora;
     return x.hora===v.hora&&x.nome===v.nome&&x.raca===v.raca&&x.tutor===v.tutor&&x.telefone===v.telefone
-      &&x.vacina.conferido===v.vacina.conferido&&x.vermifugo.conferido===v.vermifugo.conferido&&x.carrapaticida.conferido===v.carrapaticida.conferido
+      &&['vacina','vermifugo','carrapaticida'].every(function(k){return x[k].conferido===v[k].conferido&&(!v[k].plano||(x[k].plano===v[k].plano&&x[k].detalhe===v[k].detalhe));})
       &&x.experiencia===v.experiencia&&x.saude===v.saude&&x.observacoes===v.observacoes
       &&x.pagamento.recebido===v.pagamento.recebido&&x.pagamento.valorCent===v.pagamento.valorCent;
   }

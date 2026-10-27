@@ -229,7 +229,7 @@
   }
   function prevCheckConferencia(v, dia) {
     v = objeto(v);
-    if (typeof v.conferido === 'boolean') return { conferido: v.conferido };
+    if (typeof v.conferido === 'boolean') {var out={conferido:v.conferido};if(['em_dia','antes','na_zeluz','a_conferir'].indexOf(v.plano)>=0){out.plano=v.plano;out.detalhe=texto(v.detalhe);}return out;}
     var legado = prevConferencia(v, dia);
     return { conferido: !!legado && legado.situacao === 'em-dia' };
   }
@@ -249,12 +249,12 @@
   function fingerprintAgenda131(reg) {
     reg = objeto(reg);
     var a = objeto(objeto(reg.det).avaliacao129), pg = objeto(a.pagamento);
-    return hash(JSON.stringify({
+    var f={
       valor: texto(reg.valor), hora: texto(reg.hora), nome: texto(a.nome), raca: texto(a.raca), tutor: texto(a.tutor),
       vacina: objeto(a.vacina).conferido, vermifugo: objeto(a.vermifugo).conferido, carrapaticida: objeto(a.carrapaticida).conferido,
       experiencia: texto(a.experiencia), saude: texto(a.saude), observacoes: texto(a.observacoes),
       pagamento: { recebido: pg.recebido, valorPagoCentavos: pg.valorPagoCentavos, autorId: texto(pg.autorId), ts: Number(pg.ts) || 0 }
-    }));
+    };if(['vacina','vermifugo','carrapaticida'].some(function(k){return !!objeto(a[k]).plano;}))f.planos=['vacina','vermifugo','carrapaticida'].map(function(k){var v=objeto(a[k]);return [texto(v.plano),texto(v.detalhe)];});return hash(JSON.stringify(f));
   }
   function conferenciaEfetiva(deps, dia, p, regAvaliacao, persistida, fontePronta) {
     var basePrev = prevencao(deps, p, dia), baseDet = detalhesAvaliacao(deps, p, regAvaliacao), r = objeto(persistida);
@@ -283,7 +283,7 @@
       quando: origemAutoritativa ? (texto(origem.quando) || quandoBR(origem.ts)) : (fontePronta ? (texto(r.quando) || quandoBR(r.ts)) : '')
     };
   }
-  function prevAgenda(v) { return { conferido: !!(v && v.conferido) }; }
+  function prevAgenda(v) { var r={conferido:!!(v&&v.conferido)};if(v&&v.plano){r.plano=v.plano;r.detalhe=texto(v.detalhe);}return r; }
   function observacoesConferencia(p, conf) {
     var out = [];
     function por(rotulo, v) { if (texto(v)) out.push({ rotulo: rotulo, valor: texto(v) }); }
@@ -338,7 +338,7 @@
   }
   function prevParaGravar(atual, novo) {
     atual = objeto(atual);
-    var out = { conferido: novo.conferido === true };
+    var out = copiar(atual); if(typeof out.conferido!=='boolean')out.conferido=novo.conferido===true;
     var situacao = texto(atual.situacao), dataISO = texto(atual.dataISO);
     /* Migração sem perda: conserva a data antiga válida, mas nunca aceita ou cria data nova. */
     if (['em-dia', 'vencido', 'conferir'].indexOf(situacao) >= 0 && (!dataISO || dataValida(dataISO))) {

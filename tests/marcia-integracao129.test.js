@@ -205,10 +205,10 @@ function setup(opcoes = {}) {
     quantidades: { estado: 'pronto' }, faltas: { estado: 'pronto', itens: [] }, novatos: { estado: 'pronto', itens: [] }, comida: { estado: 'pronto', itens: [] }, saude: { estado: 'pronto', itens: [] }, tempos: { estado: 'pronto', itens: [] }, tarefas: { estado: 'pronto', itens: [] }
   }, { dia: DIA, podeSalvarAvaliacao: true });
   assert(incompleteHtml.includes('Dados a conferir'), 'a required prevention value left unknown remains visibly incomplete');
-  assert(incompleteHtml.includes('name="vacina-conferido" type="checkbox" checked'), 'the known check remains checked');
-  assert(incompleteHtml.includes('name="vermifugo-conferido" type="checkbox"'), 'an unknown check remains visible');
-  assert(!incompleteHtml.includes('type="date"') && !incompleteHtml.includes('name="vacina-data"'), 'prevention uses checkboxes and asks for no dates');
-  assert(incompleteHtml.includes('name="vermifugo-conferido" type="checkbox"'), 'required unknown values stay exposed rather than hidden');
+  assert(incompleteHtml.includes('Em dia'), 'known care remains visible');
+  assert(incompleteHtml.includes('A conferir'), 'unknown care remains visible');
+  assert(!incompleteHtml.includes('type="date"') && !incompleteHtml.includes('name="vacina-data"'), 'prevention is read-only and asks for no dates');
+  assert(!incompleteHtml.includes('name="vermifugo-conferido"'), 'care has no editable checkbox');
   const toneHtml = Painel.desenhar({ dia: DIA, agenda: { estado: 'pronto', itens: [] }, quantidades: { estado: 'pronto' },
     faltas: { estado: 'pronto', itens: [{ id: 'f1', nome: 'Pet falta fictícia', situacao: 'Falta sem aviso' }] },
     novatos: { estado: 'pronto', itens: [{ id: 'n1', nome: 'Pet novo fictício' }] },
@@ -286,28 +286,28 @@ function setup(opcoes = {}) {
   assert(bancoFlow.writes.some(path => path === 'daycare/avaliacoes-gestao/' + DIA + '/a1'), 'valid form submits via provider transaction');
   assert(!htmlRoot.innerHTML.includes('Não foi possível salvar a conferência'), 'the real UI accepts the provider ACK');
   assert(htmlRoot.innerHTML.includes('role="status">Conferência salva · Gestora Offline · '), 'a saved assessment reports accessible success feedback');
-  assert(htmlRoot.innerHTML.includes('name="vacina-conferido" type="checkbox" checked') && htmlRoot.innerHTML.includes('name="vermifugo-conferido" type="checkbox" checked') && htmlRoot.innerHTML.includes('name="carrapaticida-conferido" type="checkbox" checked'), 'a complete assessment keeps all three checks available after save');
-  assert(!htmlRoot.innerHTML.includes('Dados a conferir'), 'complete checks do not leave a stale incomplete summary');
+  assert(!htmlRoot.innerHTML.includes('name="vacina-conferido"'), 'cuidados são somente leitura');
+  assert(htmlRoot.innerHTML.includes('A conferir'), 'estado desconhecido continua visível');
   assert.deepEqual(bancoFlow.valores['daycare/dashboard/' + DIA], dashboardAntes, 'assessment metadata must not mutate the source assessment');
   const metaAvaliacaoPath = 'daycare/avaliacoes-gestao/' + DIA + '/a1';
   assert.equal(bancoFlow.valores[metaAvaliacaoPath].revisao, 1);
   assert.equal(bancoFlow.valores[metaAvaliacaoPath].autorId, flowAutor.id);
-  assert.equal(bancoFlow.valores[metaAvaliacaoPath].vacina.conferido, true);
-  assert.equal(bancoFlow.valores[metaAvaliacaoPath].vermifugo.conferido, true);
-  assert(htmlRoot.innerHTML.includes('name="vacina-conferido" type="checkbox" checked'), 'provider ACK leaves the confirmed checkbox checked');
-  assert(htmlRoot.innerHTML.includes('name="vermifugo-conferido" type="checkbox" checked'), 'provider ACK leaves the checked value available to edit');
+  assert.equal(bancoFlow.valores[metaAvaliacaoPath].vacina.conferido, false);
+  assert.equal(bancoFlow.valores[metaAvaliacaoPath].vermifugo.conferido, false);
+  assert(htmlRoot.innerHTML.includes('A conferir'), 'provider ACK mantém cuidado desconhecido visível');
+  assert(!htmlRoot.innerHTML.includes('name="vermifugo-conferido"'), 'provider ACK mantém cuidado somente leitura');
   const writesAtRevision1 = bancoFlow.writes.length;
   await assert.rejects(flowOpts.salvarAvaliacao({ dia: DIA, id: avaliacaoFormMatch[1], tutor: 'Tutor Fictício', vacina: { conferido: true }, vermifugo: { conferido: true }, carrapaticida: { conferido: true }, expectedRevision: 0 }), /AVALIACAO_DESATUALIZADA/);
   assert.equal(bancoFlow.writes.length, writesAtRevision1, 'stale revision is rejected before another transaction');
   formValues.expectedRevision = '1';
-  formValues['vacina-conferido'] = false;
-  formValues['vermifugo-conferido'] = true;
+  formValues.observacoes = 'Observação revisada';
   htmlRoot.handlers.submit({ target: formReal, preventDefault() {} });
   await new Promise(resolve => setImmediate(resolve)); await new Promise(resolve => setImmediate(resolve)); await new Promise(resolve => setImmediate(resolve));
   assert.equal(bancoFlow.valores[metaAvaliacaoPath].revisao, 2, 'second UI save uses revision 1');
-  assert.equal(bancoFlow.valores[metaAvaliacaoPath].vacina.conferido, false, 'second save can uncheck a previously confirmed item');
-  assert.equal(bancoFlow.valores[metaAvaliacaoPath].vermifugo.conferido, true);
-  assert(/name="vacina-conferido" type="checkbox"(?! checked)/.test(htmlRoot.innerHTML), 'unchecked state is reflected in the form after the second ACK');
+  assert.equal(bancoFlow.valores[metaAvaliacaoPath].vacina.conferido, false, 'segunda edição preserva cuidado');
+  assert.equal(bancoFlow.valores[metaAvaliacaoPath].observacoes,'Observação revisada');
+  assert.equal(bancoFlow.valores[metaAvaliacaoPath].vermifugo.conferido, false);
+  assert(!htmlRoot.innerHTML.includes('name="vacina-conferido"'), 'segunda confirmação continua somente leitura');
   assert(!htmlRoot.innerHTML.includes('Não foi possível salvar a conferência'));
   assert.deepEqual(bancoFlow.valores['daycare/dashboard/' + DIA], dashboardAntes, 'second save still preserves master record');
   fluxo.fechar();

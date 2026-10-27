@@ -73,8 +73,12 @@
   }
   function prev(v, codigo) {
     if (!v || typeof v !== 'object' || Array.isArray(v) || typeof v.conferido !== 'boolean') throw new Error(codigo + '_INVALIDO');
-    return { conferido: v.conferido };
+    var r={conferido:v.conferido};
+    if(proprio(v,'plano')){if(['em_dia','antes','na_zeluz','a_conferir'].indexOf(v.plano)<0)throw new Error(codigo+'_PLANO_INVALIDO');if(v.conferido!==(v.plano==='em_dia'))throw new Error(codigo+'_PLANO_INCONSISTENTE');r.plano=v.plano;r.detalhe=campo(v.detalhe,300,false,codigo+'_DETALHE');if(codigo==='VACINA'&&(r.plano==='antes'||r.plano==='na_zeluz')&&!r.detalhe)throw new Error('VACINA_DETALHE_OBRIGATORIO');}
+    return r;
   }
+  function prevLido(v){v=objeto(v);var r={conferido:v.conferido===true};if(['em_dia','antes','na_zeluz','a_conferir'].indexOf(v.plano)>=0){r.plano=v.plano;r.detalhe=texto(v.detalhe);}return r;}
+  function mesclarPrev(atual,novo){var a=objeto(atual),r=Object.assign({},a,novo);if(a.plano&&!novo.plano){r.conferido=a.conferido===true;}return r;}
   function normalizarCampos(cmd) {
     return {
       nome: campo(cmd.nome, 80, true, 'NOME'), raca: campo(cmd.raca, 80, true, 'RACA'),
@@ -168,8 +172,8 @@
          o bloco interno não pode ressuscitar nome/raça/hora antigos. */
       nome: marcada ? v.nome : (texto(a.nome) || v.nome), raca: marcada ? v.raca : (texto(a.raca) || v.raca),
       tutor: texto(a.tutor), telefone: telefoneBR(a.telefone, false), hora: marcada ? texto(reg.hora) : (texto(a.hora) || texto(reg.hora)),
-      vacina: { conferido: !!objeto(a.vacina).conferido }, vermifugo: { conferido: !!objeto(a.vermifugo).conferido },
-      carrapaticida: { conferido: !!objeto(a.carrapaticida).conferido },
+      vacina: prevLido(a.vacina), vermifugo: prevLido(a.vermifugo),
+      carrapaticida: prevLido(a.carrapaticida),
       experiencia: texto(a.experiencia), saude: texto(a.saude), observacoes: texto(a.observacoes),
       pagamento: pagamentoSeguro(a.pagamento), revisao: Number(a.revisao) || 0,
       autorId: texto(a.autorId), autorNome: texto(a.autorNome), ts: Number(a.ts) || 0, quando: texto(a.quando),
@@ -179,7 +183,7 @@
   }
   function serialCampos(d) {
     var canc = objeto(d.cancelamento);
-    return JSON.stringify({
+    var serial={
       nome: d.nome, raca: d.raca, tutor: d.tutor, telefone: d.telefone, hora: d.hora,
       vacina: !!d.vacina.conferido, vermifugo: !!d.vermifugo.conferido, carrapaticida: !!d.carrapaticida.conferido,
       experiencia: d.experiencia, saude: d.saude, observacoes: d.observacoes,
@@ -187,7 +191,9 @@
         autorId: d.pagamento.autorId, ts: d.pagamento.ts },
       estado: d.estado, cancelamento: { ativo: canc.ativo === true, autorId: texto(canc.autorId),
         ts: Number.isFinite(canc.ts) ? canc.ts : 0, motivo: texto(canc.motivo) }
-    });
+    };
+    if(d.vacina.plano||d.vermifugo.plano||d.carrapaticida.plano)serial.planos=[d.vacina,d.vermifugo,d.carrapaticida].map(function(v){return [v.plano||'',v.detalhe||''];});
+    return JSON.stringify(serial);
   }
   function fingerprintRegistro(reg) {
     var d = dados131(reg);
@@ -373,7 +379,7 @@
     function salvar(cmd) {
       cmd = cmd || {};
       var dia = texto(cmd.dia), id = texto(cmd.id), token = texto(cmd.requestId || cmd.token), acao = texto(cmd.acao) || (id ? 'editar' : 'criar');
-      var entradaCampos = cmd.avaliacao && typeof cmd.avaliacao === 'object' ? cmd.avaliacao : cmd, campos = null, pagamento = null;
+      var entradaCampos = cmd.avaliacao && typeof cmd.avaliacao === 'object' ? cmd.avaliacao : cmd, campos = null, pagamento = null, cuidadosGravados = null;
       var mutacaoCadastro = acao === 'criar' || acao === 'editar', editando = acao !== 'criar';
       if (!dataValida(dia)) return Promise.reject(new Error('DIA_INVALIDO'));
       if (['criar', 'editar', 'cancelar', 'reativar'].indexOf(acao) < 0 || (acao === 'criar' && id) || (acao !== 'criar' && !id)) return Promise.reject(new Error('ACAO_INVALIDA'));
@@ -404,7 +410,7 @@
         if (autor.id !== autorInicio.id || autor.nome !== autorInicio.nome) { motivo = 'AUTORIA_ALTERADA'; return; }
         var existe = atual && typeof atual === 'object' && !Array.isArray(atual), regAtual = objeto(atual), dAtual = dados131(regAtual);
         if (!editando && existe) {
-          if (texto(objeto(objeto(regAtual.det).avaliacao129).criacaoToken) === tokenSalvo) { motivo = ''; idempotente = true; return regAtual; }
+          if (texto(objeto(objeto(regAtual.det).avaliacao129).criacaoToken) === tokenSalvo) { motivo = ''; idempotente = true; cuidadosGravados={vacina:campos.vacina,vermifugo:campos.vermifugo,carrapaticida:campos.carrapaticida}; return regAtual; }
           motivo = 'AGENDAMENTO_DESATUALIZADO'; return;
         }
         if (editando && (!existe || dAtual.revisao !== revisaoEsperada || fingerprintRegistro(regAtual) !== base)) {
@@ -426,11 +432,12 @@
           a = {
             versao: 133, agendaMarcia: true, criacaoToken: texto(aAtual.criacaoToken) || tokenSalvo,
             nome: campos.nome, raca: campos.raca, tutor: campos.tutor, telefone: campos.telefone, hora: campos.hora,
-            vacina: campos.vacina, vermifugo: campos.vermifugo, carrapaticida: campos.carrapaticida,
+            vacina: mesclarPrev(aAtual.vacina,campos.vacina), vermifugo: mesclarPrev(aAtual.vermifugo,campos.vermifugo), carrapaticida: mesclarPrev(aAtual.carrapaticida,campos.carrapaticida),
             experiencia: campos.experiencia, saude: campos.saude, observacoes: campos.observacoes,
             pagamento: pg, cancelamento: copiar(aAtual.cancelamento), projecao: copiar(aAtual.projecao),
             revisao: revisao, autorId: autor.id, autorNome: autor.nome, ts: rel.ts, quando: rel.quando, historico: hist
           };
+          cuidadosGravados={vacina:prevLido(a.vacina),vermifugo:prevLido(a.vermifugo),carrapaticida:prevLido(a.carrapaticida)};
           if (a.cancelamento === undefined) delete a.cancelamento;
           if (a.projecao === undefined) delete a.projecao;
           reg.valor = campos.nome + ' / ' + campos.raca; reg.hora = campos.hora;
@@ -439,7 +446,7 @@
           a.autorId = autor.id; a.autorNome = autor.nome; a.ts = rel.ts; a.quando = rel.quando; a.historico = hist;
           a.cancelamento = aplicarCancelamento(aAtual.cancelamento, acao === 'cancelar', motivoCancelamento, autor, rel);
         }
-        hist.push({ revisao: revisao, acao: acao, autorId: autor.id, autorNome: autor.nome, ts: rel.ts });
+        var eventoHist={ revisao: revisao, acao: acao, autorId: autor.id, autorNome: autor.nome, ts: rel.ts };if(mutacaoCadastro)eventoHist.cuidados=copiar(cuidadosGravados);hist.push(eventoHist);
         a.historico = hist; a.estado = a.cancelamento && a.cancelamento.ativo === true ? 'cancelada' : (pagamentoSeguro(a.pagamento).recebido ? 'confirmada' : 'pendente');
         det.agendaMarcia = true; det.fora_do_cadastro = true; det.avaliacao129 = a;
         reg.quem = autor.nome; reg.ts = rel.ts; reg.det = det;
@@ -477,7 +484,7 @@
       })).then(function (res) {
         if (!res || res.committed !== true) throw new Error(motivo || 'AGENDAMENTO_DESATUALIZADO');
         var reg = res.snapshot && typeof res.snapshot.val === 'function' ? objeto(res.snapshot.val()) : {}, item = itemDeRegistro(dia, id, reg), dConfirmado = dados131(reg);
-        if (!dConfirmado.agendaMarcia || (mutacaoCadastro && (item.nome !== campos.nome || item.raca !== campos.raca || item.telefone !== campos.telefone || item.hora !== campos.hora))) throw new Error('CONFIRMACAO_INVALIDA');
+        if (!dConfirmado.agendaMarcia || (mutacaoCadastro && (item.nome !== campos.nome || item.raca !== campos.raca || item.telefone !== campos.telefone || item.hora !== campos.hora || !['vacina','vermifugo','carrapaticida'].every(function(k){return item[k].conferido===cuidadosGravados[k].conferido&&(!cuidadosGravados[k].plano||(item[k].plano===cuidadosGravados[k].plano&&item[k].detalhe===cuidadosGravados[k].detalhe));})))) throw new Error('CONFIRMACAO_INVALIDA');
         if (!cache[dia]) cache[dia] = {}; cache[dia][id] = copiar(reg);
         function ack(ok, itemFinal) {
           var final = itemFinal || item;

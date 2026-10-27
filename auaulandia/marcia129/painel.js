@@ -65,13 +65,13 @@
       var b = itemBase(x);
       function prev(v) {
         v = v && typeof v === 'object' ? v : {};
-        return { conferido: v.conferido === true };
+        var out={conferido:v.conferido===true};if(['em_dia','antes','na_zeluz','a_conferir'].indexOf(v.plano)>=0){out.plano=v.plano;out.detalhe=texto(v.detalhe);}return out;
       }
       var c = x.conferencia && typeof x.conferencia === 'object' ? x.conferencia : {};
       function prevComConferencia(nome) {
         var visual = x[nome] && typeof x[nome] === 'object' ? x[nome] : {};
         var canonico = c[nome] && typeof c[nome] === 'object' ? c[nome] : {};
-        return prev({ conferido: typeof canonico.conferido === 'boolean' ? canonico.conferido : visual.conferido });
+        return prev(Object.assign({}, visual, canonico, { conferido: typeof canonico.conferido === 'boolean' ? canonico.conferido : visual.conferido }));
       }
       return Object.assign(b, {
         codigoOrigem: texto(x.codigoOrigem), hora: texto(x.hora),
@@ -157,7 +157,7 @@
   }
 
   function prevHTML(rotulo, valor) {
-    return '<li><span>' + esc(rotulo) + '</span><strong class="marcia129__situacao marcia129__situacao--' + (valor.conferido ? 'conferido' : 'conferir') + '">' + (valor.conferido ? 'Conferido' : 'A conferir') + '</strong></li>';
+    var plano=valor.plano||(valor.conferido?'em_dia':'a_conferir'),rot=({em_dia:'Em dia',antes:'Vai fazer antes da avaliação',na_zeluz:'Vai fazer na Zêluz',a_conferir:'A conferir'})[plano]||'A conferir';return '<li><span>'+esc(rotulo)+'</span><span class="marcia129__situacao marcia129__situacao--'+(plano==='em_dia'?'conferido':'conferir')+'">'+esc(rot)+'</span>'+(valor.detalhe?'<small>'+esc(valor.detalhe)+'</small>':'')+(!valor.plano&&valor.conferido?'<small>origem não registrada</small>':'')+'</li>';
   }
 
   function telefoneHTML(item) {
@@ -177,11 +177,10 @@
     return '<div class="marcia129__avaliacoes">' + bloco.itens.map(function (x) {
       var obs = x.observacoes.length ? '<dl class="marcia129__obs">' + x.observacoes.map(function (o) { return '<div><dt>' + esc(o.rotulo || 'Observação') + '</dt><dd>' + esc(o.valor || 'A conferir') + '</dd></div>'; }).join('') + '</dl>' : '';
       var completa = conferenciaCompleta(x, dia);
-      function campoPrev(nome, rotulo, p) { return '<label class="marcia129__prev-check" for="marcia129-' + nome + '-' + esc(x.id) + '"><input id="marcia129-' + nome + '-' + esc(x.id) + '" name="' + nome + '-conferido" type="checkbox"' + (p.conferido ? ' checked' : '') + '><span>' + rotulo + '</span></label>'; }
       var form = '';
       if (podeSalvar) {
         var dados = '<details class="marcia129__editar"' + (!x.tutor ? ' open' : '') + '><summary><span>Corrigir dados da avaliação</span><span class="marcia129__chevron" aria-hidden="true">⌄</span></summary><div class="marcia129__editar-corpo"><label class="cad-lb" for="marcia129-tutor-' + esc(x.id) + '">Tutor *</label><input class="cad-in" id="marcia129-tutor-' + esc(x.id) + '" name="tutor" required value="' + esc(x.tutor) + '"><label class="cad-lb" for="marcia129-experiencia-' + esc(x.id) + '">Experiência anterior em creche</label><textarea class="cad-in" id="marcia129-experiencia-' + esc(x.id) + '" name="experiencia" rows="2">' + esc(x.conferencia.experiencia) + '</textarea><label class="cad-lb" for="marcia129-saude-' + esc(x.id) + '">Doença ou restrição informada</label><textarea class="cad-in" id="marcia129-saude-' + esc(x.id) + '" name="saude" rows="2">' + esc(x.conferencia.saude) + '</textarea><label class="cad-lb" for="marcia129-observacoes-' + esc(x.id) + '">Observações</label><textarea class="cad-in" id="marcia129-observacoes-' + esc(x.id) + '" name="observacoes" rows="2">' + esc(x.conferencia.observacoes) + '</textarea></div></details>';
-        form = '<form class="marcia129__conferencia" data-marcia-form-avaliacao="' + esc(x.id) + '"><p class="marcia129__nota">Conferência da avaliação. A ficha original permanece preservada.</p><div class="marcia129__prev-form">' + campoPrev('vacina', 'Vacina', x.vacina) + campoPrev('vermifugo', 'Vermífugo', x.vermifugo) + campoPrev('carrapaticida', 'Pulgas e carrapatos', x.carrapaticida) + '</div>' + dados + '<input type="hidden" name="expectedRevision" value="' + esc(x.conferencia.revisao) + '"><button type="submit" class="marcia129__salvar" data-marcia-salvar-avaliacao="' + esc(x.id) + '"' + (pendentes && pendentes[x.id] ? ' disabled' : '') + '>' + (pendentes && pendentes[x.id] ? 'Salvando…' : 'Salvar conferência') + '</button>' + (erros && erros[x.id] ? '<p class="marcia129__erro" role="alert">' + esc(erros[x.id]) + '</p>' : '') + '</form>';
+        form = '<form class="marcia129__conferencia" data-marcia-form-avaliacao="' + esc(x.id) + '"><p class="marcia129__nota">Conferência da avaliação. A ficha original permanece preservada.</p><ul class="marcia129__prev">' + prevHTML('Vacina', x.vacina) + prevHTML('Vermífugo', x.vermifugo) + prevHTML('Pulgas e carrapatos', x.carrapaticida) + '</ul>' + dados + '<input type="hidden" name="expectedRevision" value="' + esc(x.conferencia.revisao) + '"><button type="submit" class="marcia129__salvar" data-marcia-salvar-avaliacao="' + esc(x.id) + '"' + (pendentes && pendentes[x.id] ? ' disabled' : '') + '>' + (pendentes && pendentes[x.id] ? 'Salvando…' : 'Salvar conferência') + '</button>' + (erros && erros[x.id] ? '<p class="marcia129__erro" role="alert">' + esc(erros[x.id]) + '</p>' : '') + '</form>';
       }
       if (x.conferencia.quem && x.conferencia.quando) form = '<p class="marcia129__situacao marcia129__situacao--conferido" role="status">Conferência salva · ' + esc(x.conferencia.quem) + ' · ' + esc(x.conferencia.quando) + '</p>' + form;
       var prevLeitura = podeSalvar ? '' : '<ul class="marcia129__prev">' + prevHTML('Vacina', x.vacina) + prevHTML('Vermífugo', x.vermifugo) + prevHTML('Pulgas e carrapatos', x.carrapaticida) + '</ul>';
@@ -371,7 +370,7 @@
       var id = form.getAttribute('data-marcia-form-avaliacao');
       var item = atual.agenda.itens.find(function (x) { return x.id === id; });
       if (!item || ui.avaliacoesPendentes[id]) return;
-      function prev(nome) { return { conferido: campoMarcado(form, nome + '-conferido') }; }
+      function prev(nome) { return Object.assign({},item[nome]||{conferido:false}); }
       var leitura = validarConferencia({
         tutor: valorCampo(form, 'tutor'), vacina: prev('vacina'), vermifugo: prev('vermifugo'), carrapaticida: prev('carrapaticida'),
         experiencia: valorCampo(form, 'experiencia'), saude: valorCampo(form, 'saude'), observacoes: valorCampo(form, 'observacoes'), expectedRevision: valorCampo(form, 'expectedRevision')
@@ -386,7 +385,7 @@
         if (item.codigoOrigem && texto(ack.codigoOrigem) !== item.codigoOrigem) throw new Error('confirmacao_avaliacao_invalida');
         var agendaAck = ack.agenda, conferenciaAck = ack.conferencia;
         var checagem = validarConferencia({ tutor: agendaAck.tutor || conferenciaAck.tutor, vacina: agendaAck.vacina, vermifugo: agendaAck.vermifugo, carrapaticida: agendaAck.carrapaticida }, diaPedido);
-        var escolhasIguais = ['vacina','vermifugo','carrapaticida'].every(function(nome){return agendaAck[nome] && agendaAck[nome].conferido === pedido[nome].conferido;});
+        var escolhasIguais = ['vacina','vermifugo','carrapaticida'].every(function(nome){return agendaAck[nome] && agendaAck[nome].conferido === pedido[nome].conferido && (!item[nome].plano || (agendaAck[nome].plano===item[nome].plano && agendaAck[nome].detalhe===item[nome].detalhe));});
         if (!checagem.valido || !escolhasIguais || !texto(conferenciaAck.quem) || !texto(conferenciaAck.quando)) throw new Error('confirmacao_avaliacao_invalida');
         var mesclado = Object.assign({}, item, agendaAck, { codigoOrigem: texto(ack.codigoOrigem) || item.codigoOrigem, conferencia: Object.assign({}, item.conferencia, { tutor: agendaAck.tutor }, conferenciaAck) });
         var normalizado = normalizar({ dia: diaPedido, agenda: { estado: 'pronto', itens: [mesclado] } }, diaPedido).agenda.itens[0];
