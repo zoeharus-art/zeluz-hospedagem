@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict'),App=require('../auaulandia/agenda-marcia/app.js');
+const timeout=setTimeout(()=>{console.error('Teste pendente');process.exit(1)},5000),tick=()=>new Promise(r=>setImmediate(r));
+(async()=>{let criado=0,diaRead=0,mesRead=0,render=0,fechados=0,callback,stop=0,updates=[],db={},dia='2026-10-30',autor={id:'pessoa-ficticia',nome:'Equipe fictícia'},acesso=true,entrevistas=true;const raiz={textContent:''};
+const provider={criar(){criado++;return {observar(d,cb){diaRead++;callback=cb;cb({dia:d,estado:'pronto',itens:[]});return()=>{stop++}},observarMes(m,cb){mesRead++;cb({mes:m,estado:'pronto',dias:{}});return()=>{}},salvar:async()=>({ok:true}),fechar(){fechados++}}}};
+const painel={montar(r,opt){render++;opt.carregar(opt.dia).then(()=>opt.observar(opt.dia,s=>updates.push(s)));opt.observarMes(opt.dia.slice(0,7),()=>{});return {destroy(){}}}};
+const app=App.criar({raiz:()=>raiz,db:()=>db,pode:()=>acesso,podeEntrevista:()=>entrevistas,autor:()=>autor,dia:()=>dia,clientes:()=>[],dados:provider,painel});
+assert.equal(app.abrir(),true);await tick();assert.equal(app.abrir(),true);await tick();assert.deepEqual({criado,diaRead,mesRead,render},{criado:1,diaRead:1,mesRead:1,render:1},'segunda abertura reutiliza mesma instância');
+assert.equal(typeof app.ocultar,'function');app.ocultar();callback({dia,estado:'falha',itens:[]});assert.equal(updates.at(-1).estado,'falha','falha em segundo plano não vira vazio confirmado');callback({dia,estado:'pronto',itens:[{id:'ficticio',cancelada:true}]});assert.equal(updates.at(-1).itens[0].cancelada,true,'cancelamento chega mesmo oculta');assert.equal(app.abrir(),true);assert.equal(criado,1);
+dia='2026-10-31';callback({dia:'2026-10-30',estado:'pronto',itens:[]});assert.equal(fechados,1,'virada encerra ao chegar retorno antigo');assert.equal(app.abrir(),true);assert.equal(criado,2,'virada exige nova fonte');
+autor={id:'outra-pessoa',nome:'Outra pessoa'};callback({dia,estado:'pronto',itens:[]});assert.equal(fechados,2,'troca de pessoa encerra ao receber retorno');assert.equal(app.abrir(),true);assert.equal(criado,3,'troca de pessoa invalida');
+entrevistas=false;callback({dia,estado:'pronto',itens:[]});assert.equal(fechados,3,'revogação encerra ao receber retorno');assert.equal(app.abrir(),true);assert.equal(criado,4,'troca de permissão invalida');
+db={};callback({dia,estado:'pronto',itens:[]});assert.equal(fechados,4,'troca de banco encerra ao receber retorno');assert.equal(app.abrir(),true);assert.equal(criado,5,'troca de banco invalida');
+acesso=false;assert.equal(app.abrir(),false);assert(fechados>=5);assert(stop>=5);console.log('agenda-agil158: OK');
+})().finally(()=>clearTimeout(timeout)).catch(e=>{console.error(e);process.exitCode=1});
