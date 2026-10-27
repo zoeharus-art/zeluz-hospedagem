@@ -1,0 +1,43 @@
+[Unit]
+Description=Zeluz RH 151 - entrevistas restritas
+After=network-online.target
+Wants=network-online.target
+ConditionPathIsDirectory=@@RELEASE_DIR@@
+ConditionPathIsFile=/etc/zeluz-rh151/config.json
+ConditionPathIsFile=/etc/zeluz-piloto/firebase-adc.json
+
+[Service]
+Type=simple
+User=zeluz-piloto
+Group=zeluz-piloto
+WorkingDirectory=@@RELEASE_DIR@@
+ExecStart=/usr/bin/node @@RELEASE_DIR@@/executar-producao151.js
+Environment=NODE_ENV=production
+Environment=GOOGLE_APPLICATION_CREDENTIALS=/etc/zeluz-piloto/firebase-adc.json
+UMask=0117
+RuntimeDirectory=zeluz-rh151
+RuntimeDirectoryMode=0750
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=20s
+TimeoutStopSec=10s
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=@@RELEASE_DIR@@ /etc/zeluz-rh151/config.json /etc/zeluz-piloto/firebase-adc.json /opt/zeluz-piloto/releases/piloto70-24ca48a1/node_modules
+ReadWritePaths=/run/zeluz-rh151
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
