@@ -74,9 +74,9 @@ function mundo(op = {}) {
   return { store, ctx, escolher: (campo, valor) => ctx.gravarEscolha(c, cy, campo, valor, {}), soltar: () => soltarWarm && soltarWarm() };
 }
 async function testarAbaSnoopy116() {
-  const elemento = () => ({ innerHTML: '', textContent: '', attrs: {}, classList: { add() {}, remove() {}, contains: () => ativo }, addEventListener() {},
+  const elemento = () => ({ innerHTML: '', textContent: '', attrs: {}, classList: { add() {}, remove() {}, contains: () => ativo }, addEventListener() {}, querySelector() { return null; },
     setAttribute(k,v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; }, getAttribute(k) { return this.attrs[k] || null; } });
-  let ativo = false, leiturasDados = 0, leiturasSnoopy = 0, invalidacoes = 0, cancelamentos = 0, adiar = false, falharProxima = false;
+  let ativo = false, leiturasDados = 0, leiturasSnoopy = 0, invalidacoes = 0, cancelamentos = 0, adiar = false, falharProxima = false, confirmadoProximo = true, resultadoAcao = null, chamadasAcao = [], atualizacoes = 0;
   const pendencias = [];
   const host = elemento(), contador = elemento(), listaCuidados = elemento(), listaAndamento = elemento(), listaSnoopy = elemento(), badge = elemento();
   const tabs = ['resolve','progress','snoopy'].map(nome => { const e=elemento(); e.attrs['data-zt694-tab']=nome; return e; });
@@ -89,27 +89,38 @@ async function testarAbaSnoopy116() {
     addEventListener(nome,fn) { eventos[nome]=fn; }, closest() { return { classList: { contains: () => ativo } }; } };
   const elementoDia = elemento();
   const doc = { querySelector: () => hub, dispatchEvent() {} };
-  const w = { zPainel44Dia: () => dia, DB: {}, ZeluzSnoopyConfirmacao: S, ZeluzSnoopy31AdaptadorDB: {}, ZeluzSnoopy33Interface: {},
+  const w = { zPainel44Dia: () => dia, z89SnoopyAtualizar: async () => { atualizacoes++; }, DB: {}, ZeluzSnoopyConfirmacao: S, ZeluzSnoopy31AdaptadorDB: {}, ZeluzSnoopy33Interface: {},
     ZelozinhaDadosPainel116: {
       criar(op) { return { ler: async d => { leiturasDados++; op.aoAtualizar({ dia:d, estado:'pronto', total:1, itens:[] }); return true; } }; },
-      criarSnoopy(op) { return { ler: async d => { const numero=++leiturasSnoopy; if(adiar)await new Promise(resolve => { pendencias.push(resolve); });
+      criarSnoopy(op) { return { ler: async d => { ++leiturasSnoopy; const confirmadoNestaLeitura=confirmadoProximo; if(adiar)await new Promise(resolve => { pendencias.push(resolve); });
         if(falharProxima){falharProxima=false;const r={dia:d,estado:'desconhecido',total:null,itens:null};op.aoAtualizar(r);return r;}
-        const pendente=numero!==1&&numero!==5;
+        const pendente=!confirmadoNestaLeitura;
         const r={ dia:d, estado:'pronto', total:pendente?1:0, itens:[{ item:'carrapaticida', id:lineId, valor:'FILHOt fictício', confirmado:!pendente, html:'' }] };
-        op.aoAtualizar(r); return r; }, invalidar() { invalidacoes++; }, cancelar() { cancelamentos++; } }; }
+        op.aoAtualizar(r); return r; }, invalidar() { invalidacoes++; }, cancelar() { cancelamentos++; }, confirmarDireto: async (item,id) => { chamadasAcao.push(['confirmar',item,id]); return resultadoAcao; }, desfazerDireto: async (item,id) => { chamadasAcao.push(['desfazer',item,id]); return resultadoAcao; } }; }
     } };
   vm.runInNewContext(controller116, { window:w, document:doc, DB:w.DB, CustomEvent:class { constructor(){} }, setTimeout, clearTimeout, Date, Intl });
   ativo = true; await w.zelozinha116Ativar();
-  assert.match(listaSnoopy.innerHTML, /Feito/); assert.equal(leiturasDados,1); assert.equal(leiturasSnoopy,1);
+  assert.match(listaSnoopy.innerHTML, />Lançado<\/span>/); assert.equal(leiturasDados,1); assert.equal(leiturasSnoopy,1);
+  // Exercita o handler real: o mesmo item/ID chega à API e só ACK atualiza a visão nativa.
+  function caixa(checked) { return { checked, disabled:false, isConnected:true, closest(){return this;}, getAttribute(k){return k==='data-snoopy-item'?'carrapaticida':k==='data-snoopy-id'?lineId:null;} }; }
+  let check=caixa(true);resultadoAcao={estado:'confirmacao-vigente'};eventos.change({target:check});await new Promise(setImmediate);
+  assert.deepEqual(chamadasAcao.at(-1),['confirmar','carrapaticida',lineId]);assert.equal(atualizacoes,1);
+  check=caixa(false);resultadoAcao={estado:'desfeito'};eventos.change({target:check});await new Promise(setImmediate);
+  assert.deepEqual(chamadasAcao.at(-1),['desfazer','carrapaticida',lineId]);assert.equal(atualizacoes,2);
+  check=caixa(true);resultadoAcao={estado:'falhou'};eventos.change({target:check});await new Promise(setImmediate);
+  assert.equal(check.checked,false);assert.equal(check.disabled,false);assert.equal(atualizacoes,2);
+  check=caixa(false);resultadoAcao={estado:'falhou'};eventos.change({target:check});await new Promise(setImmediate);
+  assert.equal(check.checked,true);assert.equal(check.disabled,false);assert.equal(atualizacoes,2);
   assert.equal(w.zelozinha116SnoopyInvalidar(dia), true);
   assert.equal(invalidacoes,1); assert.equal(badge.textContent,'—');
-  assert.doesNotMatch(listaSnoopy.innerHTML, /Feito/, 'cartão financeiro antigo some imediatamente');
+  assert.doesNotMatch(listaSnoopy.innerHTML, />Lançado<\/span>/, 'cartão financeiro antigo some imediatamente');
   assert.equal(leiturasDados,1, 'chip não relê presença nem projeção');
+  confirmadoProximo=false;
   eventos.click({ target: { closest: () => tabs[2] } });
   await new Promise(setImmediate);
   assert.equal(leiturasSnoopy,2, 'abrir a aba relê apenas o financeiro uma vez');
   assert.equal(leiturasDados,1, 'abrir a aba não relê presença nem projeção');
-  assert.match(listaSnoopy.innerHTML, /Pendente/); assert.doesNotMatch(listaSnoopy.innerHTML, /Feito/);
+  assert.match(listaSnoopy.innerHTML, /Pendente/); assert.doesNotMatch(listaSnoopy.innerHTML, />Lançado<\/span>/);
   assert.equal(badge.textContent,'1'); assert.equal(elementoDia.textContent.includes('2026'),true,'data escolhida preservada');
   const diaNovo='2026-10-27';
   await w.zelozinha116SelecionarDia(diaNovo,false);
@@ -120,22 +131,22 @@ async function testarAbaSnoopy116() {
   assert.equal(elementoDia.textContent.includes('27'),true,'data nova continua selecionada');
   await w.zelozinha116SelecionarDia(dia,false);
   w.zelozinha116AbrirFila('snoopy');
-  adiar=true;const dadosAntesCorrida=leiturasDados;
+  adiar=true;confirmadoProximo=true;const dadosAntesCorrida=leiturasDados, baseCorrida=leiturasSnoopy;
   w.zelozinha116SnoopyInvalidar(dia);
-  await new Promise(setImmediate);assert.equal(leiturasSnoopy,5);
+  await new Promise(setImmediate);assert.equal(leiturasSnoopy,baseCorrida+1);
   w.zelozinha116SnoopyInvalidar(dia);
-  assert.equal(leiturasSnoopy,5,'segunda invalidação não inicia leitura concorrente');
-  pendencias.shift()();await new Promise(setImmediate);
-  assert.doesNotMatch(listaSnoopy.innerHTML,/Feito/,'resultado velho em voo não reaparece');
-  assert.equal(leiturasSnoopy,6,'ao terminar leitura obsoleta, uma nova leitura começa');
+  assert.equal(leiturasSnoopy,baseCorrida+1,'segunda invalidação não inicia leitura concorrente');
+  confirmadoProximo=false;pendencias.shift()();await new Promise(setImmediate);
+  assert.doesNotMatch(listaSnoopy.innerHTML,/>Lançado<\/span>/,'resultado velho em voo não reaparece');
+  assert.equal(leiturasSnoopy,baseCorrida+2,'ao terminar leitura obsoleta, uma nova leitura começa');
   pendencias.shift()();await new Promise(setImmediate);
   assert.match(listaSnoopy.innerHTML,/Pendente/);
-  assert.equal(leiturasSnoopy,6,'sem terceira leitura');
+  assert.equal(leiturasSnoopy,baseCorrida+2,'sem terceira leitura');
   assert.equal(leiturasDados,dadosAntesCorrida,'corrida financeira não relê dadosApi');
-  falharProxima=true;w.zelozinha116SnoopyInvalidar(dia);await new Promise(setImmediate);
-  assert.equal(leiturasSnoopy,7);pendencias.shift()();await new Promise(setImmediate);
-  assert.equal(leiturasSnoopy,7,'falha sem invalidação nova não entra em loop');
-  assert.equal(badge.textContent,'—');assert.doesNotMatch(listaSnoopy.innerHTML,/Feito/);
+  const baseFalha=leiturasSnoopy;falharProxima=true;w.zelozinha116SnoopyInvalidar(dia);await new Promise(setImmediate);
+  assert.equal(leiturasSnoopy,baseFalha+1);pendencias.shift()();await new Promise(setImmediate);
+  assert.equal(leiturasSnoopy,baseFalha+1,'falha sem invalidação nova não entra em loop');
+  assert.equal(badge.textContent,'—');assert.doesNotMatch(listaSnoopy.innerHTML,/>Lançado<\/span>/);
 }
 
 (async () => {
