@@ -1,0 +1,4 @@
+'use strict';
+const assert=require('node:assert/strict'),App=require('../auaulandia/agenda-marcia/app.js');
+const watchdog=setTimeout(()=>{console.error('Teste pendente');process.exit(1)},5000);
+(async()=>{let allowed=true,liberar,opts,destroyed=0,closed=0;const pending=new Promise(r=>{liberar=r}),db={},raiz={};const app=App.criar({raiz:()=>raiz,db:()=>db,pode:()=>true,podeEntrevista:()=>allowed,autor:()=>({id:'ficticio',nome:'Pessoa fictícia'}),dia:()=> '2026-10-30',clientes:()=>[],dados:{criar:()=>({salvar:()=>pending,fechar(){closed++}})},painel:{montar:(r,o)=>(opts=o,{destroy(){destroyed++}})}});assert.equal(app.abrir(),true);const voo=opts.salvar({acao:'editar'});allowed=false;liberar({ok:true});await assert.rejects(voo,/SEM_PERMISSAO/);assert.equal(destroyed,1);assert.equal(closed,1);console.log('agenda-agil-save158: OK');})().finally(()=>clearTimeout(watchdog)).catch(e=>{console.error(e);process.exitCode=1});

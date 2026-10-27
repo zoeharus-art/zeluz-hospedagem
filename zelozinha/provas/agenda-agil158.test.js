@@ -1,0 +1,3 @@
+'use strict';
+const {spawnSync}=require('node:child_process'),path=require('node:path');
+for(const [file,ok] of [['agenda-agil158.test.js','agenda-agil158: OK'],['agenda-agil-bootstrap158.test.js','agenda-agil-bootstrap158: OK'],['agenda-agil-cadastro158.test.js','agenda-agil-cadastro158: OK'],['agenda-render158.test.js','agenda-render158: OK'],['agenda-agil-save158.test.js','agenda-agil-save158: OK']]){const r=spawnSync(process.execPath,[path.resolve(__dirname,'../../tests',file)],{encoding:'utf8',timeout:12000});if(r.status!==0||!r.stdout.includes(ok)){process.stderr.write(file+' falhou ou não terminou\n'+r.stderr);process.exit(1)}process.stdout.write(r.stdout);}
