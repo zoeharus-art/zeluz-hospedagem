@@ -1,0 +1,51 @@
+{
+  "modelo": true,
+  "nodeModulesRoot": "/opt/zeluz-piloto/releases/piloto70-24ca48a1/node_modules",
+  "versoes": {
+    "firebaseAdmin": "14.5.0",
+    "googleAuth": "11.3.1"
+  },
+  "admin": {
+    "aprovado": false,
+    "appName": "zeluz-rh151",
+    "credentialMode": "applicationDefault",
+    "databaseURL": "CONFIGURAR-URL-HTTPS-EXATA"
+  },
+  "socket": {
+    "path": "/run/zeluz-rh151/api.sock",
+    "mode": "0660"
+  },
+  "backend": {
+    "modelo": true,
+    "origens": ["CONFIGURAR-ORIGEM-HTTPS-EXATA"],
+    "ttlMs": 0,
+    "limiteCorpo": 16384,
+    "corpoTimeoutMs": 0,
+    "bancoTimeoutMs": 5000,
+    "limite": {
+      "janelaMs": 0,
+      "bloqueioMs": 0,
+      "maxFalhas": 0,
+      "maxConcorrentes": 0,
+      "maxConcorrentesPorIp": 0,
+      "maxSessoes": 0,
+      "maxEntradasFalha": 0
+    },
+    "principais": {
+      "adriana": {
+        "id": "adriana",
+        "nome": "Adriana",
+        "saltHex": "INSERIR-VERIFICADOR-FORA-DO-REPOSITORIO",
+        "hashHex": "INSERIR-VERIFICADOR-FORA-DO-REPOSITORIO",
+        "ativo": true
+      },
+      "marcia": {
+        "id": "marcia",
+        "nome": "Márcia",
+        "saltHex": "INSERIR-VERIFICADOR-FORA-DO-REPOSITORIO",
+        "hashHex": "INSERIR-VERIFICADOR-FORA-DO-REPOSITORIO",
+        "ativo": true
+      }
+    }
+  }
+}
