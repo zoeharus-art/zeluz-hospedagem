@@ -101177,7 +101177,7 @@ renderAtual=function(){
     if(c.saiuHoje===true||c.saidaNaoConfirmada===true)return false;
     op=op||{};var dc=c.dcKey,i=c.ciclos.indexOf(cy),v0=vmCuidado(c,cy),l=v0.tarefa&&v0.tarefa.linha;
     if(estado.salvando[dc])return false;
-    var guarda={};estado.salvando[dc]=guarda;
+    var guarda={},refSegura=null,escutaSegura=null,erroEscuta=false;estado.salvando[dc]=guarda;
     function nao(frase){if(!op.silencioso)avisoLinha(dc,i,frase);return false;}
     function tarefaAindaPendente(rv,tarefa){var ln=tarefa&&tarefa.linha,versao=tarefa&&tarefa.versao;
       return !!(rv&&daLinha(valorAtual(rv))&&tarefa&&tarefa.estado==='criada'&&versao&&versao.respostaId===rv.respostaId&&Number(versao.revisao)===Number(rv.revisao)&&ln&&ln.id===l.id&&ln.item===l.item);
@@ -101195,10 +101195,12 @@ renderAtual=function(){
       if(cobravel&&typeof window.zelozinha116SnoopyInvalidar!=='function')return nao('O painel do Snoopy não está pronto. Nada foi gravado; atualize os envios.');
       var padrao=campo==='onde'?T.ondePadrao(vv):'',esperado={linhaId:l.id,respostaId:rv.respostaId,revisao:rv.revisao,cycleKey:cy.cycleKey,itemK:cy.itemK,origem:rv.origem};
       var ref=DB.ref('daycare/dashboard/'+c.dia+'/'+l.item+'/'+l.id),res=null;
+      if(typeof ref.on==='function'){refSegura=ref;escutaSegura=function(){};ref.on('value',escutaSegura,function(){erroEscuta=true;});}
       var warm=await ref.once('value');if(!(warm&&typeof warm.val==='function'&&warm.val()&&typeof warm.val()==='object'))return nao('A linha do Day Care não foi encontrada. Atualize e confira.');
       reg=await lerRegistro(c);var rv2=respostaAtual(c,cy),tarefa2=tarefaDe(c,cy);
       if(!reg||!rv2||rv2.respostaId!==rv.respostaId||Number(rv2.revisao)!==Number(rv.revisao)||rv2.origem!==rv.origem||
          !tarefaAindaPendente(rv2,tarefa2))return nao('A resposta ou a tarefa mudou antes de salvar. Atualize e confira; nada foi gravado.');
+      if(erroEscuta)return nao('Não consegui acompanhar a linha. Atualize e confira.');
       var tx=await ref.transaction(function(atual){res=T.mesclarEscolha(atual,esperado,{campo:campo,valor:valor,padrao:padrao});if(!res.ok||!res.mudou)return;return res.linha;},undefined,false);
       if(res&&!res.ok)return nao(res.frase||'A linha mudou. Atualize e confira; nada foi gravado.');
       var nova=tx&&tx.snapshot&&typeof tx.snapshot.val==='function'?tx.snapshot.val():null;
@@ -101222,7 +101224,7 @@ renderAtual=function(){
       }
       avisoLinha(dc,i,'');return true;
     }catch(_){return nao('Não consegui gravar a escolha. Confira a linha e tente de novo.');}
-    finally{if(estado.salvando[dc]===guarda)delete estado.salvando[dc];if(!op.silencioso)redesenharLinha(dc);}
+    finally{if(refSegura&&escutaSegura)try{refSegura.off('value',escutaSegura);}catch(_){}if(estado.salvando[dc]===guarda)delete estado.salvando[dc];if(!op.silencioso)redesenharLinha(dc);}
   }
   function capacidadeCartaz(){try{if(typeof podePapel!=='function')return '';if(podePapel('painel-consultoras'))return 'painel-consultoras';if(podePapel('painel-amanda'))return 'painel-amanda';}catch(_){return '';}return '';}
   async function lerLinha(dia,item,id){try{var s=await DB.ref('daycare/dashboard/'+dia+'/'+item+'/'+id).once('value');return s&&typeof s.val==='function'?s.val():null;}catch(_){return undefined;}}
