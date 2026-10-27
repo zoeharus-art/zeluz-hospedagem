@@ -50,6 +50,9 @@ async function main() {
   assert.doesNotMatch(unit, /MemoryDenyWriteExecute=true/, 'V8 mantém JIT normal; --jitless não foi imposto sem prova operacional');
   assert.match(unit, /ExecStart=\/usr\/bin\/node /);
   assert.doesNotMatch(unit, /--jitless/);
+  assert.doesNotMatch(unit, /ConditionPathIsFile=/, 'diretiva recusada pelo systemd real na conferência prévia');
+  assert.match(unit, /ConditionPathExists=\/etc\/zeluz-rh151\/config\.json/);
+  assert.match(unit, /ConditionPathExists=\/etc\/zeluz-piloto\/firebase-adc\.json/);
   // Importar os módulos não lê configuração, não carrega Admin e não abre socket.
   assert.equal(typeof startup.iniciarUnix, 'function');
   assert.equal(typeof executor.executar, 'function');

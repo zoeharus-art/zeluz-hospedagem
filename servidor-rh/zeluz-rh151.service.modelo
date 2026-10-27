@@ -3,8 +3,8 @@ Description=Zeluz RH 151 - entrevistas restritas
 After=network-online.target
 Wants=network-online.target
 ConditionPathIsDirectory=@@RELEASE_DIR@@
-ConditionPathIsFile=/etc/zeluz-rh151/config.json
-ConditionPathIsFile=/etc/zeluz-piloto/firebase-adc.json
+ConditionPathExists=/etc/zeluz-rh151/config.json
+ConditionPathExists=/etc/zeluz-piloto/firebase-adc.json
 
 [Service]
 Type=simple
