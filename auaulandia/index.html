@@ -975,6 +975,10 @@
   .alert-pills{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
   .alert-pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;padding:7px 13px;border-radius:10px;letter-spacing:.2px}
   .alert-pill.crit{background:rgba(192,57,43,.12);color:var(--crm-critico);border:1.5px solid rgba(192,57,43,.4);animation:piscaAlerta 1.5s ease-in-out infinite}
+  /* O selo de alergia: vermelho alpha, forte, logo depois do nome do FILHOt em toda tela (alergiaSeloHTML) */
+  .alergia-selo{display:inline-block;max-width:100%;background:rgba(192,57,43,.12);color:var(--crm-critico);border:1.5px solid rgba(192,57,43,.45);font-weight:800;border-radius:999px;padding:2px 10px;font-size:12px;line-height:1.35;margin-left:6px;vertical-align:middle;letter-spacing:.2px;overflow-wrap:anywhere}
+  .alergia-selo-curto{padding:1px 8px;font-size:11px;white-space:nowrap}
+  .alert-pill .alergia-selo{margin-left:0;font-size:12.5px;padding:4px 12px}
   .alert-pill.warn{background:rgba(222,180,40,.16);color:var(--crm-atencao-text);border:1.5px solid rgba(222,180,40,.45)}
   @keyframes piscaAlerta{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.5)}50%{box-shadow:0 0 0 6px rgba(192,57,43,0)}}
   /* vacinas */
@@ -1082,6 +1086,97 @@
   .prev-linha:first-child{border-top:none}
   .prev-acoes{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
   .prev-busca{font-size:16px;min-height:48px;margin:0}
+  /* ===== O PAINEL DA PREVENÇÃO (28/out/2026): cinco cartões com uma rosca cada ===== */
+  /* --pn-ok é a única cor de dado fora dos tokens (o verde da série «em dia»); o resto sai dos tokens do app. */
+  :root{--pn-ok:#1E9152;--pn-sem:rgba(35,77,103,.10)}
+  .pn{margin-bottom:22px}
+  .pn-topo{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:flex-end;justify-content:space-between;margin-bottom:12px}
+  .pn-tit{font-size:24px;font-weight:800;color:var(--z-blue);letter-spacing:-.03em;line-height:1.15}
+  .pn-sub{font-size:13px;font-weight:500;color:var(--z-blue-soft);margin-top:4px;line-height:1.45}
+  .pv-tab{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;min-height:40px;border-radius:999px;border:1.5px solid var(--pm-linha);background:var(--z-white);color:var(--z-blue);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+  .pv-tab:hover{border-color:var(--z-blue-soft)}
+  .pv-tab[aria-expanded="true"]{border-color:var(--z-blue);background:rgba(35,77,103,.06)}
+  .pn-tabela{margin:0 0 14px;background:var(--z-white);border:1px solid var(--pm-linha-fina);border-top:3px solid var(--pm-tarja);border-radius:16px;padding:14px 14px 10px;box-shadow:var(--pm-sombra);overflow-x:auto}
+  .pn-tabela table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+  .pn-tabela caption{text-align:left;font-size:13px;font-weight:700;color:var(--z-blue);padding-bottom:8px}
+  .pn-tabela th,.pn-tabela td{padding:7px 4px;text-align:right;border-top:1px solid var(--pm-linha-fina);vertical-align:bottom}
+  .pn-tabela thead th{border-top:none;font-weight:700;color:var(--z-blue-soft);font-size:11.5px}
+  .pn-tabela th:first-child,.pn-tabela td:first-child{text-align:left;font-weight:700;color:var(--z-blue)}
+  .pn-tabela td{color:var(--z-blue-deep)}
+  .pn-tabela td.v{font-weight:800;color:var(--z-blue)}
+  .pv-grid{display:grid;grid-template-columns:1fr;gap:12px;align-items:start}
+  @media(min-width:600px) and (max-width:899px){
+    .pv-grid{grid-template-columns:1fr 1fr}
+    .pv-card.ult{grid-column:1/-1;justify-self:center;width:calc(50% - 6px)}
+  }
+  @media(min-width:900px){
+    .pv-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+    .pv-card[data-i="0"]{grid-column:1/3}
+    .pv-card[data-i="1"]{grid-column:3/5}
+    .pv-card[data-i="2"]{grid-column:5/7}
+    .pv-card[data-i="3"]{grid-column:2/4}
+    .pv-card[data-i="4"]{grid-column:4/6}
+  }
+  .pv-card{position:relative;background:var(--z-white);border:1px solid var(--pm-linha-fina);border-top:3px solid var(--pm-tarja);border-radius:16px;padding:17px 16px 15px;box-shadow:var(--pm-sombra);transition:transform 200ms var(--pm-ease),box-shadow 200ms var(--pm-ease),border-color 200ms;min-width:0}
+  .pv-card:hover{transform:translateY(-3px);box-shadow:var(--pm-sombra-alta)}
+  .pv-card.on{border-color:rgba(35,77,103,.32);border-top-color:var(--z-gold);box-shadow:var(--pm-sombra-alta)}
+  .pv-nome{font-size:19px;font-weight:800;color:var(--z-blue);letter-spacing:-.025em;line-height:1.22}
+  .pv-base{font-size:12.5px;font-weight:500;color:var(--z-blue-soft);margin-top:3px}
+  .pv-anel-caixa{display:flex;gap:16px 18px;align-items:center;flex-wrap:wrap;margin-top:14px}
+  .pv-anel{position:relative;width:132px;height:132px;flex:0 0 132px}
+  .pv-anel svg{width:132px;height:132px;display:block;overflow:visible}
+  .pv-seg{fill:none;stroke-width:14;stroke-linecap:butt;transition:stroke-dasharray 700ms var(--pm-ease),opacity 150ms;cursor:pointer;outline:none}
+  .pv-seg:hover,.pv-seg:focus{opacity:.82}
+  .pv-seg:focus-visible{stroke-width:17}
+  .pv-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+  .pv-mid b{font-size:35px;font-weight:800;color:var(--z-blue);letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+  .pv-mid span{font-size:12px;font-weight:600;color:var(--z-blue-soft);margin-top:3px}
+  .pv-leg{list-style:none;flex:1 1 150px;min-width:0;display:flex;flex-direction:column;gap:7px;margin:0;padding:0}
+  .pv-leg li{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--z-blue-deep);min-width:0}
+  .pv-leg .dot,.pv-bt .dot,.pn-tip .dot{flex:0 0 10px;width:10px;height:10px;border-radius:50%;display:inline-block}
+  .pv-leg .dot.sem,.pn-tip .dot.sem{border:1px solid rgba(35,77,103,.35)}
+  .pv-leg .rot{flex:1 1 auto;min-width:0}
+  .pv-leg .num{font-weight:800;color:var(--z-blue);font-variant-numeric:tabular-nums}
+  .pv-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}
+  .pv-bt{flex:1 1 130px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 12px;min-height:44px;border-radius:999px;border:1.5px solid var(--pm-linha);background:var(--z-white);color:var(--z-blue);font:inherit;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap;transition:background 180ms,border-color 180ms,transform 180ms var(--pm-ease)}
+  .pv-bt:hover{transform:translateY(-1px)}
+  .pv-bt .dot{flex:0 0 9px;width:9px;height:9px}
+  .pv-bt.b7{background:rgba(222,180,40,.10);border-color:rgba(184,150,31,.45)}
+  .pv-bt.b7 .dot{background:var(--z-gold-deep)}
+  .pv-bt.b7[aria-expanded="true"]{background:rgba(222,180,40,.24);border-color:var(--z-gold-deep)}
+  .pv-bt.bv{background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.40)}
+  .pv-bt.bv .dot{background:var(--crm-critico)}
+  .pv-bt.bv[aria-expanded="true"]{background:rgba(192,57,43,.16);border-color:var(--crm-critico)}
+  .pv-bt[disabled]{opacity:.5;cursor:default;transform:none}
+  .pv-regra{font-size:12px;font-weight:500;color:var(--z-blue-soft);border-left:3px solid var(--z-gold);padding:5px 0 5px 10px;margin:13px 0 0;line-height:1.5}
+  .pv-regra strong{color:var(--z-blue);font-weight:700}
+  .pn-tip{position:fixed;z-index:80;left:0;top:0;visibility:hidden;opacity:0;pointer-events:none;background:var(--z-white);border:1px solid var(--pm-linha);border-radius:10px;padding:7px 11px;box-shadow:0 8px 22px rgba(35,77,103,.18);font-size:12.5px;font-weight:700;color:var(--z-blue-deep);white-space:nowrap;display:flex;align-items:center;gap:7px;transition:opacity 120ms}
+  .pn-tip.on{visibility:visible;opacity:1}
+  .pv-bt:focus-visible,.pv-tab:focus-visible,.pv-fechar:focus-visible{outline:3px solid var(--z-gold);outline-offset:2px}
+  /* o painel da lista do recorte: largura toda, logo depois da linha do cartão */
+  .pv-dp{grid-column:1/-1;background:var(--z-white);border:1px solid var(--pm-linha-fina);border-top:3px solid var(--z-gold-deep);border-radius:16px;padding:16px 16px 6px;box-shadow:var(--pm-sombra-alta);scroll-margin-top:12px;min-width:0;animation:pvEntra 220ms var(--pm-ease)}
+  .pv-dp.v{border-top-color:var(--crm-critico)}
+  @keyframes pvEntra{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .pv-dp:focus{outline:none}
+  .pv-dp-topo{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--pm-linha)}
+  .pv-dp-t{font-size:17px;font-weight:800;color:var(--z-blue);letter-spacing:-.02em;line-height:1.25}
+  .pv-dp-t span{font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:999px;margin-left:6px;white-space:nowrap;vertical-align:2px;background:rgba(222,180,40,.20);color:var(--z-blue)}
+  .pv-dp.v .pv-dp-t span{background:rgba(192,57,43,.12);color:var(--crm-critico)}
+  .pv-dp-s{font-size:12px;color:var(--z-blue-soft);margin-top:3px}
+  .pv-fechar{padding:6px 14px;min-height:40px;border-radius:999px;border:1.5px solid var(--pm-linha);background:var(--z-white);color:var(--z-blue);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+  .pv-fechar:hover{border-color:var(--z-blue-soft)}
+  .pv-lin{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+  .pv-dp-topo+.pv-lin,.pv-faixas+.pv-lin{border-top:none}
+  .pv-vazio{padding:12px 0 10px;font-size:13px;font-weight:600;color:var(--z-blue-soft)}
+  .pv-av{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:800;color:var(--z-blue);background:rgba(222,180,40,.20);border:1.5px solid rgba(184,150,31,.45)}
+  .pv-dp.v .pv-av{background:rgba(192,57,43,.10);border-color:rgba(192,57,43,.35)}
+  .pv-corpo{min-width:0;flex:1 1 auto}
+  .pv-ln{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline}
+  .pv-ficha{background:none;border:none;padding:0;font:inherit;font-size:15px;font-weight:800;color:var(--z-blue);text-decoration:underline;cursor:pointer;text-align:left}
+  .pv-meta{font-size:12px;color:var(--z-blue-soft);font-weight:600}
+  .pv-fal{margin-top:8px}
+  .pv-fal-nome{font-size:12px;font-weight:800;color:var(--z-blue-soft);margin-bottom:3px}
+  @media (prefers-reduced-motion:reduce){ .pv-dp{animation:none} .pv-seg,.pv-card,.pv-bt{transition:none} }
   .ficha-topico-corpo{padding:0 12px 12px;border-top:1px solid var(--line)}
   .ficha-topico-corpo .prev-bloco{border:0;border-radius:0;padding:12px 0 0;margin:0;background:transparent}
   /* Faixa «ATENÇÃO — LEIA ANTES» e botões dos alertas fixos (maquete aprovada pela Adriana, 28/out/2026).
@@ -4504,6 +4599,7 @@
        já existia no cadastro (dispensaSe) e o relatório a respeita. -->
   <section class="view" id="v-vacinas">
     <div class="role-note"><span data-icon="alert"></span><span><strong>Quem está faltando alguma coisa.</strong> Vacinas, antiparasitário, coleira, vermífugo (ou exame de fezes). Toque num item para abrir a lista dele, com «Feito hoje» e a mensagem pronta. A pesagem do mês tem tela própria — <strong>Peso</strong>, aqui do lado. Quem faz <strong>exame de fezes</strong> não precisa de vermífugo — e o contrário também vale.</span></div>
+    <div id="prevPainel"></div>
     <div class="card">
       <input class="cad-in prev-busca" id="prevBusca" placeholder="Buscar o FILHOt pelo nome (ou o tutor)" oninput="renderPrevencao()" autocomplete="off" type="search">
       <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px" id="prevFiltros"></div>
@@ -8545,7 +8641,11 @@ return { criar };
     // da ficha (pelCamposBarrados), não só no botão.
     'alerta-fixo-ligar':        ['gestao','supervisor','diretoria','monitor'],
     'alerta-fixo-desligar':     ['gestao','supervisor','diretoria'],
-    'editar-medicacao':         ['gestao','supervisor','diretoria','vet'],
+    // «Outro…» digitado (Adriana, 28/out/2026): escrever um alerta de convivência ou de comportamento que
+    // não está na lista pronta é só da Gestão (Márcia), da Supervisão (Amanda) e da Diretoria (Adriana).
+    // A monitora liga os prontos, mas não digita. O porteiro (pelAlertaFixoPermitido) confere esta capacidade.
+    'alerta-fixo-outro':        ['gestao','supervisor','diretoria'],
+    'editar-medicacao':        ['gestao','supervisor','diretoria','vet'],
     'editar-medicacao-checkin': ['gestao','supervisor','diretoria','vet','consultora'],
     // 6.54 — «Mudar comida e remédio» do hóspede depois do check-in (PA3): os mesmos do check-in.
     // Plantonista, monitor, aprendiz e conferência continuam vendo a comida e o remédio, sem mudar.
@@ -17859,7 +17959,7 @@ return { criar };
         if(por.pendente) linhaCafe+='<div class="alm-restr">⚠ '+escAttr(por.pendente)+'</div>';
       }
       return '<div class="pet alm-card '+(m||'')+'">'+ph
-        +'<div class="nm">'+escAttr(h.nome||'')+'</div>'
+        +'<div class="nm">'+escAttr(h.nome||'')+alergiaSeloHTML(h)+'</div>'
         +'<div class="br">'+escAttr(h.raca||(typeof racaDe==='function'?(racaDe(h)||'') :''))+'</div>'
         +(obsCi.restr?'<div class="alm-restr">&#9888; '+escAttr((rf&&!/restri/i.test(obsCi.restr)?'RESTRIÇÃO: ':'')+obsCi.restr)+'</div>':'')
         +linhaCafe
@@ -17945,7 +18045,7 @@ return { criar };
         const delBtn=(_podeRemHosp && !h.mascote) ? `<button type="button" class="hosp-del" title="Remover do Plantão de hoje" onclick="event.stopPropagation();removerHospedeCard(${i},this)">&#10005;</button>` : '';
         return `<div class="pet" onclick="abrirPlantao(${i})">
           ${delBtn}${ph}${alertaVivoFoto}${alertaFoto}${medFoto}${recFoto}${naoComeuFoto}
-          <div class="nm">${cad.nome||h.nome}</div>
+          <div class="nm">${cad.nome||h.nome}${alergiaSeloDeTexto(ex.alergia)}</div>
           <div class="br">${raca}</div>
           <div class="hosp-tutor">${h.mascote?'Nossa Zelozinha':(tutorShow?'Tutor: '+tutorShow:'Tutor a confirmar')}</div>
           ${(function(){var mc=chipDe(h); return (!h.mascote&&mc)?`<div class="hosp-chip" style="font-size:11px;font-weight:800;color:var(--z-gold-deep);margin-top:2px">Microchip: ${chipHtml(mc)}</div>`:'';})()}
@@ -18374,11 +18474,11 @@ return { criar };
     {id:'peq',   g:'Convivência', kind:'conv', ic:'🐾', tx:'Só pode ficar com peludinhos PEQUENOS', chip:'Só com peludinhos pequenos'},
     {id:'mach',  g:'Convivência', kind:'conv', ic:'♂️', tx:'NÃO pode ficar com MACHOS', chip:'Não pode com machos'},
     {id:'sozi',  g:'Convivência', kind:'conv', ic:'🛏️', tx:'Dorme SOZINHO', chip:'Dorme sozinho'},
-    {id:'sep',   g:'Convivência', kind:'conv', ic:'🍽️', tx:'Come SEPARADO dos outros', chip:'Come separado'},
+    {id:'pres',  g:'Convivência', kind:'conv', ic:'🍽️', tx:'Só come com PRESENÇA HUMANA', chip:'Só come com presença humana'},
     {id:'foge',  g:'Comportamento', kind:'amb', ic:'⚠️', tx:'Foge / pula portão — conferir trancas', chip:'Foge / pula portão'},
     {id:'morde', g:'Comportamento', kind:'amb', ic:'⚠️', tx:'Morde quando mexem na comida', chip:'Morde quando mexem na comida'},
     {id:'medo',  g:'Comportamento', kind:'amb', ic:'🌩️', tx:'Medo de trovão / fogos', chip:'Medo de trovão / fogos'},
-    {id:'alerg', g:'Saúde', kind:'amb', ic:'⚠️', tx:'Alergia', chip:'Alergia a …'},
+    {id:'alerg', g:'Saúde', kind:'amb', ic:'⚠️', tx:'Alergia', chip:'ALERGIA A …'},
     {id:'colar', g:'Saúde', kind:'amb', ic:'🦺', tx:'Usa colar elizabetano — não tirar', chip:'Usa colar elizabetano'},
     {id:'rep',   g:'Saúde', kind:'amb', ic:'🛑', tx:'Repouso — não pode correr', chip:'Não pode correr / repouso'}
   ];
@@ -18400,17 +18500,92 @@ return { criar };
   // Os alertas fixos LIGADOS, na ordem da lista: convivência (vermelho) primeiro, depois comportamento e saúde.
   function alertasFixosItens(ex){
     ex=ex||{}; var out=[];
+    // Os digitados («＋ Outro…») entram logo depois dos prontos do MESMO grupo: convivência (vermelho) primeiro, depois comportamento.
+    var digitados=alertasFixosDigitados(ex, true);
+    var doGrupo=function(g){ digitados.filter(function(x){ return x.cod===g; }).forEach(function(x){
+      out.push({id:x.id, kind:x.kind, ic:x.ic, tx:x.txt, sub:String(x.det||'').trim(), quem:x.quem, ts:x.ts});
+    }); };
+    var grupoAnterior='';
     ALERTAS_FIXOS.forEach(function(d){
+      if(d.g!==grupoAnterior){ if(grupoAnterior) doGrupo(OUTRO_GRUPOS[grupoAnterior]||''); grupoAnterior=d.g; }
       if(d.id==='alerg'){
-        var al=String(ex.alergia==null?'':ex.alergia).trim();
-        if(al) out.push({id:d.id, kind:d.kind, ic:d.ic, tx:'Alergia: '+al, sub:'', quem:'', ts:0});
+        var al=alergiaValida(ex.alergia);
+        if(al) out.push({id:d.id, kind:d.kind, ic:d.ic, tx:'ALERGIA A '+alergiaMaiuscula(al), sub:'', quem:'', ts:0});
         return;
       }
       var a=alertaFixoNo(ex, d.id); if(!a || a.on!==true) return;
       out.push({id:d.id, kind:d.kind, ic:d.ic, tx:d.tx, sub:String(a.det||'').trim(), quem:String(a.quem||''), ts:Number(a.ts)||0});
     });
+    if(grupoAnterior) doGrupo(OUTRO_GRUPOS[grupoAnterior]||'');
     return out;
   }
+  // ---- alertas DIGITADOS («＋ Outro…», Adriana, 28/out/2026) ----
+  // «Precisamos deixar digitar outros comportamentos e convivência além desses.» Nó: alertas_fixos/x<base36> =
+  // {on, txt (até 80), g:'conv'|'comp', det, quem, ts, desligadoPor?, desligadoTs?}. O id começa com «x» e só tem [a-z0-9]
+  // (5 a 12 letras/números): é o que separa o digitado dos prontos (que só têm letras e nunca começam com «x»).
+  var OUTRO_MAX=80;
+  var OUTRO_GRUPOS={'Convivência':'conv','Comportamento':'comp'};   // grupo da lista → código gravado em g
+  var OUTRO_ROTULO={conv:'Convivência', comp:'Comportamento'};
+  function alertaFixoEhDigitado(id){ return /^x[a-z0-9]{4,11}$/.test(String(id||'')); }
+  function alertaFixoPodeOutro(){ try{ return !!podePapel('alerta-fixo-outro'); }catch(e){ return false; } } /* silencioso de propósito: sem a tabela de permissões, a resposta é «não pode» */
+  // Os digitados do cadastro (ex = o que pelExtra/extraDoHosp devolvem). soLigados: só os que estão on:true.
+  function alertasFixosDigitados(ex, soLigados){
+    var af=(ex && ex.alertas_fixos && typeof ex.alertas_fixos==='object')?ex.alertas_fixos:{}, out=[];
+    Object.keys(af).forEach(function(id){
+      var a=af[id]; if(!alertaFixoEhDigitado(id) || !a || typeof a!=='object') return;
+      var txt=String(a.txt==null?'':a.txt).trim().slice(0,OUTRO_MAX), g=(a.g==='conv'||a.g==='comp')?a.g:'';
+      if(!txt || !g) return;
+      if(soLigados && a.on!==true) return;
+      out.push({id:id, g:(g==='conv'?'Convivência':'Comportamento'), cod:g, kind:(g==='conv'?'conv':'amb'), ic:(g==='conv'?'📌':'⚠️'),
+        txt:txt, det:String(a.det||''), quem:String(a.quem||''), ts:Number(a.ts)||0, on:a.on===true});
+    });
+    out.sort(function(x,y){ return x.ts-y.ts || (x.id<y.id?-1:1); });
+    return out;
+  }
+  // ---- a ALERGIA em texto: o campo vazio ou «não tem» é «sem alergia» ----
+  function alergiaSemAcento(t){ return String(t==null?'':t).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+  // Devolve o texto da alergia (aparado) ou '' quando está vazio ou diz que não tem.
+  function alergiaValida(t){
+    var s=String(t==null?'':t).trim(); if(!s) return '';
+    var n=alergiaSemAcento(s).replace(/[.!\s]+$/,'');
+    if(/^(nao tem|nao possui|nao tem alergia|nenhuma|nenhum|sem alergia|sem alergias|nao|nada|n\/a|na|-|—)$/.test(n)) return '';
+    return s;
+  }
+  function alergiaMaiuscula(t){ var s=String(t==null?'':t); try{ return s.toLocaleUpperCase('pt-BR'); }catch(e){ return s.toUpperCase(); } } /* silencioso de propósito: navegador sem locale: o maiúsculo comum serve */
+  // ---- O SELO DE ALERGIA em todo lugar onde o FILHOt aparece (Adriana, 28/out/2026) ----
+  // «Alergias precisa aparecer em destaque e ser comunicado em tudo que o peludo aparecer. Onde tiver o registro dele,
+  //  aparece essa informação.» UMA função só desenha o selo; cada tela chama `alergiaSeloHTML(alvo)` logo depois do nome.
+  // alvo = o peludinho do cadastro (PELUDINHOS: {n,tutor}), a chave do cadastro (texto) ou o registro de hospedagem
+  // ({nome,tutor,refKey}). Lê só o que já está carregado (o cadastro em memória e o espelho do aparelho): nunca vai ao banco.
+  // opc.curto = «⚠ ALERGIA» (linhas apertadas), com o texto inteiro no title.
+  function alergiaDoAlvo(alvo){
+    try{
+      if(alvo==null) return '';
+      if(typeof alvo==='string'){
+        var k=alvo.toLowerCase().replace(/[.#$\[\]\/]/g,'-'), loc={};
+        try{ loc=JSON.parse(localStorage.getItem('zeluz_pel_'+k)||'{}')||{}; }catch(e){ loc={}; } /* silencioso de propósito: sem espelho no aparelho vale o cadastro em memória */
+        var rem=(typeof pelCadCache!=='undefined' && pelCadCache && pelCadCache[k])||{};
+        return alergiaValida(Object.assign({}, loc, rem).alergia);
+      }
+      if(typeof alvo!=='object') return '';
+      // a lista que já carrega a chave do cadastro (chave = pelKey) é a pista mais exata: vale primeiro
+      if(typeof alvo.chave==='string' && alvo.chave && alvo.refKey==null){ var _pc=alergiaDoAlvo(alvo.chave); if(_pc) return _pc; }
+      if(alvo.nome!=null || alvo.refKey!=null){
+        // hospedagem: o vínculo com o cadastro é o mesmo da faixa (extraDoHosp); a alergia gravada na própria hospedagem vale se o cadastro não tem
+        var daFicha=alergiaValida((extraDoHosp(alvo)||{}).alergia);
+        return daFicha || alergiaValida(alvo.alergia);
+      }
+      if(alvo.n!=null) return alergiaValida((pelExtra(alvo)||{}).alergia) || alergiaValida(alvo.alergia);
+      return alergiaValida(alvo.alergia);   // objeto de extra já resolvido (ou registro com o campo alergia)
+    }catch(e){ return ''; } /* silencioso de propósito: o selo é enfeite de segurança — falhar aqui não pode derrubar a tela que o chamou */
+  }
+  function alergiaSeloDeTexto(txt, opc){
+    var al=alergiaValida(txt); if(!al) return '';
+    var cheio='ALERGIA A '+alergiaMaiuscula(al);
+    if(opc && opc.curto) return '<span class="alergia-selo alergia-selo-curto" role="note" title="'+escAttr(cheio)+'">⚠ ALERGIA</span>';
+    return '<span class="alergia-selo" role="note">⚠ '+escAttr(cheio)+'</span>';
+  }
+  function alergiaSeloHTML(alvo, opc){ return alergiaSeloDeTexto(alergiaDoAlvo(alvo), opc); }
   // As tarjas da ficha, na linha «Também na ficha:». A ALERGIA não entra aqui: ela já é um cartão
   // grande (o campo Alergia preenchido É o alerta), então a tarja só repetiria o mesmo texto.
   function faixaChipsDaFicha(ex){
@@ -18566,7 +18741,7 @@ return { criar };
   // O que precisa de uma pergunta (alergia) pergunta DENTRO da página, nunca em janela nativa.
   var ALERTAFIXO_UI={pede:'', confirma:'', msg:'', ocupado:false};
   function alertaFixoLigado(ex, id){
-    if(id==='alerg') return !!String(ex&&ex.alergia!=null?ex.alergia:'').trim();
+    if(id==='alerg') return !!alergiaValida(ex&&ex.alergia);
     var a=alertaFixoNo(ex, id); return !!(a && a.on===true);
   }
   function alertasFixosContaTexto(ex){
@@ -18589,17 +18764,20 @@ return { criar };
       +'</div></details>';
   }
   function alertasFixosEditorHTML(p){
-    var ex=pelExtra(p), ui=ALERTAFIXO_UI, pLig=alertaFixoPodeLigar(), pDes=alertaFixoPodeDesligar(), h='';
+    var ex=pelExtra(p), ui=ALERTAFIXO_UI, pLig=alertaFixoPodeLigar(), pDes=alertaFixoPodeDesligar(), pOutro=alertaFixoPodeOutro(), h='';
     h+='<p class="hint" style="margin:8px 0 0">'+(pLig
       ?'Toque para ligar ou desligar. O que estiver ligado aparece na faixa ATENÇÃO — LEIA ANTES.'+(pDes?'':' <b>Só a Gestão desliga.</b>')
       :'O que estiver ligado aparece na faixa ATENÇÃO — LEIA ANTES. Quem liga e desliga é a Gestão, a Supervisão e quem cuida do FILHOt no chão.')+'</p>';
     ALERTAS_FIXOS_GRUPOS.forEach(function(g){
       var defs=ALERTAS_FIXOS.filter(function(d){ return d.g===g; });
+      var cod=OUTRO_GRUPOS[g]||'', outros=cod?alertasFixosDigitados(ex, true).filter(function(o){ return o.cod===cod; }):[];
       h+='<div class="faixa-grupo">'+escAttr(g)+'</div>';
       if(!pLig){
         h+='<ul class="faixa-lista">'+defs.map(function(d){
           var on=alertaFixoLigado(ex, d.id), a=alertaFixoNo(ex, d.id);
           return '<li><b>'+escAttr(d.chip)+'</b> — '+(on?('ligado'+((a&&a.quem)?' por '+escAttr(a.quem)+(a.ts?' em '+faixaDataCurta(a.ts):''):'')):'desligado')+'</li>';
+        }).join('')+outros.map(function(o){
+          return '<li><b>'+escAttr(o.txt)+'</b> — ligado'+(o.quem?' por '+escAttr(o.quem)+(o.ts?' em '+faixaDataCurta(o.ts):''):'')+'</li>';
         }).join('')+'</ul>';
         return;
       }
@@ -18607,14 +18785,30 @@ return { criar };
         var on=alertaFixoLigado(ex, d.id), trava=on&&!pDes;
         return '<button type="button" class="faixa-liga '+(d.kind==='conv'?'k-conv':'k-amb')+'" aria-pressed="'+on+'"'+(trava?' aria-disabled="true"':'')+' onclick="alertaFixoToque(\''+d.id+'\')">'
           +escAttr(d.chip+(trava?' · 🔒 só a Gestão desliga':''))+'</button>';
-      }).join('')+'</div>';
+      }).join('')
+      // os digitados ligados aparecem como os prontos (ligados) e o «＋ Outro…» só para quem pode digitar
+      +outros.map(function(o){
+        var trava=!pDes;
+        return '<button type="button" class="faixa-liga '+(o.kind==='conv'?'k-conv':'k-amb')+'" aria-pressed="true"'+(trava?' aria-disabled="true"':'')+' onclick="alertaFixoToqueOutro(\''+o.id+'\')">'
+          +escAttr(o.txt+(trava?' · 🔒 só a Gestão desliga':''))+'</button>';
+      }).join('')
+      +(pOutro&&cod?'<button type="button" class="faixa-liga" aria-pressed="false" aria-expanded="'+(ui.pede==='outro-'+cod)+'" onclick="alertaFixoOutroAbrir(\''+cod+'\')">＋ Outro…</button>':'')
+      +'</div>';
+      if(pOutro && cod && ui.pede==='outro-'+cod){
+        h+='<div class="faixa-cx"><b>Outro alerta de '+escAttr(OUTRO_ROTULO[cod].toLowerCase())+'</b>'
+          +'<div class="hint" style="margin:2px 0 6px">Escreva o alerta em poucas palavras (até '+OUTRO_MAX+' letras). Ele aparece na faixa ATENÇÃO — LEIA ANTES, igual aos prontos.</div>'
+          +'<input class="cad-in" id="afOutroNovo" maxlength="'+OUTRO_MAX+'" autocomplete="off" placeholder="ex.: só passeia de peitoral" aria-label="Outro alerta de '+escAttr(OUTRO_ROTULO[cod].toLowerCase())+'">'
+          +'<div class="faixa-acoes"><button type="button" class="btn btn-primary" style="min-height:44px" onclick="alertaFixoOutroLigar(\''+cod+'\')">Ligar</button>'
+          +'<button type="button" class="btn" style="min-height:44px" onclick="alertaFixoCancelar()">Cancelar</button></div></div>';
+      }
       defs.forEach(function(d){
         var on=alertaFixoLigado(ex, d.id), a=alertaFixoNo(ex, d.id);
         if(d.id==='alerg'){
           if(ui.pede==='alerg' && !on){
-            h+='<div class="faixa-cx"><b>Ligar «Alergia»</b><div class="hint" style="margin:2px 0 6px">Escreva a quê ele tem alergia — é o mesmo campo Alergia de Saúde › Alergia, restrição e problemas de saúde.</div>'
+            h+='<div class="faixa-cx"><b>Ligar «ALERGIA A …»</b><div class="hint" style="margin:2px 0 6px">Escreva a quê ele tem alergia — é o mesmo campo Alergia (Saúde › Alergia). Se for a tudo, toque em «ALERGIA A TUDO».</div>'
               +'<input class="cad-in" id="afAlergiaNova" maxlength="140" autocomplete="off" placeholder="ex.: frango" aria-label="Alergia a">'
               +'<div class="faixa-acoes"><button type="button" class="btn btn-primary" style="min-height:44px" onclick="alertaFixoAlergiaLigar()">Ligar alerta</button>'
+              +'<button type="button" class="btn faixa-tudo" style="min-height:44px" onclick="alertaFixoAlergiaTudo()">ALERGIA A TUDO</button>'
               +'<button type="button" class="btn" style="min-height:44px" onclick="alertaFixoCancelar()">Cancelar</button></div></div>';
             return;
           }
@@ -18625,8 +18819,9 @@ return { criar };
             return;
           }
           if(on){
-            h+='<div class="faixa-cx"><b>'+d.ic+' Alergia</b>'
-              +'<label class="faixa-rot">Alergia a …<input class="cad-in" value="'+escAttr(String(ex.alergia||''))+'" maxlength="140" autocomplete="off" onchange="alertaFixoAlergiaEditar(this.value)"></label>'
+            h+='<div class="faixa-cx"><b>'+d.ic+' ALERGIA A …</b>'
+              +'<label class="faixa-rot">ALERGIA A …<input class="cad-in" value="'+escAttr(String(ex.alergia||''))+'" maxlength="140" autocomplete="off" onchange="alertaFixoAlergiaEditar(this.value)"></label>'
+              +'<div class="faixa-acoes"><button type="button" class="btn faixa-tudo" style="min-height:44px" onclick="alertaFixoAlergiaTudo()">ALERGIA A TUDO</button></div>'
               +'<div class="hint" style="margin:4px 0 0">o mesmo dado do campo Alergia (Saúde › Alergia)</div></div>';
           }
           return;
@@ -18699,6 +18894,40 @@ return { criar };
     var el=document.getElementById('afAlergiaNova'), v=String((el&&el.value)||'').trim().slice(0,140);
     if(!v){ ALERTAFIXO_UI.msg='Escreva a quê ele tem alergia.'; alertasFixosEditorRender(true); try{ document.getElementById('afAlergiaNova').focus(); }catch(e){} /* silencioso de propósito: foco é enfeite de tela */ return; }
     alertaFixoGravar({alergia:v}, 'ligou', 'Alergia: '+v);
+  }
+  // O botão rápido: «ALERGIA A TUDO» grava alergia='TUDO' pelo mesmo caminho do campo (mesma permissão de ligar a alergia).
+  function alertaFixoAlergiaTudo(){
+    if(!pelAtual) return;
+    if(!alertaFixoPodeLigar()){ ALERTAFIXO_UI.msg='Você não tem permissão para ligar alertas.'; alertasFixosEditorRender(true); return; }
+    alertaFixoGravar({alergia:'TUDO'}, 'ligou', 'Alergia: TUDO');
+  }
+  // ---- «＋ Outro…»: o alerta digitado (só quem tem 'alerta-fixo-outro') ----
+  function alertaFixoOutroAbrir(cod){
+    if(!OUTRO_ROTULO[cod]) return;
+    ALERTAFIXO_UI.msg=''; ALERTAFIXO_UI.confirma='';
+    if(!alertaFixoPodeOutro()){ ALERTAFIXO_UI.pede=''; ALERTAFIXO_UI.msg='Só a Gestão, a Supervisão e a Diretoria escrevem um alerta novo.'; alertasFixosEditorRender(true); return; }
+    ALERTAFIXO_UI.pede=(ALERTAFIXO_UI.pede==='outro-'+cod)?'':'outro-'+cod;
+    alertasFixosEditorRender(true);
+    try{ var el=document.getElementById('afOutroNovo'); if(el) el.focus(); }catch(e){} /* silencioso de propósito: foco é enfeite de tela */
+  }
+  function alertaFixoOutroLigar(cod){
+    if(!pelAtual || !OUTRO_ROTULO[cod]) return;
+    if(!alertaFixoPodeOutro()){ ALERTAFIXO_UI.msg='Só a Gestão, a Supervisão e a Diretoria escrevem um alerta novo.'; alertasFixosEditorRender(true); return; }
+    var el=document.getElementById('afOutroNovo'), t=String((el&&el.value)||'').replace(/\s+/g,' ').trim().slice(0,OUTRO_MAX);
+    if(!t){ ALERTAFIXO_UI.msg='Escreva o alerta antes de ligar.'; alertasFixosEditorRender(true); try{ document.getElementById('afOutroNovo').focus(); }catch(e){} /* silencioso de propósito: foco é enfeite de tela */ return; }
+    var id='x'+Date.now().toString(36)+Math.floor(Math.random()*36).toString(36), p={};
+    p['alertas_fixos/'+id]={on:true, txt:t, g:cod, det:'', quem:quemSou(), ts:Date.now()};
+    alertaFixoGravar(p, 'ligou', 'Outro ('+OUTRO_ROTULO[cod].toLowerCase()+'): '+t);
+  }
+  // Desligar um digitado: on:false + quem/quando; o texto e quem ligou ficam (nada se apaga).
+  function alertaFixoToqueOutro(id){
+    var p=pelAtual; if(!p || !alertaFixoEhDigitado(id)) return;
+    var o=alertasFixosDigitados(pelExtra(p), true).filter(function(x){ return x.id===id; })[0]; if(!o) return;
+    ALERTAFIXO_UI.msg=''; ALERTAFIXO_UI.pede=''; ALERTAFIXO_UI.confirma='';
+    if(!alertaFixoPodeDesligar()){ ALERTAFIXO_UI.msg='Só a Gestão desliga este alerta.'; alertasFixosEditorRender(true); return; }
+    var off={on:false, txt:o.txt, g:o.cod, det:o.det, quem:o.quem, ts:o.ts, desligadoPor:quemSou(), desligadoTs:Date.now()}, po={};
+    po['alertas_fixos/'+id]=off;
+    alertaFixoGravar(po, 'desligou', 'Outro ('+OUTRO_ROTULO[o.cod].toLowerCase()+'): '+o.txt);
   }
   function alertaFixoAlergiaDesligar(){
     if(!pelAtual) return;
@@ -23291,7 +23520,7 @@ return { criar };
       const qtd=fmtQtd(it.q,it.u);
       return '<div style="display:flex;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line)">'
         +'<span style="flex:0 0 8px;height:8px;border-radius:50%;background:'+cor+';align-self:center"></span>'
-        +'<span style="font-weight:800;color:var(--z-blue)">'+escAttr(it.hospNome||'')+'</span>'
+        +'<span style="font-weight:800;color:var(--z-blue)">'+escAttr(it.hospNome||'')+'</span>'+alergiaSeloHTML({nome:it.hospNome||'', tutor:it.tutor||'', chave:it.key||''},{curto:true})
         +'<span style="flex:1;color:var(--muted);font-size:12.5px">'+escAttr(it.nome||'')+(qtd?(' · '+escAttr(qtd)):'')+'</span>'
         +'<span style="font-size:12.5px;font-weight:700">'+escAttr(it.horario||'')+'</span>'
         +(extra||'')+'</div>';
@@ -33630,7 +33859,7 @@ return { criar };
                    :`<div class="av-ph" style="background:${corPel(o.i)}">${(nome[0]||'?').toUpperCase()}</div>`;
       return `<div class="av-card" onclick="escolherHospede(${o.i})">
         ${alerta}${ph}
-        <div class="av-nm">${nome}</div>
+        <div class="av-nm">${nome}${alergiaSeloDeTexto(ex.alergia)}</div>
         <div class="av-br">${raca}</div>
         <div class="av-tt">${tutor}</div>
       </div>`;
@@ -38650,13 +38879,13 @@ return { criar };
         +((d.acao==='manter' && pode)?(' <button type="button" class="btn" style="padding:6px 12px;font-size:13px;background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue)" data-k="'+escAttr(o.chave)+'" onclick="this.disabled=true;banhoFaltaManterUI(this.dataset.k)">Ainda vem</button>'):'');
       else situ=botao(o)+aqui(o);
       h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)">'
-        +'<strong style="color:var(--z-blue)">'+escAttr(banhoFaltaNomeVisivel(o))+'</strong>'
+        +'<strong style="color:var(--z-blue)">'+escAttr(banhoFaltaNomeVisivel(o))+'</strong>'+alergiaSeloHTML(o)
         +'<span class="hint" style="margin:0">'+(o.hora?('banho às '+escAttr(o.hora)):'banho hoje')+(o.fixo?' (fixo)':'')+' · '
         +(o.porque==='avisada'?'falta avisada':'faltou')+'</span>'+situ+'</div>';
     });
     BANHO_FALTA_CHEGOU.forEach(function(o){
       h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)">'
-        +'<strong style="color:var(--z-blue)">'+escAttr(o.nome)+'</strong>'
+        +'<strong style="color:var(--z-blue)">'+escAttr(o.nome)+'</strong>'+alergiaSeloHTML(o)
         +'<span style="color:var(--crm-atencao-text);font-weight:700">chegou depois de o horário'+(o.hora?(' das '+escAttr(o.hora)):'')
         +' ser liberado: se ainda for tomar banho, lance de novo em Lançamentos do dia</span></div>';
     });
@@ -39241,7 +39470,7 @@ return { criar };
       var med=temRecomAtiva(h)?'<span class="mini-med">VET</span>':'';
       var tutor=(typeof tutorDe==='function')?tutorDe(h):(h.tutor||'');
       return '<div class="vet-pet" onclick="abrirVetFicha('+i+')">'+ph+alerta+med
-        +'<div class="nm">'+escAttr((cad.nome||h.nome||'—'))+'</div>'
+        +'<div class="nm">'+escAttr((cad.nome||h.nome||'—'))+alergiaSeloDeTexto(ex.alergia)+'</div>'
         +'<div class="br">'+(racaDe(h)?escAttr(racaDe(h)):'—')+'</div>'
         +'<div class="tt">'+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'))+'</div></div>';
     }).join('');
@@ -40732,10 +40961,22 @@ return { criar };
   // Qualquer outra forma (apagar o nó, valor sem on, o nó inteiro «alertas_fixos», id fora de ALERTAS_FIXOS,
   // subcaminho mais fundo como alertas_fixos/<id>/on) é barrada para todos: desligar nunca apaga.
   function pelAlertaFixoPermitido(c, v){
-    var m=/^alertas_fixos\/([a-z]{2,12})(\/det)?$/.exec(String(c||'')); if(!m) return false;
+    var m=/^alertas_fixos\/([a-z0-9]{2,12})(\/(?:det|txt))?$/.exec(String(c||'')); if(!m) return false;
+    var pode=function(cap){ try{ return (typeof podePapel==='function') && podePapel(cap); }catch(e){ return false; } }; /* silencioso de propósito: sem a tabela de permissões, a resposta é «não pode» */
+    // Digitado («＋ Outro…»): id x<base36> (5 a 12 letras/números). Criar, ligar ou mudar o texto pede 'alerta-fixo-outro';
+    // desligar (on:false) pede 'alerta-fixo-desligar'; o motivo (/det) pede 'alerta-fixo-ligar'. Texto de 1 a 80 e grupo conv|comp.
+    if(/^x[a-z0-9]{4,11}$/.test(m[1])){
+      var ehTxt=(m[2]==='/txt');
+      if(m[2]) return typeof v==='string' && (ehTxt ? (v.trim().length>0 && v.length<=80 && pode('alerta-fixo-outro')) : (v.length<=140 && pode('alerta-fixo-ligar')));
+      if(!v || typeof v!=='object') return false;
+      var txtOk=(typeof v.txt==='string' && v.txt.trim().length>0 && v.txt.length<=80), gOk=(v.g==='conv' || v.g==='comp');
+      if(v.on===true) return txtOk && gOk && pode('alerta-fixo-outro');
+      if(v.on===false) return (v.txt===undefined || txtOk) && (v.g===undefined || gOk) && pode('alerta-fixo-desligar');
+      return false;
+    }
+    if(m[2]==='/txt' || !/^[a-z]{2,12}$/.test(m[1])) return false;
     // Só id conhecido (e que se guarda: «alerg» é o próprio campo Alergia, nunca um nó daqui).
     if(typeof alertaFixoDef!=='function' || !alertaFixoDef(m[1]) || m[1]==='alerg') return false;
-    var pode=function(cap){ try{ return (typeof podePapel==='function') && podePapel(cap); }catch(e){ return false; } }; /* silencioso de propósito: sem a tabela de permissões, a resposta é «não pode» */
     if(m[2]) return typeof v==='string' && pode('alerta-fixo-ligar');
     if(!v || typeof v!=='object') return false;
     if(v.on===true) return pode('alerta-fixo-ligar');
@@ -40745,7 +40986,7 @@ return { criar };
   function pelCamposBarrados(patch, op){
     // Caminho de alerta = qualquer chave que COMECE com 'alertas_fixos' (o nó inteiro, id fora da lista, subcaminho
     // mais fundo): o que o pelAlertaFixoPermitido não reconhece fica barrado para todos os papéis, inclusive quem edita a ficha.
-    var _ehAf=function(c){ return String(c).replace(/^[s/]+/,'').indexOf('alertas_fixos')===0; };
+    var _ehAf=function(c){ return String(c).replace(/^[\s\/]+/,'').indexOf('alertas_fixos')===0; };
     var _af=Object.keys(patch||{}).filter(function(c){ return _ehAf(c) && !pelAlertaFixoPermitido(c, patch[c]); });
     if(typeof canEditPel==='function' && canEditPel()) return _af;
     // A monitora só atravessa o porteiro com o recibo recém-revalidado da tarefa exata.
@@ -41076,6 +41317,17 @@ return { criar };
     if(sl) return '<div class="hint" style="margin-top:4px;color:var(--crm-ok);font-weight:700">'
       +escAttr(zSeloFrase('Sem '+rot, sl))+' · <button type="button" class="btn" style="background:none;border:none;padding:0;color:var(--z-blue);text-decoration:underline;font-weight:700;font-size:12px" onclick="pelNaoTemLimpar(\''+campo+'\')">apagar este registro</button></div>';
     return '<button type="button" class="btn" style="margin-top:5px;min-height:44px;padding:8px 14px;font-size:12.5px;font-weight:800;background:none;color:var(--z-blue);border:1.5px solid var(--z-blue)" onclick="pelNaoTemGravar(\''+campo+'\',\''+rot+'\')">Não tem</button>';
+  }
+  // «ALERGIA A TUDO» ao lado do «Não tem» (Adriana, 28/out/2026): um toque grava alergia='TUDO' pelo mesmo caminho do campo
+  // (setPelExtra → porteiro: a mesma permissão de editar a alergia). Só aparece com o campo vazio.
+  function pelAlergiaTudoHTML(ex){
+    if(String((ex||{}).alergia||'').trim()) return '';
+    return '<button type="button" class="btn faixa-tudo" style="margin:5px 0 0 6px;min-height:44px;padding:8px 14px;font-size:12.5px;font-weight:800;background:none;color:var(--crm-critico);border:1.5px solid var(--crm-critico)" onclick="pelAlergiaTudoGravar()">ALERGIA A TUDO</button>';
+  }
+  function pelAlergiaTudoGravar(){
+    if(!pelAtual) return;
+    setPelExtra(pelAtual, {alergia:'TUDO'});
+    try{ renderPelFicha(); }catch(e){ try{ refreshPills(); }catch(_){} /* silencioso de propósito: a ficha se redesenha na próxima abertura */ }
   }
   function pelChipNaoTemHTML(ex){
     if(zChipNumero(ex)) return '';
@@ -41552,7 +41804,7 @@ return { criar };
   function fieldSens(fid,label,inputHtml){ const sens=SENS.has(fid); return `<div class="field${sens?' sensivel':''}"><label>${label} ${fLock(fid)}</label>${inputHtml}</div>`; }
   function alertPills(ex){
     const P=[];
-    if(ex.alergia) P.push(`<span class="alert-pill crit">ALERGIA: ${escAttr(ex.alergia)}</span>`);
+    { const _sa=alergiaSeloDeTexto(ex.alergia); if(_sa) P.push(`<span class="alert-pill crit">${_sa}</span>`); }   // o selo ALERGIA de sempre agora é o selo novo (um só desenho, sem duplicar)
     if(ex.restricao) P.push(`<span class="alert-pill crit">RESTRIÇÃO: ${escAttr(ex.restricao)}</span>`);
     if(ex.problema) P.push(`<span class="alert-pill crit">SAÚDE: ${escAttr(ex.problema)}</span>`);
     if(ex.medicacao) P.push(`<span class="alert-pill warn">MEDICAÇÃO: ${escAttr(ex.medicacao)}</span>`);
@@ -41564,7 +41816,8 @@ return { criar };
   // pelPills2. O código antigo só atualizava um "pelPills" que ficava num bloco escondido —
   // então digitar uma alergia não acendia a tarja na hora (11/ago/2026). Atualiza os dois.
   function refreshPills(){ if(!pelAtual) return; const html=alertPills(pelExtra(pelAtual));
-    ['pelPills','pelPills2'].forEach(function(id){ const el=document.getElementById(id); if(el) el.innerHTML=html; }); }
+    ['pelPills','pelPills2'].forEach(function(id){ const el=document.getElementById(id); if(el) el.innerHTML=html; });
+    const _cab=document.getElementById('pelAlergiaCab'); if(_cab) _cab.innerHTML=alergiaSeloDeTexto(pelExtra(pelAtual).alergia); }   // o selo do cabeçalho da ficha acompanha o campo na hora
   // ===== PREVENÇÃO & CUIDADOS VACINAIS — o sistema calcula a próxima data =====
   // Regras dadas pela Adriana. A monitora/consultora informa o que deu e quando;
   // a data da próxima sai sozinha (errar isso é FILHOt desprotegido).
@@ -43351,7 +43604,7 @@ return { criar };
       var op=oportDe(pelKey(o.p),'checkup');
       var opTxt=op?oportLinha(op):'';
       return '<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);flex-wrap:wrap">'
-        +'<a style="font-weight:800;color:var(--z-blue);cursor:pointer;text-decoration:underline dotted" onclick="abrirPeludinhoCheckup('+o.i+')">'+escAttr(pelNome(o.p))+'</a>'
+        +'<a style="font-weight:800;color:var(--z-blue);cursor:pointer;text-decoration:underline dotted" onclick="abrirPeludinhoCheckup('+o.i+')">'+escAttr(pelNome(o.p))+'</a>'+alergiaSeloHTML(o.p,{curto:true})
         +'<span style="font-size:12.5px;color:var(--muted)">'+escAttr(pelGet(o.p,'tutor')||'')+'</span>'
         +'<span style="font-size:12px;font-weight:700;color:var(--z-gold-deep)">'+escAttr(prevCheckupIdade(o.p))+'</span>'
         +(extra||'')
@@ -43376,6 +43629,8 @@ return { criar };
       +(semInfo.length?('<span class="prev-sec-conta">'+semInfo.length+' sem informação</span>'):''), h);
   }
   function renderPrevencao(){
+    // O Painel da prevenção (as roscas) vem antes do resto; se ele falhar, a lista de baixo continua inteira.
+    try{ prevPainelRender(); }catch(e){ try{ console.warn('[Zêluz] Painel da prevenção falhou:', (e&&e.message)||e); }catch(_){} /* silencioso de propósito: se nem o console aceita, não há para onde contar */ }
     var foco=(typeof cuidado57FocoAtual==='function')?cuidado57FocoAtual():null;
     if(foco){
       var fp=prevPetDe(foco.pelKey), fres=document.getElementById('prevResumo'), ffl=document.getElementById('prevFiltros'), fel=document.getElementById('prevLista'), fck=document.getElementById('prevCheckup');
@@ -43582,7 +43837,7 @@ return { criar };
       h+='<tr style="border-top:1px solid var(--line)">'
         +'<td style="padding:8px 9px;vertical-align:top;width:'+LARG_NOME+'px;overflow-wrap:anywhere">'
         +'<button type="button" class="btn" style="background:none;border:none;padding:0;text-align:left;font:inherit;cursor:pointer" onclick="prevAbrir(\''+jsAspas(ch)+'\')">'
-        +'<span style="font-weight:800;color:var(--z-blue);font-size:14.5px;text-decoration:underline">'+escAttr(o.nome)+'</span></button>'
+        +'<span style="font-weight:800;color:var(--z-blue);font-size:14.5px;text-decoration:underline">'+escAttr(o.nome)+'</span></button>'+alergiaSeloHTML(o.p,{curto:true})
         +'<div style="font-size:11.5px;color:var(--muted);font-weight:600">'+escAttr(o.raca||'')
         +(o.tutor?(' · '+escAttr(o.tutor)):'')+'</div></td>';
       cols.forEach(function(c){
@@ -43602,6 +43857,347 @@ return { criar };
       if(painel) h+='<tr><td colspan="'+(cols.length+1)+'" style="padding:0 9px 9px">'+painel+'</td></tr>';
     });
     return h+'</tbody></table></div></div>';
+  }
+
+  // ===== O PAINEL DA PREVENÇÃO — uma rosca por item (28/out/2026) =================================
+  // Cinco cartões — Vacina, Antiparasitário, Vermífugo, Coleira repelente, Check-up — com quantos FILHOts estão em dia,
+  // vencem em 7 dias, estão vencidos ou sem data. NENHUMA regra nova: cada FILHOt é classificado pelas mesmas funções
+  // que as listas de hoje usam (prevFaltasDe, com a janela de 7 dias, e prevCheckupContagem), para o painel bater com elas.
+  var PREV_PN_DIAS=7;
+  var PREV_PN_ITENS=[
+    {k:'vacina',  nome:'Vacina',            ks:['vac_mult_p','vac_gripe_p','vac_raiva_p'], regra:'<strong>Vacina</strong> = qualquer uma das 3: Múltipla, Gripe ou Antirrábica.'},
+    {k:'antipar', nome:'Antiparasitário',   ks:['ecto_p'], regra:'<strong>Antiparasitário</strong> = carrapaticida, em pipeta ou comprimido.'},
+    {k:'vermif',  nome:'Vermífugo',         ks:['verm_p'], regra:'<strong>Vermífugo</strong>: quem faz exame de fezes em dia conta como em dia.'},
+    {k:'coleira', nome:'Coleira repelente', ks:['col_p'], soUsa:true, regra:'<strong>Coleira repelente</strong>: só entra quem usa coleira (%M dos %N).'},
+    {k:'checkup', nome:'Check-up',          ks:['checkup_p'], checkup:true, regra:'<strong>Check-up</strong>: vencido ou «nunca fez» conta como vencido.'}
+  ];
+  // Quem USA coleira: a ficha tem alguma marca dela (data, marca, a-fazer). Sem nada, o FILHOt não entra na conta da coleira.
+  function prevPainelUsaColeira(ex){
+    ex=ex||{};
+    var it=PREV_ITENS.filter(function(x){ return x.k==='col_p'; })[0];
+    return !!((it && prevValor(ex, it)) || ex.col_t || ex.col_nome || ex.col_afazer);
+  }
+  // O estado de UM FILHOt num item, a partir das faltas dele naquele item (prevFaltasDe com janela de 7 dias).
+  // Vencido manda; depois o que vence em até 7 dias; depois a falta de data (ou a data impossível); senão, em dia.
+  function prevPainelEstado(fs){
+    if(fs.some(function(f){ return f.tipo==='venc'; })) return 'venc';
+    if(fs.some(function(f){ return f.tipo==='avencer'; })) return 'd7';
+    return fs.length?'sem':'em';
+  }
+  // As contas do painel. Cada item traz: total (a base dele), em/d7/venc/sem (somam o total) e as duas listas.
+  function prevPainelDados(){
+    var itens=PREV_PN_ITENS.map(function(d){
+      return {k:d.k, nome:d.nome, regra:d.regra, soUsa:!!d.soUsa, total:0, em:0, d7:0, venc:0, sem:0, listas:{venc:[], d7:[]}};
+    });
+    var ck=prevCheckupContagem(), ckEst={};
+    ck.nunca.forEach(function(o){ ckEst[o.i]={e:'venc', nunca:true}; });
+    ck.vencidos.forEach(function(o){ ckEst[o.i]={e:'venc', vence:o.vence}; });
+    ck.emDia.forEach(function(o){ var d=diasAteISO(o.vence); ckEst[o.i]={e:(d!=null && d>=0 && d<=PREV_PN_DIAS)?'d7':'em', vence:o.vence}; });
+    ck.semInfo.forEach(function(o){ ckEst[o.i]={e:'sem'}; });
+    var base=0, baseCol=0;
+    (PELUDINHOS||[]).forEach(function(p, i){
+      if(typeof pelInativo==='function' && pelInativo(p)) return;     // inativo fica fora, como em todo o resto da tela
+      var ex=pelExtra(p)||{};
+      base++;
+      var fs=prevFaltasDe(ex, PREV_PN_DIAS), usaCol=prevPainelUsaColeira(ex);
+      if(usaCol) baseCol++;
+      var nome=(typeof pelNome==='function'?pelNome(p):'')||p.n||'';
+      PREV_PN_ITENS.forEach(function(d, ix){
+        var it=itens[ix], est, faltas=[], extra={};
+        if(d.soUsa && !usaCol) return;
+        if(d.checkup){ var c=ckEst[i]||{e:'sem'}; est=c.e; extra={nunca:!!c.nunca, vence:c.vence||''}; }
+        else {
+          faltas=fs.filter(function(f){ return d.ks.indexOf(f.k)>=0; });
+          est=prevPainelEstado(faltas);
+          // coleira: quem usa e não tem data na ficha não é «em dia» — o item é opcional e não gera falta sozinho
+          if(d.soUsa && est==='em' && !prevValor(ex, PREV_ITENS.filter(function(x){ return x.k==='col_p'; })[0])) est='sem';
+        }
+        it.total++; it[est]++;
+        if(est==='venc' || est==='d7')
+          it.listas[est].push({p:p, i:i, ch:pelKey(p), nome:nome,
+            raca:(typeof pelGet==='function'?pelGet(p,'raca'):'')||p.raca||'',
+            tutor:(typeof pelGet==='function'?pelGet(p,'tutor'):'')||p.tutor||'',
+            faltas:faltas.filter(function(f){ return f.tipo===(est==='venc'?'venc':'avencer'); }),
+            nunca:!!extra.nunca, vence:extra.vence||''});
+      });
+    });
+    // Quem venceu há mais tempo primeiro («nunca fez» antes de todos); quem vence antes primeiro. Empate: nome.
+    var peso=function(o, est){
+      if(o.nunca) return 1e9;
+      var ds=o.faltas.map(function(f){ return f.dias||0; });
+      if(est==='venc'){ if(!ds.length){ var dv=diasAteISO(o.vence); return (dv==null)?0:-dv; } return Math.max.apply(null, ds); }
+      if(!ds.length){ var dd=diasAteISO(o.vence); return (dd==null)?0:dd; }
+      return Math.min.apply(null, ds);
+    };
+    itens.forEach(function(it){
+      it.listas.venc.sort(function(a,b){ return (peso(b,'venc')-peso(a,'venc')) || jsNorm(a.nome).localeCompare(jsNorm(b.nome),'pt'); });
+      it.listas.d7.sort(function(a,b){ return (peso(a,'d7')-peso(b,'d7')) || jsNorm(a.nome).localeCompare(jsNorm(b.nome),'pt'); });
+    });
+    return {hoje:hojeISO(), base:base, baseColeira:baseCol, itens:itens};
+  }
+
+  // ---- o desenho: cartões com rosca, tabela, dicas ao tocar e o painel da lista -------------------------------
+  var PREV_PN_ESTADOS=[
+    {k:'em',   rot:'Em dia',          cor:'var(--pn-ok)'},
+    {k:'d7',   rot:'Vence em 7 dias', cor:'var(--z-gold-deep)'},
+    {k:'venc', rot:'Vencido',         cor:'var(--crm-critico)'},
+    {k:'sem',  rot:'Sem data',        cor:'var(--pn-sem)'}
+  ];
+  var PREV_PN_C=2*Math.PI*59, PREV_PN_VAO=2;     // circunferência da rosca (raio 59 num quadro de 132) e o vão entre segmentos
+  var PREV_PN_SEMANA=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  var PREV_PN_ABERTO={k:'', st:''};              // o recorte aberto: o item e 'venc' ou 'd7'
+  var PREV_PN_TABELA=false, PREV_PN_ASSIN='', PREV_PN_HTML='', PREV_PN_COLS=0, PREV_PN_TIP=null, PREV_PN_FOCO='';
+  function prevPnFilhots(n){ return n+' FILHOt'+(n===1?'':'s'); }
+  function prevPnPct(n, total){
+    if(!total) return '0%';
+    var p=Math.round(n/total*100);
+    return (p===0 && n>0)?'menos de 1%':(p+'%');
+  }
+  function prevPnDiaTexto(iso){
+    var a=String(iso||'').split('-').map(Number);
+    if(a.length!==3 || !a[0]) return '';
+    return PREV_PN_SEMANA[new Date(Date.UTC(a[0],a[1]-1,a[2])).getUTCDay()]+', '+fmtBR(iso);
+  }
+  // Quantos cartões cabem por linha — o mesmo corte do CSS (1 coluna; 2 a partir de 600px; 3+2 a partir de 900px).
+  function prevPnColunas(){
+    try{
+      if(window.matchMedia('(min-width:900px)').matches) return 3;
+      if(window.matchMedia('(min-width:600px)').matches) return 2;
+    }catch(e){} /* silencioso de propósito: sem medida da janela vale uma coluna, que cabe em qualquer tela */
+    return 1;
+  }
+  function prevPnReduz(){
+    try{ return !!window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+    catch(e){ return false; } /* silencioso de propósito: sem a preferência, o painel anima como de costume */
+  }
+  // O índice do último cartão da MESMA linha do cartão i: o painel da lista entra logo depois dele.
+  function prevPnFimDaLinha(i, cols){
+    if(cols>=3) return (i<3)?2:4;
+    if(cols===2) return Math.min((i%2===0)?i+1:i, 4);
+    return i;
+  }
+  function prevPnRoscaHTML(it, animar){
+    var segs='', acc=0, C=PREV_PN_C;
+    PREV_PN_ESTADOS.forEach(function(e){
+      var n=it[e.k]; if(!n || !it.total) return;
+      var frac=n/it.total, len=Math.max(frac*C-PREV_PN_VAO,1);
+      var txt=e.rot+': '+prevPnFilhots(n)+' · '+prevPnPct(n, it.total);
+      segs+='<circle class="pv-seg" cx="66" cy="66" r="59" transform="rotate(-90 66 66)" tabindex="0" role="img"'
+        +' aria-label="'+escAttr(txt)+'" data-txt="'+escAttr(txt)+'" data-cor="'+e.cor+'" data-sem="'+(e.k==='sem'?1:0)+'" data-len="'+len.toFixed(2)+'"'
+        +' style="stroke:'+e.cor+';stroke-dasharray:'+(animar?'0':len.toFixed(2))+' '+C.toFixed(2)+';stroke-dashoffset:'+(-(acc+PREV_PN_VAO/2)).toFixed(2)+'"></circle>';
+      acc+=frac*C;
+    });
+    if(!segs) segs='<circle cx="66" cy="66" r="59" style="fill:none;stroke:var(--pn-sem);stroke-width:14"></circle>';
+    return '<svg viewBox="0 0 132 132" role="group" aria-label="'+escAttr('Rosca de '+it.nome+': '+it.em+' em dia, '+it.d7+' vencem em 7 dias, '+it.venc+' vencidos, '+it.sem+' sem data')+'">'+segs+'</svg>';
+  }
+  function prevPnCartaoHTML(it, i, d, animar, aberto){
+    var leg=PREV_PN_ESTADOS.map(function(e){
+      return '<li><i class="dot'+(e.k==='sem'?' sem':'')+'" style="background:'+e.cor+'"></i><span class="rot">'+e.rot+'</span><span class="num">'+it[e.k]+'</span></li>';
+    }).join('');
+    var base=it.soUsa?(prevPnFilhots(it.total)+' que '+(it.total===1?'usa':'usam')+' coleira'):(it.total+' FILHOt'+(it.total===1?' ativo':'s ativos'));
+    var regra=it.regra.replace('%M', it.total).replace('%N', d.base);
+    var bt=function(st, rot, cls, n){
+      var ab=(aberto.k===it.k && aberto.st===st);
+      return '<button type="button" class="pv-bt '+cls+'" id="prevPnBt_'+it.k+'_'+st+'" aria-expanded="'+(ab?'true':'false')+'" aria-controls="prevPnLista"'
+        +((!n && !ab)?' disabled':'')+' onclick="prevPnAbrir(\''+it.k+'\',\''+st+'\')"><i class="dot"></i>'+rot+' ('+n+')</button>';
+    };
+    return '<article class="pv-card'+(i===4?' ult':'')+(aberto.k===it.k?' on':'')+'" data-i="'+i+'" data-k="'+it.k+'" aria-label="'+escAttr(it.nome)+'">'
+      +'<h3 class="pv-nome">'+escAttr(it.nome)+'</h3>'
+      +'<div class="pv-base">'+escAttr(base)+'</div>'
+      +'<div class="pv-anel-caixa"><div class="pv-anel">'+prevPnRoscaHTML(it, animar)
+      +'<div class="pv-mid"><b data-n="'+it.venc+'">'+it.venc+'</b><span>'+(it.venc===1?'vencido':'vencidos')+'</span></div></div>'
+      +'<ul class="pv-leg" aria-label="'+escAttr('Legenda de '+it.nome)+'">'+leg+'</ul></div>'
+      +'<div class="pv-acoes">'+bt('d7','Vence em 7 dias','b7',it.d7)+bt('venc','Vencido','bv',it.venc)+'</div>'
+      +'<p class="pv-regra">'+regra+'</p>'
+      +'</article>';
+  }
+  function prevPnTabelaHTML(d){
+    return '<table><caption>FILHOts por situação, em '+escAttr(fmtBR(d.hoje))+'</caption><thead><tr><th scope="col">Item</th>'
+      +PREV_PN_ESTADOS.map(function(e){ return '<th scope="col">'+e.rot+'</th>'; }).join('')+'<th scope="col">Total</th></tr></thead><tbody>'
+      +d.itens.map(function(it){
+        return '<tr><th scope="row">'+escAttr(it.nome)+'</th>'
+          +PREV_PN_ESTADOS.map(function(e){ return '<td'+(e.k==='venc'?' class="v"':'')+'>'+it[e.k]+'</td>'; }).join('')
+          +'<td class="v">'+it.total+'</td></tr>';
+      }).join('')+'</tbody></table>';
+  }
+  // O painel inteiro. opc: {cols, aberto:{k,st}, tabela, animar, lista:function(item, st)} — `lista` desenha o painel das linhas.
+  function prevPainelHTML(d, opc){
+    opc=opc||{};
+    var cols=opc.cols||3, ab=opc.aberto||{k:'', st:''}, animar=!!opc.animar, idx=-1;
+    d.itens.forEach(function(it, i){ if(it.k===ab.k) idx=i; });
+    var painel=(idx>=0 && (ab.st==='venc' || ab.st==='d7') && typeof opc.lista==='function')?opc.lista(d.itens[idx], ab.st):'';
+    var fim=(idx>=0)?prevPnFimDaLinha(idx, cols):-1;
+    var cartoes=d.itens.map(function(it, i){ return prevPnCartaoHTML(it, i, d, animar, ab)+((i===fim)?painel:''); }).join('');
+    var base=(d.base===1)?'1 FILHOt ativo':(d.base+' FILHOts ativos');
+    return '<section class="pn" aria-labelledby="prevPnT">'
+      +'<div class="pn-topo"><div><h2 class="pn-tit" id="prevPnT">Painel da prevenção</h2>'
+      +'<p class="pn-sub">'+escAttr(prevPnDiaTexto(d.hoje))+' · base: '+base+' (coleira: só '+(d.baseColeira===1?'o 1 que usa':('os '+d.baseColeira+' que usam'))+')</p></div>'
+      +'<button type="button" class="pv-tab" id="prevPnTab" aria-expanded="'+(opc.tabela?'true':'false')+'" aria-controls="prevPnTabela" onclick="prevPnTabelaVirar()">'+(opc.tabela?'Esconder a tabela':'Ver em tabela')+'</button></div>'
+      +'<div class="pn-tabela" id="prevPnTabela"'+(opc.tabela?'':' hidden')+'>'+prevPnTabelaHTML(d)+'</div>'
+      +'<div class="pv-grid" id="prevPnGrade">'+cartoes+'</div></section>';
+  }
+  function prevPnTabelaVirar(){
+    PREV_PN_TABELA=!PREV_PN_TABELA;
+    prevPainelRender();
+  }
+  // ---- a dica de cada segmento («Vencido: 12 FILHOts · 8%»): ao passar o mouse, tocar ou focar com o teclado ----
+  function prevPnTipo(){
+    if(!PREV_PN_TIP){
+      var t=document.createElement('div'); t.className='pn-tip'; t.id='prevPnTip'; t.setAttribute('role','tooltip');
+      document.body.appendChild(t); PREV_PN_TIP=t;
+    }
+    return PREV_PN_TIP;
+  }
+  function prevPnTipMostra(seg, x, y){
+    var t=prevPnTipo();
+    t.textContent='';
+    var dot=document.createElement('i'); dot.className='dot'+(seg.getAttribute('data-sem')==='1'?' sem':''); dot.style.background=seg.getAttribute('data-cor')||'';
+    var tx=document.createElement('span'); tx.textContent=seg.getAttribute('data-txt')||'';
+    t.appendChild(dot); t.appendChild(tx);
+    t.classList.add('on');
+    var w=t.offsetWidth, h=t.offsetHeight, vw=document.documentElement.clientWidth, vh=window.innerHeight;
+    var L=Math.min(Math.max(8, x+12), vw-w-8), T=y-h-12;
+    if(T<8) T=y+18;
+    if(T+h>vh-8) T=Math.max(8, vh-h-8);
+    t.style.left=L+'px'; t.style.top=T+'px';
+  }
+  function prevPnTipSome(){ if(PREV_PN_TIP) PREV_PN_TIP.classList.remove('on'); }
+  function prevPnLigar(el){
+    if(el.getAttribute('data-pn-ligado')==='1') return;
+    el.setAttribute('data-pn-ligado','1');
+    var seg=function(e){ return (e.target && e.target.closest)?e.target.closest('.pv-seg'):null; };
+    var noAnel=function(s){ var r=s.ownerSVGElement.getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+8}; };
+    el.addEventListener('pointerover', function(e){ var s=seg(e); if(s) prevPnTipMostra(s, e.clientX, e.clientY); });
+    el.addEventListener('pointermove', function(e){ var s=seg(e); if(s) prevPnTipMostra(s, e.clientX, e.clientY); });
+    el.addEventListener('pointerout', function(e){ if(seg(e) && e.pointerType==='mouse') prevPnTipSome(); });
+    el.addEventListener('click', function(e){
+      var s=seg(e); if(!s) return;
+      if(e.detail===0){ var p=noAnel(s); prevPnTipMostra(s, p.x, p.y); } else prevPnTipMostra(s, e.clientX, e.clientY);
+    });
+    el.addEventListener('focusin', function(e){ var s=seg(e); if(s){ var p=noAnel(s); prevPnTipMostra(s, p.x, p.y); } });
+    el.addEventListener('focusout', function(e){ if(seg(e)) prevPnTipSome(); });
+    el.addEventListener('keydown', function(e){ if(e.key==='Escape') prevPnTipSome(); });
+    document.addEventListener('pointerdown', function(e){ if(!(e.target && e.target.closest && e.target.closest('.pv-seg'))) prevPnTipSome(); });
+    window.addEventListener('scroll', prevPnTipSome, {passive:true});
+    // girou o aparelho ou mudou a janela: com um painel de lista aberto, ele muda de linha junto com os cartões
+    var rz=null;
+    window.addEventListener('resize', function(){
+      clearTimeout(rz);
+      rz=setTimeout(function(){ if(PREV_PN_ABERTO.k && prevPnColunas()!==PREV_PN_COLS) prevPainelRender(); }, 120);
+    });
+  }
+  // A rosca enche em 700 ms e o número do centro sobe em 600 ms; sem animação para quem pediu menos movimento.
+  function prevPnAnimar(el){
+    var segs=el.querySelectorAll('.pv-seg');
+    Array.prototype.forEach.call(el.querySelectorAll('.pv-mid b'), function(b){
+      var para=+b.getAttribute('data-n')||0; if(!para) return;
+      var t0=performance.now();
+      (function passo(t){ var p=Math.min(1,(t-t0)/600); b.textContent=Math.round(para*(1-Math.pow(1-p,3))); if(p<1) requestAnimationFrame(passo); })(t0);
+    });
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      Array.prototype.forEach.call(segs, function(c){ c.style.strokeDasharray=c.getAttribute('data-len')+' '+PREV_PN_C.toFixed(2); });
+    }); });
+  }
+  function prevPainelRender(){
+    var el=document.getElementById('prevPainel'); if(!el) return;
+    if(typeof cuidado57FocoAtual==='function' && cuidado57FocoAtual()){ el.innerHTML=''; el.style.display='none'; PREV_PN_HTML=''; return; }
+    el.style.display='';
+    if(typeof PELUDINHOS==='undefined' || !Array.isArray(PELUDINHOS)){ el.innerHTML=''; PREV_PN_HTML=''; return; }
+    var d=prevPainelDados();
+    var assin=JSON.stringify([d.hoje, d.base, d.baseColeira, d.itens.map(function(it){ return [it.em, it.d7, it.venc, it.sem]; })]);
+    var animar=(assin!==PREV_PN_ASSIN) && !prevPnReduz();
+    PREV_PN_ASSIN=assin; PREV_PN_COLS=prevPnColunas();
+    var opc={cols:PREV_PN_COLS, aberto:PREV_PN_ABERTO, tabela:PREV_PN_TABELA, animar:false, lista:prevPnListaHTML};
+    var html=prevPainelHTML(d, opc);                    // a versão «assentada», com os arcos já cheios: é com ela que se compara
+    prevPnLigar(el);
+    if(html===PREV_PN_HTML && el.firstChild) return;     // nada mudou (digitar na busca redesenha a tela inteira): não mexe no painel, nem corta a animação em curso
+    PREV_PN_HTML=html;
+    if(animar){ opc.animar=true; html=prevPainelHTML(d, opc); }
+    el.innerHTML=html;
+    if(animar) prevPnAnimar(el);
+    if(PREV_PN_FOCO){ var f=document.getElementById(PREV_PN_FOCO); PREV_PN_FOCO=''; try{ if(f) f.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ }
+  }
+  // ---- o painel das linhas do recorte («Vacina · Vencido»): os FILHOts, cada um com os botões que a lista de hoje já tem ----
+  // Nada de gravação nova: «Feito hoje», o chip «Feito em… / Vence em…» e a mensagem pronta são os MESMOS da seção do item
+  // (prevCorrigeFeitoHoje, prevCorrigeChip/prevCorrigePainelHTML, prevMsgHTML). Só a origem do toque é própria ('pn-<item>'), para
+  // o editor abrir aqui e não também na seção, e a mensagem aberta aqui tem o prefixo 'pn:'. O check-up usa o que a seção dele usa:
+  // «Copiar mensagem».
+  function prevPnChipTexto(f, st){
+    var dt=f.data?prevCelulaData(f.data):'', n=f.dias||0;
+    if(st==='venc') return 'venceu em '+dt+' · há '+n+' dia'+(n===1?'':'s');
+    return 'vence em '+dt+' · '+(n===0?'hoje':(n===1?'amanhã':('em '+n+' dias')));
+  }
+  function prevPnChipEstilo(st){
+    return 'font-size:12px;white-space:nowrap;'+((st==='venc')?'background:rgba(192,57,43,.12);color:var(--crm-critico)':'background:rgba(222,180,40,.20);color:var(--z-blue)');
+  }
+  function prevPnFeitoHoje(ch, k){
+    PREV_CORRIGE_ABERTO=''; PREV_CORRIGE_ORIGEM='pn-'+k;
+    prevCorrigeFeitoHoje(ch, k, 'prev');
+  }
+  // O nome abre a ficha do FILHOt (a volta traz de novo a Prevenção).
+  function prevPnFicha(ch){
+    var i=-1;
+    (PELUDINHOS||[]).forEach(function(p, j){ if(i<0 && pelKey(p)===ch) i=j; });
+    if(i>=0) abrirPeludinhoCheckup(i);
+  }
+  function prevPnLinhaHTML(o, it, st, hoje){
+    var ch=o.ch, ka=jsAspas(ch), hosp=prevEhHospede(o.p), pode=prevCorrigePode();
+    var h='<div class="pv-lin"><div class="pv-av" aria-hidden="true">'+escAttr(String(o.nome||'?').charAt(0).toUpperCase())+'</div><div class="pv-corpo">'
+      +'<div class="pv-ln"><button type="button" class="pv-ficha" onclick="prevPnFicha(\''+ka+'\')">'+escAttr(o.nome)+'</button>'
+      +'<span class="pv-meta">'+[o.raca, o.tutor].filter(Boolean).map(escAttr).join(' · ')+'</span></div>';
+    var btn2='min-height:40px;padding:6px 13px;font-size:12.5px;font-weight:800;background:var(--z-white);color:var(--z-blue);border:1.5px solid var(--line)';
+    if(it.k==='checkup'){
+      // a seção «Check-up veterinário» de hoje: idade, a situação, «Copiar mensagem» e a conversa já registrada
+      var n=0, ate=diasAteISO(o.vence);
+      if(ate!=null) n=Math.abs(ate);
+      var txt=o.nunca?'Nunca fez — conta como vencido'
+        :((st==='venc')?('venceu em '+prevCelulaData(o.vence)+' · há '+n+' dia'+(n===1?'':'s'))
+          :('vence em '+prevCelulaData(o.vence)+' · '+(n===0?'hoje':(n===1?'amanhã':('em '+n+' dias')))));
+      var op=oportDe(o.ch, 'checkup'), opTxt=op?oportLinha(op):'';
+      h+='<div class="prev-acoes"><span style="display:inline-block;padding:2px 9px;border-radius:999px;font-weight:800;'+prevPnChipEstilo(st)+'">'+escAttr(txt)+'</span>'
+        +'<span style="font-size:12px;font-weight:700;color:var(--z-gold-deep)">'+escAttr(prevCheckupIdade(o.p))+'</span>'
+        +((st==='venc')?('<button type="button" class="btn btn-gold" style="min-height:40px;padding:6px 14px;font-size:12.5px;font-weight:800" onclick="prevCheckupCopiar(this,'+o.i+',\''+(o.nunca?'nunca':'vencido')+'\')">Copiar mensagem</button>'):'')
+        +'</div>'
+        +(opTxt?('<div class="hint" style="margin-top:4px">Oportunidade: '+escAttr(opTxt)+'</div>'):'');
+      return h+'</div></div>';
+    }
+    o.faltas.forEach(function(f){
+      var k=f.k, kk=jsAspas(k), origem='pn-'+k, msgAberta=(PREV_MSG_ABERTO==='pn:'+ch+'|'+k);
+      var gravando=prevCorrBotaoGravando(prevCorrigeAlvo(ch, k), 'feito');
+      var chip=hosp?('<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-weight:800;'+prevPnChipEstilo(st)+'">'+escAttr(prevPnChipTexto(f, st))+'</span>')
+                   :prevCorrigeChip(ch, k, prevPnChipTexto(f, st), 'prev', prevPnChipEstilo(st), origem);
+      h+='<div class="pv-fal">'+((it.k==='vacina')?('<div class="pv-fal-nome">'+escAttr(f.nome)+'</div>'):'')
+        +'<div class="prev-acoes">'+chip
+        // hóspede: com ele não se lança, se avisa o tutor — o bloco «Hóspedes», logo abaixo da lista, é quem faz isso
+        +((pode && !hosp)?('<button type="button" class="btn btn-gold" style="min-height:40px;padding:6px 14px;font-size:12.5px;font-weight:800" onclick="prevPnFeitoHoje(\''+ka+'\',\''+kk+'\')">'+(gravando?'Gravando…':'Feito hoje')+'</button>'):'')
+        +(hosp?'':('<button type="button" class="btn" style="'+btn2+'" onclick="prevMsgVirar(\''+ka+'\',\''+kk+'\',\'pn:\')">'+(msgAberta?'Fechar mensagem':'Mensagem pronta')+'</button>'))
+        +'</div>'
+        +(hosp?'<div class="hint" style="margin-top:4px">Hóspede: o aviso ao tutor fica no bloco «Hóspedes», mais abaixo.</div>':'')
+        +(hosp?'':prevCorrigePainelHTML(ch, 'prev', hoje, origem))
+        +((msgAberta && !hosp)?prevMsgHTML(o.p, k, 'pn:'):'')
+        +'</div>';
+    });
+    return h+'</div></div>';
+  }
+  function prevPnListaHTML(it, st){
+    var v=(st==='venc'), lista=it.listas[st], hoje=hojeISO();
+    var d=PREV_PN_ITENS.filter(function(x){ return x.k===it.k; })[0]||{ks:[]};
+    var faixas=d.ks.map(function(k){ return '<div class="prev-sec-faixa" data-prev-faixa="'+escAttr(k)+'">'+prevSecFaixaHTML(k)+'</div>'; }).join('');
+    return '<div class="pv-dp'+(v?' v':'')+'" id="prevPnLista" role="region" aria-labelledby="prevPnListaT" tabindex="-1">'
+      +'<div class="pv-dp-topo"><div><div class="pv-dp-t" id="prevPnListaT">'+escAttr(it.nome)+' · '+(v?'Vencido':'Vence em 7 dias')+'<span>'+prevPnFilhots(lista.length)+'</span></div>'
+      +'<div class="pv-dp-s">'+(v?'Quem venceu há mais tempo aparece primeiro.':'Quem vence primeiro aparece primeiro.')+'</div></div>'
+      +'<button type="button" class="pv-fechar" onclick="prevPnAbrir(\''+it.k+'\',\''+st+'\')">Fechar</button></div>'
+      +'<div class="pv-faixas">'+faixas+'</div>'
+      +(lista.length?lista.map(function(o){ return prevPnLinhaHTML(o, it, st, hoje); }).join('')
+        :'<div class="pv-vazio">'+(v?'Ninguém com este item vencido agora.':'Ninguém com este item vencendo nos próximos 7 dias.')+'</div>')
+      +'</div>';
+  }
+  function prevPnAbrir(k, st){
+    if(PREV_PN_ABERTO.k===k && PREV_PN_ABERTO.st===st){ PREV_PN_ABERTO={k:'', st:''}; PREV_PN_FOCO='prevPnBt_'+k+'_'+st; prevPainelRender(); return; }
+    PREV_PN_ABERTO={k:k, st:st};
+    prevPainelRender();
+    try{ var p=document.getElementById('prevPnLista'); if(p){ p.scrollIntoView({block:'nearest', behavior:prevPnReduz()?'auto':'smooth'}); p.focus({preventScroll:true}); } }
+    catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */
   }
 
   // ===== A PREVENÇÃO EM SEÇÕES QUE ABREM E FECHAM (Adriana, 26/out/2026) ==========================
@@ -43711,7 +44307,7 @@ return { criar };
     var bt2='min-height:40px;padding:6px 13px;font-size:12.5px;font-weight:800;background:var(--z-white);color:var(--z-blue);border:1.5px solid var(--line)';
     return '<div class="prev-linha">'
       +'<div><button type="button" class="btn" style="background:none;border:none;padding:0;min-height:0;text-align:left;font:inherit;cursor:pointer" onclick="prevAbrirNaSecao(\''+ka+'\',\''+kk+'\')">'
-      +'<span style="font-weight:800;color:var(--z-blue);font-size:15px;text-decoration:underline">'+escAttr(o.nome)+'</span></button>'
+      +'<span style="font-weight:800;color:var(--z-blue);font-size:15px;text-decoration:underline">'+escAttr(o.nome)+'</span></button>'+alergiaSeloHTML(o.p)
       +' <span style="font-size:12px;color:var(--muted);font-weight:600">'+escAttr(o.raca||'')+(o.tutor?(' · '+escAttr(o.tutor)):'')+'</span></div>'
       +'<div class="prev-acoes">'
       +prevCorrigeChip(ch, k, prevCelulaTexto(f), 'prev', 'font-size:12px;white-space:nowrap;'+prevCelulaEstilo(f), origem)
@@ -43743,7 +44339,7 @@ return { criar };
   }
   // Troca só as faixas, no lugar (a linha do «Atualizados hoje» chega do banco depois do verde).
   function prevSecFaixasRefazer(){
-    try{ document.querySelectorAll('#prevLista [data-prev-faixa]').forEach(function(el){ el.innerHTML=prevSecFaixaHTML(el.getAttribute('data-prev-faixa')); }); }
+    try{ document.querySelectorAll('#prevLista [data-prev-faixa], #prevPainel [data-prev-faixa]').forEach(function(el){ el.innerHTML=prevSecFaixaHTML(el.getAttribute('data-prev-faixa')); }); }
     catch(e){} /* silencioso de propósito: enfeite de tela — a faixa aparece no próximo redesenho */
   }
   // «Feito em…» na própria linha de quem está sem data: escolhe o dia no calendário e grava (a mesma porta do painel).
@@ -43771,8 +44367,9 @@ return { criar };
     prevCorrigeFeitoHoje(ch, k, 'prev');
   }
   // ---- a mensagem pronta: o texto dela de Vencimentos (vencMensagemDe), nunca um texto novo ----
-  function prevMsgVirar(ch, k){
-    var alvo=ch+'|'+k;
+  // pref (opcional): quem abre a mensagem fora das seções (o Painel da prevenção usa 'pn:') — assim a mesma caixa nunca aparece em dois lugares com o mesmo id.
+  function prevMsgVirar(ch, k, pref){
+    var alvo=(pref||'')+ch+'|'+k;
     PREV_MSG_ABERTO=(PREV_MSG_ABERTO===alvo)?'':alvo;
     if(PREV_MSG_ABERTO && !PREV_MSG_CFG_OK){
       // Os textos que a Gestão editou moram no banco; até chegarem, a caixa diz «carregando» —
@@ -43801,8 +44398,8 @@ return { criar };
       sexo:(typeof pelGet==='function'?pelGet(p,'sexo'):'')||p.sexo||'',
       itens:itens, atrasados:itens.filter(function(x){ return x.atrasado; }).length};
   }
-  function prevMsgHTML(p, k){
-    var id=pelKey(p)+'_'+k, idA=escAttr(id), idJs=jsAspas(id);
+  function prevMsgHTML(p, k, pref){
+    var id=(pref||'')+pelKey(p)+'_'+k, idA=escAttr(id), idJs=jsAspas(id);
     var box='<div style="margin-top:8px;border:1.5px solid var(--z-blue);border-radius:12px;padding:10px 12px;background:var(--z-cream)">';
     if(!PREV_MSG_CFG_OK) return box+'<div class="hint">'+(PREV_MSG_CFG_ERRO?'Não consegui ler os textos aprovados agora. Toque em «Fechar mensagem» e tente de novo.':'Carregando a mensagem aprovada…')+'</div></div>';
     var hoje=(typeof zHojeISO==='function')?zHojeISO():hojeISO();
@@ -45714,7 +46311,7 @@ return { criar };
     return '<div '+(embutido138?'data-z138-editor-native':'id="prevEd_'+chId+'"')+' class="card" style="margin:8px 0;border-left:4px solid var(--z-gold)">'
       +'<datalist id="prevQuemLista"><option value="Zêluz"><option value="Tutor"><option value="Clínica externa"></datalist>'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
-      +'<h2 style="font-size:16px;margin:0">'+escAttr(o.nome)+'</h2>'
+      +'<h2 style="font-size:16px;margin:0">'+escAttr(o.nome)+'</h2>'+alergiaSeloHTML(o.p)
       +'<button class="btn" style="background:none;border:none;color:var(--muted);font-weight:800" '+(embutido138?'data-zt694-acao="fechar-ficha"':'onclick="prevAbrir(\''+chJs+'\')"')+'>fechar</button></div>'
       +'<div class="hint">Lance aqui mesmo o que foi feito — não precisa abrir a ficha inteira. A data de validade eu calculo sozinho; se quiser outra, é só escrever.</div>'
       +itens.map(linha).join('')
@@ -47473,7 +48070,7 @@ return { criar };
     const _hojeBusca=hojeISO();
     document.getElementById('pelBody').innerHTML=list.map((o,row)=>{ const p=o.p; const atual=ZeluzCadastroLinha115.linha({nome:pelNome(p),raca:pelGet(p,'raca'),tutor:pelGet(p,'tutor'),dias:pelDias(p)}); return `<tr onclick="abrirPeludinhoLista(${o.i})" style="cursor:pointer">
       <td class="pel-num">${row+1}</td>
-      <td class="pel-ficha-atual">${atual.html}${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}${banhoRecEtiquetaPel(p)}${linhaBuscaCadastro(p,_hojeBusca)}${medLinhaDoPel(p)}</td>
+      <td class="pel-ficha-atual">${atual.html}${alergiaSeloHTML(p,{curto:true})}${p.apelido?` <span class="pel-obs">${p.apelido}</span>`:''}${((pelExtra(p).castrado||p.castrado)==='Não')?' <span class="pel-obs">Não castrado</span>':''}${banhoRecEtiquetaPel(p)}${linhaBuscaCadastro(p,_hojeBusca)}${medLinhaDoPel(p)}</td>
       <td><span class="pel-freq">${pelFreq(p)}</span></td>
       <td>${calcIdade(pelNasc(p))||'—'}</td>
     </tr>`; }).join('');
@@ -48256,6 +48853,7 @@ return { criar };
           <div class="hf-nome">${can?`<input class="pel-nome-input" value="${escAttr(pelNome(p))}" onchange="onNomePel(this.value)" aria-label="Nome do peludinho">`:`${pelNome(p)}`}<span id="pelApelidoCab" style="font-size:14px;color:var(--muted)">${(ex.apelido||p.apelido)?(' ('+escAttr(ex.apelido||p.apelido)+')'):''}</span></div>
           <div class="hf-meta">${[pelGet(p,'raca'),sexo,idade].filter(Boolean).join(' · ')}${castr==='Não'?' · <strong style="color:var(--z-daycare)">Não castrado</strong>':''}</div>
           <div class="hf-estadia">Tutor: ${escAttr(pelGet(p,'tutor'))}</div>
+          <div id="pelAlergiaCab" style="margin-top:6px">${alergiaSeloDeTexto(ex.alergia)}</div>
           <!-- "E onde for a informação dele precisa ir a medicação" (Adriana, 22/set/2026).
                No cabeçalho, antes de qualquer aba: quem abre a ficha já sabe. -->
           <div id="pelMedLinha">${medLinhaDoPel(p,'Detalhes e alterações em Saúde › Medicamentos.')}</div>
@@ -48396,7 +48994,7 @@ return { criar };
         <div class="hint" style="margin-top:8px">Tudo que o monitor precisa saber antes de cuidar e dar o almoço.</div>
         <div id="pelPills2">${alertPills(ex)}</div>
         <div class="cad-grid">
-          <div class="field"><label>Alergia</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setPelExtra(pelAtual,{alergia:this.value});refreshPills()">${iaRevMarcaFicha(p,'alergia')}${pelNaoTemHTML(ex,'alergia','alergia')}</div>
+          <div class="field"><label>Alergia</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setPelExtra(pelAtual,{alergia:this.value});refreshPills()">${iaRevMarcaFicha(p,'alergia')}${pelNaoTemHTML(ex,'alergia','alergia')}${pelAlergiaTudoHTML(ex)}</div>
           <div class="field"><label>Restrição alimentar</label><input id="pelRestricaoInput" class="cad-in" value="${escAttr(ex.restricao||'')}" placeholder="Ex: sem grãos" onchange="pelRestrGravar(this.value)">${iaRevMarcaFicha(p,'restricao')}${pelNaoTemHTML(ex,'restricao','restrição alimentar')}
             <div class="hint" style="margin-top:4px">Aparece também em Almoço na creche (Rotina e alimentação) e serve de base ao Enriquecimento ambiental.</div></div>
           <!-- O bloco ALIMENTAÇÃO mora na aba Rotina e alimentação (Adriana, 01/set: "almoço em campo almoço"). -->
@@ -54678,7 +55276,7 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
         var ex=(typeof pelExtra==='function'?pelExtra(p):{})||{};
         if(typeof pelEmAdaptacao!=='function'||!pelEmAdaptacao(ex)) return;
         var n=(typeof adaptDiasDe==='function')?adaptDiasDe(ex):null;
-        out.push({nome:pelNome(p), dias:n});
+        out.push({nome:pelNome(p), dias:n, chave:pelKey(p)});
       });
     }catch(e){ _logFalhaGrav('adaptEmCursoLista', e); }
     return out.sort(function(a,b){ return (b.dias||0)-(a.dias||0) || jsNorm(a.nome).localeCompare(jsNorm(b.nome)); });
@@ -54693,7 +55291,7 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
       +'<div class="hint">Os primeiros '+ADAPT_DIAS+' dias corridos — foco de todo o time. Quando passa do prazo, sai desta lista sozinho.</div>'
       +'<div style="margin-top:8px;font-weight:700;color:var(--z-blue);font-size:14.5px">'
       +E.map(function(x){
-        return escAttr(x.nome)+' <span style="font-size:12px;font-weight:600;color:var(--muted)">('
+        return escAttr(x.nome)+alergiaSeloHTML(x)+' <span style="font-size:12px;font-weight:600;color:var(--muted)">('
           +(x.dias!=null?(x.dias+'º dia de '+ADAPT_DIAS):'em adaptação')+')</span>';
       }).join(' · ')
       +'</div></div>';
@@ -57731,7 +58329,7 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
       +(fot?('<div style="width:64px;height:64px;border-radius:14px;flex:0 0 64px;background-image:url(\''+fot+'\');background-size:cover;background-position:center"></div>')
            :('<div style="width:64px;height:64px;border-radius:14px;flex:0 0 64px;background:var(--z-blue-soft)"></div>'))
       +'<div style="flex:1;min-width:0">'
-      +'<div style="font-weight:900;color:var(--z-blue);font-size:18px">'+escAttr((typeof pelNome==='function')?pelNome(p):(p.n||''))+'</div>'
+      +'<div style="font-weight:900;color:var(--z-blue);font-size:18px">'+escAttr((typeof pelNome==='function')?pelNome(p):(p.n||''))+alergiaSeloHTML(p)+'</div>'
       +'<div class="hint" style="margin:1px 0 0">'+ativIdent(p)+'</div></div>'
       +'<button class="btn" style="background:none;border:none;color:var(--z-blue);text-decoration:underline;font-weight:800;font-size:12.5px" onclick="pesoTelaTrocar()">trocar</button>'
       +'</div>'
@@ -68228,14 +68826,14 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     if(fechado){
       return '<div class="card" id="vencCard_'+escAttr(o.chave)+'" style="border-left:4px solid var(--crm-ok)">'
         +'<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;justify-content:space-between">'
-        +'<div><strong style="color:var(--z-blue);font-size:16px">'+escAttr(o.nome)+'</strong> '
+        +'<div><strong style="color:var(--z-blue);font-size:16px">'+escAttr(o.nome)+'</strong>'+alergiaSeloHTML(o.chave)+' '
         +'<span class="hint" style="display:inline">— ficha atualizada por '+escAttr(r.ficha_atualizada.quem||'-')+'. Assunto fechado.</span></div>'
         +'<button type="button" class="btn" style="padding:5px 12px;font-size:12px;font-weight:800;background:none;border:none;color:var(--z-blue);text-decoration:underline" onclick="vencReabrir(\''+ka+'\')">reabrir</button>'
         +'</div></div>';
     }
     var borda=o.atrasados?'var(--crm-critico)':'var(--z-gold)';
     var h='<div class="card" id="vencCard_'+escAttr(o.chave)+'" style="border-left:4px solid '+borda+'">';
-    h+='<div style="font-weight:800;color:var(--z-blue);font-size:17px">'+escAttr(o.nome)
+    h+='<div style="font-weight:800;color:var(--z-blue);font-size:17px">'+escAttr(o.nome)+alergiaSeloHTML(o.chave)
       +' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">'+escAttr(o.raca||'')
       +(o.tutor?(' · tutor: '+escAttr(o.tutor)):'')+'</span></div>';
     if(o.tel) h+='<div class="hint" style="margin:2px 0 0"><a href="tel:'+escAttr(o.tel)+'" style="color:var(--z-blue);font-weight:800">'+escAttr(o.tel)+'</a></div>';
@@ -68478,7 +69076,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     var h='<div style="margin-top:9px;padding:10px 12px;border-radius:12px;background:var(--z-cream-warm);'
       +'border:1px solid var(--line);border-left:4px solid '+cor+'">'
       +'<div style="display:flex;flex-wrap:wrap;gap:7px;align-items:baseline">'
-      +'<strong style="color:var(--z-blue);font-size:15px">'+escAttr(nome)+'</strong>'
+      +'<strong style="color:var(--z-blue);font-size:15px">'+escAttr(nome)+'</strong>'+alergiaSeloHTML(x)
       +'<span class="hint" style="display:inline">'+escAttr(x.rotulo)
       +(x.tutor?(' · tutor: '+escAttr(x.tutor)):'')+'</span>'+vencSeloEstado(x.estado)+'</div>'
       +'<div class="hint" style="margin-top:2px">Mandada '+escAttr(vencEspera(x.enviadaTs||x.ts, agora))
@@ -69561,7 +70159,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
       +'<div class="hint">Marcados como "veio" na chamada de hoje, mas o check-in do corpo de entrada não foi feito. O exame continua obrigatório: o nome sai daqui quando o check-in for feito.</div>';
     S.forEach(function(o){
       h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)">'
-        +'<strong style="color:var(--z-blue)">'+escAttr(hojeSemCheckinNome(o, L))+'</strong>'
+        +'<strong style="color:var(--z-blue)">'+escAttr(hojeSemCheckinNome(o, L))+'</strong>'+alergiaSeloHTML(o.p||o)
         +(pode?('<button type="button" class="btn" style="padding:6px 12px;font-size:13px;min-height:44px;background:#14532D;border:1.5px solid #14532D;color:#fff" data-k="'+escAttr(o.chave)+'" onclick="hojeSemCheckinIr(this.dataset.k)">Fazer o check-in agora</button>'):'')
         +'</div>';
     });
@@ -70090,7 +70688,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     }
     return '<div style="display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)">'
       +'<div style="flex:1 1 200px;min-width:0">'
-      +'<div><strong style="font-size:15.5px;color:var(--z-blue)">'+escAttr(x.nome||'')+'</strong>'
+      +'<div><strong style="font-size:15.5px;color:var(--z-blue)">'+escAttr(x.nome||'')+'</strong>'+alergiaSeloHTML(x)
       +(x.tutor?('<span class="hint" style="margin:0 0 0 6px">tutor '+escAttr(x.tutor)+'</span>'):'')+'</div>'
       +'<div style="font-size:13.5px;font-weight:700;color:'+(x.atrasado?'var(--crm-critico)':'var(--z-blue)')+';line-height:1.45;margin-top:2px;overflow-wrap:anywhere">'+detalhe+'</div>'
       +((x.grupo!=='cobrar'&&!x.tel&&!x.lendo)?'<div class="hint" style="margin-top:2px">Sem telefone na ficha: o WhatsApp abre para você escolher o contato.</div>':'')
@@ -72276,7 +72874,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
       +((salvo&&salvo.ativo)?'var(--z-gold)':'var(--line)')+';padding-left:10px;padding-right:12px">'
       +'<div style="display:flex;gap:9px;align-items:baseline;flex-wrap:wrap">'
       +'<strong style="font-size:16px;color:var(--z-blue)">'+escAttr(nome)
-      +(raca?('<span style="font-weight:600;color:var(--muted)">/'+escAttr(raca)+'</span>'):'')+'</strong>'
+      +(raca?('<span style="font-weight:600;color:var(--muted)">/'+escAttr(raca)+'</span>'):'')+'</strong>'+alergiaSeloHTML(p)
       +(tutor?('<span class="hint" style="margin:0">tutor '+escAttr(tutor)+'</span>'):'')
       // O INTERRUPTOR — a "caixa fácil" que ela pediu.
       +'<label style="margin-left:auto;display:flex;gap:7px;align-items:center;font-size:13px;font-weight:800;color:var(--z-blue);cursor:'+(pode?'pointer':'not-allowed')+'">'
@@ -74516,7 +75114,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     h+='<div style="margin-top:10px">'+esp.map(function(r){
       var ch=escAttr(String(r._chave||'')).replace(/'/g,'&#39;');
       return '<div style="border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:9px;background:var(--z-cream-warm)">'
-        +'<div style="font-weight:800;color:var(--z-blue);font-size:16px">'+escAttr(pernNomeLimpo(r.nome))+'</div>'
+        +'<div style="font-weight:800;color:var(--z-blue);font-size:16px">'+escAttr(pernNomeLimpo(r.nome))+alergiaSeloHTML(r)+'</div>'
         +'<div class="hint" style="margin-top:2px">'+escAttr(r.motivo||'motivo não declarado')
         +(r.hora?(' · avisado às '+escAttr(r.hora)):'')
         +(r.quem?(' · lançado por '+escAttr(r.quem)):'')+'</div>'
@@ -78219,7 +78817,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       const ph=foto?'<div class="ci-ph" style="background-image:url(\''+foto+'\')"></div>'
                    :'<div class="ci-ph" style="background:'+corPel(o.i)+'">'+((nome[0]||'?').toUpperCase())+'</div>';
       return '<div class="ci-result" onclick="ciEscolher('+o.i+')">'+ph+
-        '<div><div class="ci-nm">'+esc(nome)+'</div><div class="ci-br">'+esc(raca)+' · '+esc(tutor)+'</div></div>'+alerta+'</div>';
+        '<div><div class="ci-nm">'+esc(nome)+alergiaSeloDeTexto(ex.alergia)+'</div><div class="ci-br">'+esc(raca)+' · '+esc(tutor)+'</div></div>'+alerta+'</div>';
     }).join('');
   }
   function esc(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -84611,7 +85209,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     if(hospAbaEdit===id){
       return '<div class="hosp-est he-edit">'
         + av
-        + '<div class="he-main"><div class="he-nome">'+escAttr(e.nome||'')+'</div>'
+        + '<div class="he-main"><div class="he-nome">'+escAttr(e.nome||'')+alergiaSeloHTML(e)+'</div>'
         + '<div class="he-sub">Mudando as datas da hospedagem. A planilha não desfaz o que for salvo aqui.</div></div>'
         + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Entrada<br><input type="date" class="cad-in" id="hospEdIni" value="'+escAttr(e.entrada||'')+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>'
         + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Saída<br><input type="date" class="cad-in" id="hospEdFim" value="'+escAttr(e.saida||'')+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>'
@@ -84628,7 +85226,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     if(hospAbaBaixa===id){
       return '<div class="hosp-est he-edit">'
         + av
-        + '<div class="he-main"><div class="he-nome">Registrar saída (dar baixa) — '+escAttr(e.nome||'')+'</div>'
+        + '<div class="he-main"><div class="he-nome">Registrar saída (dar baixa) — '+escAttr(e.nome||'')+alergiaSeloHTML(e)+'</div>'
         + '<div class="he-sub">Registra quando ele foi embora e tira a hospedagem do Plantão. Não finaliza o check-out com tutor, itens e assinatura.</div></div>'
         + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Foi embora em<br><input type="date" class="cad-in" id="hospBxData" value="'+escAttr(e.saida||hospHojeISO())+'" max="'+escAttr(hospHojeISO())+'" min="2015-01-01" onkeydown="return dataSoNoCalendario(event)"></label>'
         + '<div class="he-acoes"><button class="btn btn-primary" onclick="hospConfirmarBaixa(\''+id+'\')">Confirmar baixa</button>'
@@ -84650,7 +85248,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       const n=hospNoitesNaoUsadas(e, real);
       return '<div class="hosp-est he-edit">'
         + av
-        + '<div class="he-main"><div class="he-nome">Saída antecipada — '+escAttr(e.nome||'')+'</div>'
+        + '<div class="he-main"><div class="he-nome">Saída antecipada — '+escAttr(e.nome||'')+alergiaSeloHTML(e)+'</div>'
         + '<div class="he-sub">A saída combinada era '+escAttr(prev?((typeof ciBRdata==='function')?ciBRdata(prev):prev):'sem data')+'. '
         + 'Em que dia ele foi embora de verdade? As noites que ele não usou voltam como crédito na ficha dele.</div>'
         + '<div class="he-sub" id="hospAntConta" style="font-weight:800;color:var(--z-blue)">'+escAttr(hospAntecipadaFrase(e, real))+'</div></div>'
@@ -84665,7 +85263,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     if(e._soPlanilha){
       return '<div class="hosp-est">'
         + av
-        + '<div class="he-main"><div class="he-nome">'+escAttr(e.nome||'')+'<span class="he-tag saiu">SÓ NA PLANILHA</span></div>'
+        + '<div class="he-main"><div class="he-nome">'+escAttr(e.nome||'')+'<span class="he-tag saiu">SÓ NA PLANILHA</span>'+alergiaSeloHTML(e)+'</div>'
         + '<div class="he-sub">'+escAttr(e.raca||'raça a cadastrar')+' · Tutor: '+escAttr(e.tutor||'a confirmar')+'</div>'
         + '<div class="he-sub">Está no Plantão de hoje pela planilha, mas sem datas registradas no app. Registre para ele não sumir se a planilha não for atualizada.</div></div>'
         + '<div class="he-datas" style="color:var(--muted)">sem datas</div>'
@@ -84688,7 +85286,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     return '<div class="hosp-est">'
       + av
       + '<div class="he-main" style="cursor:pointer" onclick="hospAbrirFicha(\''+id+'\')">'
-      + '<div class="he-nome">'+escAttr(e.nome||'')+'<span class="he-tag '+tag[0]+'">'+(_xc.tag||tag[1])+'</span></div>'
+      + '<div class="he-nome">'+escAttr(e.nome||'')+'<span class="he-tag '+tag[0]+'">'+(_xc.tag||tag[1])+'</span>'+alergiaSeloHTML(e)+'</div>'
       + '<div class="he-sub">'+escAttr(e.raca||'raça a cadastrar')+' · Tutor: '+escAttr(e.tutor||'a confirmar')+'</div>'
       + '<div class="he-sub">'+selos+'</div>'+alt+_xc.sub+_x6.sub+'</div>'
       + '<div class="he-datas">'+ent+' &rarr; '+sai+'</div>'
@@ -84958,7 +85556,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     if(hospNovaPend){
       var _amanha=(function(){ var d=new Date(); d.setDate(d.getDate()+1); var p=function(x){return String(x).padStart(2,'0');}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); })();
       h+='<div class="hosp-est he-edit">'
-        + '<div class="he-main"><div class="he-nome">'+(hospNovaPernoite?'🌙 Pernoite de hoje — ':'Nova hospedagem — ')+escAttr(hospNovaPend.nome||'')+'</div>'
+        + '<div class="he-main"><div class="he-nome">'+(hospNovaPernoite?'🌙 Pernoite de hoje — ':'Nova hospedagem — ')+escAttr(hospNovaPend.nome||'')+alergiaSeloHTML(hospNovaPend)+'</div>'
         + '<div class="he-sub">Tutor: '+escAttr(hospNovaPend.tutor||'a confirmar')+'. '+(hospNovaPernoite?'Entra hoje e sai amanhã — confira as datas e salve. A monitora recebe na Conferência.':'Informe de quando a quando o FILHOt fica.')+'</div></div>'
         + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Entrada<br><input type="date" class="cad-in" id="hospNovaIni" value="'+escAttr(hospHojeISO())+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>'
         + '<label style="font-size:12px;font-weight:700;color:var(--muted)">Saída<br><input type="date" class="cad-in" id="hospNovaFim" value="'+(hospNovaPernoite?escAttr(_amanha):'')+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>'
@@ -87773,7 +88371,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       // Item 7 — pernoite lançada pela recepção chega marcada para a monitora conferir.
       var _pern=(pend&&pend.e&&pend.e.pernoite)?'<span class="mini-med" style="background:#2E7D8A;color:#fff">PERNOITE</span>':'';
       return '<div class="vet-pet" onclick="abrirCfFicha('+i+')">'+ph+alerta+selo+_pern
-        +'<div class="nm">'+escAttr((cad.nome||h.nome||'—'))+'</div>'
+        +'<div class="nm">'+escAttr((cad.nome||h.nome||'—'))+alergiaSeloDeTexto(ex.alergia)+'</div>'
         +'<div class="br">'+(racaDe(h)?escAttr(racaDe(h)):'—')+'</div>'
         +'<div class="tt">'+(h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar'))+'</div></div>';
     }).join('');
@@ -90253,7 +90851,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
         :((e.saida===hoje)?'<span class="mini-med" style="background:var(--crm-critico);color:#fff">A PREPARAR</span>':'');
       return '<div class="vet-pet" onclick="coAbrirFicha(\''+escAttr(o.rk)+'\')"><div class="ph" style="background:#234D67">'+escAttr(ini)+'</div>'+selo
         +'<div class="mini-med" style="background:#EAF0F4;color:#234D67">'+tipo+'</div>'
-        +'<div class="nm">'+escAttr(e.nome||'—')+'</div><div class="br">'+escAttr(e.raca||'—')+'</div>'
+        +'<div class="nm">'+escAttr(e.nome||'—')+alergiaSeloHTML(e)+'</div><div class="br">'+escAttr(e.raca||'—')+'</div>'
         +'<div class="tt">'+(e.tutor?'Tutor: '+escAttr(e.tutor):'—')+(e.saida?' · sai '+ciBRdata(e.saida):' · sem data de saída')+'</div></div>'; };
     // O bloco de hoje é único e inclui as duas etapas. Assim a recepção não perde quem já está pronto.
     var saiHoje=lista.filter(function(o){ return o.e.saida===hoje; });
@@ -91722,7 +92320,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
   function pmSaidasSessao(){try{var u=usuarioAtual()||{};return [u.role||'',u.monId||'',u.nome||''].join('|');}catch(e){return '';}}
   function pmSaidasPodeVer(){var u=null,m=null;try{if(!podePapel('painel-monitor'))return false;u=usuarioAtual();if(!u||!u.role)return false;if(u.role!=='monitor')return true;if(!u.monId)return false;m=(monitoresValendo()||[]).filter(function(x){return x&&String(x.id)===String(u.monId);})[0]||null;return monAtivo(m);}catch(e){return false;}}
   function pmSaidasDados(){if(typeof CF_ESTADIAS_LIDO==='undefined'||CF_ESTADIAS_LIDO!==true)return {pronto:false,itens:[]};var h=hojeISO();return {pronto:true,itens:Object.keys(CF_ESTADIAS||{}).map(function(rk){var r=CF_ESTADIAS[rk]||{};return {rk:rk,e:r.e||{}};}).filter(function(o){return (o.e.status||'ativa')==='ativa'&&o.e.saida===h&&!ehMoradorDaCasa(o.e.nome,o.rk);}).sort(function(a,b){return jsNorm(a.e.nome||'').localeCompare(jsNorm(b.e.nome||''));})};}
-  function pmSaidasConteudo(){var d=pmSaidasDados();if(!d.pronto)return '<p class="pm-sub">Conferindo as estadias já lançadas…</p>';if(!d.itens.length)return '<p class="pm-sub">Nenhuma saída de Hotel hoje.</p>';return '<div class="pm-lista">'+d.itens.map(function(o){var e=o.e,et=coEtapaDe(e),tipo=ehPernoite(e)?'PERNOITE':'HÓSPEDE',st=et===2?'NA RECEPÇÃO':'A PREPARAR';return '<button type="button" class="pm-li" data-rk="'+escAttr(o.rk)+'" style="width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;border:0;background:transparent;padding:0" onclick="pmSaidasAbrir(this.dataset.rk)"><div class="pm-li-txt"><b>'+escAttr(e.nome||'—')+'</b><span>Tutor: '+escAttr(e.tutor||'—')+' · '+tipo+'</span></div><span class="mini-med" style="background:'+(et===2?'#1E8449':'var(--crm-critico)')+';color:#fff">'+st+'</span></button>';}).join('')+'</div>';}
+  function pmSaidasConteudo(){var d=pmSaidasDados();if(!d.pronto)return '<p class="pm-sub">Conferindo as estadias já lançadas…</p>';if(!d.itens.length)return '<p class="pm-sub">Nenhuma saída de Hotel hoje.</p>';return '<div class="pm-lista">'+d.itens.map(function(o){var e=o.e,et=coEtapaDe(e),tipo=ehPernoite(e)?'PERNOITE':'HÓSPEDE',st=et===2?'NA RECEPÇÃO':'A PREPARAR';return '<button type="button" class="pm-li" data-rk="'+escAttr(o.rk)+'" style="width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit;border:0;background:transparent;padding:0" onclick="pmSaidasAbrir(this.dataset.rk)"><div class="pm-li-txt"><b>'+escAttr(e.nome||'—')+alergiaSeloHTML(e,{curto:true})+'</b><span>Tutor: '+escAttr(e.tutor||'—')+' · '+tipo+'</span></div><span class="mini-med" style="background:'+(et===2?'#1E8449':'var(--crm-critico)')+';color:#fff">'+st+'</span></button>';}).join('')+'</div>';}
   function pmSaidasTitulo(){var d=pmSaidasDados();return 'Quem vai embora hoje'+(d.pronto?' ('+d.itens.length+')':'');}
   function pmSaidasCardHTML(){if(!pmSaidasPodeVer())return '';return '<article id="pmSaidasHojeCard" class="pm-card pm-rv pm-c6"><details open><summary id="pmSaidasHojeTitulo" class="pm-tit" style="cursor:pointer">'+pmSaidasTitulo()+'</summary><div id="pmSaidasHojeConteudo" style="margin-top:10px">'+pmSaidasConteudo()+'</div></details></article>';}
   function pmSaidasFaixa(){if(!pmSaidasPodeVer())return '';var d=pmSaidasDados();if(!d.pronto)return '<div class="hint">Conferindo as saídas de Hotel…</div>';if(!d.itens.length)return '';return '<button type="button" class="card" style="width:100%;margin:0;text-align:left;cursor:pointer" onclick="pmSaidasAbrirLista()"><strong>Quem vai embora hoje</strong> · '+d.itens.length+' '+(d.itens.length===1?'saída':'saídas')+' <span class="hint">Abrir lista de check-out</span></button>';}
@@ -95000,7 +95598,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     semAviso.slice(0,2).forEach(function(x){
       var tel=poTelDoTutor(x.o.p), tutor=String(x.o.p.tutor||'').trim();
       h+='<div class="pm-li"><span class="pm-badge pm-b-critico">sem aviso</span>'
-        +'<div class="pm-li-txt"><b>'+esc(x.o.p.n)+'</b>'
+        +'<div class="pm-li-txt"><b>'+esc(x.o.p.n)+alergiaSeloHTML(x.o.p,{curto:true})+'</b>'
         +'<span>nenhuma notícia hoje'+(tutor?(' — tutor '+esc(tutor)):'')+'</span>'
         +(tel
           ? ('<p style="margin-top:8px"><a class="pm-bt pm-bt-ouro pm-bt-mini" href="tel:'+escAttr(tel)+'">Ligar para o tutor</a></p>')
@@ -95009,7 +95607,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     });
     comAviso.slice(0, Math.max(1, 3-Math.min(2,semAviso.length))).forEach(function(x){
       h+='<div class="pm-li"><span class="pm-badge pm-b-info">avisou</span>'
-        +'<div class="pm-li-txt"><b>'+esc(x.o.p.n)+'</b>'
+        +'<div class="pm-li-txt"><b>'+esc(x.o.p.n)+alergiaSeloHTML(x.o.p,{curto:true})+'</b>'
         +'<span>'+esc(x.m.motivo)+(x.m.obs?(' — '+esc(x.m.obs)):'')+' · reposição registrada</span></div></div>';
     });
     h+='</div>';
@@ -95081,7 +95679,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       var _identC=x.nome+(x.raca?('/'+x.raca):(x.tutor?(' ('+x.tutor+')'):''));
       h+='<div class="pm-li"><span class="pm-badge '+(x.aviso?'pm-b-ok':(x.grave?'pm-b-critico':'pm-b-atencao'))+'">'
         +(x.aviso?'avisado':(x.pronto?'por avisar':'aguarda o 2º'))+'</span>'
-        +'<div class="pm-li-txt"><b>'+esc(_identC)+'</b><span>'+esc(x.motivo)+'</span></div></div>';
+        +'<div class="pm-li-txt"><b>'+esc(_identC)+alergiaSeloHTML(x,{curto:true})+'</b><span>'+esc(x.motivo)+'</span></div></div>';
     });
     h+='</div>';
     if(lista.length>3) h+='<p class="pm-sub" style="margin-top:10px">Mais '
@@ -95105,7 +95703,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     itens.slice(0,3).forEach(function(x){
       h+='<div class="pm-li"><span class="pm-badge '+(x.grave?'pm-b-critico':'pm-b-atencao')+'">'
         +(x.tipo==='preso'?'não saiu':(x.tipo==='reavaliacao'?'reavaliação':'remédio'))+'</span>'
-        +'<div class="pm-li-txt"><b>'+esc(x.nome)+'</b><span>'+esc(x.texto)+'</span></div></div>';
+        +'<div class="pm-li-txt"><b>'+esc(x.nome)+alergiaSeloHTML(x,{curto:true})+'</b><span>'+esc(x.texto)+'</span></div></div>';
     });
     h+='</div>';
     if(itens.length>3) h+='<p class="pm-sub" style="margin-top:10px">Mais '
@@ -95137,7 +95735,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       h+='<div class="pm-li"><span class="pm-badge '
         +(x.resolvido?'pm-b-ok':(x.lado==='Day Care'?'pm-b-atencao':'pm-b-info'))+'">'
         +esc(x.lado)+'</span>'
-        +'<div class="pm-li-txt"><b>'+esc(x.nome||'FILHOt sem nome anotado')+'</b>'
+        +'<div class="pm-li-txt"><b>'+esc(x.nome||'FILHOt sem nome anotado')+alergiaSeloHTML(x,{curto:true})+'</b>'
         +'<span>'+esc(x.texto)+(x.resolvido?' · já teve desfecho':'')+'</span></div></div>';
     });
     h+='</div>';
@@ -95191,7 +95789,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     L.slice(0,4).forEach(function(x){
       var quandoBR=(typeof fmtBR==='function'&&x.quando)?fmtBR(x.quando):(x.quando||'');
       h+='<div class="pm-li"><span class="pm-badge '+(x.marco===45?'pm-b-ok':'pm-b-atencao')+'">'+x.marco+' dias</span>'
-        +'<div class="pm-li-txt"><b>'+esc(x.nome)+'</b>'
+        +'<div class="pm-li-txt"><b>'+esc(x.nome)+alergiaSeloHTML(x,{curto:true})+'</b>'
         +'<span>'+(x.tutor?('tutor '+esc(x.tutor)):'tutor não anotado na ficha')
         +(quandoBR?(' · '+(x.marco===30?'fez um mês':'fez 45 dias')+' em '+esc(quandoBR)):'')+'</span>'
         +'<p style="margin-top:8px">'
@@ -95255,7 +95853,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       h+='<div class="pm-lista">';
       ANT.slice(0,4).forEach(function(r){
         h+='<div class="pm-li"><span class="pm-badge pm-b-critico">noite sem check-in</span>'
-          +'<div class="pm-li-txt"><b>'+esc(pernNomeLimpo(r.nome||''))+'</b>'
+          +'<div class="pm-li-txt"><b>'+esc(pernNomeLimpo(r.nome||''))+alergiaSeloHTML(r,{curto:true})+'</b>'
           +'<span>'+esc('noite de '+pernNoiteTexto(r._dia)+' — '+(r.motivo||'motivo não declarado'))+'</span></div></div>';
       });
       h+='</div>';
@@ -95272,7 +95870,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       h+='<div class="pm-lista">';
       (typeof pernLista==='function'?pernLista('aguardando'):[]).slice(0,4).forEach(function(r){
         h+='<div class="pm-li"><span class="pm-badge pm-b-critico">sem check-in</span>'
-          +'<div class="pm-li-txt"><b>'+esc(pernNomeLimpo(r.nome||''))+'</b>'
+          +'<div class="pm-li-txt"><b>'+esc(pernNomeLimpo(r.nome||''))+alergiaSeloHTML(r,{curto:true})+'</b>'
           +'<span>'+esc((r.motivo||'motivo não declarado')+(r.hora?(' · avisado às '+r.hora):''))+'</span></div></div>';
       });
       h+='</div>';
@@ -95378,7 +95976,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       h+='<div class="pm-lista">';
       E.impedidos.slice(0,2).forEach(function(x){
         h+='<div class="pm-li"><span class="pm-badge pm-b-critico">ficou de fora</span>'
-          +'<div class="pm-li-txt"><b>'+esc(x.n||'FILHOt sem nome')+'</b>'
+          +'<div class="pm-li-txt"><b>'+esc(x.n||'FILHOt sem nome')+alergiaSeloHTML({nome:x.n||'', tutor:x.tutor||''},{curto:true})+'</b>'
           +'<span>'+esc(x.motivo||'restrição não detalhada')+'</span></div></div>';
       });
       h+='</div>';

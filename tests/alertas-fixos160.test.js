@@ -147,12 +147,12 @@ prova('a faixa junta alertas fixos, alertas da estadia e as tarjas da ficha, com
 
 prova('a ordem é convivência (vermelho) primeiro, depois comportamento e saúde, depois a estadia', () => {
   const a = aparelho({
-    extra: { alertas_fixos: { rep: { on: true }, foge: { on: true }, sep: { on: true }, nocao: { on: true } }, alergia: 'frango' },
+    extra: { alertas_fixos: { rep: { on: true }, foge: { on: true }, pres: { on: true }, nocao: { on: true } }, alergia: 'frango' },
     estadia: [{ _id: 'e1', txt: 'Ciumento', ate: 'tirar', quem: 'X', ts: 1 }],
   });
   const it = a.run("faixaItens({p:pelAtual})");
   const ids = it.grandes.map((x) => x.id);
-  assert.deepStrictEqual(Array.from(ids), ['nocao', 'sep', 'foge', 'alerg', 'rep', 'estadia:e1']);
+  assert.deepStrictEqual(Array.from(ids), ['nocao', 'pres', 'foge', 'alerg', 'rep', 'estadia:e1']);
   assert.deepStrictEqual(Array.from(it.grandes.map((x) => x.kind)), ['conv', 'conv', 'amb', 'amb', 'amb', 'amb']);
   const r = a.run("faixaResumo({nome:'Exemplo', tutor:'Tutor Exemplo'})");
   assert.strictEqual(r.n, 6);
@@ -186,7 +186,7 @@ prova('a alergia é o próprio campo Alergia: preenchido = ligado; o nó alertas
   const com = aparelho({ extra: { alergia: 'frango' } });
   const it = com.run('alertasFixosItens(EXTRA)');
   assert.strictEqual(it.length, 1);
-  assert.strictEqual(it[0].tx, 'Alergia: frango');
+  assert.strictEqual(it[0].tx, 'ALERGIA A FRANGO');
   assert.strictEqual(com.run('alertaFixoLigado(EXTRA, "alerg")'), true);
   assert.strictEqual(com.run('faixaChipsDaFicha(EXTRA).length'), 0, 'a tarja de alergia não repete o cartão');
 });
@@ -500,7 +500,7 @@ prova('os textos novos não usam termos proibidos e o caminho dos alertas fixos 
   const todos = a.run('ALERTAS_FIXOS.map(function(d){ return d.tx+" | "+d.chip; }).join("\\n")');
   assert.ok(!/\b(c[ãa]o|c[ãa]es|cachorro|baia|solt)/i.test(todos));
   assert.strictEqual(a.run('ALERTAS_FIXOS.length'), 11);
-  assert.deepStrictEqual(Array.from(a.run('ALERTAS_FIXOS.map(function(d){ return d.id; })')), ['nocao', 'peq', 'mach', 'sozi', 'sep', 'foge', 'morde', 'medo', 'alerg', 'colar', 'rep']);
+  assert.deepStrictEqual(Array.from(a.run('ALERTAS_FIXOS.map(function(d){ return d.id; })')), ['nocao', 'peq', 'mach', 'sozi', 'pres', 'foge', 'morde', 'medo', 'alerg', 'colar', 'rep']);
   assert.strictEqual(a.run("alertaFixoDef('nocao').tx"), 'NÃO pode ficar junto com outros peludinhos');
   assert.strictEqual(a.run("alertaFixoDef('nocao').chip"), 'Não pode ficar com outros peludinhos');
   assert.strictEqual(a.run("alertaFixoDef('mach').chip"), 'Não pode com machos');
@@ -508,6 +508,256 @@ prova('os textos novos não usam termos proibidos e o caminho dos alertas fixos 
   assert.strictEqual(a.run("alertaFixoDef('morde').tx"), 'Morde quando mexem na comida');
   assert.strictEqual(a.run("alertaFixoDef('medo').tx"), 'Medo de trovão / fogos');
   assert.strictEqual(a.run("alertaFixoDef('rep').chip"), 'Não pode correr / repouso');
+});
+
+// ========================================================================= PARTE E (28/out/2026): «＋ Outro…», «Só come com presença humana», ALERGIA A TUDO
+// ------------------------------------------------------------------------- «Só come com presença humana» no lugar de «Come separado»
+prova('«Só come com presença humana» (id pres) tomou o lugar de «Come separado» (id sep): faixa, botão e grupo Convivência', () => {
+  const a = aparelho({ papel: 'gestao', extra: { alertas_fixos: { pres: { on: true, quem: 'Pessoa A', ts: 1 } } } });
+  assert.ok(!/\bsep\b/.test(listaAlertasFixos()), 'o id sep não existe mais na lista');
+  assert.strictEqual(a.run("alertaFixoDef('sep')"), null);
+  const d = a.run("alertaFixoDef('pres')");
+  assert.deepStrictEqual([d.g, d.kind, d.tx, d.chip], ['Convivência', 'conv', 'Só come com PRESENÇA HUMANA', 'Só come com presença humana']);
+  const h = a.run("faixaAtencaoHTML({p:pelAtual, onde:'ficha'})");
+  assert.ok(/Só come com PRESENÇA HUMANA/.test(h) && !/Come SEPARADO/i.test(h), 'a faixa');
+  const ed = a.run('alertasFixosEditorHTML(pelAtual)');
+  assert.ok(/aria-pressed="true"[^>]*onclick="alertaFixoToque\('pres'\)">Só come com presença humana</.test(ed), 'o botão, ligado');
+  assert.ok(ed.indexOf('Só come com presença humana') < ed.indexOf('>Comportamento<'), 'está no grupo Convivência (antes do grupo Comportamento)');
+  assert.ok(!/Come separado/i.test(ed));
+  // o porteiro conhece o id novo e já não conhece o antigo
+  assert.deepStrictEqual(barrados('monitor', { 'alertas_fixos/pres': { on: true, det: '', quem: 'X', ts: 1 } }, false), []);
+  assert.deepStrictEqual(barrados('gestao', { 'alertas_fixos/sep': { on: true, det: '', quem: 'X', ts: 1 } }, true), ['alertas_fixos/sep']);
+});
+
+// ------------------------------------------------------------------------- ALERGIA A TUDO
+prova('ALERGIA A …: o botão do editor, a faixa em maiúsculas e o botão rápido «ALERGIA A TUDO» que grava alergia=\'TUDO\'', async () => {
+  assert.strictEqual(aparelho().run("alertaFixoDef('alerg').chip"), 'ALERGIA A …');
+  const a = aparelho({ papel: 'gestao', extra: {} });
+  a.run("alertaFixoToque('alerg')");
+  const ed = a.run('alertasFixosEditorHTML(pelAtual)');
+  assert.ok(/>ALERGIA A …<\/button>/.test(ed), 'o botão passa a ALERGIA A …');
+  assert.ok(/onclick="alertaFixoAlergiaTudo\(\)">ALERGIA A TUDO<\/button>/.test(ed), 'o botão rápido no painel de ligar');
+  assert.ok(/Saúde › Alergia/.test(ed) && !/Atenção & Cuidados/.test(ed));
+  assert.strictEqual(a.gravacoes.length, 0, 'abrir o painel não grava');
+  a.run('alertaFixoAlergiaTudo()');
+  await espera();
+  assert.deepStrictEqual(Object.assign({}, a.gravacoes[0].patch), { alergia: 'TUDO' }, 'o mesmo campo alergia, o mesmo caminho');
+  assert.strictEqual(a.gravacoes[0].op.soDepoisDoOk, true);
+  assert.ok(a.auditoria.some((x) => x[0] === 'alerta-fixo' && /Alergia: TUDO/.test(x[1])));
+  // com a alergia gravada: a faixa lê «ALERGIA A TUDO» e o painel de editar também tem o botão rápido
+  a.set('EXTRA', { alergia: 'TUDO' });
+  const h = a.run("faixaAtencaoHTML({p:pelAtual, onde:'ficha'})");
+  assert.ok(/<div class="faixa-tx">ALERGIA A TUDO<\/div>/.test(h), 'a faixa: ALERGIA A TUDO');
+  assert.ok(/onclick="alertaFixoAlergiaTudo\(\)">ALERGIA A TUDO<\/button>/.test(a.run('alertasFixosEditorHTML(pelAtual)')), 'também no painel de editar');
+  // texto em maiúsculas, com acento e escapado
+  a.set('EXTRA', { alergia: 'frango e ovo <b>x</b>' });
+  const h2 = a.run("faixaAtencaoHTML({p:pelAtual, onde:'ficha'})");
+  assert.ok(h2.indexOf('ALERGIA A FRANGO E OVO &lt;B>X&lt;/B>') >= 0 && !/<b>x/i.test(h2), 'maiúsculas e escapado (o escAttr da casa troca o «<»)');
+  a.set('EXTRA', { alergia: 'maçã' });
+  assert.ok(/ALERGIA A MAÇÃ/.test(a.run("faixaAtencaoHTML({p:pelAtual, onde:'ficha'})")));
+  // «não tem» escrito no campo não vira alerta
+  a.set('EXTRA', { alergia: 'Não tem' });
+  assert.strictEqual(a.run('alertasFixosItens(EXTRA).length'), 0);
+});
+
+prova('ALERGIA A TUDO segue a permissão de ligar: a monitora grava, a veterinária não (nada é gravado)', async () => {
+  const mon = aparelho({ papel: 'monitor', extra: {} });
+  mon.run('alertaFixoAlergiaTudo()');
+  await espera();
+  assert.deepStrictEqual(Object.assign({}, mon.gravacoes[0].patch), { alergia: 'TUDO' });
+  const vet = aparelho({ papel: 'vet', extra: {} });
+  vet.run('alertaFixoAlergiaTudo()');
+  await espera();
+  assert.strictEqual(vet.gravacoes.length, 0);
+  assert.ok(/Você não tem permissão para ligar alertas/.test(vet.run('alertasFixosEditorHTML(pelAtual)')) || vet.run('ALERTAFIXO_UI.msg').length > 0);
+});
+
+// ------------------------------------------------------------------------- «＋ Outro…»: alertas digitados
+prova('tabela de permissões: «alerta-fixo-outro» é só Gestão, Supervisão e Diretoria', () => {
+  const a = aparelho();
+  assert.deepStrictEqual(Array.from(a.run("PERM['alerta-fixo-outro']")), ['gestao', 'supervisor', 'diretoria']);
+  assert.deepStrictEqual(Array.from(a.run("PERM['alerta-fixo-ligar']")), ['gestao', 'supervisor', 'diretoria', 'monitor'], 'ligar continua como era');
+});
+
+prova('«＋ Outro…» aparece em Convivência e em Comportamento só para Gestão, Supervisão e Diretoria; Monitora e Veterinária não o veem', () => {
+  ['gestao', 'supervisor', 'diretoria'].forEach((p) => {
+    const h = aparelho({ papel: p, extra: {} }).run('alertasFixosEditorHTML(pelAtual)');
+    assert.strictEqual((h.match(/＋ Outro…/g) || []).length, 2, p + ': um em cada grupo (Convivência e Comportamento)');
+    assert.ok(/alertaFixoOutroAbrir\('conv'\)/.test(h) && /alertaFixoOutroAbrir\('comp'\)/.test(h), p);
+    assert.ok(h.indexOf("alertaFixoOutroAbrir('conv')") < h.indexOf('>Comportamento<') && h.indexOf("alertaFixoOutroAbrir('comp')") > h.indexOf('>Comportamento<') && h.indexOf("alertaFixoOutroAbrir('comp')") < h.indexOf('>Saúde<'), p + ': cada um no seu grupo, nenhum em Saúde');
+  });
+  ['monitor', 'vet', 'plantonista', 'consultora'].forEach((p) => {
+    const h = aparelho({ papel: p, extra: {} }).run('alertasFixosEditorHTML(pelAtual)');
+    assert.ok(!/Outro…/.test(h) && !/alertaFixoOutro/.test(h), p + ' não vê o «＋ Outro…»');
+  });
+});
+
+prova('«＋ Outro…» abre o campo (até 80) e o botão «Ligar» dentro da página; sem texto não grava; com texto grava x<base36> com txt, g, quem e ts', async () => {
+  const a = aparelho({ papel: 'gestao', extra: {} });
+  a.run("alertaFixoOutroAbrir('conv')");
+  const h = a.run('alertasFixosEditorHTML(pelAtual)');
+  assert.ok(/id="afOutroNovo" maxlength="80"/.test(h) && /onclick="alertaFixoOutroLigar\('conv'\)">Ligar<\/button>/.test(h), 'campo de texto e botão Ligar, dentro da página');
+  assert.strictEqual(a.gravacoes.length, 0, 'abrir não grava');
+  a.set('document', { body: { dataset: { role: 'gestao' } }, getElementById: (id) => (id === 'afOutroNovo' ? { value: '   ' } : null) });
+  a.run("alertaFixoOutroLigar('conv')");
+  assert.strictEqual(a.gravacoes.length, 0, 'vazio não liga');
+  assert.ok(/Escreva o alerta antes de ligar/.test(a.run('alertasFixosEditorHTML(pelAtual)')));
+  a.set('document', { body: { dataset: { role: 'gestao' } }, getElementById: (id) => (id === 'afOutroNovo' ? { value: '  só passeia  de peitoral ' } : null) });
+  a.run("alertaFixoOutroLigar('conv')");
+  await espera();
+  assert.strictEqual(a.gravacoes.length, 1);
+  const g = a.gravacoes[0];
+  const chaves = Object.keys(g.patch);
+  assert.strictEqual(chaves.length, 1);
+  assert.ok(/^alertas_fixos\/x[a-z0-9]{5,12}$/.test(chaves[0]), 'id x<base36> de 5 a 12 letras/números: ' + chaves[0]);
+  const no = g.patch[chaves[0]];
+  assert.deepStrictEqual([no.on, no.txt, no.g, no.det, no.quem], [true, 'só passeia de peitoral', 'conv', '', 'Pessoa Exemplo']);
+  assert.ok(no.ts > 0);
+  assert.strictEqual(g.op.soDepoisDoOk, true, 'só muda a tela depois do ok do banco');
+  assert.ok(a.auditoria.some((x) => x[0] === 'alerta-fixo' && /ligou/.test(x[1]) && /só passeia de peitoral/.test(x[1])), 'fica na auditoria');
+  // o texto passa de 80: corta em 80
+  a.set('document', { body: { dataset: { role: 'gestao' } }, getElementById: (id) => (id === 'afOutroNovo' ? { value: 'a'.repeat(120) } : null) });
+  a.run("alertaFixoOutroLigar('comp')");
+  await espera();
+  const n2 = a.gravacoes[1].patch[Object.keys(a.gravacoes[1].patch)[0]];
+  assert.deepStrictEqual([n2.txt.length, n2.g], [80, 'comp']);
+  // dois ids seguidos não se repetem
+  assert.notStrictEqual(chaves[0], Object.keys(a.gravacoes[1].patch)[0]);
+});
+
+prova('Monitora e Veterinária não digitam: nada é gravado mesmo chamando a função direto', async () => {
+  ['monitor', 'vet'].forEach(() => {});
+  for (const p of ['monitor', 'vet']) {
+    const a = aparelho({ papel: p, extra: {} });
+    a.set('document', { body: { dataset: { role: p } }, getElementById: (id) => (id === 'afOutroNovo' ? { value: 'texto qualquer' } : null) });
+    a.run("alertaFixoOutroAbrir('conv')");
+    a.run("alertaFixoOutroLigar('conv')");
+    await espera();
+    assert.strictEqual(a.gravacoes.length, 0, p);
+    assert.ok(/Só a Gestão, a Supervisão e a Diretoria escrevem um alerta novo/.test(a.run('alertasFixosEditorHTML(pelAtual)')), p);
+  }
+});
+
+const NOVO = (o) => Object.assign({ on: true, txt: 'só passeia de peitoral', g: 'conv', det: '', quem: 'X', ts: 1 }, o || {});
+prova('porteiro: só Gestão, Supervisão e Diretoria criam, ligam e mudam o texto de um alerta digitado; desligar pede «alerta-fixo-desligar»', () => {
+  ['gestao', 'supervisor', 'diretoria'].forEach((p) => {
+    assert.deepStrictEqual(barrados(p, { 'alertas_fixos/xk3j9a1b2': NOVO() }, true), [], p + ' cria');
+    assert.deepStrictEqual(barrados(p, { 'alertas_fixos/xk3j9a1b2/txt': 'outro texto' }, true), [], p + ' muda o texto');
+    assert.deepStrictEqual(barrados(p, { 'alertas_fixos/xk3j9a1b2': NOVO({ on: false, desligadoPor: 'Y', desligadoTs: 2 }) }, true), [], p + ' desliga');
+    assert.deepStrictEqual(barrados(p, { 'alertas_fixos/xk3j9a1b2/det': 'motivo' }, true), [], p + ' põe motivo');
+  });
+  ['monitor', 'vet', 'plantonista', 'aprendiz', 'consultora'].forEach((p) => {
+    const edita = p === 'consultora';
+    assert.deepStrictEqual(barrados(p, { 'alertas_fixos/xk3j9a1b2': NOVO() }, edita), ['alertas_fixos/xk3j9a1b2'], p + ' não cria');
+    assert.deepStrictEqual(barrados(p, { 'alertas_fixos/xk3j9a1b2/txt': 'outro texto' }, edita), ['alertas_fixos/xk3j9a1b2/txt'], p + ' não muda o texto');
+    assert.deepStrictEqual(barrados(p, { 'alertas_fixos/xk3j9a1b2': NOVO({ on: false }) }, edita), ['alertas_fixos/xk3j9a1b2'], p + ' não desliga');
+  });
+  // a monitora liga os PRONTOS como antes, mas não o digitado; o motivo (/det) do digitado segue a regra de ligar
+  assert.deepStrictEqual(barrados('monitor', { 'alertas_fixos/nocao': { on: true, det: '', quem: 'X', ts: 1 } }, false), []);
+  assert.deepStrictEqual(barrados('monitor', { 'alertas_fixos/xk3j9a1b2/det': 'motivo' }, false), []);
+});
+
+prova('porteiro: id fora do padrão, texto vazio ou grande demais, grupo estranho, valor sem «on» e o nó inteiro continuam barrados para todos', () => {
+  const ruins = {
+    'id curto demais': { 'alertas_fixos/xab': NOVO() },
+    'id sem x': { 'alertas_fixos/k3j9a1b2c': NOVO() },
+    'id com maiúscula': { 'alertas_fixos/Xk3j9a1b2': NOVO() },
+    'id com símbolo': { 'alertas_fixos/xk3j-a1b2': NOVO() },
+    'id comprido demais': { 'alertas_fixos/xk3j9a1b2c3d4': NOVO() },
+    'subcaminho on': { 'alertas_fixos/xk3j9a1b2/on': true },
+    'subcaminho g': { 'alertas_fixos/xk3j9a1b2/g': 'conv' },
+    'texto vazio': { 'alertas_fixos/xk3j9a1b2': NOVO({ txt: '   ' }) },
+    'texto grande': { 'alertas_fixos/xk3j9a1b2': NOVO({ txt: 'a'.repeat(81) }) },
+    'texto que não é texto': { 'alertas_fixos/xk3j9a1b2': NOVO({ txt: { a: 1 } }) },
+    'sem grupo': { 'alertas_fixos/xk3j9a1b2': NOVO({ g: undefined }) },
+    'grupo saúde': { 'alertas_fixos/xk3j9a1b2': NOVO({ g: 'saude' }) },
+    'sem on': { 'alertas_fixos/xk3j9a1b2': { txt: 'x', g: 'conv' } },
+    'apagar o nó': { 'alertas_fixos/xk3j9a1b2': null },
+    'o nó inteiro': { alertas_fixos: { xk3j9a1b2: NOVO() } },
+    'barra no começo': { '/alertas_fixos/xk3j9a1b2': NOVO() },
+    'texto novo grande': { 'alertas_fixos/xk3j9a1b2/txt': 'a'.repeat(81) },
+    'texto novo vazio': { 'alertas_fixos/xk3j9a1b2/txt': '' },
+    'txt de um pronto': { 'alertas_fixos/nocao/txt': 'x' },
+  };
+  Object.keys(ruins).forEach((nome) => {
+    ['gestao', 'supervisor', 'diretoria'].forEach((p) => {
+      const chaves = Object.keys(ruins[nome]);
+      assert.deepStrictEqual(barrados(p, ruins[nome], true), chaves, p + ': ' + nome + ' tem de ficar barrado');
+    });
+  });
+});
+
+prova('o alerta digitado aparece como botão ligado igual aos prontos, e a monitora o vê travado («só a Gestão desliga»)', () => {
+  const extra = { alertas_fixos: { xk3j9a1b2: NOVO({ quem: 'Pessoa A', ts: 5 }), xz9y8x7w6: NOVO({ txt: 'late ao ver bicicleta', g: 'comp', ts: 6 }) } };
+  const g = aparelho({ papel: 'gestao', extra });
+  const h = g.run('alertasFixosEditorHTML(pelAtual)');
+  assert.ok(/class="faixa-liga k-conv" aria-pressed="true" onclick="alertaFixoToqueOutro\('xk3j9a1b2'\)">só passeia de peitoral<\/button>/.test(h), 'convivência: vermelho, ligado');
+  assert.ok(/class="faixa-liga k-amb" aria-pressed="true" onclick="alertaFixoToqueOutro\('xz9y8x7w6'\)">late ao ver bicicleta<\/button>/.test(h), 'comportamento: dourado, ligado');
+  assert.ok(h.indexOf('só passeia de peitoral') < h.indexOf('>Comportamento<') && h.indexOf('late ao ver bicicleta') > h.indexOf('>Comportamento<') && h.indexOf('late ao ver bicicleta') < h.indexOf('>Saúde<'), 'cada um no seu grupo');
+  const m = aparelho({ papel: 'monitor', extra }).run('alertasFixosEditorHTML(pelAtual)');
+  assert.ok(/aria-disabled="true"[^>]*>só passeia de peitoral · 🔒 só a Gestão desliga/.test(m), 'a monitora vê travado');
+  assert.ok(!/＋ Outro/.test(m));
+  const v = aparelho({ papel: 'vet', extra }).run('alertasFixosEditorHTML(pelAtual)');
+  assert.ok(!/faixa-liga/.test(v) && /<li><b>só passeia de peitoral<\/b> — ligado por Pessoa A/.test(v), 'quem não liga vê a lista só de leitura, com o digitado');
+});
+
+prova('o digitado entra na faixa na cor do grupo (convivência = vermelho, comportamento = dourado), depois dos prontos do mesmo grupo, e conta como alerta', () => {
+  const a = aparelho({
+    extra: { alertas_fixos: { xk3j9a1b2: NOVO({ ts: 5 }), xz9y8x7w6: NOVO({ txt: 'late ao ver bicicleta', g: 'comp', ts: 6 }), nocao: { on: true }, foge: { on: true }, rep: { on: true } } },
+  });
+  const it = a.run('faixaItens({p:pelAtual})');
+  assert.deepStrictEqual(Array.from(it.grandes.map((x) => x.id)), ['nocao', 'xk3j9a1b2', 'foge', 'xz9y8x7w6', 'rep']);
+  assert.deepStrictEqual(Array.from(it.grandes.map((x) => x.kind)), ['conv', 'conv', 'amb', 'amb', 'amb']);
+  const h = a.run("faixaAtencaoHTML({p:pelAtual, onde:'ficha'})");
+  assert.ok(/<div class="faixa-al conv"><span class="faixa-ic" aria-hidden="true">📌<\/span><div><div class="faixa-tx">só passeia de peitoral<\/div>/.test(h), 'convivência: faixa-al conv (vermelho)');
+  assert.ok(/<div class="faixa-al amb"><span class="faixa-ic" aria-hidden="true">⚠️<\/span><div><div class="faixa-tx">late ao ver bicicleta<\/div>/.test(h), 'comportamento: faixa-al amb (dourado)');
+  assert.ok(/data-n="5"/.test(h));
+  assert.strictEqual(a.run("faixaResumo({nome:'Exemplo', tutor:'Tutor Exemplo'}).n"), 5, 'o selo do cartão da hospedagem também conta');
+  assert.strictEqual(a.run('alertasFixosContaTexto(EXTRA)'), '5 alertas');
+});
+
+prova('desligar um digitado: grava on:false com quem desligou e quando, o texto e quem ligou ficam (nada é apagado); a monitora não desliga', async () => {
+  const extra = { alertas_fixos: { xk3j9a1b2: NOVO({ quem: 'Pessoa A', ts: 5, det: 'ciúme' }) } };
+  const a = aparelho({ papel: 'gestao', extra });
+  a.run("alertaFixoToqueOutro('xk3j9a1b2')");
+  await espera();
+  assert.strictEqual(a.gravacoes.length, 1);
+  assert.deepStrictEqual(Object.keys(a.gravacoes[0].patch), ['alertas_fixos/xk3j9a1b2']);
+  const d = a.gravacoes[0].patch['alertas_fixos/xk3j9a1b2'];
+  assert.deepStrictEqual([d.on, d.txt, d.g, d.det, d.quem, d.ts, d.desligadoPor], [false, 'só passeia de peitoral', 'conv', 'ciúme', 'Pessoa A', 5, 'Pessoa Exemplo']);
+  assert.ok(d.desligadoTs > 0);
+  assert.ok(a.auditoria.some((x) => x[0] === 'alerta-fixo' && /desligou/.test(x[1]) && /só passeia de peitoral/.test(x[1])));
+  // desligado, sai da faixa e do botão (o nó fica no banco)
+  a.set('EXTRA', { alertas_fixos: { xk3j9a1b2: Object.assign({}, d) } });
+  assert.strictEqual(a.run('alertasFixosItens(EXTRA).length'), 0);
+  assert.ok(!/só passeia de peitoral/.test(a.run("faixaAtencaoHTML({p:pelAtual, onde:'ficha'})")));
+  assert.ok(!/só passeia de peitoral/.test(a.run('alertasFixosEditorHTML(pelAtual)')));
+  const m = aparelho({ papel: 'monitor', extra });
+  m.run("alertaFixoToqueOutro('xk3j9a1b2')");
+  await espera();
+  assert.strictEqual(m.gravacoes.length, 0);
+  assert.ok(/Só a Gestão desliga este alerta/.test(m.run('alertasFixosEditorHTML(pelAtual)')));
+});
+
+prova('texto digitado vai escapado: <img onerror> no txt não vira tag na faixa, no botão nem na lista; nó torto no banco é ignorado', () => {
+  const sujo = '<img src=x onerror=alert(1)>';
+  const extra = { alertas_fixos: { xk3j9a1b2: NOVO({ txt: sujo }) } };
+  const g = aparelho({ papel: 'gestao', extra });
+  const faixa = g.run("faixaAtencaoHTML({p:pelAtual, onde:'ficha'})");
+  const ed = g.run('alertasFixosEditorHTML(pelAtual)');
+  assert.ok(!/<img/i.test(faixa) && !/<img/i.test(ed) && /&lt;img/.test(faixa) && /&lt;img/.test(ed), 'faixa e botão');
+  assert.ok(!/<img/i.test(aparelho({ papel: 'vet', extra }).run('alertasFixosEditorHTML(pelAtual)')), 'lista de leitura');
+  // o nó torto (id fora do padrão, texto vazio, grupo estranho, valor que não é objeto) não acende nada
+  const torto = aparelho({ extra: { alertas_fixos: { xab: NOVO(), 'x!bad1': NOVO(), xk3j9a1b2: NOVO({ txt: '' }), xz9y8x7w6: NOVO({ g: 'saude' }), xq1w2e3r4: 'texto', xl1l1l1l1: null } } });
+  assert.strictEqual(torto.run('alertasFixosItens(EXTRA).length'), 0);
+});
+
+prova('vocabulário e janelas nativas: os textos novos da parte E não têm termo proibido nem alert/confirm/prompt', () => {
+  const t = trechoFaixa();
+  const so = t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  assert.ok(!/\b(c[ãa]o|c[ãa]es|cachorro|cachorros|baia|baias|soltar|solto|solta)\b/i.test(so));
+  assert.ok(!/\balert\s*\(|\bconfirm\s*\(|\bprompt\s*\(/.test(t));
+  ['pelAlergiaTudoHTML', 'pelAlergiaTudoGravar'].forEach((f) => assert.ok(!/\balert\s*\(|\bconfirm\s*\(/.test(funcaoDe(src, f)), f));
 });
 
 (async () => {
