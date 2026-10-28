@@ -35373,10 +35373,15 @@ prova('6.59 P34 (AC13, guarda) — a área protegida, a atividade Peso do Day Ca
   const sec = (x) => { const i = x.indexOf('id="v-daycare"'); const j = x.indexOf('id="v-', i + 10); return x.slice(i, j); };
   const decl = (x) => x.split('\n').filter((l) => /^\s*(var|let|const)\s+(ck|ckt|pt)[A-Z_]/.test(l)).join('\n');
   igual([nomes.length, h(nomes.map((n) => n + '\n' + run(n + '.toString()')).join('\n\n')), h(sec(html)), h(decl(html))], [PROT_BASE658.n, PROT_BASE658.funcoes, PROT_BASE658.daycare, PROT_BASE658.decl]);
+  // abrirVetFicha — alertas fixos (28/out/2026, tests/alertas-fixos160.test.js).
+  //   Antes:  79a19e70ab5e4e58c04a3d86699f8e4f31cb2583382983af56dff2405f513e58 (a função da base desta prova).
+  //   Depois: 8ad5859b7bb890c8b8e9a95f246adc5baed00dbf56e77ce6a9bf277384115230 — ganhou UMA linha, depois das tarjas do cabeçalho: desenha
+  //           a faixa «ATENÇÃO — LEIA ANTES» em #vfFaixa (nasce recolhida, com try/catch para não impedir a ficha de abrir).
+  //   Por quê: a Veterinária precisa ler os alertas fixos do FILHOt antes de examiná-lo; nenhuma outra linha da função mudou.
   const BASE = { renderPesoAtiv: '432ef6ad1d2da28af4d13513eeb83bf71725bbf67470c7d5f34391ff49ad9afa', pesoAtivSalvar: 'a2e2e1176e1ffb5805b7a2d05ebdfb65b4de7ef32e5393d5d6ca508604312911',
     tgAvisar: 'fe030a1d1f9175992bed0d2416d57ebb298ab60f55dd7990c1f9682d16ef1c49', tgAvisarAlteracao: 'a2992b21868f9377003340f350e3b2b93421697d83c57e2cb300ecbd281440e9',
     dashPonteChamarJa: 'dcddee702d3a081a5a619b60737fcc3b604e41131d26309da44a6427a8dfaa1c', dashEspelhar: 'b391f81b75745520a46daaa65f2284a4a3a4b475797e642167e09e922d9b6405',
-    dashAutoSincronizar: 'ba29c5cfc857f2c630014f1c649bbeb2788dcfc00db27f3137a607d3161bdf1a', abrirVetFicha: '79a19e70ab5e4e58c04a3d86699f8e4f31cb2583382983af56dff2405f513e58',
+    dashAutoSincronizar: 'ba29c5cfc857f2c630014f1c649bbeb2788dcfc00db27f3137a607d3161bdf1a', abrirVetFicha: '8ad5859b7bb890c8b8e9a95f246adc5baed00dbf56e77ce6a9bf277384115230',
     pesoTentar: '7121f14ca1ed4c78ce77b1d806111408506934b602f9351885004988188fa728' };
   const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h(run(n + '.toString()')); });
   igual(agora, BASE, 'letra por letra iguais às da base');

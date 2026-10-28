@@ -1079,6 +1079,57 @@
   .prev-busca{font-size:16px;min-height:48px;margin:0}
   .ficha-topico-corpo{padding:0 12px 12px;border-top:1px solid var(--line)}
   .ficha-topico-corpo .prev-bloco{border:0;border-radius:0;padding:12px 0 0;margin:0;background:transparent}
+  /* Faixa «ATENÇÃO — LEIA ANTES» e botões dos alertas fixos (maquete aprovada pela Adriana, 28/out/2026).
+     Cartão branco, borda vermelha de 2px; a cor mora na borda, no texto e num wash de alpha — nunca em fundo chapado. */
+  .faixa-atn{border:2px solid var(--crm-critico);background:var(--z-white);border-radius:16px;padding:10px 14px 14px;margin:0 0 14px;box-shadow:var(--shadow);animation:faixaPulso 1.6s ease-in-out infinite}
+  .faixa-atn.recolhida{animation:none;padding:2px 14px}
+  @keyframes faixaPulso{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,0)}50%{box-shadow:0 0 0 6px rgba(192,57,43,.18)}}
+  .faixa-cab{display:flex;align-items:center;gap:8px}
+  .faixa-tit{all:unset;box-sizing:border-box;flex:1;min-width:0;display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;font-size:14px;font-weight:800;letter-spacing:.02em;color:var(--crm-critico);text-transform:uppercase}
+  .faixa-tit:focus-visible{outline:3px solid var(--z-gold);outline-offset:2px;border-radius:12px}
+  .faixa-cnt{flex:none;white-space:nowrap;font-size:11px;background:rgba(192,57,43,.12);color:var(--crm-critico);border-radius:999px;padding:2px 9px;letter-spacing:0}
+  .faixa-rec{flex:none;min-height:44px;border-radius:999px;border:1.5px solid var(--crm-critico);background:transparent;color:var(--crm-critico);font-weight:700;padding:0 14px;font-size:13px;cursor:pointer}
+  .faixa-atn.recolhida .faixa-rec{display:none}
+  .faixa-corpo{display:grid;grid-template-rows:1fr;transition:grid-template-rows .3s ease,visibility 0s}
+  .faixa-atn.recolhida .faixa-corpo{grid-template-rows:0fr;visibility:hidden;transition:grid-template-rows .3s ease,visibility 0s .3s}
+  .faixa-in{overflow:hidden;min-height:0;padding-top:2px}
+  .faixa-grandes{display:grid;grid-template-columns:1fr;column-gap:10px}
+  @media (min-width:900px){ .faixa-grandes{grid-template-columns:1fr 1fr} }
+  .faixa-al{display:flex;gap:12px;align-items:center;border-radius:12px;padding:10px 12px;margin-top:8px}
+  .faixa-ic{flex:none;font-size:22px;line-height:1;width:30px;text-align:center}
+  .faixa-tx{font-weight:800;font-size:15px;line-height:1.25;overflow-wrap:anywhere}
+  .faixa-sub{font-size:13px;margin-top:2px;font-weight:500;overflow-wrap:anywhere}
+  .faixa-al.conv{background:rgba(192,57,43,.12);color:var(--crm-critico)}
+  .faixa-al.amb{background:rgba(222,180,40,.14);color:var(--crm-atencao-text)}
+  .faixa-tag{display:inline-block;margin-top:5px;font-size:11px;font-weight:800;background:rgba(222,180,40,.22);color:var(--z-blue);border-radius:999px;padding:2px 9px}
+  .faixa-auto{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .faixa-lbl{font-size:11.5px;font-weight:700;color:var(--muted)}
+  .faixa-chip{min-height:44px;padding:0 12px;border-radius:999px;border:1.5px solid rgba(222,180,40,.45);background:rgba(222,180,40,.14);color:var(--crm-atencao-text);font-weight:800;font-size:11.5px;letter-spacing:.02em;cursor:pointer}
+  .faixa-chip[aria-expanded="true"]{background:rgba(222,180,40,.22);color:var(--z-blue)}
+  .faixa-chip-txt{flex:1 1 100%;background:rgba(222,180,40,.14);color:var(--crm-atencao-text);border-radius:10px;padding:7px 11px;font-size:13px;overflow-wrap:anywhere}
+  .faixa-chip-txt[hidden]{display:none}
+  .faixa-nada{background:var(--z-white);border:1.5px solid var(--line);border-left:4px solid var(--crm-ok);color:var(--z-blue);border-radius:12px;padding:10px 14px;margin:0 0 14px;font-weight:600;font-size:13.5px;box-shadow:var(--shadow)}
+  .faixa-grupo{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin:14px 0 6px}
+  .faixa-botoes{display:flex;flex-wrap:wrap;gap:8px}
+  .faixa-liga{min-height:44px;padding:6px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--z-white);color:var(--z-blue);font-weight:600;font-size:13px;cursor:pointer;text-align:left}
+  .faixa-liga[aria-pressed="true"].k-conv{background:rgba(192,57,43,.12);border-color:var(--crm-critico);color:var(--crm-critico);font-weight:700}
+  .faixa-liga[aria-pressed="true"].k-amb{background:rgba(222,180,40,.22);border-color:var(--z-gold);color:var(--crm-atencao-text);font-weight:700}
+  .faixa-liga[aria-disabled="true"]{cursor:default}
+  .faixa-liga:focus-visible{outline:3px solid var(--z-gold);outline-offset:2px}
+  .faixa-lista{margin:0;padding-left:18px;font-size:13.5px;line-height:1.6;color:var(--z-blue)}
+  .faixa-cx{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--z-cream-warm);border:1.5px solid var(--line);color:var(--z-blue);font-size:13.5px}
+  .faixa-rot{display:block;margin-top:6px;font-size:12px;font-weight:700;color:var(--muted)}
+  .faixa-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .faixa-msg{margin-top:10px;padding:9px 12px;border-radius:10px;background:rgba(222,180,40,.14);border-left:4px solid var(--z-gold);color:var(--crm-atencao-text);font-weight:700;font-size:13px}
+  .faixa-previa{margin-top:14px;padding:12px;border:2px dashed var(--z-blue-soft);border-radius:14px;background:var(--z-cream-warm)}
+  .faixa-previa-t{font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--z-blue);margin-bottom:8px}
+  .faixa-previa .faixa-atn,.faixa-previa .faixa-nada{margin-bottom:0}
+  .faixa-selo{display:inline-block;max-width:100%;background:rgba(192,57,43,.12);color:var(--crm-critico);border-radius:12px;padding:4px 10px;font-weight:800;font-size:12px;margin-left:6px;vertical-align:top;overflow-wrap:anywhere}
+  .faixa-selo small{display:block;font-weight:600;font-size:11.5px}
+  @media (prefers-reduced-motion:reduce){
+    .faixa-atn{animation:none;border-width:3px}
+    .faixa-corpo,.faixa-atn.recolhida .faixa-corpo{transition:none}
+  }
   @media(max-width:480px){
     details.ficha-topico>summary{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'nome seta' 'estado seta';column-gap:8px;row-gap:5px;align-items:center}
     .ficha-topico-nome{grid-area:nome;min-width:0}
@@ -4283,6 +4334,9 @@
           <div id="vf-instr"></div>
         </div>
       </div>
+
+      <!-- Faixa «ATENÇÃO — LEIA ANTES» (28/out/2026): nasce recolhida aqui; abre com um toque. -->
+      <div id="vfFaixa"></div>
 
       <!-- Medicação-fonte: cria / altera / suspende as fichas que disparam os alarmes -->
       <div class="card">
@@ -8046,6 +8100,8 @@ return { criar };
           if(vci && vci.style.display!=='none' && typeof ciPelAtual!=='undefined' && ciPelAtual
              && typeof ciRenderCadastroFalta==='function') ciRenderCadastroFalta(ciPelAtual);
         }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        // Alertas fixos (28/out/2026): ligados ou desligados em outro aparelho, a faixa da ficha, a aba Hóspedes de hoje e a ficha do plantão acompanham.
+        try{ alertasFixosRedesenharAgendar(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         try{ retomarPainelAposBanco(); }catch(e){} /* uma única retomada da tela que abriu antes do banco e aguardava esta carteira */
       });
       // As fotos vêm de um nó separado, sem ouvinte — ver o comentário lá em cima.
@@ -8108,6 +8164,8 @@ return { criar };
       DB.ref('auaulandia/alertas').on('value', s=>{ ALERTAS_CACHE=s.val()||{};
         try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         try{ if(typeof fichaAlertasRender==='function') fichaAlertasRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+        // Alertas fixos (28/out/2026): o «só nesta estadia» lançado em outro aparelho também chega às faixas abertas e à aba Hóspedes de hoje.
+        try{ if(typeof alertasFixosRedesenharAgendar==='function') alertasFixosRedesenharAgendar(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       });
       // Item 4 — remédio PRESCRITO PELA VET que chegou na data de término. A agenda inteira fica em
       // memória (só muda quando alguém prescreve/altera — não é o log de doses), para o aviso valer
@@ -8446,6 +8504,14 @@ return { criar };
     'lancar-reposicao':         ['consultora','gestao','supervisor','diretoria'],
     'decidir-troca':            ['gestao','diretoria'],
     'editar-alergia':           ['gestao','supervisor','diretoria','monitor'],
+    // ===== ALERTAS FIXOS DO FILHOt (faixa «ATENÇÃO — LEIA ANTES») ======================
+    // Quem convive com o FILHOt na noite vê o perigo antes de todo mundo: por isso quem está
+    // no chão liga o alerta na hora (convivência, comportamento, saúde). Desligar é decisão de
+    // quem responde pela ficha — ligado por engano ou resolvido, a Gestão confere e desliga
+    // (nada se apaga: fica quem ligou, quem desligou e quando). Conferido também no porteiro
+    // da ficha (pelCamposBarrados), não só no botão.
+    'alerta-fixo-ligar':        ['gestao','supervisor','diretoria','monitor'],
+    'alerta-fixo-desligar':     ['gestao','supervisor','diretoria'],
     'editar-medicacao':         ['gestao','supervisor','diretoria','vet'],
     'editar-medicacao-checkin': ['gestao','supervisor','diretoria','vet','consultora'],
     // 6.54 — «Mudar comida e remédio» do hóspede depois do check-in (PA3): os mesmos do check-in.
@@ -17127,7 +17193,8 @@ return { criar };
   }
   // A lista «Pares já respondidos (N)», fechada: a resposta, quem e quando, e «Desfazer esta resposta». O par juntado pelo
   // microchip (identificador, não resposta) aparece sem o botão.
-  function hospParesRespondidosHtml(){
+  // soCorpo (28/out/2026): devolve {n, corpo} — a aba Hóspedes de hoje põe os pares numa sanfona própria (prevSecHTML).
+  function hospParesRespondidosHtml(soCorpo){
     var L=[], pode=hospPodeResponderMesmo();
     Object.keys(HOSP_MESMO||{}).sort().forEach(function(ch){
       var r=HOSP_MESMO[ch]; if(!r || typeof r!=='object') return;
@@ -17146,6 +17213,7 @@ return { criar };
         +'<div style="font-weight:800;font-size:14px;color:var(--z-blue)">'+esc(String(h.nome||'')+(h.tutor?(' · '+h.tutor):''))+' e '+esc(h.tambemNaPlanilhaComo)+'</div>'
         +'<div style="font-size:13.5px;color:var(--z-blue)">É o mesmo: juntado pelo microchip</div></div>');
     });
+    if(soCorpo) return {n:L.length, corpo:L.join('')};
     if(!L.length) return '';
     return '<details style="margin:10px 0"><summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:800;color:var(--z-blue)">Pares já respondidos ('+L.length+')</summary>'+L.join('')+'</details>';
   }
@@ -18094,9 +18162,9 @@ return { criar };
     var f=document.getElementById('hosp-ficha'); if(!f || f.style.display==='none' || !currentHosp) return;
     var hoje=fichaEhHoje(), hora=fichaHoraAgora(), papel=(document.body.dataset.role||'');
     // ALERTA
-    var al=alertasAtivosDe(currentHosp);
-    fichaTopicoPintar('tp-alerta', al.length
-      ? {estado:'pisca', n:al.length, est:'⚠ LER', sub:String(al[0].txt||'')+(al.length>1?(' · e mais '+(al.length-1)):'')}
+    var al=alertasAtivosDe(currentHosp), fxA=fichaAlertasFixosDoHosp(currentHosp), nAl=al.length+fxA.length;
+    fichaTopicoPintar('tp-alerta', nAl
+      ? {estado:'pisca', n:nAl, est:'⚠ LER', sub:String(fxA.length?fxA[0].tx:(al[0].txt||''))+(nAl>1?(' · e mais '+(nAl-1)):'')}
       : {estado:'zero', n:0, est:'', sub:'Nenhum alerta'});
     // MEDICAMENTO
     var m=MAG_RESUMO||{};
@@ -18161,18 +18229,24 @@ return { criar };
       .filter(function(a){ return alertaVale(a, agora, hoje); })
       .sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
   }
+  // Os alertas FIXOS do cadastro (faixa ATENÇÃO) também valem aqui, no tópico ALERTA da ficha do plantão. Sem botão de
+  // tirar: quem desliga um fixo é a Gestão, na ficha do cadastro; o «Tirar alerta» abaixo continua só para os da estadia.
+  function fichaAlertasFixosDoHosp(h){
+    try{ return alertasFixosItens(extraDoHosp(h)); }catch(e){ return []; } /* silencioso de propósito: sem a ficha do cadastro, só os alertas da estadia aparecem */
+  }
   function fichaAlertasRender(){
     var el=document.getElementById('hf-alertas'); if(!el) return;
     if(!currentHosp){ el.innerHTML=''; return; }
-    var L=alertasAtivosDe(currentHosp), pode=alertaPodeMexer();
-    el.innerHTML=L.length ? L.map(function(a){
+    var L=alertasAtivosDe(currentHosp), pode=alertaPodeMexer(), fx=fichaAlertasFixosDoHosp(currentHosp);
+    var fxHTML=fx.length ? '<div class="faixa-lbl" style="margin:0 0 2px">Alertas fixos da ficha</div>'+fx.map(faixaCartaoHTML).join('')+(L.length?'<div class="faixa-lbl" style="margin:12px 0 2px">Só nesta estadia</div>':'') : '';
+    el.innerHTML=fxHTML+(L.length ? L.map(function(a){
       var quando=a.ts?new Date(a.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
       var ate=a.ate==='tirar'?'até alguém tirar':(a.ate==='pernoite'?'durante o pernoite':'só hoje');
       return '<div class="alerta-item"><div class="alerta-txt">'+escAttr(a.txt)+'</div>'
         +'<div class="alerta-por">'+escAttr(a.quem||'—')+(quando?(' · '+escAttr(quando)):'')+' · '+ate+'</div>'
         +(pode?'<div style="margin-top:8px"><button type="button" class="btn" style="min-height:44px;background:var(--z-white);color:var(--crm-critico);border:2px solid var(--crm-critico)" onclick="alertaTirar(\''+jsAspas(a._id)+'\',this)">Tirar alerta</button></div>':'')
         +'</div>';
-    }).join('') : '<div class="hint" style="margin:0">Nenhum alerta ativo. A Monitora lança o alerta no Relatório do Dia ou no Adicionar pernoite.</div>';
+    }).join('') : (fx.length ? '' : '<div class="hint" style="margin:0">Nenhum alerta ativo. A Monitora lança o alerta no Relatório do Dia ou no Adicionar pernoite.</div>'));
     try{ fichaTopicosPintar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
   }
   function alertaTirar(id, btn){
@@ -18247,6 +18321,365 @@ return { criar };
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Alerta salvo — a plantonista já vê no tópico ALERTA.'; }
       try{ if(typeof audit==='function') audit('alerta', 'lançou alerta de '+nome+': '+reg.txt, {pet:nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
     }).catch(function(e){ if(btn) btn.disabled=false; if(st){ st.style.color='var(--crm-critico)'; st.textContent='⚠️ Não salvou: '+((e&&e.message)||e)+' — toque de novo.'; } _logFalhaGrav('alertaSalvarDoDia', e); });
+  }
+
+  // ===== ALERTAS FIXOS E FAIXA «ATENÇÃO — LEIA ANTES» — Adriana, 28/out/2026 ============
+  // «A tarja de alergia aparece, mas o que faz o FILHOt ficar sozinho, não poder com macho ou
+  //  pular o portão ficava perdido no meio da ficha.» Um componente só junta, no topo de toda
+  //  tela onde alguém vai cuidar do FILHOt: (1) os alertas FIXOS do cadastro (daycare/cadastro/
+  //  <FILHOt>/alertas_fixos/<id>, ligados e desligados por botão); (2) os alertas «só nesta estadia»
+  //  que já existiam (auaulandia/alertas); (3) as tarjas da ficha (restrição, saúde, medicação,
+  //  manias, ansioso), numa linha «Também na ficha:» que abre o texto inteiro. Desligar nunca
+  //  apaga: grava on:false com quem e quando (o rastro fica no próprio alerta e na auditoria).
+  //  A alergia é a exceção: não tem nó próprio — «ligado» é o campo Alergia preenchido, um dado só.
+  var ALERTAS_FIXOS=[
+    {id:'nocao', g:'Convivência', kind:'conv', ic:'🚫', tx:'NÃO pode ficar junto com outros peludinhos', chip:'Não pode ficar com outros peludinhos'},
+    {id:'peq',   g:'Convivência', kind:'conv', ic:'🐾', tx:'Só pode ficar com peludinhos PEQUENOS', chip:'Só com peludinhos pequenos'},
+    {id:'mach',  g:'Convivência', kind:'conv', ic:'♂️', tx:'NÃO pode ficar com MACHOS', chip:'Não pode com machos'},
+    {id:'sozi',  g:'Convivência', kind:'conv', ic:'🛏️', tx:'Dorme SOZINHO', chip:'Dorme sozinho'},
+    {id:'sep',   g:'Convivência', kind:'conv', ic:'🍽️', tx:'Come SEPARADO dos outros', chip:'Come separado'},
+    {id:'foge',  g:'Comportamento', kind:'amb', ic:'⚠️', tx:'Foge / pula portão — conferir trancas', chip:'Foge / pula portão'},
+    {id:'morde', g:'Comportamento', kind:'amb', ic:'⚠️', tx:'Morde quando mexem na comida', chip:'Morde quando mexem na comida'},
+    {id:'medo',  g:'Comportamento', kind:'amb', ic:'🌩️', tx:'Medo de trovão / fogos', chip:'Medo de trovão / fogos'},
+    {id:'alerg', g:'Saúde', kind:'amb', ic:'⚠️', tx:'Alergia', chip:'Alergia a …'},
+    {id:'colar', g:'Saúde', kind:'amb', ic:'🦺', tx:'Usa colar elizabetano — não tirar', chip:'Usa colar elizabetano'},
+    {id:'rep',   g:'Saúde', kind:'amb', ic:'🛑', tx:'Repouso — não pode correr', chip:'Não pode correr / repouso'}
+  ];
+  var ALERTAS_FIXOS_GRUPOS=['Convivência','Comportamento','Saúde'];
+  function alertaFixoDef(id){ return ALERTAS_FIXOS.filter(function(d){ return d.id===id; })[0]||null; }
+  function alertaFixoPodeLigar(){ try{ return !!podePapel('alerta-fixo-ligar'); }catch(e){ return false; } } /* silencioso de propósito: sem a tabela de permissões, a resposta é «não pode» */
+  function alertaFixoPodeDesligar(){ try{ return !!podePapel('alerta-fixo-desligar'); }catch(e){ return false; } } /* silencioso de propósito: sem a tabela de permissões, a resposta é «não pode» */
+  function faixaPlural(n){ return n+(n===1?' alerta':' alertas'); }
+  function faixaDataCurta(ts){
+    var d=new Date(ts); if(!ts || isNaN(d.getTime())) return '';
+    var p=function(x){ return String(x).padStart(2,'0'); };
+    return p(d.getDate())+'/'+p(d.getMonth()+1);
+  }
+  // O nó de um alerta fixo no cadastro (ex = o que pelExtra/extraDoHosp devolvem).
+  function alertaFixoNo(ex, id){
+    var af=(ex && ex.alertas_fixos && typeof ex.alertas_fixos==='object')?ex.alertas_fixos:{};
+    var a=af[id]; return (a && typeof a==='object')?a:null;
+  }
+  // Os alertas fixos LIGADOS, na ordem da lista: convivência (vermelho) primeiro, depois comportamento e saúde.
+  function alertasFixosItens(ex){
+    ex=ex||{}; var out=[];
+    ALERTAS_FIXOS.forEach(function(d){
+      if(d.id==='alerg'){
+        var al=String(ex.alergia==null?'':ex.alergia).trim();
+        if(al) out.push({id:d.id, kind:d.kind, ic:d.ic, tx:'Alergia: '+al, sub:'', quem:'', ts:0});
+        return;
+      }
+      var a=alertaFixoNo(ex, d.id); if(!a || a.on!==true) return;
+      out.push({id:d.id, kind:d.kind, ic:d.ic, tx:d.tx, sub:String(a.det||'').trim(), quem:String(a.quem||''), ts:Number(a.ts)||0});
+    });
+    return out;
+  }
+  // As tarjas da ficha, na linha «Também na ficha:». A ALERGIA não entra aqui: ela já é um cartão
+  // grande (o campo Alergia preenchido É o alerta), então a tarja só repetiria o mesmo texto.
+  function faixaChipsDaFicha(ex){
+    ex=ex||{}; var out=[];
+    var add=function(nome, txt){ txt=String(txt==null?'':txt).trim(); if(txt) out.push({nome:nome, txt:txt}); };
+    add('RESTRIÇÃO', ex.restricao);
+    add('SAÚDE', ex.problema);
+    add('MEDICAÇÃO', ex.medicacao);
+    add('MANIAS', ex.manias);
+    if(ex.ansioso==='Sim') add('ANSIOSO', 'come em caixa própria — servir logo após quem tem banho');
+    return out;
+  }
+  // Os alertas «só nesta estadia» (auaulandia/alertas), no mesmo formato dos cartões.
+  function faixaEstadiaItens(h){
+    var L=[]; try{ L=alertasAtivosDe(h)||[]; }catch(e){ L=[]; } /* silencioso de propósito: sem o cache dos alertas da estadia, a faixa mostra o resto */
+    return L.map(function(a){
+      var ate=(a.ate==='tirar')?'até alguém tirar':(a.ateTs?('até '+faixaDataCurta(a.ateTs)):'só hoje');
+      return {id:'estadia:'+String(a._id||''), kind:'amb', ic:'🕒', tx:String(a.txt||''), sub:'', quem:String(a.quem||''), ts:Number(a.ts)||0,
+        tag:'só nesta estadia · '+ate+' · lançado por '+String(a.quem||'—')};
+    });
+  }
+  // ctx = {p (ficha do cadastro) OU h (hospedagem: refKey/nome/tutor), onde:'ficha'|'hosp'|'pernoite'|'vet'|'plantao'|'previa'}
+  function faixaExtraDe(ctx){
+    ctx=ctx||{};
+    try{ return ctx.p ? (pelExtra(ctx.p)||{}) : (ctx.h ? (extraDoHosp(ctx.h)||{}) : {}); }catch(e){ return {}; } /* silencioso de propósito: sem a ficha, a faixa nasce vazia em vez de quebrar a tela */
+  }
+  function faixaHospDe(ctx){
+    ctx=ctx||{};
+    if(ctx.h) return ctx.h;
+    if(ctx.p){ try{ return {nome:pelNome(ctx.p), tutor:pelGet(ctx.p,'tutor'), refKey:pelKey(ctx.p)}; }catch(e){ return null; } } /* silencioso de propósito: sem a ficha, só os alertas fixos aparecem */
+    return null;
+  }
+  function faixaChaveDe(ctx){
+    ctx=ctx||{};
+    try{ return ctx.p ? pelKey(ctx.p) : (ctx.h ? cadKey(ctx.h) : ''); }catch(e){ return ''; } /* silencioso de propósito: sem chave, a faixa não guarda «recolhida» */
+  }
+  function faixaItens(ctx){
+    var ex=faixaExtraDe(ctx), h=faixaHospDe(ctx);
+    var fixos=alertasFixosItens(ex), est=h?faixaEstadiaItens(h):[];
+    return {fixos:fixos, estadia:est, grandes:fixos.concat(est), chips:faixaChipsDaFicha(ex)};
+  }
+  // O resumo para o selo do cartão da hospedagem: quantos e a 1ª linha do mais grave (convivência primeiro).
+  function faixaResumo(h){
+    var it=faixaItens({h:h});
+    return {n:it.grandes.length, primeira:it.grandes.length?it.grandes[0].tx:''};
+  }
+  // ---- «recolhida» guardada por FILHOt e por dia (no dia seguinte volta a pulsar) ----
+  var FAIXA_RECOLHIDA_CH='zeluz_faixa_recolhida_v1';
+  function faixaMapaLer(){
+    try{ var m=JSON.parse(localStorage.getItem(FAIXA_RECOLHIDA_CH)||'{}'); return (m && typeof m==='object')?m:{}; }
+    catch(e){ return {}; } /* silencioso de propósito: aparelho sem armazenamento (janela privada, bloqueado): a faixa só não lembra */
+  }
+  function faixaRecolhidaDe(chave, padrao){
+    var m=faixaMapaLer()[chave];
+    return (m && typeof m==='object' && m.d===zHojeISO()) ? !!m.r : !!padrao;
+  }
+  function faixaRecolhidaGravar(chave, rec){
+    if(!chave) return;
+    try{
+      var m=faixaMapaLer(), hoje=zHojeISO(), n={};
+      Object.keys(m).forEach(function(k){ if(m[k] && m[k].d===hoje) n[k]=m[k]; });   // dia velho sai: o mapa não cresce
+      n[chave]={d:hoje, r:!!rec};
+      localStorage.setItem(FAIXA_RECOLHIDA_CH, JSON.stringify(n));
+    }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — a faixa já mudou na tela */
+  }
+  function faixaCartaoHTML(a){
+    return '<div class="faixa-al '+(a.kind==='conv'?'conv':'amb')+'"><span class="faixa-ic" aria-hidden="true">'+a.ic+'</span><div>'
+      +'<div class="faixa-tx">'+escAttr(a.tx)+'</div>'
+      +(a.sub?'<div class="faixa-sub">'+escAttr(a.sub)+'</div>':'')
+      +(a.tag?'<span class="faixa-tag">'+escAttr(a.tag)+'</span>':'')
+      +'</div></div>';
+  }
+  function faixaTituloHTML(rec, n, m){
+    if(rec) return '<span aria-hidden="true">⚠</span><span>ATENÇÃO — '+(n?faixaPlural(n)+(m?' · +'+m+' da ficha':''):m+' da ficha')+' · toque para ler</span>';
+    return '<span aria-hidden="true">⚠</span><span>ATENÇÃO — LEIA ANTES</span>'+(n?'<span class="faixa-cnt">'+n+'</span>':'');
+  }
+  // O componente. Nada a mostrar: faixa verde discreta, sem pulso. Na Cuidado Vet ela nasce recolhida.
+  // Ele é chamado DENTRO do desenho da ficha, do pernoite e da Cuidado Vet: se falhar, a tela não pode deixar de abrir — e
+  // também não pode fingir que «não há alerta». Falhou, aparece o aviso em vermelho para ler a ficha com atenção.
+  function faixaAtencaoHTML(ctx){
+    try{ return faixaAtencaoMontar(ctx); }
+    catch(e){
+      try{ _logFalhaGrav('faixa ATENÇÃO', e); }catch(e2){} /* silencioso de propósito: o aviso na tela já diz o que fazer */
+      return '<section class="faixa-atn" role="alert"><div class="faixa-al conv"><span class="faixa-ic" aria-hidden="true">⚠️</span><div><div class="faixa-tx">Não consegui montar os alertas deste FILHOt</div><div class="faixa-sub">Leia a ficha inteira com atenção antes de cuidar dele.</div></div></div></section>';
+    }
+  }
+  function faixaAtencaoMontar(ctx){
+    ctx=ctx||{};
+    var it=faixaItens(ctx), chave=faixaChaveDe(ctx), onde=String(ctx.onde||'ficha');
+    var n=it.grandes.length, m=it.chips.length;
+    var sig=faixaAssinatura(it, chave);
+    if(!n && !m) return '<section class="faixa-nada" data-sig="'+sig+'" aria-label="Alertas"><span aria-hidden="true">🟢</span> Nenhum alerta cadastrado</section>';
+    var slot=(onde+'_'+chave).replace(/[^a-z0-9]+/gi,'_');
+    var rec=ctx.previa?false:faixaRecolhidaDe(chave, onde==='vet');
+    var chips='';
+    if(m){
+      chips='<div class="faixa-auto"><span class="faixa-lbl">Também na ficha:</span>'
+        +it.chips.map(function(c,i){ return '<button type="button" class="faixa-chip" aria-expanded="false" aria-controls="fc_'+slot+'_'+i+'" onclick="faixaChipAlternar(this)">'+escAttr(c.nome)+'</button>'; }).join('')
+        +it.chips.map(function(c,i){ return '<div class="faixa-chip-txt" id="fc_'+slot+'_'+i+'" hidden><b>'+escAttr(c.nome)+':</b> '+escAttr(c.txt)+'</div>'; }).join('')
+        +'</div>';
+    }
+    return '<section class="faixa-atn'+(rec?' recolhida':'')+'" data-faixa="'+escAttr(slot)+'" data-chave="'+escAttr(chave)+'" data-sig="'+sig+'" data-n="'+n+'" data-m="'+m+'"'+(ctx.previa?' data-previa="1"':'')+' aria-label="Atenção — leia antes">'
+      +'<div class="faixa-cab"><button type="button" class="faixa-tit" aria-expanded="'+(!rec)+'" aria-controls="fb_'+slot+'" onclick="faixaAlternar(this)">'+faixaTituloHTML(rec, n, m)+'</button>'
+      +'<button type="button" class="faixa-rec" onclick="faixaAlternar(this)">Recolher</button></div>'
+      +'<div class="faixa-corpo" id="fb_'+slot+'"><div class="faixa-in"><div class="faixa-grandes">'+it.grandes.map(faixaCartaoHTML).join('')+'</div>'+chips+'</div></div></section>';
+  }
+  function faixaAlternar(btn){
+    var el=(btn && btn.closest)?btn.closest('[data-faixa]'):null; if(!el) return;
+    var rec=!el.classList.contains('recolhida');
+    el.classList.toggle('recolhida', rec);
+    var t=el.querySelector('.faixa-tit');
+    if(t){ t.setAttribute('aria-expanded', String(!rec)); t.innerHTML=faixaTituloHTML(rec, +el.getAttribute('data-n')||0, +el.getAttribute('data-m')||0); }
+    if(!el.getAttribute('data-previa')) faixaRecolhidaGravar(el.getAttribute('data-chave')||'', rec);
+    if(!rec && t){ try{ t.focus(); }catch(e){} } /* silencioso de propósito: foco é enfeite de tela */
+  }
+  function faixaChipAlternar(btn){
+    var id=btn.getAttribute('aria-controls'), box=document.getElementById(id); if(!box) return;
+    var abre=btn.getAttribute('aria-expanded')!=='true';
+    btn.setAttribute('aria-expanded', String(abre));
+    if(abre) box.removeAttribute('hidden'); else box.setAttribute('hidden','');
+  }
+  // Redesenha as faixas que estão na tela só quando o CONTEÚDO mudou — o ouvinte do cadastro dispara a cada
+  // mudança de qualquer ficha, e redesenhar à toa reiniciaria o pulso e fecharia o chip que alguém abriu.
+  // A assinatura (data-sig na própria faixa) = a chave do FILHOt + o que a faixa mostra; outra ficha ou outro conteúdo, outra assinatura.
+  function faixaAssinatura(it, chave){
+    var s=String(chave||'')+'|'+JSON.stringify([it.grandes, it.chips]), h=5381;
+    for(var i=0;i<s.length;i++) h=((h*33)^s.charCodeAt(i))>>>0;
+    return h.toString(36);
+  }
+  function faixaRedesenharEm(id, ctx){
+    var el=document.getElementById(id); if(!el) return;
+    var sig=faixaAssinatura(faixaItens(ctx), faixaChaveDe(ctx)), atual=el.firstElementChild;
+    if(atual && atual.getAttribute('data-sig')===sig) return;
+    el.innerHTML=faixaAtencaoHTML(ctx);
+  }
+  // O ouvinte do cadastro e o dos alertas da estadia chamam por aqui: vários avisos no mesmo quadro viram um redesenho só.
+  var _alertasFixosRaf=0;
+  function alertasFixosRedesenharAgendar(){
+    if(_alertasFixosRaf) return;
+    try{ _alertasFixosRaf=requestAnimationFrame(function(){ _alertasFixosRaf=0; alertasFixosRedesenhar(); }); }
+    catch(e){ _alertasFixosRaf=0; alertasFixosRedesenhar(); } /* silencioso de propósito: sem o relógio de tela, redesenha na hora */
+  }
+  function alertasFixosRedesenhar(){
+    try{ var f=document.getElementById('pel-ficha'); if(pelAtual && f && f.style.display!=='none') faixaRedesenharEm('pelFaixa', {p:pelAtual, onde:'ficha'}); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    try{ if(typeof alertasFixosEditorRender==='function') alertasFixosEditorRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    try{ if(typeof PERN_PEND!=='undefined' && PERN_PEND) faixaRedesenharEm('pfFaixa', {h:PERN_PEND, onde:'pernoite'}); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    try{ var vf=document.getElementById('vet-ficha'); if(typeof vetHosp!=='undefined' && vetHosp && vf && vf.style.display!=='none') faixaRedesenharEm('vfFaixa', {h:vetHosp, onde:'vet'}); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    try{ var vh=document.getElementById('v-hospedes'), lh=document.getElementById('hospAbaLista'), ae=document.activeElement; if(vh && vh.classList.contains('active') && typeof renderHospedesAba==='function' && !(ae && lh && lh.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))) renderHospedesAba(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    try{ if(typeof fichaAlertasRender==='function') fichaAlertasRender(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+
+  // ---- os botões liga/desliga na ficha (aba Comportamento › «Alertas de convivência e cuidado») ----
+  // O que precisa de uma pergunta (alergia) pergunta DENTRO da página, nunca em janela nativa.
+  var ALERTAFIXO_UI={pede:'', confirma:'', msg:'', ocupado:false};
+  function alertaFixoLigado(ex, id){
+    if(id==='alerg') return !!String(ex&&ex.alergia!=null?ex.alergia:'').trim();
+    var a=alertaFixoNo(ex, id); return !!(a && a.on===true);
+  }
+  function alertasFixosContaTexto(ex){
+    var n=alertasFixosItens(ex).length; return n?faixaPlural(n):'Nenhum';
+  }
+  // Também chamada dentro do desenho da ficha: se falhar, a aba Comportamento continua com os campos de sempre.
+  function alertasFixosSanfonaHTML(p){
+    try{ return alertasFixosSanfonaMontar(p); }
+    catch(e){ try{ _logFalhaGrav('alertas fixos na ficha', e); }catch(e2){} return ''; } /* silencioso de propósito: a falha já foi para a auditoria; a faixa do topo continua mostrando os alertas */
+  }
+  function alertasFixosSanfonaMontar(p){
+    ALERTAFIXO_UI.pede=''; ALERTAFIXO_UI.confirma=''; ALERTAFIXO_UI.msg='';   // ficha desenhada de novo: nenhuma pergunta ficou pela metade
+    var ex=pelExtra(p), n=alertasFixosItens(ex).length;
+    return '<details class="ficha-topico" data-ficha-topico="comp-alertas" open>'
+      +'<summary><span class="ficha-topico-nome">Alertas de convivência e cuidado</span>'
+      +'<span class="ficha-topico-estado '+(n?'ficha-topico-vencido':'ficha-topico-ok')+'" id="pelAlertasEstado">'+escAttr(alertasFixosContaTexto(ex))+'</span>'
+      +'<span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>'
+      +'<div class="ficha-topico-corpo"><div id="pelAlertasFixos">'+alertasFixosEditorHTML(p)+'</div>'
+      +'<div class="faixa-previa"><div class="faixa-previa-t">PRÉVIA — COMO A PLANTONISTA VERÁ</div><div id="pelAlertasPrev">'+faixaAtencaoHTML({p:p, onde:'previa', previa:true})+'</div></div>'
+      +'</div></details>';
+  }
+  function alertasFixosEditorHTML(p){
+    var ex=pelExtra(p), ui=ALERTAFIXO_UI, pLig=alertaFixoPodeLigar(), pDes=alertaFixoPodeDesligar(), h='';
+    h+='<p class="hint" style="margin:8px 0 0">'+(pLig
+      ?'Toque para ligar ou desligar. O que estiver ligado aparece na faixa ATENÇÃO — LEIA ANTES.'+(pDes?'':' <b>Só a Gestão desliga.</b>')
+      :'O que estiver ligado aparece na faixa ATENÇÃO — LEIA ANTES. Quem liga e desliga é a Gestão, a Supervisão e quem cuida do FILHOt no chão.')+'</p>';
+    ALERTAS_FIXOS_GRUPOS.forEach(function(g){
+      var defs=ALERTAS_FIXOS.filter(function(d){ return d.g===g; });
+      h+='<div class="faixa-grupo">'+escAttr(g)+'</div>';
+      if(!pLig){
+        h+='<ul class="faixa-lista">'+defs.map(function(d){
+          var on=alertaFixoLigado(ex, d.id), a=alertaFixoNo(ex, d.id);
+          return '<li><b>'+escAttr(d.chip)+'</b> — '+(on?('ligado'+((a&&a.quem)?' por '+escAttr(a.quem)+(a.ts?' em '+faixaDataCurta(a.ts):''):'')):'desligado')+'</li>';
+        }).join('')+'</ul>';
+        return;
+      }
+      h+='<div class="faixa-botoes">'+defs.map(function(d){
+        var on=alertaFixoLigado(ex, d.id), trava=on&&!pDes;
+        return '<button type="button" class="faixa-liga '+(d.kind==='conv'?'k-conv':'k-amb')+'" aria-pressed="'+on+'"'+(trava?' aria-disabled="true"':'')+' onclick="alertaFixoToque(\''+d.id+'\')">'
+          +escAttr(d.chip+(trava?' · 🔒 só a Gestão desliga':''))+'</button>';
+      }).join('')+'</div>';
+      defs.forEach(function(d){
+        var on=alertaFixoLigado(ex, d.id), a=alertaFixoNo(ex, d.id);
+        if(d.id==='alerg'){
+          if(ui.pede==='alerg' && !on){
+            h+='<div class="faixa-cx"><b>Ligar «Alergia»</b><div class="hint" style="margin:2px 0 6px">Escreva a quê ele tem alergia — é o mesmo campo Alergia da aba Atenção &amp; Cuidados.</div>'
+              +'<input class="cad-in" id="afAlergiaNova" maxlength="140" autocomplete="off" placeholder="ex.: frango" aria-label="Alergia a">'
+              +'<div class="faixa-acoes"><button type="button" class="btn btn-primary" style="min-height:44px" onclick="alertaFixoAlergiaLigar()">Ligar alerta</button>'
+              +'<button type="button" class="btn" style="min-height:44px" onclick="alertaFixoCancelar()">Cancelar</button></div></div>';
+            return;
+          }
+          if(ui.confirma==='alerg' && on){
+            h+='<div class="faixa-cx"><b>Desligar «Alergia: '+escAttr(String(ex.alergia||''))+'»?</b><div class="hint" style="margin:2px 0 6px">Isso esvazia o campo Alergia da ficha. O que estava escrito fica no histórico da ficha.</div>'
+              +'<div class="faixa-acoes"><button type="button" class="btn" style="min-height:44px;background:var(--z-white);color:var(--crm-critico);border:2px solid var(--crm-critico)" onclick="alertaFixoAlergiaDesligar()">Sim, desligar</button>'
+              +'<button type="button" class="btn" style="min-height:44px" onclick="alertaFixoCancelar()">Não, manter</button></div></div>';
+            return;
+          }
+          if(on){
+            h+='<div class="faixa-cx"><b>'+d.ic+' Alergia</b>'
+              +'<label class="faixa-rot">Alergia a …<input class="cad-in" value="'+escAttr(String(ex.alergia||''))+'" maxlength="140" autocomplete="off" onchange="alertaFixoAlergiaEditar(this.value)"></label>'
+              +'<div class="hint" style="margin:4px 0 0">o mesmo dado do campo Alergia (Atenção &amp; Cuidados)</div></div>';
+          }
+          return;
+        }
+        if(!on) return;
+        h+='<div class="faixa-cx"><b>'+d.ic+' '+escAttr(d.chip)+'</b>'
+          +'<div class="hint" style="margin:2px 0 0">ligado por '+escAttr((a&&a.quem)||'—')+((a&&a.ts)?' em '+faixaDataCurta(a.ts):'')+'</div>'
+          +'<label class="faixa-rot">Motivo/detalhe (opcional)<input class="cad-in" value="'+escAttr((a&&a.det)||'')+'" maxlength="140" autocomplete="off" placeholder="aparece como linha menor na faixa" onchange="alertaFixoDet(\''+d.id+'\',this.value)"></label></div>';
+      });
+    });
+    if(ui.msg) h+='<div class="faixa-msg" role="status">'+escAttr(ui.msg)+'</div>';
+    return h;
+  }
+  function alertasFixosEditorRender(forcar){
+    var box=document.getElementById('pelAlertasFixos'); if(!box || !pelAtual) return;
+    // Quem está digitando um motivo não perde o que escreveu quando outro aparelho muda o cadastro.
+    try{ var ae=document.activeElement; if(!forcar && ae && ae.tagName==='INPUT' && box.contains(ae)) return; }catch(e){} /* silencioso de propósito: sem saber o foco, redesenha */
+    box.innerHTML=alertasFixosEditorHTML(pelAtual);
+    var pv=document.getElementById('pelAlertasPrev'); if(pv) faixaRedesenharEm('pelAlertasPrev', {p:pelAtual, onde:'previa', previa:true});
+    var es=document.getElementById('pelAlertasEstado');
+    if(es){ var ex=pelExtra(pelAtual), n=alertasFixosItens(ex).length; es.textContent=alertasFixosContaTexto(ex); es.className='ficha-topico-estado '+(n?'ficha-topico-vencido':'ficha-topico-ok'); }
+  }
+  // Grava pela porta única da ficha (setPelExtra → porteiro → rastro). A tela só muda DEPOIS do ok do banco.
+  function alertaFixoGravar(patch, acao, resumo){
+    var p=pelAtual; if(!p) return Promise.resolve({ok:false});
+    if(ALERTAFIXO_UI.ocupado) return Promise.resolve({ok:false});
+    ALERTAFIXO_UI.ocupado=true; ALERTAFIXO_UI.msg='';
+    var nome=''; try{ nome=pelNome(p); }catch(e){ nome=''; } /* silencioso de propósito: o nome só enfeita a auditoria */
+    return Promise.resolve(setPelExtra(p, patch, {tela:'Ficha › Comportamento › Alertas', soDepoisDoOk:true})).then(function(r){
+      ALERTAFIXO_UI.ocupado=false;
+      if(r && r.ok){
+        ALERTAFIXO_UI.pede=''; ALERTAFIXO_UI.confirma='';
+        try{ if(typeof audit==='function') audit('alerta-fixo', acao+' — '+nome+': '+resumo, {pet:nome, alvo:pelKey(p)}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio */
+      } else if(!ALERTAFIXO_UI.msg){
+        ALERTAFIXO_UI.msg='⚠ Não salvou o alerta. Confira a internet e toque de novo.';
+      }
+      try{ if(typeof refreshPills==='function') refreshPills(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+      alertasFixosRedesenhar(); alertasFixosEditorRender(true);
+      return r;
+    });
+  }
+  function alertaFixoToque(id){
+    var p=pelAtual, d=alertaFixoDef(id); if(!p || !d) return;
+    var ex=pelExtra(p), on=alertaFixoLigado(ex, id), a=alertaFixoNo(ex, id);
+    ALERTAFIXO_UI.msg=''; ALERTAFIXO_UI.pede=''; ALERTAFIXO_UI.confirma='';
+    if(on){
+      if(!alertaFixoPodeDesligar()){ ALERTAFIXO_UI.msg='Só a Gestão desliga este alerta.'; alertasFixosEditorRender(true); return; }
+      if(id==='alerg'){ ALERTAFIXO_UI.confirma='alerg'; alertasFixosEditorRender(true); return; }
+      var off={on:false, det:String((a&&a.det)||''), quem:String((a&&a.quem)||''), ts:Number(a&&a.ts)||0, desligadoPor:quemSou(), desligadoTs:Date.now()};
+      var po={}; po['alertas_fixos/'+id]=off;
+      alertaFixoGravar(po, 'desligou', d.chip);
+      return;
+    }
+    if(!alertaFixoPodeLigar()){ ALERTAFIXO_UI.msg='Você não tem permissão para ligar alertas.'; alertasFixosEditorRender(true); return; }
+    if(id==='alerg'){ ALERTAFIXO_UI.pede='alerg'; alertasFixosEditorRender(true); try{ document.getElementById('afAlergiaNova').focus(); }catch(e){} /* silencioso de propósito: foco é enfeite de tela */ return; }
+    var lig={on:true, det:'', quem:quemSou(), ts:Date.now()};
+    var pl={}; pl['alertas_fixos/'+id]=lig;
+    alertaFixoGravar(pl, 'ligou', d.chip);
+  }
+  function alertaFixoDet(id, v){
+    if(!alertaFixoDef(id) || !pelAtual) return;
+    if(!alertaFixoPodeLigar()){ ALERTAFIXO_UI.msg='Você não tem permissão para mudar o motivo.'; alertasFixosEditorRender(true); return; }
+    var t=String(v==null?'':v).trim().slice(0,140), p={}; p['alertas_fixos/'+id+'/det']=t;
+    alertaFixoGravar(p, 'mudou o motivo de', alertaFixoDef(id).chip+(t?' → '+t:' (vazio)'));
+  }
+  function alertaFixoCancelar(){ ALERTAFIXO_UI.pede=''; ALERTAFIXO_UI.confirma=''; ALERTAFIXO_UI.msg=''; alertasFixosEditorRender(true); }
+  function alertaFixoAlergiaLigar(){
+    if(!pelAtual) return;
+    if(!alertaFixoPodeLigar()){ ALERTAFIXO_UI.msg='Você não tem permissão para ligar alertas.'; alertasFixosEditorRender(true); return; }
+    var el=document.getElementById('afAlergiaNova'), v=String((el&&el.value)||'').trim().slice(0,140);
+    if(!v){ ALERTAFIXO_UI.msg='Escreva a quê ele tem alergia.'; alertasFixosEditorRender(true); try{ document.getElementById('afAlergiaNova').focus(); }catch(e){} /* silencioso de propósito: foco é enfeite de tela */ return; }
+    alertaFixoGravar({alergia:v}, 'ligou', 'Alergia: '+v);
+  }
+  function alertaFixoAlergiaDesligar(){
+    if(!pelAtual) return;
+    if(!alertaFixoPodeDesligar()){ ALERTAFIXO_UI.msg='Só a Gestão desliga este alerta.'; alertasFixosEditorRender(true); return; }
+    alertaFixoGravar({alergia:''}, 'desligou', 'Alergia');
+  }
+  // Mudar o texto da alergia pela faixa é editar o campo; esvaziá-lo é DESLIGAR (pede a mesma confirmação e a mesma permissão).
+  function alertaFixoAlergiaEditar(v){
+    if(!pelAtual) return;
+    var t=String(v==null?'':v).trim().slice(0,140);
+    if(!t){
+      ALERTAFIXO_UI.msg=''; ALERTAFIXO_UI.pede='';
+      if(!alertaFixoPodeDesligar()){ ALERTAFIXO_UI.msg='Só a Gestão desliga este alerta.'; ALERTAFIXO_UI.confirma=''; }
+      else ALERTAFIXO_UI.confirma='alerg';
+      alertasFixosEditorRender(true); return;
+    }
+    if(!alertaFixoPodeLigar()){ ALERTAFIXO_UI.msg='Você não tem permissão para mudar este alerta.'; alertasFixosEditorRender(true); return; }
+    alertaFixoGravar({alergia:t}, 'mudou', 'Alergia: '+t);
   }
 
   // ===== «COMO COMEU?» — Adriana, 27/out/2026 ========================================
@@ -33277,7 +33710,9 @@ return { criar };
     const hoje=(typeof hospHojeISO==='function')?hospHojeISO():'';
     box.style.display='block';
     box.innerHTML='<div style="padding:4px 2px">'
-      +'<div style="font-weight:800;font-size:17px;color:var(--z-blue);margin-bottom:2px">Pernoite de '+escAttr(reg.nome||'')+'</div>'
+      +'<div style="font-weight:800;font-size:17px;color:var(--z-blue);margin-bottom:8px">Pernoite de '+escAttr(reg.nome||'')+'</div>'
+      // FAIXA «ATENÇÃO — LEIA ANTES» (28/out/2026): antes de qualquer campo, pulsando até alguém recolher — quem lança o pernoite lê o que importa primeiro.
+      +'<div id="pfFaixa">'+faixaAtencaoHTML({h:reg, onde:'pernoite'})+'</div>'
       +'<div style="font-size:13.5px;color:var(--muted);font-weight:600;margin-bottom:12px">Pode ser hoje ou um dia combinado com o tutor. Quem estiver de plantão nessa noite já vai ver na lista dele.</div>'
       +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
       +'<label style="flex:1;min-width:150px;font-size:12px;font-weight:700;color:var(--muted)">Entra no dia<br><input type="date" class="cad-in" id="pfData" value="'+escAttr(hoje)+'" min="'+escAttr(hoje)+'" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></label>'
@@ -38781,6 +39216,8 @@ return { criar };
     document.getElementById('vf-meta').innerHTML=[ (racaDe(h)?escAttr(racaDe(h)):''), (_vidade?escAttr(_vidade):''), (h.mascote?'Nossa Zelozinha':(tutor?'Tutor: '+escAttr(tutor):'Tutor a confirmar')) ].filter(Boolean).join(' · ');
     var ex=(typeof extraDoHosp==='function')?extraDoHosp(h):{};
     document.getElementById('vf-pills').innerHTML=(typeof alertPills==='function')?alertPills(ex):'';
+    // Faixa «ATENÇÃO — LEIA ANTES» (28/out/2026): no topo da Cuidado Vet, nascendo recolhida (a Veterinária abre quando quer).
+    try{ faixaRedesenharEm('vfFaixa', {h:h, onde:'vet'}); }catch(e){} /* silencioso de propósito: enfeite de tela — falhar não impede a Veterinária de abrir a ficha */
     renderVetInstrucoesFicha(h,'vf-instr');
     renderVcReavalAtual(h);
     var _vo=document.getElementById('vetObsTexto'); if(_vo) _vo.value=''; if(typeof renderVetObsList==='function') renderVetObsList();
@@ -40238,19 +40675,36 @@ return { criar };
       catch(e){return false;}
     });
   }
+  // Alertas fixos (faixa ATENÇÃO): o porteiro confere pela CAPACIDADE, não pelo papel da ficha — a
+  // consultora edita a ficha inteira, mas ligar/desligar alerta tem lista própria na tabela PERM.
+  //   alertas_fixos/<id>        valor {on:true,…}  → liga: pede 'alerta-fixo-ligar'
+  //                             valor {on:false,…} → desliga: pede 'alerta-fixo-desligar'
+  //   alertas_fixos/<id>/det    o motivo/detalhe (texto): quem liga também escreve o motivo
+  // Qualquer outra forma (apagar o nó, valor sem on) é barrada: desligar nunca apaga.
+  function pelAlertaFixoPermitido(c, v){
+    var m=/^alertas_fixos\/([a-z]{2,12})(\/det)?$/.exec(String(c||'')); if(!m) return false;
+    var pode=function(cap){ try{ return (typeof podePapel==='function') && podePapel(cap); }catch(e){ return false; } }; /* silencioso de propósito: sem a tabela de permissões, a resposta é «não pode» */
+    if(m[2]) return typeof v==='string' && pode('alerta-fixo-ligar');
+    if(!v || typeof v!=='object') return false;
+    if(v.on===true) return pode('alerta-fixo-ligar');
+    if(v.on===false) return pode('alerta-fixo-desligar');
+    return false;
+  }
   function pelCamposBarrados(patch, op){
-    if(typeof canEditPel==='function' && canEditPel()) return [];
+    var _af=Object.keys(patch||{}).filter(function(c){ return c.indexOf('alertas_fixos/')===0 && !pelAlertaFixoPermitido(c, patch[c]); });
+    if(typeof canEditPel==='function' && canEditPel()) return _af;
     // A monitora só atravessa o porteiro com o recibo recém-revalidado da tarefa exata.
     // O mesmo recibo fixa pet, item, dia, autoria e o conjunto/valor de todos os campos.
-    if(pelCuidado57PatchPermitido(patch, op)) return [];
+    if(pelCuidado57PatchPermitido(patch, op)) return _af;
     var podeAlergia=false;
     try{ podeAlergia=(typeof podePapel==='function') && podePapel('editar-alergia'); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
-    return Object.keys(patch||{}).filter(function(c){
+    return _af.concat(Object.keys(patch||{}).filter(function(c){
+      if(c.indexOf('alertas_fixos/')===0) return false;   // já conferido acima, pela capacidade
       if(PEL_LIVRES[c]) return false;
       if(/^pesos_corr\/\d{4}-\d{2}-\d{2}$/.test(c)) return false;   // 6.59 (AC1.8): a correção do peso, já assinada no cartaz
       if(podeAlergia && PEL_ALERGIA[c]) return false;
       return true;
-    });
+    }));
   }
   // ===== 6.57 — O ANTES E O DEPOIS DA FICHA (AC2) ========================================
   // "A ficha muda sem guardar o que era nem quem mudou" (revisão de 09/10, F06 e F09: alergia é
@@ -40285,6 +40739,9 @@ return { criar };
     microchip:'Microchip', inativo:'Inativo', tipoSaida:'Tipo de saída', dataSaida:'Data de saída', dataObito:'Data do falecimento',
     entrevista:'Entrevista (resposta do tutor)', escova_dc:'Escova no Day Care', ea_restr:'Restrição no Enriquecimento',
     peso_hoje:'Peso de hoje',   // 6.59 (AC1.6): o valor trocado no mesmo dia
+    // Alertas fixos: o caminho tem barra (alertas_fixos/<id>), então o rastro campo a campo não o grava —
+    // quem liga/desliga é anotado pelo próprio alerta (alertaFixoGravar) e na auditoria, com este rótulo.
+    alertas_fixos:'Alertas fixos (faixa ATENÇÃO)',
     // 6.65 (AC9): o vermífugo legível no rastro (a 2ª dose dada já sai «Vermífugo — 2ª dose — última», pela PREV_ITENS)
     verm_dose2_dias:'Vermífugo — dias até a 2ª dose', verm_doses:'Vermífugo — quantas doses', verm_2a:'Vermífugo — 2ª dose (data da conta)'};
   function pelRastroRotulo(c){
@@ -43106,25 +43563,27 @@ return { criar };
   var PREV_ABERTO_SEC='';      // em que seção a ficha inteira (PREV_ABERTO) foi aberta
   var PREV_MSG_ABERTO='';      // 'pelKey|item' da mensagem aberta — uma por vez
   var PREV_MSG_CFG_OK=false, PREV_MSG_CFG_ERRO=false;   // os textos de Vencimentos já vieram do banco?
-  function prevSecAberta(id){
+  // `padrao` (28/out/2026): a seção que NASCE aberta (Hóspedes de hoje: «Hospedados agora», «A chegar»). Para ela o
+  // aparelho guarda também o «fechei» (false) — sem isso, fechar não se lembraria, porque ausente já quer dizer aberta.
+  function prevSecAberta(id, padrao){
     if(PREV_SEC===null){
       PREV_SEC={};
       try{ var g=JSON.parse(localStorage.getItem(PREV_SEC_CH)||'{}'); if(g && typeof g==='object') PREV_SEC=g; }
       catch(e){ PREV_SEC={}; } /* silencioso de propósito: sem valor guardado, nasce tudo fechado */
     }
-    return !!PREV_SEC[id];
+    return Object.prototype.hasOwnProperty.call(PREV_SEC, id) ? !!PREV_SEC[id] : !!padrao;
   }
-  function prevSecVirar(id, aberta){
-    if(prevSecAberta(id)===!!aberta) return;
-    if(aberta) PREV_SEC[id]=true; else delete PREV_SEC[id];
+  function prevSecVirar(id, aberta, padrao){
+    if(prevSecAberta(id, padrao)===!!aberta) return;
+    if(padrao) PREV_SEC[id]=!!aberta; else if(aberta) PREV_SEC[id]=true; else delete PREV_SEC[id];
     try{ localStorage.setItem(PREV_SEC_CH, JSON.stringify(PREV_SEC)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — a tela já mudou */
   }
   // Uma seção. `forcar`: aberta por causa da busca ou da ficha aberta nela — não grava a escolha.
-  function prevSecHTML(id, titulo, contaHTML, corpo, forcar){
+  function prevSecHTML(id, titulo, contaHTML, corpo, forcar, padraoAberta){
     if(!corpo) return '';
-    var aberta=!!forcar || prevSecAberta(id);
+    var aberta=!!forcar || prevSecAberta(id, padraoAberta);
     return '<details class="prev-sec" id="prevSec_'+escAttr(id)+'"'+(aberta?' open':'')
-      +(forcar?'':' ontoggle="prevSecVirar(\''+jsAspas(id)+'\',this.open)"')+'>'
+      +(forcar?'':' ontoggle="prevSecVirar(\''+jsAspas(id)+'\',this.open'+(padraoAberta?',1':'')+')"')+'>'
       +'<summary><span class="prev-sec-nome">'+escAttr(titulo)+'</span><span class="prev-sec-contas">'+(contaHTML||'')+'</span>'
       +'<span class="prev-sec-seta" aria-hidden="true">⌄</span></summary>'
       +'<div class="prev-sec-corpo">'+corpo+'</div></details>';
@@ -47392,6 +47851,10 @@ return { criar };
         <span class="chip-serv" style="background:rgba(224,136,86,.16);color:#a85a2e">Day Care</span>
       </div>
 
+      <!-- FAIXA «ATENÇÃO — LEIA ANTES» (28/out/2026): logo abaixo do cabeçalho, largura toda, antes das abas.
+           O cabeçalho não muda; a faixa junta os alertas fixos, os da estadia e as tarjas da ficha. -->
+      <div id="pelFaixa">${faixaAtencaoHTML({p:p, onde:'ficha'})}</div>
+
       <!-- ORDEM DAS ABAS (Adriana, 11/ago/2026): "ao abrir a ficha, a primeira coisa que
            precisa aparecer para consultoras, gestão e supervisão é o PLANO".
            Plano · Identificação · Comportamento · Prevenção · Rotina & Almoço · Atenção & Cuidados.
@@ -47574,6 +48037,7 @@ return { criar };
 
       <div class="ppanel2" id="ps-comp"><div class="card">
         <h2 style="font-size:20px">Comportamento</h2>
+        ${alertasFixosSanfonaHTML(p)}
         <div class="cad-grid">
           <div class="field"><label>Em casa</label><input class="cad-in" value="${escAttr(ex.comp_casa||'')}" onchange="setPelExtra(pelAtual,{comp_casa:this.value})"></div>
           <div class="field"><label>Com pessoas</label><input class="cad-in" value="${escAttr(ex.comp_pessoas||'')}" onchange="setPelExtra(pelAtual,{comp_pessoas:this.value})"></div>
@@ -83753,8 +84217,11 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     const sai=e.saida?((typeof ciBRdata==='function')?ciBRdata(e.saida):e.saida):'a confirmar';
     const temFicha=!!(e.ficha&&e.ficha.alim&&(e.ficha.alim.tipo||e.ficha.alim.qtd));
     const nMed=Array.isArray(e.medicacao)?e.medicacao.length:0;
+    // Alertas fixos + «só nesta estadia» (28/out/2026): selo vermelho com a 1ª linha do mais grave — convivência primeiro.
+    let _selAl=''; try{ const _ra=faixaResumo(e); if(_ra.n) _selAl='<span class="faixa-selo">⚠ '+faixaPlural(_ra.n)+'<small>'+escAttr(_ra.primeira)+'</small></span>'; }catch(x){} /* silencioso de propósito: sem o selo o cartão continua inteiro */
     const selos=(temFicha?'<span class="he-tag agora">ALIMENTAÇÃO NA FICHA</span>':'<span class="he-tag saiu">SEM FICHA DE CHECK-IN</span>')
-              + (nMed?'<span class="he-tag achegar">'+nMed+' MEDICAÇÃO'+(nMed>1?'S':'')+'</span>':'');
+              + (nMed?'<span class="he-tag achegar">'+nMed+' MEDICAÇÃO'+(nMed>1?'S':'')+'</span>':'')
+              + _selAl;
     const alt=(e.alterado_por && !hospDatasHistLista(e).length)?('<div class="he-sub" style="color:var(--z-gold-deep)">Data alterada por '+escAttr(e.alterado_por)+(e.alteracao_anterior&&e.alteracao_anterior.saida?(' — antes saía '+((typeof ciBRdata==='function')?ciBRdata(e.alteracao_anterior.saida):e.alteracao_anterior.saida)):'')+'</div>'):'';
     const _xc=hospCorrLinha(id, e, st);   // 6.53: EXCLUÍDA, ficha trocada e o cartaz "Corrigir esta hospedagem"
     const _x6=hospLinha666(id, e, st);   // 6.66: as datas mudadas, a reabertura, a saída antecipada desfeita e os botões de desfazer
@@ -84038,19 +84505,25 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
         + '<div class="he-acoes"><button class="btn btn-primary" onclick="hospSalvarNova()">Salvar hospedagem</button>'
         + '<button class="btn" onclick="hospNovaPend=null;renderHospedesAba()">Cancelar</button></div></div>';
     }
-    const bloco=function(titulo,lista,vazio,limite){
-      let s='<div class="he-grp">'+titulo+' ('+lista.length+')</div>';
-      if(!lista.length) return s+'<div class="he-sub" style="color:var(--muted);padding:4px 2px 10px">'+vazio+'</div>';
-      const mostrar=(limite&&!q)?lista.slice(0,limite):lista;
-      s+=mostrar.map(function(o,i){ return hospAbaLinha(o,i); }).join('');
-      if(mostrar.length<lista.length) s+='<div class="he-sub" style="padding:2px 2px 10px">Mostrando as '+mostrar.length+' hospedagens mais recentes. Use a busca para achar as outras.</div>';
-      return s;
+    // Cada bloco é uma sanfona (prevSecHTML, ids «hosp-»): «Hospedados agora» e «A chegar» nascem abertas, «Já saíram» e
+    // «Pares» fechadas, e o aparelho lembra. Com a busca digitada, abrem as que têm resultado.
+    const bloco=function(id,titulo,lista,vazio,limite,padrao){
+      let s='';
+      if(!lista.length) s='<div class="he-sub" style="color:var(--muted);padding:4px 2px 10px">'+vazio+'</div>';
+      else {
+        const mostrar=(limite&&!q)?lista.slice(0,limite):lista;
+        s=mostrar.map(function(o,i){ return hospAbaLinha(o,i); }).join('');
+        if(mostrar.length<lista.length) s+='<div class="he-sub" style="padding:2px 2px 10px">Mostrando as '+mostrar.length+' hospedagens mais recentes. Use a busca para achar as outras.</div>';
+      }
+      return prevSecHTML(id, titulo, '<span class="prev-sec-conta">'+lista.length+'</span>', s, !!(q&&lista.length), padrao);
     };
-    h+=bloco('Hospedados agora',g.agora,'Ninguém hospedado no momento.');
-    h+=bloco('A chegar',g.achegar,'Nenhum check-in agendado para os próximos dias.');
-    h+=bloco('Já saíram — histórico',g.saiu,'Nenhuma hospedagem encerrada ainda.',40);
+    h+=bloco('hosp-agora','Hospedados agora',g.agora,'Ninguém hospedado no momento.',0,true);
+    h+=bloco('hosp-achegar','A chegar',g.achegar,'Nenhum check-in agendado para os próximos dias.',0,true);
+    h+=bloco('hosp-saiu','Já saíram — histórico',g.saiu,'Nenhuma hospedagem encerrada ainda.',40,false);
     // 6.66 (AC10.1): os pares «É o mesmo / São dois» já respondidos, com «Desfazer esta resposta»
-    try{ h+=hospParesRespondidosHtml(); if(!HOSP_MESMO_OUVINDO && !HOSP_ABA_MESMO_PEDIU){ HOSP_ABA_MESMO_PEDIU=true; hospCarregarMesmo().then(function(){ try{ renderHospedesAba(); }catch(x){} /* silencioso de propósito: redesenho de tela */ }); } }
+    try{ const _pr=hospParesRespondidosHtml(true);
+      if(_pr && _pr.n) h+=prevSecHTML('hosp-pares','Pares já respondidos','<span class="prev-sec-conta">'+_pr.n+'</span>', _pr.corpo, !!(q && jsNorm(_pr.corpo.replace(/<[^>]*>/g,' ')).indexOf(q)>=0), false);
+      if(!HOSP_MESMO_OUVINDO && !HOSP_ABA_MESMO_PEDIU){ HOSP_ABA_MESMO_PEDIU=true; hospCarregarMesmo().then(function(){ try{ renderHospedesAba(); }catch(x){} /* silencioso de propósito: redesenho de tela */ }); } }
     catch(x){} /* silencioso de propósito: sem a lista dos pares, a aba continua */
     box.innerHTML=h;
   }
