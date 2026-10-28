@@ -9151,7 +9151,7 @@ prova('6.27 "fez em" do check-up grava as casas juntas (checkup_t e checkup_data
 });
 prova('6.27 a aba: check-up e escova no topo (antes das vacinas), um campo só de check-up com "Fez em" e "Vence em", a escova com as duas datas', () => {
   const h = ficha627({ checkup_data: '2025-03-10', checkup_t: '2025-09-01', escova_t: '2026-08-01', escova_p: '2026-10-30', escova_dc: 'Sim' });
-  const i = h.indexOf('<div class="ppanel2" id="ps-saude">'), fim = h.indexOf('<div class="ppanel2" id="ps-med">');
+  const i = h.indexOf('<div class="ppanel2" id="ps-saude">'), fim = h.indexOf('<div class="ppanel2" id="ps-comp">');
   assert.ok(i > 0 && fim > i, 'a aba Prevenção desenhou');
   const aba = h.slice(i, fim);
   const pos = (t) => aba.indexOf(t);
@@ -9176,19 +9176,20 @@ prova('6.27 a aba: check-up e escova no topo (antes das vacinas), um campo só d
   const hl = ficha627({ checkup: '2024-11-27' });
   assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2024-11-27"/.test(hl), 'só o campo legado');
   assert.ok(pos('Última troca de escova de dentes') < pos('Escova os dentes no Day Care?') && pos('Escova os dentes no Day Care?') < pos('<h3 class="cad-sub">Vacinas</h3>'), 'o "Escova no Day Care?" sobe junto');
-  assert.ok(pos('Escova os dentes no Day Care?') < pos('EMERGÊNCIA — veterinário(a) de confiança do tutor'), 'a emergência continua no topo, logo depois');
-  assert.ok(pos('<h3 class="cad-sub">Oportunidades</h3>') > pos('EMERGÊNCIA — veterinário(a) de confiança do tutor'), 'e as Oportunidades vêm depois da emergência');
+  // 28/out/2026 (ficha em 8 abas): a Emergência, o Peso e o Cio foram para a aba Saúde; a Prevenção segue com as Oportunidades logo depois da escova.
+  assert.ok(pos('EMERGÊNCIA — veterinário(a) de confiança do tutor') < 0 && h.indexOf('EMERGÊNCIA — veterinário(a) de confiança do tutor') > h.indexOf('id="ps-saudeg"') && h.indexOf('EMERGÊNCIA — veterinário(a) de confiança do tutor') < i, 'a emergência foi para a aba Saúde');
+  assert.ok(pos('<h3 class="cad-sub">Oportunidades</h3>') > pos('Escova os dentes no Day Care?'), 'as Oportunidades vêm depois do bloco da escova');
   assert.ok(pos('Se você só sabe quando vence, digite em ') > pos('Check-up e escova') && pos('Se você só sabe quando vence, digite em ') < pos('Último check-up (fez em)'), 'a ajuda do "Vence em" (para quem digita) no bloco do topo');
-  assert.ok(pos('<h3 class="cad-sub">Peso</h3>') > pos('Exame de fezes'), 'o peso continua no fim');
+  assert.ok(pos('<h3 class="cad-sub">Peso</h3>') < 0 && h.indexOf('id="pesoNovo"') > h.indexOf('id="ps-saudeg"') && h.indexOf('id="pesoNovo"') < i, 'o peso foi para a aba Saúde (sanfona Peso)');
   // ficha antiga só com a casa de cima (checkup_data): a data aparece, e o "Vence em" não diz "última: não informada"
   const ho = ficha627({ checkup_data: '2025-03-10' });
-  const abaO = ho.slice(ho.indexOf('<div class="ppanel2" id="ps-saude">'), ho.indexOf('<div class="ppanel2" id="ps-med">'));
+  const abaO = ho.slice(ho.indexOf('<div class="ppanel2" id="ps-saude">'), ho.indexOf('<div class="ppanel2" id="ps-comp">'));
   assert.ok(/<label>Último check-up \(fez em\)<\/label><input type="date" class="cad-in" value="2025-03-10"/.test(abaO), 'a data antiga aparece no campo único');
   const ckV = abaO.slice(abaO.indexOf('Vence em (próximo check-up)'), abaO.indexOf('Última troca de escova de dentes'));
   assert.ok(/Pela conta: 10\/03\/2026 · 1 ano\./.test(ckV) && ckV.indexOf('última: não informada') < 0, ckV);
   // quem não digita o "Vence em" (decisão de 24/set): vê a data, sem campo
   const hc = ficha627({ checkup_t: '2025-09-01', checkup_p: '2026-09-01', escova_t: '2026-08-01', escova_p: '2026-10-30', verm_t: '2026-07-01', verm_p: '2026-11-01' }, 'consultora');
-  const abaC = hc.slice(hc.indexOf('<div class="ppanel2" id="ps-saude">'), hc.indexOf('<div class="ppanel2" id="ps-med">'));
+  const abaC = hc.slice(hc.indexOf('<div class="ppanel2" id="ps-saude">'), hc.indexOf('<div class="ppanel2" id="ps-comp">'));
   assert.ok(/<label>Vence em \(próximo check-up\)<\/label><div class="prev-calc" id="prevVence_checkup_p">vence em 01\/09\/2026<\/div>/.test(abaC), 'consultora: vê o vencimento do check-up');
   assert.ok(/<label>Vence em \(próximo vermífugo\)<\/label><div class="prev-calc" id="prevVence_verm_p">vence em 01\/11\/2026<\/div>/.test(abaC), 'e o do vermífugo (a Cookie: o campo existe; quem digita é Gestão, Diretoria e Supervisão)');
 });
@@ -16905,8 +16906,8 @@ prova('6.45 AC1/AC4 — a ficha (Prevenção › Check-up e escova) pergunta com
   assert.ok(/Último treino: 09\/10: deixou, por Quinn Teste\./.test(run("escovaFichaHTML({escova_dc:'Sim', escova_aceita:'treino', escova_treino:{'2026-10-09':{res:'deixou', quem:'Quinn Teste', ts:1}}})")), 'um só: no singular');
   // a ficha inteira: o bloco novo fica entre a pergunta da 6.16 e a emergência
   const f = ficha627({ escova_dc: 'Sim', escova_aceita: 'treino', escova_kit: 'Não' });
-  const aba = f.slice(f.indexOf('<div class="ppanel2" id="ps-saude">'), f.indexOf('<div class="ppanel2" id="ps-med">'));
-  assert.ok(aba.indexOf('Escova os dentes no Day Care?') < aba.indexOf('Como aceita a escovação?') && aba.indexOf('Tem o kit dental aqui?') < aba.indexOf('EMERGÊNCIA — veterinário(a) de confiança do tutor'), 'na aba Prevenção da ficha');
+  const aba = f.slice(f.indexOf('<div class="ppanel2" id="ps-saude">'), f.indexOf('<div class="ppanel2" id="ps-comp">'));
+  assert.ok(aba.indexOf('Escova os dentes no Day Care?') < aba.indexOf('Como aceita a escovação?') && aba.indexOf('Tem o kit dental aqui?') < aba.indexOf('<h3 class="cad-sub">Oportunidades</h3>'), 'na aba Prevenção da ficha (28/out/2026: a emergência saiu para Saúde, o bloco da escova vem antes das Oportunidades)');
   } finally { run(SOLTA645); }
 });
 provaAsync('6.45 AC1/AC4/AC7 — «como aceita» e o kit: a pessoa toca, a ficha grava, o rastro diz o quê; sem permissão, com resposta inválida ou com o banco recusando, nada de rastro', async () => {

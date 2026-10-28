@@ -7350,13 +7350,16 @@ async function main() {
       (html.match(/onchange="setPelExtra\(pelAtual,zChipPatch\(this\.value\)\)"/g)||[]).length === 1);
     check('o bloco ALIMENTACAO mora em Rotina & Alimentacao (nao em Atencao & Cuidados)',
       html.indexOf('almoço em campo almoço') > 0 &&
-      /Xixi e cocô[\s\S]{0,900}ALIMENTAÇÃO — o que e quanto ele come/.test(html));
+      // 28/out/2026 (ficha em 8 abas): a caixa mora na sanfona «Alimentação» da aba Rotina e alimentação, antes do almoço e do Xixi e cocô.
+      html.indexOf('id="ps-rotina"') > 0 && html.indexOf('id="ps-rotina"') < html.indexOf('ALIMENTAÇÃO — o que e quanto ele come') &&
+      html.indexOf('ALIMENTAÇÃO — o que e quanto ele come') < html.indexOf('<label>Xixi e cocô</label>'));
     check('o veterinario de emergencia mora na Prevencao, junto do Check-up',
       html.indexOf('O veterinário de emergência mudou para a aba Prevenção') > 0 &&
       // 6.27 (06/out/2026): a escova subiu para o lado do check-up; a emergência vem logo depois.
       /check-up vale por 12 meses[\s\S]{0,3000}escovaFichaHTML\(ex\)\}\s*<div class="cad-grid" style="margin-top:12px">\s*<!-- EMERG/.test(html));
-    check('a aba Exames do corpo existe, explica o "tudo normal" e lista os pontos',
-      /ps-exames/.test(html) && /Exames do corpo/.test(html) &&
+    // 28/out/2026 (ficha em 8 abas): a aba Exames do corpo virou a sanfona «Exames do corpo» da aba Saúde.
+    check('a sanfona Exames do corpo (aba Saúde) existe, explica o "tudo normal" e lista os pontos',
+      /fichaSanfonaInicio\('sg-exames','Exames do corpo'/.test(html) && /Exames do corpo/.test(html) &&
       /todos<\/strong> os pontos abaixo foram olhados/.test(html) &&
       /CK_PONTOS\.map\(function\(pt\)\{ return pt\.t; \}\)/.test(html));
   }
@@ -14790,11 +14793,13 @@ async function main() {
         && /id="renovDesfazer"[\s\S]{0,120}onclick="desfazerRenovacao\(\)"/.test(html)
         && /audit\('renovacao-desfeita'/.test(html)
         && /Renovações anteriores \('\+hist\.length\+'\)/.test(html));
-      check('v-15 · a aba Identificação virou SOMENTE LEITURA — uma porta só para o plano',
-        /Plano Day Care — início<\/label><input type="date"[^>]*readonly/.test(html)
-        && /Plano Day Care — fim \(vencimento\)<\/label><input type="date"[^>]*readonly/.test(html)
+      // 28/out/2026 (ficha em 8 abas): o tópico «Plano atual» saiu do Cadastro (virou o atalho «Plano» do Resumo e continua na aba Plano):
+      // o Cadastro não tem mais campo de plano, então a porta única do plano é só a aba Plano.
+      check('v-15 · o Cadastro não grava plano — uma porta só, a aba Plano (o tópico «Plano atual» virou atalho do Resumo)',
+        !/Plano Day Care — início<\/label>/.test(html)
         && !/onchange="setPelRenov\(/.test(html)
-        && /onclick="irParaAbaPlano\(\);return false"/.test(html));
+        && /onclick="irParaAbaPlano\(\);return false"/.test(html)
+        && /\{l:'Plano', t:sr\.label/.test(html));
       check('v-15 · a faixa amarela de dado inconsistente existe na aba Plano',
         /id="planoIncoerente"/.test(html)
         && /O plano gravado diz '\+esc\(String\(gravado\.aulas\)\)\+'x, mas '/.test(html)
@@ -17889,7 +17894,8 @@ async function main() {
       check('v-35 · o que parou continua na ficha, embaixo, em "Já não toma mais"',
         /Já não toma mais/.test(html)
         && /PAROU DE TOMAR em/.test(html)
-        && /const parados=ids\.filter\(function\(i\)\{ return \(FMED_ITENS\[i\]\|\|\{\}\)\.continuo!==true; \}\);/.test(html));
+        // 28/out/2026: as receitas da veterinária em vigor saíram de «parados» (têm subtítulo próprio); o resto continua parado.
+        && /const parados=ids\.filter\(function\(i\)\{ return \(FMED_ITENS\[i\]\|\|\{\}\)\.continuo!==true && receitas\.indexOf\(i\)<0; \}\);/.test(html));
       check('v-35 · re-salvar a ficha não apaga o registro de quem parou nem a palavra do tutor',
         /if\(prev\.paradoEm\) item\.paradoEm=prev\.paradoEm;/.test(html)
         && /if\(prev\.confirmado_em_checkin\) item\.confirmado_em_checkin=prev\.confirmado_em_checkin;/.test(html));
@@ -17961,7 +17967,7 @@ async function main() {
 
     // ---- (h) onde o FILHOt aparece, a medicação aparece ----------------------------
     check('v-35 · a linha está no cabeçalho da ficha, antes de qualquer aba',
-      /<div id="pelMedLinha">\$\{medLinhaDoPel\(p,'Detalhes e alterações na aba Medicamentos\.'\)\}<\/div>/.test(html));
+      /<div id="pelMedLinha">\$\{medLinhaDoPel\(p,'Detalhes e alterações em Saúde › Medicamentos\.'\)\}<\/div>/.test(html));
     check('v-35 · a linha está no check-in do corpo, junto da tarja de restrição',
       /\+tarjaRestricao\(\{n:p\.n,tutor:p\.tutor\}\)[\s\S]{0,320}\+medLinhaDoPel\(p,'Uso contínuo, do cadastro\./.test(html));
     check('v-35 · a linha está no cartão do Vence amanhã',
@@ -17993,12 +17999,14 @@ async function main() {
       && /if\(el&&el\.closest&&\(el\.closest\('#ciMeds'\)\|\|el\.closest\('#fmedItens'\)\)\) return canEditCheckinMed\(\);/.test(html));
 
     // ---- (j) a aba existe, no lugar combinado, e os horários moram em Configurações -
-    check('v-35 · a aba Medicamentos fica entre Prevenção e Rotina & Almoço',
-      html.indexOf("pelSubtab(this,'ps-saude')") < html.indexOf("pelSubtab(this,'ps-med')")
-      && html.indexOf("pelSubtab(this,'ps-med')") < html.indexOf("pelSubtab(this,'ps-rotina')")
-      && /<div class="ppanel2" id="ps-med">/.test(html));
+    // 28/out/2026 (ficha em 8 abas): os Medicamentos moram na sanfona «Medicamentos» da aba Saúde, que vem antes da Prevenção e da Rotina.
+    check('v-35 · a aba Saúde (onde mora Medicamentos) vem antes de Prevenção e de Rotina e alimentação',
+      html.indexOf("pelSubtab(this,'ps-saudeg')") < html.indexOf("pelSubtab(this,'ps-saude')")
+      && html.indexOf("pelSubtab(this,'ps-saude')") < html.indexOf("pelSubtab(this,'ps-rotina')")
+      && /<div class="ppanel2" id="ps-saudeg">/.test(html)
+      && html.indexOf('id="ps-saudeg"') < html.indexOf('id="fmedItens"') && html.indexOf('id="fmedItens"') < html.indexOf('id="ps-saude"'));
     check('v-35 · abrir a aba lê a agenda do FILHOt (uma vez por FILHOt, nó pequeno)',
-      /pelSubtab\(this,'ps-med'\);fmedRender\(\)/.test(html)
+      /pelSubtab\(this,'ps-saudeg'\);fmedRender\(\)/.test(html)
       && /if\(key!==FMED_KEY\)\{ FMED_KEY=key; FMED_ITENS=\{\}; FMED_CARREGOU=false; \}/.test(html));
     check('v-35 · os horários das refeições são de NEGÓCIO: moram no banco e se editam sem programador',
       /DB\.ref\('daycare\/config\/refeicoes'\)\.set\(novo\)/.test(html)

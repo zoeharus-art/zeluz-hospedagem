@@ -55,6 +55,13 @@ function trechoFaixa() {
   assert.ok(a > 0 && b > a, 'trecho da faixa ausente');
   return src.slice(a, b);
 }
+// A lista ALERTAS_FIXOS (o porteiro só reconhece id que está nela).
+function listaAlertasFixos() {
+  const a = src.indexOf('var ALERTAS_FIXOS=[');
+  const b = src.indexOf('];', a);
+  assert.ok(a > 0 && b > a, 'lista ALERTAS_FIXOS ausente');
+  return src.slice(a, b + 2);
+}
 function tabelaPerm() {
   const a = src.indexOf('const PERM={');
   const b = src.indexOf('\n  };', a);
@@ -261,7 +268,7 @@ function barrados(papel, patch, canEdit) {
     PEL_ALERGIA: { alergia: 1, restricao: 1, alergia_nenhuma: 1, restricao_nenhuma: 1 },
     papelDoCorpo() { return papel; },
   });
-  vm.runInContext([tabelaPerm(), funcaoDe(src, 'podePapel'), funcaoDe(src, 'pelAlertaFixoPermitido'), funcaoDe(src, 'pelCamposBarrados')].join('\n'), ctx);
+  vm.runInContext([tabelaPerm(), funcaoDe(src, 'podePapel'), listaAlertasFixos(), linhaDe(src, 'alertaFixoDef'), funcaoDe(src, 'pelAlertaFixoPermitido'), funcaoDe(src, 'pelCamposBarrados')].join('\n'), ctx);
   ctx.__p = patch;
   return Array.from(vm.runInContext('pelCamposBarrados(__p, {})', ctx));
 }
@@ -294,7 +301,15 @@ prova('porteiro: apagar o nó, valor sem «on» ou id estranho é barrado para t
   assert.deepStrictEqual(barrados('gestao', { 'alertas_fixos/nocao': null }, true), ['alertas_fixos/nocao']);
   assert.deepStrictEqual(barrados('gestao', { 'alertas_fixos/nocao': { det: 'x' } }, true), ['alertas_fixos/nocao']);
   assert.deepStrictEqual(barrados('gestao', { 'alertas_fixos/NOCAO!': { on: true } }, true), ['alertas_fixos/NOCAO!']);
-  assert.deepStrictEqual(barrados('gestao', { alertas_fixos: { nocao: { on: true } } }, true), [], 'o nó inteiro não passa por este ramo (é o setPelExtra do cadastro que não o monta)');
+  // revisão de segurança da parte A: o nó inteiro e qualquer caminho que o porteiro não reconhece ficam barrados para TODOS
+  ['gestao', 'consultora', 'supervisor', 'diretoria'].forEach((p) => {
+    assert.deepStrictEqual(barrados(p, { alertas_fixos: { nocao: { on: true } } }, true), ['alertas_fixos'], p + ': o nó inteiro é barrado');
+    assert.deepStrictEqual(barrados(p, { 'alertas_fixos/inexistente': { on: true } }, true), ['alertas_fixos/inexistente'], p + ': id fora da lista');
+    assert.deepStrictEqual(barrados(p, { 'alertas_fixos/nocao/on': true }, true), ['alertas_fixos/nocao/on'], p + ': subcaminho mais fundo');
+    assert.deepStrictEqual(barrados(p, { '/alertas_fixos/nocao/on': true }, true), ['/alertas_fixos/nocao/on'], p + ': barra no começo (o banco a ignora) não escapa do filtro');
+    assert.deepStrictEqual(barrados(p, { 'alertas_fixos/alerg': { on: true } }, true), ['alertas_fixos/alerg'], p + ': alergia é o campo Alergia, não um nó');
+  });
+  assert.deepStrictEqual(barrados('monitor', { alertas_fixos: { nocao: { on: true } } }, false), ['alertas_fixos'], 'monitora: o nó inteiro também');
   assert.deepStrictEqual(barrados('monitor', { pesos: [1], 'pesos_corr/2026-10-01': {}, alergia: 'frango', tutor: 'Outro' }, false), ['tutor'], 'monitora: peso, correção de peso e alergia como sempre; tutor barrado');
   assert.deepStrictEqual(barrados('monitor', Object.assign({ tutor: 'Outro' }, DESLIGA), false), ['alertas_fixos/nocao', 'tutor']);
 });
@@ -446,7 +461,7 @@ prova('a aba Hóspedes de hoje: quatro sanfonas com ids hosp-, selo «⚠ N aler
 prova('a faixa aparece nos cinco lugares pedidos e a ficha do plantão lista os fixos sem botão de tirar', () => {
   const pel = corpoDe(src, 'abrirPeludinho');
   assert.ok(pel.indexOf('id="pelFaixa">${faixaAtencaoHTML({p:p, onde:\'ficha\'})}') > pel.indexOf('class="card hosp-head"'), 'ficha: abaixo do cabeçalho');
-  assert.ok(pel.indexOf('id="pelFaixa"') < pel.indexOf('<div class="subtabs">'), 'ficha: antes das abas');
+  assert.ok(pel.indexOf('id="pelFaixa"') < pel.indexOf('<div class="subtabs ficha-abas"'), 'ficha: antes das abas');
   assert.ok(pel.indexOf('${alertasFixosSanfonaHTML(p)}') > pel.indexOf('id="ps-comp"') && pel.indexOf('${alertasFixosSanfonaHTML(p)}') < pel.indexOf('Em casa'), 'Comportamento: a sanfona vem antes dos campos de antes');
   const pern = corpoDe(src, 'abrirPernForm');
   assert.ok(pern.indexOf("faixaAtencaoHTML({h:reg, onde:'pernoite'})") > 0 && pern.indexOf("faixaAtencaoHTML({h:reg, onde:'pernoite'})") < pern.indexOf('id="pfData"'), 'pernoite: antes de qualquer campo');

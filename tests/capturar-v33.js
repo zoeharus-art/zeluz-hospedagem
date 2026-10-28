@@ -207,7 +207,7 @@ async function dispensarCartazes(page, quantos) {
       const pinta = () => {
         const el = document.getElementById('pelMedLinha');
         if (el && typeof medLinhaDoPel === 'function' && typeof pelAtual !== 'undefined' && pelAtual) {
-          el.innerHTML = medLinhaDoPel(pelAtual, 'Detalhes e alterações na aba Medicamentos.');
+          el.innerHTML = medLinhaDoPel(pelAtual, 'Detalhes e alterações em Saúde › Medicamentos.');
         }
         return !!(el && el.textContent && el.textContent.indexOf('toma remédio') >= 0);
       };
@@ -234,26 +234,26 @@ async function dispensarCartazes(page, quantos) {
       console.log('ficha-toshi-cabecalho-' + larg.rot + '.png');
     } else { problemas.push('não achei o cabeçalho da ficha (' + larg.rot + ')'); }
 
-    // ---- 3 · a aba Medicamentos ----------------------------------------------------
+    // ---- 3 · Medicamentos (desde 28/out/2026 é uma sanfona da aba Saúde) ---------------
     const abriuAba = await page.evaluate(() => {
       const t = Array.from(document.querySelectorAll('#pel-ficha .subtab2'))
-        .find((x) => (x.textContent || '').trim() === 'Medicamentos');
+        .find((x) => (x.textContent || '').trim() === 'Saúde');
       if (!t) return false;
       t.click(); return true;
     });
-    if (!abriuAba) { problemas.push('a aba Medicamentos não existe na ficha (' + larg.rot + ')'); await ctx.close(); continue; }
+    if (!abriuAba) { problemas.push('a aba Saúde (onde mora Medicamentos) não existe na ficha (' + larg.rot + ')'); await ctx.close(); continue; }
     await page.waitForTimeout(2000);
     await estabilizar(page);
 
-    // A ordem das abas é a combinada: Prevenção · Medicamentos · Rotina & Almoço.
+    // A ordem das abas é a combinada: Saúde (com Medicamentos) logo antes de Prevenção.
     const ordem = await page.$$eval('#pel-ficha .subtab2', (ns) => ns.map((x) => (x.textContent || '').trim()));
-    const iPrev = ordem.indexOf('Prevenção'), iMed = ordem.indexOf('Medicamentos');
-    if (!(iPrev >= 0 && iMed === iPrev + 1)) problemas.push('a aba Medicamentos não está logo depois de Prevenção (' + larg.rot + '): ' + ordem.join(' · '));
+    const iPrev = ordem.indexOf('Prevenção'), iMed = ordem.indexOf('Saúde');
+    if (!(iPrev >= 0 && iMed === iPrev - 1)) problemas.push('a aba Saúde não está logo antes de Prevenção (' + larg.rot + '): ' + ordem.join(' · '));
 
-    await page.evaluate(() => { const p = document.getElementById('ps-med'); if (p && p.scrollIntoView) p.scrollIntoView(); });
+    await page.evaluate(() => { const p = document.getElementById('fichaTopico_sg-med'); if (p && p.scrollIntoView) p.scrollIntoView(); });
     await page.waitForTimeout(400);
     await mascararTelefones(page);
-    const painel = await page.$('#ps-med');
+    const painel = await page.$('#fichaTopico_sg-med');
     if (painel) {
       await painel.screenshot({ path: path.join(SAIDA, 'aba-medicamentos-' + larg.rot + '.png'), animations: 'disabled', timeout: 30000 });
       console.log('aba-medicamentos-' + larg.rot + '.png');

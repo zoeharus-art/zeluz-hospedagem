@@ -1124,6 +1124,23 @@
   .faixa-previa{margin-top:14px;padding:12px;border:2px dashed var(--z-blue-soft);border-radius:14px;background:var(--z-cream-warm)}
   .faixa-previa-t{font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--z-blue);margin-bottom:8px}
   .faixa-previa .faixa-atn,.faixa-previa .faixa-nada{margin-bottom:0}
+  /* ===== A FICHA EM 8 ABAS (28/out/2026): a barra de abas gruda no topo; Resumo e leituras ===== */
+  .subtabs.ficha-abas{flex-wrap:nowrap;overflow-x:auto;gap:7px;position:sticky;top:var(--ficha-abas-topo,0px);z-index:19;background:var(--z-cream);padding:8px 0 10px;margin-bottom:10px;scrollbar-width:thin}
+  .subtabs.ficha-abas .subtab2{flex:none;min-height:40px;display:inline-flex;align-items:center;white-space:nowrap}
+  #pel-ficha details.ficha-topico{scroll-margin-top:calc(var(--ficha-abas-topo,0px) + 58px)}
+  .fres-lista{margin:6px 0 0;padding:0;list-style:none}
+  .fres-lin{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:11px 0;border-top:1px solid var(--line);font-size:14px}
+  .fres-lin:first-child{border-top:0}
+  .fres-k{color:var(--muted);font-weight:500;flex:0 0 38%}
+  .fres-v{color:var(--z-blue);font-weight:600;text-align:right;flex:1;min-width:0;overflow-wrap:anywhere}
+  .fres-at{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer;color:var(--z-blue)}
+  .fres-at:focus-visible{outline:3px solid var(--z-gold);outline-offset:2px;border-radius:10px}
+  .fres-at-fixo{cursor:default}
+  .fres-n{font-weight:700;font-size:14.5px;flex:1 1 auto;min-width:0}
+  .fres-t{display:block;font-size:12px;color:var(--muted);font-weight:500;overflow-wrap:anywhere}
+  .fres-go{font-size:22px;line-height:1;color:var(--z-blue-soft)}
+  .fres-leitura{padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--z-cream-warm);color:var(--z-blue);font-size:14px;overflow-wrap:anywhere}
+  .fres-hist{margin-top:8px}
   .faixa-selo{display:inline-block;max-width:100%;background:rgba(192,57,43,.12);color:var(--crm-critico);border-radius:12px;padding:4px 10px;font-weight:800;font-size:12px;margin-left:6px;vertical-align:top;overflow-wrap:anywhere}
   .faixa-selo small{display:block;font-weight:600;font-size:11.5px}
   @media (prefers-reduced-motion:reduce){
@@ -2742,8 +2759,8 @@
 .z-painel44{--p44-blue:#234d67;--p44-soft:#3a6a85;--p44-cream:#fffdf6;--p44-warm:#faf5e9;--p44-gold:#deb428;--p44-line:#e7e0d2;--p44-muted:#7c8a93;box-sizing:border-box;max-width:1160px;padding:24px 38px 52px;background:var(--p44-cream);color:var(--p44-blue);font-family:Inter,Poppins,system-ui,sans-serif}.z-painel44 *{box-sizing:border-box}.z-painel44 [hidden]{display:none!important}.z-painel44 button{font:inherit}.z-painel44 button:focus-visible{outline:3px solid rgba(222,180,40,.55);outline-offset:3px}.z-painel44__topo{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.z-painel44__saudacao .pm-saud1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.12;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2{margin:8px 0 0;font-size:16px;font-weight:600;line-height:1.45;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2 b{font-size:21px;font-weight:800;color:#a57a00}.z-painel44__saudacao .pm-saud3{max-width:54ch;margin:5px 0 0;color:var(--p44-soft);font-size:15px;font-weight:500;font-style:italic;line-height:1.5}.z-painel44__saudacao .pm-traco{display:block;width:40px;height:3px;margin-top:13px;border-radius:2px;background:linear-gradient(90deg,var(--p44-gold),#a57a00)}.z-painel44__saudacao .pm-data{margin-top:14px;color:var(--p44-muted);font-size:12px;font-weight:600}.z-painel44__selo{flex:0 0 auto;padding:8px 11px;border:1px solid var(--p44-line);border-radius:999px;background:#fff;color:var(--p44-blue);font-size:12px;font-weight:700}.z-painel44__selo:before{content:'•';margin-right:5px;color:var(--p44-gold);font-size:18px}.z-painel44__sticker{display:block;width:62px;max-width:90px;height:68px;max-height:80px;object-fit:contain;margin:4px auto 0}.z-painel44__bem-estar{display:block;width:100%;margin-bottom:18px}.z-painel44__bem-estar>*{width:100%}.z-painel44__abas{display:flex;gap:7px;margin:0 0 16px}.z-painel44__abas button{padding:10px 14px;border:1px solid var(--p44-line);border-radius:10px;background:#fff;color:var(--p44-blue);font-size:14px;font-weight:700;cursor:pointer}.z-painel44__abas button[aria-selected=true]{border-color:var(--p44-blue);background:var(--p44-blue);color:var(--p44-cream)}.z-painel44__intro{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:12px 0}.z-painel44__intro h2,.z-painel44__equipe h2{margin:0;font-size:20px}.z-painel44__intro p,.z-painel44__equipe>p{margin:5px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__contagem{color:var(--p44-muted);font-size:12px;font-weight:700}.z-painel44__temas{display:grid;gap:9px}.z-painel44__tema{overflow:hidden;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__tema-cabeca{display:grid;grid-template-columns:36px 1fr auto 20px;align-items:center;gap:10px;width:100%;padding:14px 15px;border:0;background:transparent;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__tema-icone{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--p44-warm);font-size:17px}.z-painel44__tema-titulo,.z-painel44__tema-passo{display:block}.z-painel44__tema-titulo{font-size:15px;font-weight:800}.z-painel44__tema-passo{margin-top:3px;color:var(--p44-muted);font-size:12px}.z-painel44__pill{padding:4px 8px;border-radius:999px;background:#e9f5f7;color:#226477;font-size:11px;font-weight:800}.z-painel44__seta{color:var(--p44-soft);font-size:18px;transition:transform .16s}.z-painel44__tema.aberto .z-painel44__seta{transform:rotate(90deg)}.z-painel44__tema-corpo{margin:0 12px 12px;padding:14px 15px;border-top:1px solid var(--p44-line);background:var(--p44-warm)}.z-painel44__equipe{padding:18px;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__pessoas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}.z-painel44__pessoa{display:flex;align-items:center;gap:11px;width:100%;padding:13px;border:1px solid var(--p44-line);border-radius:12px;background:#fff;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__avatar{display:grid;place-items:center;width:39px;height:39px;flex:0 0 auto;border-radius:50%;background:var(--p44-blue);color:var(--p44-cream);font-size:12px;font-weight:800}.z-painel44__pessoa-info{min-width:0}.z-painel44__pessoa strong,.z-painel44__pessoa small{display:block}.z-painel44__pessoa strong{font-size:14px}.z-painel44__pessoa small{overflow:hidden;margin-top:3px;color:var(--p44-muted);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.z-painel44__pessoa-seta{margin-left:auto;color:#a57a00;font-size:18px}.z-painel44__pessoa-detalhe{margin-top:15px}.z-painel44__pessoa-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__pessoa-secao h3{margin:0;font-size:14px}.z-painel44__pessoa-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}.z-painel44__vazio{margin:15px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__zelozinha{display:block;width:100%;margin-top:16px;padding:12px;border:1px dashed var(--p44-gold);border-radius:11px;background:var(--p44-warm);color:#805d00;text-align:left;cursor:pointer}.z-painel44__zelozinha-titulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.z-painel44__canal{padding:3px 7px;border-radius:999px;background:#fff;color:var(--p44-muted);font-size:11px}.z-painel44__zelozinha-aviso{display:block;margin-top:7px;font-size:12px;line-height:1.45}.z-painel44__perfil{margin-top:15px}.z-painel44__voltar{margin-bottom:12px;padding:8px 11px;border:1px solid var(--p44-line);border-radius:9px;background:#fff;color:var(--p44-blue);font-size:13px;font-weight:700;cursor:pointer}.z-painel44__perfil-subtitulo{margin:4px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__perfil-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__perfil-secao h3{margin:0;font-size:14px}.z-painel44__perfil-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}@media(max-width:760px){.z-painel44{padding:18px}.z-painel44__topo,.z-painel44__intro{display:block}.z-painel44__selo{display:inline-block;margin-top:13px}.z-painel44__contagem{display:block;margin-top:8px}.z-painel44__tema-cabeca{grid-template-columns:32px 1fr auto 16px;padding:12px}.z-painel44__tema-corpo{margin:0 8px 8px;padding:12px}.z-painel44__pessoas,.z-painel44__perfil-conteudo,.z-painel44__pessoa-conteudo{grid-template-columns:1fr}}
 
 </style>
-<link rel="stylesheet" href="marcia129/painel.css?v=2026-10-28-02">
-<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-10-28-02">
+<link rel="stylesheet" href="marcia129/painel.css?v=2026-10-28-04">
+<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-10-28-04">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -8151,11 +8168,13 @@ return { criar };
       // Onda 3 — Cuidado Vet. Recomendações/cuidados ativos (viram instruções na ficha/card, como a
       // tarja de alergia) e datas de reavaliação (avisam no dia). Em tempo real em todos os aparelhos.
       DB.ref('auaulandia/vet-recomendacoes').on('value', s=>{ VET_RECOM_CACHE=s.val()||{};
+        try{ if(typeof fichaVetRedesenhar==='function') fichaVetRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         try{ if(currentHosp&&typeof renderVetInstrucoesFicha==='function') renderVetInstrucoesFicha(currentHosp); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         try{ const v=document.getElementById('v-cuidadovet'); if(v&&v.classList.contains('active')&&typeof renderVetLista==='function') renderVetLista(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       });
       DB.ref('auaulandia/vet-reavaliacao').on('value', s=>{ VET_REAVAL_CACHE=s.val()||{};
+        try{ if(typeof fichaVetRedesenhar==='function') fichaVetRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
         try{ if(typeof checarReavaliacoesHoje==='function') checarReavaliacoesHoje(); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
         try{ if(typeof renderHosp==='function') renderHosp(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       });
@@ -18575,7 +18594,7 @@ return { criar };
         var on=alertaFixoLigado(ex, d.id), a=alertaFixoNo(ex, d.id);
         if(d.id==='alerg'){
           if(ui.pede==='alerg' && !on){
-            h+='<div class="faixa-cx"><b>Ligar «Alergia»</b><div class="hint" style="margin:2px 0 6px">Escreva a quê ele tem alergia — é o mesmo campo Alergia da aba Atenção &amp; Cuidados.</div>'
+            h+='<div class="faixa-cx"><b>Ligar «Alergia»</b><div class="hint" style="margin:2px 0 6px">Escreva a quê ele tem alergia — é o mesmo campo Alergia de Saúde › Alergia, restrição e problemas de saúde.</div>'
               +'<input class="cad-in" id="afAlergiaNova" maxlength="140" autocomplete="off" placeholder="ex.: frango" aria-label="Alergia a">'
               +'<div class="faixa-acoes"><button type="button" class="btn btn-primary" style="min-height:44px" onclick="alertaFixoAlergiaLigar()">Ligar alerta</button>'
               +'<button type="button" class="btn" style="min-height:44px" onclick="alertaFixoCancelar()">Cancelar</button></div></div>';
@@ -18590,7 +18609,7 @@ return { criar };
           if(on){
             h+='<div class="faixa-cx"><b>'+d.ic+' Alergia</b>'
               +'<label class="faixa-rot">Alergia a …<input class="cad-in" value="'+escAttr(String(ex.alergia||''))+'" maxlength="140" autocomplete="off" onchange="alertaFixoAlergiaEditar(this.value)"></label>'
-              +'<div class="hint" style="margin:4px 0 0">o mesmo dado do campo Alergia (Atenção &amp; Cuidados)</div></div>';
+              +'<div class="hint" style="margin:4px 0 0">o mesmo dado do campo Alergia (Saúde › Alergia)</div></div>';
           }
           return;
         }
@@ -31166,7 +31185,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-28-02';
+  const APP_VERSAO='2026-10-28-04';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -40680,9 +40699,12 @@ return { criar };
   //   alertas_fixos/<id>        valor {on:true,…}  → liga: pede 'alerta-fixo-ligar'
   //                             valor {on:false,…} → desliga: pede 'alerta-fixo-desligar'
   //   alertas_fixos/<id>/det    o motivo/detalhe (texto): quem liga também escreve o motivo
-  // Qualquer outra forma (apagar o nó, valor sem on) é barrada: desligar nunca apaga.
+  // Qualquer outra forma (apagar o nó, valor sem on, o nó inteiro «alertas_fixos», id fora de ALERTAS_FIXOS,
+  // subcaminho mais fundo como alertas_fixos/<id>/on) é barrada para todos: desligar nunca apaga.
   function pelAlertaFixoPermitido(c, v){
     var m=/^alertas_fixos\/([a-z]{2,12})(\/det)?$/.exec(String(c||'')); if(!m) return false;
+    // Só id conhecido (e que se guarda: «alerg» é o próprio campo Alergia, nunca um nó daqui).
+    if(typeof alertaFixoDef!=='function' || !alertaFixoDef(m[1]) || m[1]==='alerg') return false;
     var pode=function(cap){ try{ return (typeof podePapel==='function') && podePapel(cap); }catch(e){ return false; } }; /* silencioso de propósito: sem a tabela de permissões, a resposta é «não pode» */
     if(m[2]) return typeof v==='string' && pode('alerta-fixo-ligar');
     if(!v || typeof v!=='object') return false;
@@ -40691,7 +40713,10 @@ return { criar };
     return false;
   }
   function pelCamposBarrados(patch, op){
-    var _af=Object.keys(patch||{}).filter(function(c){ return c.indexOf('alertas_fixos/')===0 && !pelAlertaFixoPermitido(c, patch[c]); });
+    // Caminho de alerta = qualquer chave que COMECE com 'alertas_fixos' (o nó inteiro, id fora da lista, subcaminho
+    // mais fundo): o que o pelAlertaFixoPermitido não reconhece fica barrado para todos os papéis, inclusive quem edita a ficha.
+    var _ehAf=function(c){ return String(c).replace(/^[s/]+/,'').indexOf('alertas_fixos')===0; };
+    var _af=Object.keys(patch||{}).filter(function(c){ return _ehAf(c) && !pelAlertaFixoPermitido(c, patch[c]); });
     if(typeof canEditPel==='function' && canEditPel()) return _af;
     // A monitora só atravessa o porteiro com o recibo recém-revalidado da tarefa exata.
     // O mesmo recibo fixa pet, item, dia, autoria e o conjunto/valor de todos os campos.
@@ -40699,7 +40724,7 @@ return { criar };
     var podeAlergia=false;
     try{ podeAlergia=(typeof podePapel==='function') && podePapel('editar-alergia'); }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
     return _af.concat(Object.keys(patch||{}).filter(function(c){
-      if(c.indexOf('alertas_fixos/')===0) return false;   // já conferido acima, pela capacidade
+      if(_ehAf(c)) return false;   // já conferido acima, pela capacidade
       if(PEL_LIVRES[c]) return false;
       if(/^pesos_corr\/\d{4}-\d{2}-\d{2}$/.test(c)) return false;   // 6.59 (AC1.8): a correção do peso, já assinada no cartaz
       if(podeAlergia && PEL_ALERGIA[c]) return false;
@@ -40723,7 +40748,7 @@ return { criar };
   // tela de origem. Gravação recusada não gera registro: a falha segue em gravacao-FALHOU.
   var PEL_RASTRO_MAX=4000, PEL_RASTRO_AUD=120, PEL_RASTRO_CORTE=' (cortado)';
   var PEL_RASTRO_FORA={pesos:1};
-  var PEL_RASTRO_ROTULO={n:'Nome', tutor:'Tutor', tel:'Telefone do tutor', raca:'Raça', nasc:'Nascimento', idadeAprox:'Idade aproximada',
+  var PEL_RASTRO_ROTULO={n:'Nome', apelido:'Apelido', tutor:'Tutor', tel:'Telefone do tutor', raca:'Raça', nasc:'Nascimento', idadeAprox:'Idade aproximada',
     corPelo:'Cor do pelo', sexo:'Sexo', castrado:'Castrado?', dias:'Dias da semana', freq:'Frequência', renov:'Plano', foto:'Foto',
     tutor2:'Tutor 2 (guarda compartilhada)', tutorPrinc:'Tutor principal', matricula:'Data de matrícula', checkup_fez:'Já fez check-up?',
     vetNome:'Veterinário(a) — nome', vetTel:'Veterinário(a) — telefone', vetClinica:'Clínica — nome', vetEnd:'Clínica — endereço',
@@ -41038,6 +41063,8 @@ return { criar };
     var quem=(typeof quemSou==='function')?quemSou():'-';
     var patch={}; patch[campo]=''; patch[campo+'_nenhuma']={quem:quem, ts:Date.now()};
     setPelExtra(pelAtual, patch);
+    // Restrição é um dado só: a grade do Day Care lê `almoco-cad.restr`, então «Não tem» zera lá também (a frase de antes vai ao rastro).
+    if(campo==='restricao') pelRestrAlmoZerar();
     if(typeof audit==='function') audit(campo==='alergia'?'alergia-nao-tem':'restricao-nao-tem',
       ((typeof pelNome==='function')?pelNome(pelAtual):'')+' — registrado que não tem '+rot,
       {alvo:(typeof pelKey==='function'?pelKey(pelAtual):''), quem:quem});
@@ -41503,7 +41530,7 @@ return { criar };
     if(ex.ansioso==='Sim') P.push(`<span class="alert-pill warn">ANSIOSO: come em caixa própria — servir logo após quem tem banho</span>`);
     return P.length?`<div class="alert-pills">${P.join('')}</div>`:'';
   }
-  // As tarjas (alérgico, restrição, medicação) vivem na aba "Atenção & Cuidados", no elemento
+  // As tarjas (alérgico, restrição, medicação) vivem em Saúde › Alergia, restrição e problemas de saúde (era a aba "Atenção & Cuidados"), no elemento
   // pelPills2. O código antigo só atualizava um "pelPills" que ficava num bloco escondido —
   // então digitar uma alergia não acendia a tarja na hora (11/ago/2026). Atualiza os dois.
   function refreshPills(){ if(!pelAtual) return; const html=alertPills(pelExtra(pelAtual));
@@ -46845,7 +46872,6 @@ return { criar };
   }
   function camposAlmocoFicha(){
     const a=almCad(pelAtual)||{};
-    const seg=(campo,val,opts)=>opts.map(o=>`<button class="${val===o?'on':''}" onclick="pick(this);setAlmCad(pelAtual,{${campo}:${o==='Sim'?'true':'false'}});renderAlmSeFor()">${o}</button>`).join('');
     // A pergunta era "NÃO almoça na creche?" — dupla negativa: responder "Não" queria dizer
     // "sim, almoça". Confundia todo mundo e foi assim que a Repolho virou "não almoça"
     // (Adriana, 11/ago/2026). Agora a pergunta é direta: "Almoça na creche?" Sim/Não.
@@ -46855,10 +46881,12 @@ return { criar };
     return `
       <div class="field" style="grid-column:1/-1"><label>Alimentação</label><input class="cad-in" value="${escAttr(a.alim||'')}" placeholder="Ex: Ração · Comida Natural · Ração + Patê" onchange="setAlmCad(pelAtual,{alim:this.value});renderAlmSeFor()"></div>
       <div class="field"><label>Quantidade</label><input class="cad-in" value="${escAttr(a.quant||'')}" placeholder="Ex: 75g · Total · Metade" onchange="setAlmCad(pelAtual,{quant:this.value});renderAlmSeFor()"></div>
-      <div class="field"><label>Restrição (aparece em vermelho)</label><input class="cad-in" value="${escAttr(a.restr||'')}" placeholder="Ex: RESTRIÇÃO A TUDO" onchange="setAlmCad(pelAtual,{restr:this.value});renderAlmSeFor()"></div>
+      <!-- A RESTRIÇÃO É UM DADO SÓ (28/out/2026): a fonte é Saúde › Restrição alimentar; aqui ela aparece em leitura. Ao gravar a de Saúde
+           grava-se também almoco-cad.restr (é o que a grade do Day Care lê). Se o almoço tinha outra frase, ela aparece como «No almoço estava». -->
+      <div class="field"><label>Restrição (aparece em vermelho)</label><div id="pelRestrAlmo">${pelRestrAlmoHTML(pelAtual, pelExtra(pelAtual))}</div></div>
       <div class="field" style="grid-column:1/-1"><label>Complemento / observação do almoço</label><input class="cad-in" value="${escAttr(almObsLimpa(a.extra,a.restr))}" placeholder="Só o que NÃO está nos campos acima. Ex: Quando for só comida = 100g · Come no corredor · Almoçar com Juju" onchange="setAlmCad(pelAtual,{extra:this.value});renderAlmSeFor()"></div>
       <div class="hint" style="grid-column:1/-1;margin-top:-4px">Não repita aqui o comedouro lento nem a restrição — cada um já tem o seu campo e aparece sozinho na lista e no relatório.</div>
-      <div class="field"><label>Comedouro lento?</label><div class="seg gold" data-single>${seg('lento',a.lento?'Sim':'Nao',['Sim','Nao'])}</div></div>
+      <div class="hint" style="grid-column:1/-1">O comedouro lento agora é um campo só, em <strong>Alimentação — o que e quanto come</strong>, logo acima: ele grava aqui e no cadastro do FILHOt juntos.</div>
       <div class="field"><label>Almoça na creche?</label><div class="seg gold" data-single>${segAlmoca(a.nao?'Nao':'Sim',['Sim','Nao'])}</div>
         <div class="hint" style="margin-top:4px;font-size:11px">Mesmo marcando <strong>Não</strong>, ele continua aparecendo na grade do Almoço todos os dias — o tutor pode mandar comida um dia.</div></div>`;
   }
@@ -47556,12 +47584,12 @@ return { criar };
   function renderPelFicha(){
     try{
       if(pelAtualIdx==null) return;
-      const ativa=(document.querySelector('.ppanel2.active')||{}).id||'ps-ident';
+      const ativa=(document.querySelector('.ppanel2.active')||{}).id||'ps-resumo';
       // O RASCUNHO de Medicamentos (QA B-N3, 25/set/2026): o que a pessoa está digitando e
       // ainda não salvou mora só na tela. Guardamos os nós como estão (com os valores dentro)
       // e os recolocamos depois do redesenho — senão a dose mudada sumia sem aviso.
       let medVelho=null, medAcoesVelho=null;
-      if(ativa==='ps-med'){
+      if(ativa==='ps-saudeg'){   // Medicamentos mora dentro da aba Saúde (era a aba ps-med)
         const mi=document.getElementById('fmedItens');
         // Só o rascunho DESTE FILHOt (QA B3): se a ficha que se redesenha for de outro, o
         // rascunho do anterior não pode aparecer nela (nem ser salvo na agenda errada).
@@ -47578,7 +47606,7 @@ return { criar };
       // aba presa em "Montando…" depois de qualquer redesenho da ficha.
       try{
         if(ativa==='ps-tutor' && typeof fichaTutorRender==='function') fichaTutorRender();
-        if(ativa==='ps-med'){
+        if(ativa==='ps-saudeg'){
           const mn=document.getElementById('fmedItens');
           if(medVelho && mn && mn.parentNode){
             mn.parentNode.replaceChild(medVelho, mn);
@@ -47799,6 +47827,362 @@ return { criar };
     feitoC();
     return rC;
   }
+  // ===== A FICHA EM 8 ABAS — Adriana, 28/out/2026 ==================================================
+  // A ficha era arrumada por QUEM GRAVOU cada campo; agora é arrumada por ASSUNTO: Resumo · Cadastro · Plano · Saúde ·
+  // Prevenção · Comportamento · Rotina e alimentação · Com o tutor. Cada bloco foi MOVIDO inteiro (as mesmas funções, os
+  // mesmos ids de campo, os mesmos textos de ajuda, avisos e confirmações): só a casca (as abas e as sanfonas) mudou.
+  // Os nomes das abas antigas (ps-med, ps-exames, ps-atencao) ainda são usados por quem chama de fora (as conferências do
+  // check-in, os atalhos): pelAbaDeAntiga leva cada um para a sanfona nova, e fichaIrPara faz o caminho (aba + sanfona + rolagem).
+  var FICHA_ABA_ANTIGA={'ps-med':{aba:'ps-saudeg', topico:'sg-med'}, 'ps-exames':{aba:'ps-saudeg', topico:'sg-exames'}, 'ps-atencao':{aba:'ps-saudeg', topico:'sg-alerg'}};
+  function pelAbaDeAntiga(aba){ var n=FICHA_ABA_ANTIGA[String(aba||'')]; return n?{aba:n.aba, topico:n.topico}:{aba:String(aba||''), topico:''}; }
+  // O mesmo toque da pessoa na aba (assim a aba que se desenha por função — Resumo, Medicamentos, Com o tutor — se desenha),
+  // depois abre a sanfona e rola até ela. Devolve false quando a aba não existe para quem está logado (Plano e Com o tutor somem
+  // para quem não os vê): quem chama decide o que fazer.
+  function fichaIrPara(aba, topico){
+    try{
+      var a=pelAbaDeAntiga(aba); aba=a.aba; topico=topico||a.topico;
+      var raiz=document.getElementById('pel-ficha'); if(!raiz) return false;
+      var bt=Array.prototype.find.call(raiz.querySelectorAll('.subtab2'), function(b){ return (b.getAttribute('onclick')||'').indexOf("'"+aba+"'")>=0; });
+      if(!bt) return false;
+      bt.click();
+      var alvo=topico?document.getElementById('fichaTopico_'+topico):null;
+      if(alvo && alvo.tagName==='DETAILS') alvo.open=true;   // o ontoggle guarda o aberto por FILHOt
+      var rolar=alvo||document.getElementById(aba);
+      if(rolar && rolar.scrollIntoView) rolar.scrollIntoView({behavior:'smooth', block:'start'});
+      return true;
+    }catch(e){ _logFalhaGrav('ir para a aba da ficha', e); return false; }
+  }
+  // A sanfona da ficha, com aberta/fechada guardada por FILHOt (FICHA_TOPICOS_ABERTOS, o mesmo molde do fichaTopicoInicio) e
+  // o seu estado inicial dito aqui — o fichaTopicoInicio nasce sempre fechado. `estado` = {texto, classe} ou null (sem selo).
+  function fichaSanfonaInicio(id, nome, estado, abertaPadrao){
+    var chave=fichaTopicoChave(id);
+    var aberto=Object.prototype.hasOwnProperty.call(FICHA_TOPICOS_ABERTOS, chave)?!!FICHA_TOPICOS_ABERTOS[chave]:!!abertaPadrao;
+    return '<details class="ficha-topico" data-ficha-topico="'+escAttr(id)+'" id="fichaTopico_'+escAttr(id)+'"'+(aberto?' open':'')
+      +' ontoggle="fichaTopicoAlternarDaFicha(\''+jsAspas(chave)+'\',this.open)"><summary><span class="ficha-topico-nome">'+escAttr(nome)+'</span>'
+      +(estado?('<span class="ficha-topico-estado ficha-topico-'+escAttr(estado.classe||'sem')+'" id="fichaSelo_'+escAttr(id)+'">'+escAttr(estado.texto)+'</span>'):'')
+      +'<span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary><div class="ficha-topico-corpo">';
+  }
+  function fichaSelo(texto, classe){ return {texto:String(texto||''), classe:classe||'sem'}; }
+  // Receita da veterinária em vigor: lançada pela veterinária (origem «vet»), que não é de uso contínuo e ainda vale hoje
+  // (sem data de fim, ou o fim é hoje ou depois) — ou que está SUSPENSA por ela (continua à vista, com a faixa SUSPENSO).
+  // É o mesmo conjunto que o Cuidado Vet mostra; a Ficha › Saúde › Medicamentos passou a mostrá-lo (antes só o uso contínuo).
+  function fmedEhReceitaVigor(it, hoje){
+    it=it||{};
+    if(medItemAnulado(it) || it.continuo===true || it.origem!=='vet') return false;
+    if(it.suspenso===true) return true;
+    return !it.dataFim || String(it.dataFim)>=String(hoje||'');
+  }
+  function fichaMedContagem(key){
+    var o={cont:0, rec:0};
+    try{
+      var itens=((typeof MED_AGENDA_GERAL!=='undefined'?MED_AGENDA_GERAL:{})[key]||{}).itens||{}, hoje=zHojeISO();
+      Object.keys(itens).forEach(function(id){
+        var it=itens[id]||{}; if(medItemAnulado(it) || !nomeMedOk(it.nome)) return;
+        if(it.continuo===true) o.cont++; else if(fmedEhReceitaVigor(it, hoje)) o.rec++;
+      });
+    }catch(e){} /* silencioso de propósito: enfeite do selo — sem a contagem a sanfona só diz «sem informação» */
+    return o;
+  }
+  function fichaMedSelo(p){
+    var c=fichaMedContagem(medChaveDoPel(p)), n=c.cont+c.rec;
+    return n?fichaSelo(n+' em uso','ok'):fichaSelo('Nenhum cadastrado','sem');
+  }
+
+  // ---- O RESUMO (a 1ª aba, só leitura) ------------------------------------------------------------
+  // «Cuidados de hoje»: o que quem cuida precisa ver antes de tudo. «Atalhos»: uma linha por assunto, com o estado dele, que
+  // abre a aba e a sanfona certas. Nada aqui grava; tudo vem das mesmas funções que a ficha já usa.
+  function fichaResumoDados(p, ex){
+    ex=ex||{};
+    var key=medChaveDoPel(p), cuidados=[], atalhos=[];
+    var nenhuma=function(campo){ return !!zNaoTemSelo(ex, campo); };
+    var alerg=String(ex.alergia||'').trim();
+    cuidados.push(['Alergia', alerg||(nenhuma('alergia')?'Não tem':'Não informada')]);
+    var restr=''; try{ restr=String(restricaoDe(p).restricao||'').trim(); }catch(e){ restr=String(ex.restricao||'').trim(); } /* silencioso de propósito: sem a leitura unida, vale a da ficha */
+    cuidados.push(['Restrição alimentar', restr||(nenhuma('restricao')?'Não tem':'Não informada')]);
+    var rem=''; try{ rem=medResumoTexto(key); }catch(e){ rem=''; } /* silencioso de propósito: sem a agenda lida o campo diz «nenhum cadastrado» */
+    try{
+      var hoje=zHojeISO(), itens=((typeof MED_AGENDA_GERAL!=='undefined'?MED_AGENDA_GERAL:{})[key]||{}).itens||{};
+      var rec=Object.keys(itens).map(function(id){ return itens[id]||{}; }).filter(function(it){ return nomeMedOk(it.nome) && fmedEhReceitaVigor(it, hoje) && it.suspenso!==true; })
+        .map(function(it){ return [it.nome, medDoseTxt(it)].filter(Boolean).join(' ')+(it.dataFim?(' (até '+fmtBR(it.dataFim).slice(0,5)+')'):''); });
+      if(rec.length) rem=(rem?(rem+' · '):'')+rec.join(' · ');
+    }catch(e){} /* silencioso de propósito: as receitas da vet são um acréscimo; o resto do resumo segue */
+    cuidados.push(['Remédio de hoje', rem||'Nenhum cadastrado']);
+    var a=null; try{ a=almCad(p); }catch(e){ a=null; } /* silencioso de propósito: sem o cadastro do almoço o campo diz «não lançado» */
+    a=a||{};
+    cuidados.push(['Almoço na creche', a.nao===true?'Não almoça na creche':([a.alim, a.quant].map(function(x){ return String(x||'').trim(); }).filter(Boolean).join(' · ')||'Almoço não lançado')]);
+    var lento=pelLentoEstado(p, ex);
+    cuidados.push(['Comedouro lento', lento.diverge?'Cadastro e almoço divergem — confira em Rotina e alimentação':(lento.valor===true?'Sim — usar o comedouro lento':(lento.valor===false?'Não usa':'Não informado'))]);
+
+    var pend={venc:[], sem:[]}; try{ pend=prevPendencias(ex); }catch(e){} /* silencioso de propósito: sem a conta o atalho diz «sem informação» */
+    var pv=[]; if(pend.venc.length) pv.push(pend.venc.length+(pend.venc.length>1?' vencidos':' vencido')); if(pend.sem.length) pv.push(pend.sem.length+' sem data');
+    atalhos.push({l:'Prevenção', t:pv.length?pv.join(' · '):'tudo em dia', estado:pend.venc.length?fichaSelo('Vencido','vencido'):(pend.sem.length?fichaSelo('Falta preencher','breve'):fichaSelo('OK','ok')), aba:'ps-saude', topico:'checkup', ver:true});
+    var verPlano=false; try{ verPlano=podeVerPlano(); }catch(e){} /* silencioso de propósito: sem a tabela de permissões, não mostra */
+    if(verPlano){
+      var sr=null; try{ sr=statusRenov(ex); }catch(e){} /* silencioso de propósito: sem a conta o atalho diz «sem plano» */
+      sr=sr||{estado:'sem', label:'sem plano ativo'};
+      var fq=''; try{ fq=pelFreq(p); }catch(e){} /* silencioso de propósito: a frequência é um acréscimo */
+      atalhos.push({l:'Plano', t:sr.label+(fq&&fq!=='—'?(' · '+fq+' por semana'):''), estado:({ok:fichaSelo('OK','ok'), vence:fichaSelo('Vence em breve','breve'), vencido:fichaSelo('Vencido','vencido')})[sr.estado]||fichaSelo('Sem plano','sem'), aba:'ps-plano', topico:'', ver:true});
+    }
+    var verTutor=false; try{ verTutor=(typeof fichaTutorPode==='function') && fichaTutorPode(); }catch(e){} /* silencioso de propósito: sem a leitura a linha não aparece */
+    if(verTutor){
+      var d=null; try{ d=fichaUnicaDados(p); }catch(e){ d=null; } /* silencioso de propósito: o atalho diz «ver a aba» */
+      if(d){
+        var venc=(d.ficha||[]).filter(function(x){ return x.atrasado; }).length, esp=(d.esperando||[]).length, pe=(d.pendencias||[]).length, tp=[];
+        if(venc) tp.push(venc+(venc>1?' itens vencidos':' item vencido')); if(esp) tp.push(esp+(esp>1?' conversas sem resposta':' conversa sem resposta')); if(pe) tp.push(pe+(pe>1?' pendências de outro dia':' pendência de outro dia'));
+        atalhos.push({l:'Com o tutor', t:tp.length?tp.join(' · '):'nada pendente', estado:tp.length?fichaSelo('Pendente','breve'):fichaSelo('Em dia','ok'), aba:'ps-tutor', topico:'', ver:true});
+      } else atalhos.push({l:'Com o tutor', t:'abra a aba para ver', estado:fichaSelo('Ver','sem'), aba:'ps-tutor', topico:'', ver:true});
+    }
+    var saldo=0; try{ saldo=repSaldoReposicao(p); }catch(e){ saldo=0; } /* silencioso de propósito: sem o saldo o atalho diz zero */
+    if(verPlano) atalhos.push({l:'Reposições', t:'saldo '+saldo+(saldo===1?' dia a repor':' dias a repor'), estado:fichaSelo('saldo '+saldo, saldo>0?'breve':'sem'), aba:'ps-plano', topico:'pl-repos', ver:verPlano});
+    var pesou=false; try{ pesou=pesouEsteMes(ex); }catch(e){} /* silencioso de propósito: sem a conta o atalho diz «falta pesar» */
+    atalhos.push({l:'Peso', t:pesou?'pesado este mês':'falta pesar este mês', estado:pesou?fichaSelo('OK','ok'):fichaSelo('Falta pesar','breve'), aba:'ps-saudeg', topico:'sg-peso', ver:true});
+    var adTexto='', emAdapt=false; try{ emAdapt=pelEmAdaptacao(ex); adTexto=emAdapt?adaptTextoFicha(ex):''; }catch(e){} /* silencioso de propósito: o atalho diz «fora da adaptação» */
+    atalhos.push({l:'Adaptação', t:adTexto||'fora da adaptação', estado:emAdapt?fichaSelo('Em adaptação','breve'):fichaSelo('—','sem'), aba:'ps-comp', topico:'comp-adapt', ver:true});
+    var rv=null; try{ rv=(typeof VET_REAVAL_CACHE!=='undefined'&&VET_REAVAL_CACHE)?VET_REAVAL_CACHE[key]:null; }catch(e){} /* silencioso de propósito: sem a leitura o atalho diz «sem data» */
+    var rvOn=false; try{ rvOn=vetReavalAtiva(rv); }catch(e){} /* silencioso de propósito: idem */
+    atalhos.push({l:'Reavaliação da vet', t:rvOn?vetReavalTexto(rv):'sem data marcada', estado:rvOn?fichaSelo(fmtBR(rv.data).slice(0,5),'breve'):fichaSelo('Sem data','sem'), aba:'ps-saudeg', topico:'sg-reav', ver:true});
+    return {cuidados:cuidados, atalhos:atalhos};
+  }
+  function fichaResumoHTML(p, ex){
+    try{
+      var d=fichaResumoDados(p, ex);
+      var cu='<ul class="fres-lista">'+d.cuidados.map(function(c){ return '<li class="fres-lin"><span class="fres-k">'+escAttr(c[0])+'</span><span class="fres-v">'+escAttr(c[1])+'</span></li>'; }).join('')+'</ul>';
+      var at=d.atalhos.map(function(x){
+        var dentro='<span class="fres-n">'+escAttr(x.l)+'<span class="fres-t">'+escAttr(x.t)+'</span></span><span class="ficha-topico-estado ficha-topico-'+escAttr(x.estado.classe)+'">'+escAttr(x.estado.texto)+'</span>';
+        if(!x.ver) return '<div class="fres-at fres-at-fixo">'+dentro+'</div>';
+        return '<button type="button" class="fres-at" onclick="fichaIrPara(\''+x.aba+'\',\''+x.topico+'\')" aria-label="'+escAttr(x.l+': '+x.t+'. Ir para a sanfona')+'">'+dentro+'<span class="fres-go" aria-hidden="true">›</span></button>';
+      }).join('');
+      return '<div class="card"><h2 style="font-size:20px">Cuidados de hoje</h2>'+cu+'</div>'
+        +'<div class="card"><h2 style="font-size:20px">Atalhos</h2><div class="hint" style="margin:2px 0 4px">Toque numa linha para ir direto à sanfona.</div>'+at+'</div>';
+    }catch(e){ try{ _logFalhaGrav('resumo da ficha', e); }catch(e2){} return '<div class="card"><div class="hint">Não consegui montar o resumo. As outras abas continuam como sempre.</div></div>'; } /* silencioso de propósito: a falha já foi para a auditoria; as outras abas seguem */
+  }
+  function fichaResumoRedesenhar(){
+    try{ var el=document.getElementById('ps-resumo'); if(el && pelAtual) el.innerHTML=fichaResumoHTML(pelAtual, pelExtra(pelAtual)); }
+    catch(e){ _logFalhaGrav('redesenho do resumo da ficha', e); }
+  }
+
+  // ---- CADASTRO: apelido e histórico de saídas e voltas -------------------------------------------
+  // O apelido já era lido pela busca e pelo cabeçalho, mas não havia onde editá-lo: grava `apelido` pelo mesmo setPelExtra.
+  function pelApelidoSet(v){
+    if(!pelAtual) return;
+    v=String(v||'').trim();
+    setPelExtra(pelAtual, {apelido:v});
+    var el=document.getElementById('pelApelidoCab'); var mostra=v||String((pelAtual&&pelAtual.apelido)||''); if(el) el.textContent=mostra?(' ('+mostra+')'):'';
+  }
+  function fichaSaidaHistoricoHTML(ex){
+    var L=Array.isArray((ex||{}).saidas)?ex.saidas:[], rot={pausa:'pausa', definitiva:'saída definitiva', obito:'falecimento'};
+    if(!L.length) return '<div class="hint" style="margin-top:6px">Nenhuma saída e volta registrada ainda.</div>';
+    return '<div class="fres-hist"><ul class="faixa-lista">'+L.map(function(sv,i){ return {sv:sv||{}, i:i}; }).reverse().map(function(o){
+      var sv=o.sv, tp=rot[String(sv.tipo||'')]||String(sv.tipo||'');
+      return '<li><b>Saiu em '+escAttr(sv.quando||'data não informada')+'</b>'+(tp?(' · '+escAttr(tp)):'')+(sv.motivo?(' — '+escAttr(sv.motivo)):'')
+        +'<br>Voltou em '+escAttr(sv.retornoEm||'—')+(sv.retornoPor?(' · por '+escAttr(sv.retornoPor)):'')+(sv.retornoMotivo?(': '+escAttr(sv.retornoMotivo)):'')
+        +((sv.desfeita&&typeof sv.desfeita==='object')?('<br><span style="color:var(--crm-critico);font-weight:700">Volta desfeita'+(sv.desfeita.por?(' por '+escAttr(sv.desfeita.por)):'')+(sv.desfeita.quando?(' em '+escAttr(sv.desfeita.quando)):'')+(sv.desfeita.motivo?(' — '+escAttr(sv.desfeita.motivo)):'')+'</span>'):'')
+        +'</li>'; }).join('')+'</ul></div>';
+  }
+  function fichaSaidaSelo(ex){
+    if(ehObito(ex)) return fichaSelo('Faleceu em '+(ex.dataObito||'—'),'sem');
+    return ex.inativo==='Sim'?fichaSelo('Inativo','breve'):fichaSelo('Ativo','ok');
+  }
+
+  // ---- SAÚDE: reavaliação da veterinária (só leitura; quem marca é a veterinária, no Cuidado Vet) ----
+  // Reaproveita o que o Cuidado Vet já lê: auaulandia/vet-reavaliacao e auaulandia/vet-recomendacoes (os mesmos caches, em tempo
+  // real) e o renderVetInstrucoesFicha (aqui sem os botões, que só existem no Cuidado Vet).
+  function fichaVetObj(p){ return {refKey:pelKey(p), nome:(p.n||''), tutor:(p.tutor||'')}; }
+  function fichaVetReavSelo(p){
+    var rv=null; try{ rv=VET_REAVAL_CACHE[medChaveDoPel(p)]; }catch(e){ rv=null; } /* silencioso de propósito: sem a leitura a sanfona diz «sem data» */
+    var on=false; try{ on=vetReavalAtiva(rv); }catch(e){} /* silencioso de propósito: idem */
+    return on?fichaSelo(fmtBR(rv.data).slice(0,5),'breve'):fichaSelo('Sem data','sem');
+  }
+  function fichaVetReavDesenhar(){
+    try{
+      var el=document.getElementById('pelVetReav'); if(!el || !pelAtual) return;
+      var key=medChaveDoPel(pelAtual), rv=(VET_REAVAL_CACHE||{})[key], h='';
+      if(vetReavalAtiva(rv)){
+        h+='<div class="vet-instr-box" style="border-color:var(--z-gold)"><div style="font-size:13px;font-weight:800;color:var(--z-gold-deep)">Reavaliação marcada: '+escAttr(vetReavalTexto(rv))+'</div>'
+          +'<div style="margin-top:5px;font-size:12px;font-weight:700;color:var(--muted)">Marcada por '+escAttr(rv.por||'a Veterinária')+' no Cuidado Vet'+(rv.ts?(' em '+escAttr(new Date(rv.ts).toLocaleDateString('pt-BR'))):'')+'.</div></div>';
+      } else h+='<div class="hint">Nenhuma reavaliação marcada pela Veterinária.</div>';
+      h+='<div id="pelVetInstr" style="margin-top:8px"></div>'
+        +'<div class="hint" style="margin-top:8px">Só leitura aqui: quem marca a reavaliação e as instruções é a Veterinária, no Cuidado Vet.</div>';
+      el.innerHTML=h;
+      renderVetInstrucoesFicha(fichaVetObj(pelAtual), 'pelVetInstr');
+      var sl=document.getElementById('fichaSelo_sg-reav'); if(sl){ var s=fichaVetReavSelo(pelAtual); sl.textContent=s.texto; sl.className='ficha-topico-estado ficha-topico-'+s.classe; }
+    }catch(e){ _logFalhaGrav('reavaliação da vet na ficha', e); }
+  }
+  // O que a Veterinária marcou em outro aparelho chega à ficha aberta (Saúde › Reavaliação e o atalho do Resumo).
+  function fichaVetRedesenhar(){
+    try{ if(typeof pelAtual!=='undefined' && pelAtual && document.getElementById('pelVetReav')){ fichaVetReavDesenhar(); fichaResumoRedesenhar(); } }
+    catch(e){ _logFalhaGrav('redesenho da reavaliação na ficha', e); }
+  }
+
+  // ---- COMPORTAMENTO e ROTINA: o que só existia na hospedagem, agora à vista (só leitura) ------------------
+  function fichaBrinquedosHospHTML(p){
+    var t=''; try{ t=String((getCad({nome:(p.n||''), tutor:(p.tutor||'')})||{}).brinquedos||'').trim(); }catch(e){ t=''; } /* silencioso de propósito: sem o cadastro da hospedagem o campo diz «nada anotado» */
+    return '<div class="field" style="grid-column:1/-1"><label>Brinquedos que trouxe</label>'
+      +'<div class="fres-leitura">'+(t?escAttr(t):'<span style="color:var(--muted)">Nada anotado na hospedagem.</span>')+'</div>'
+      +'<div class="hint" style="margin-top:3px">Só leitura: é o que a hospedagem anota no check-in.</div></div>';
+  }
+  function fichaPlanoAlimHospTexto(plano){
+    if(!plano || typeof plano!=='object' || !plano.refs) return '';
+    var u=(!plano.unidade||plano.unidade==='gramas')?'g':(' '+plano.unidade), L=[], fx=(plano.refs&&plano.refs.fixas)||{};
+    var nomes={cafe:'Café da manhã', almoco:'Almoço', jantar:'Jantar'};
+    var parte=function(r){ var q=[]; if(r.racao) q.push(r.racao+u+' de ração'); if(r.natural) q.push(r.natural+'g de natural'); if(r.extra) q.push(r.extra); return q.length?q.join(' + '):'a definir'; };
+    ['cafe','almoco','jantar'].forEach(function(k){ var r=fx[k]; if(r && r.on) L.push(nomes[k]+(r.hora?(' ('+r.hora+')'):'')+': '+parte(r)); });
+    (Array.isArray(plano.refs.extras)?plano.refs.extras:[]).forEach(function(r){ r=r||{}; L.push((r.nome||'Refeição extra')+(r.hora?(' ('+r.hora+')'):'')+': '+parte(r)); });
+    var cab=[plano.marca?('ração '+plano.marca):'', plano.tipo||''].filter(Boolean).join(' · ');
+    return (cab?(cab+' — '):'')+L.join(' · ');
+  }
+  function fichaPlanoAlimHospHTML(ex){
+    var t=''; try{ t=fichaPlanoAlimHospTexto((ex||{}).alim_plano); }catch(e){ t=''; } /* silencioso de propósito: plano ilegível = «ainda não há» (nada é apagado) */
+    return '<div class="hint" style="margin-top:8px">«O que ele come» da AuAulândia, guardado na ficha pelo check-in da hospedagem. Só leitura: quem muda é o check-in, com a confirmação do tutor.</div>'
+      +'<div class="fres-leitura" style="margin-top:6px">'+(t?escAttr(t):'<span style="color:var(--muted)">Ainda não há plano alimentar da hospedagem guardado na ficha.</span>')+'</div>';
+  }
+  function fichaBanhoRecHTML(p){
+    var t='', prox='';
+    try{ var br=banhoRecDe(p); if(br && br.ativo){ t=banhoRecTexto(br)+banhoRecShampooFrase(br); var pr=banhoRecProxima(br, zHojeISO(), true); if(pr) prox=' · próximo: '+fmtBR(pr).slice(0,5); } }catch(e){ t=''; } /* silencioso de propósito: sem o combinado a linha diz «sem banho recorrente» */
+    return '<div class="field" style="grid-column:1/-1"><label>Banho recorrente</label><div class="fres-leitura">'+(t?escAttr(t+prox):'<span style="color:var(--muted)">Sem banho recorrente.</span>')+'</div>'
+      +'<div class="hint" style="margin-top:3px">Editado na tela de Banho.</div></div>';
+  }
+
+  // ---- COMEDOURO LENTO: um campo só, que grava os dois lugares de sempre -------------------------------
+  // Antes eram dois campos: «Come em comedouro lento?» (cadastro: `ansioso`, o que acende a tarja ANSIOSO) e «Comedouro lento?»
+  // (daycare/almoco-cad: `lento`, o que a grade do Day Care lê). Agora um controle só grava os dois juntos. Se os dois divergem
+  // para este FILHOt, a ficha mostra a divergência e a pessoa escolhe o valor certo (que grava os dois) — nada é apagado sozinho.
+  function pelLentoEstado(p, ex){
+    ex=ex||{};
+    var a=null; try{ a=almCad(p); }catch(e){ a=null; } /* silencioso de propósito: sem o cadastro do almoço só vale o do cadastro */
+    a=a||{};
+    var cad=(ex.ansioso==='Sim')?true:(ex.ansioso==='Nao'||ex.ansioso==='Não'?false:null);
+    var alm=(a.lento===true)?true:(a.lento===false?false:null);
+    // «Sem resposta» num lado e «Sim» no outro não é divergência: vale o que alguém respondeu. Só Sim × Não diverge.
+    var diverge=(cad!==null && alm!==null && cad!==alm);
+    return {cad:cad, alm:alm, diverge:diverge, valor:diverge?null:(cad!==null?cad:alm)};
+  }
+  function pelLentoHTML(p, ex){
+    var e=pelLentoEstado(p, ex), sim=(e.valor===true), nao=(e.valor===false), h='';
+    if(e.diverge) h+='<div class="hint" style="margin:0 0 6px;background:rgba(222,180,40,.16);border-left:4px solid var(--z-gold);border-radius:9px;padding:8px 11px;color:var(--crm-atencao-text);font-weight:700">'
+      +'Os dois cadastros diziam coisas diferentes: o cadastro do FILHOt diz «'+(e.cad?'Sim':'Não')+'» e o almoço (grade do Day Care) diz «'+(e.alm?'Sim':'Não')+'». Escolha o certo: o botão grava nos dois.</div>';
+    h+='<div class="seg gold" data-single><button type="button" class="'+(sim?'on':'')+'" onclick="pelLentoGravar(true)">Sim</button><button type="button" class="'+(nao?'on':'')+'" onclick="pelLentoGravar(false)">Não</button></div>';
+    return h;
+  }
+  function pelLentoGravar(v){
+    if(!pelAtual) return;
+    v=(v===true);
+    setPelExtra(pelAtual, {ansioso:v?'Sim':'Nao'});
+    setAlmCad(pelAtual, {lento:v});
+    try{ refreshPills(); }catch(e){} /* silencioso de propósito: enfeite de tela — a tarja se refaz na próxima abertura */
+    try{ renderAlmSeFor(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    var box=document.getElementById('pelLentoBox'); if(box) box.innerHTML=pelLentoHTML(pelAtual, pelExtra(pelAtual));
+    try{ fichaResumoRedesenhar(); }catch(e){} /* silencioso de propósito: o resumo se refaz ao abrir a aba */
+  }
+
+  // ---- RESTRIÇÃO ALIMENTAR: um dado só (Saúde) que o almoço mostra ------------------------------------------
+  // A fonte é `restricao` (Saúde › Restrição alimentar). A grade do Day Care lê `almoco-cad.restr`; por isso, ao gravar `restricao`
+  // grava-se também `restr` no cadastro de almoço. O que estava diferente no almoço não é apagado sem ação: a ficha mostra «No
+  // almoço estava: …» com um botão.
+  function pelRestrGravar(v){
+    if(!pelAtual) return;
+    v=String(v==null?'':v);
+    // Se o almoço guardava outra frase, ela é trocada pela de Saúde (a pessoa acabou de escrever a certa) — mas a frase de antes
+    // fica no rastro, para ninguém perder o que estava escrito.
+    try{
+      var a0=null; try{ a0=almCad(pelAtual); }catch(e){ a0=null; } /* silencioso de propósito: sem o cadastro do almoço não há o que guardar */
+      var antes=String((a0&&a0.restr)||'').trim();
+      if(antes && antes!==v.trim() && typeof audit==='function') audit('almoco_cad','a restrição do almoço passou a ser a de Saúde — no almoço estava: «'+antes+'»',{alvo:pelKey(pelAtual)});
+    }catch(e){} /* silencioso de propósito: o rastro é um acréscimo; a gravação segue */
+    setPelExtra(pelAtual, {restricao:v});
+    setAlmCad(pelAtual, {restr:v});
+    try{ refreshPills(); }catch(e){} /* silencioso de propósito: enfeite de tela */
+    try{ pelRestrAlmoRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+  }
+  function pelRestrAlmoHTML(p, ex){
+    var saude=String((ex||{}).restricao||'').trim(), a=null; try{ a=almCad(p); }catch(e){ a=null; } /* silencioso de propósito: sem o cadastro do almoço só vale a da Saúde */
+    var alm=String((a&&a.restr)||'').trim();
+    var norm=function(s){ try{ return jsNorm(s); }catch(e){ return String(s||'').toLowerCase().trim(); } }; /* silencioso de propósito: sem o normalizador compara em minúsculas */
+    var h='<div class="fres-leitura" style="'+(saude?'color:var(--crm-critico);font-weight:700':'color:var(--muted)')+'">'+(saude?escAttr(saude):'Nenhuma restrição em Saúde.')+'</div>'
+      +'<div class="hint" style="margin-top:3px">Vem de <strong>Saúde › Restrição alimentar</strong>. Para mudar, mude lá — o almoço acompanha.</div>';
+    if(alm && norm(alm)!==norm(saude)){
+      var pode=false; try{ pode=canEditPel(); }catch(e){ pode=false; } /* silencioso de propósito: sem a tabela de permissões, só leitura */
+      h+='<div class="hint" style="margin-top:6px;background:rgba(222,180,40,.16);border-left:4px solid var(--z-gold);border-radius:9px;padding:8px 11px;color:var(--crm-atencao-text);font-weight:700">No almoço estava: «'+escAttr(alm)+'».'
+        +(!pode?''   // quem só lê vê o aviso, mas não ganha botão que grava (o setAlmCad não tem porteiro próprio)
+          :saude
+          ?' <button type="button" class="btn" style="margin-top:6px;min-height:44px;padding:8px 14px;font-size:12.5px;font-weight:800;background:var(--z-white);color:var(--z-blue);border:1.5px solid var(--z-blue)" onclick="pelRestrAlmoUsarSaude()">Usar a de Saúde</button>'
+          :' <button type="button" class="btn" style="margin-top:6px;min-height:44px;padding:8px 14px;font-size:12.5px;font-weight:800;background:var(--z-white);color:var(--z-blue);border:1.5px solid var(--z-blue)" onclick="pelRestrAlmoPassarParaSaude()">Passar para Saúde</button>'
+           +' <button type="button" class="btn" style="margin-top:6px;min-height:44px;padding:8px 14px;font-size:12.5px;font-weight:800;background:var(--z-white);color:var(--z-blue);border:1.5px solid var(--z-blue)" onclick="pelRestrAlmoZerar()">Limpar a do almoço</button>')
+        +'</div>';
+    }
+    return h;
+  }
+  function pelRestrAlmoRedesenhar(){
+    var box=document.getElementById('pelRestrAlmo'); if(box && pelAtual) box.innerHTML=pelRestrAlmoHTML(pelAtual, pelExtra(pelAtual));
+    try{ var inp=document.getElementById('pelRestricaoInput'); if(inp && pelAtual){ var v=String(pelExtra(pelAtual).restricao||''); if(inp.value!==v) inp.value=v; } }catch(e){} /* silencioso de propósito: enfeite de tela */
+  }
+  // «Usar a de Saúde»: a restrição de Saúde passa a valer no almoço (grava `restr` igual à de Saúde).
+  // Zera a restrição do almoço guardando a frase de antes no rastro (usado pelo «Não tem» e pelo botão «Limpar a do almoço»).
+  function pelRestrAlmoZerar(){
+    if(!pelAtual) return;
+    var a=null; try{ a=almCad(pelAtual); }catch(e){ a=null; } /* silencioso de propósito: sem o cadastro do almoço não há o que zerar */
+    var antes=String((a&&a.restr)||'').trim(); if(!antes) return;
+    try{ if(typeof audit==='function') audit('almoco_cad','a restrição do almoço foi limpa — no almoço estava: «'+antes+'»',{alvo:pelKey(pelAtual)}); }catch(e){} /* silencioso de propósito: o rastro é um acréscimo */
+    setAlmCad(pelAtual, {restr:''});
+    try{ renderAlmSeFor(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    try{ pelRestrAlmoRedesenhar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+  }
+  function pelRestrAlmoUsarSaude(){
+    if(!pelAtual) return;
+    setAlmCad(pelAtual, {restr:String(pelExtra(pelAtual).restricao||'')});
+    try{ renderAlmSeFor(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    pelRestrAlmoRedesenhar();
+  }
+  // Quando Saúde está VAZIA e só o almoço tinha a restrição (o caso de quem foi cadastrado só no almoço): «Usar a de Saúde»
+  // apagaria uma restrição de segurança. Aqui o botão faz o contrário e à vista: passa a do almoço para Saúde (que vira a fonte).
+  function pelRestrAlmoPassarParaSaude(){
+    if(!pelAtual) return;
+    var a=null; try{ a=almCad(pelAtual); }catch(e){ a=null; } /* silencioso de propósito: sem o cadastro do almoço não há o que passar */
+    var alm=String((a&&a.restr)||'').trim(); if(!alm) return;
+    setPelExtra(pelAtual, {restricao:alm, restricao_nenhuma:null}); // a restrição volta a existir: o «não tem» antigo deixa de valer
+    try{ refreshPills(); }catch(e){} /* silencioso de propósito: enfeite de tela */
+    try{ renderPelFicha(); }catch(e){} /* silencioso de propósito: a ficha se redesenha na próxima abertura */
+  }
+  // ---- OS SELOS DAS SANFONAS (o estado de cada uma, como na Prevenção) ---------------------------------
+  function fichaDadosSelo(p, ex, sexo, castr){
+    var falta=!(pelGet(p,'raca') && pelNasc(p) && sexo && castr && (zChipNumero(ex) || zChipNaoTem(ex)));
+    return falta?fichaSelo('Falta preencher','breve'):fichaSelo('Completo','ok');
+  }
+  function fichaReposSelo(p){
+    var s=0; try{ s=repSaldoReposicao(p); }catch(e){ return fichaSelo('saldo —','sem'); } /* silencioso de propósito: sem o saldo o selo não afirma nada */
+    return fichaSelo('saldo '+s, s>0?'breve':'sem');
+  }
+  function fichaEmergSelo(ex){
+    var tem=!!(String(ex.vetNome||'').trim() || String(ex.vetTel||'').trim() || String(ex.vetClinica||'').trim() || String(ex.vetEnd||'').trim());
+    return tem?fichaSelo('Preenchida','ok'):fichaSelo('Sem informação','sem');
+  }
+  function fichaAlergSelo(ex){
+    if(String(ex.alergia||'').trim()) return fichaSelo('Tem alergia','breve');
+    if(zNaoTemSelo(ex,'alergia')) return fichaSelo('Sem alergia','ok');
+    return fichaSelo('Sem informação','sem');
+  }
+  function fichaPesoSelo(ex){
+    var ok=false; try{ ok=pesouEsteMes(ex); }catch(e){ ok=false; } /* silencioso de propósito: sem a conta o selo diz «falta pesar» */
+    return ok?fichaSelo('Pesado este mês','ok'):fichaSelo('Falta pesar','breve');
+  }
+  function fichaAdaptSelo(ex){
+    if(pelEmAdaptacao(ex)){ var n=adaptDiasDe(ex); return fichaSelo(n+'º dia de '+ADAPT_DIAS,'breve'); }
+    if(String((ex||{}).adaptacao_tipo||'')==='Hospedagem' && (ex||{}).adaptacao==='Sim') return fichaSelo('Hospedagem','sem');
+    return fichaSelo('Fora da adaptação','sem');
+  }
+  function fichaEASelo(ex){
+    return (ex.ea_restr || ex.ea_restr_nao || ex.restricao)?fichaSelo('OK','ok'):fichaSelo('Falta responder','breve');
+  }
+  function fichaAlimSelo(ex){
+    return String(ex.alim_refs||'').trim()?fichaSelo('OK','ok'):fichaSelo('Falta marcar refeição','breve');
+  }
+  function fichaAlmocoSelo(p){
+    var r=null; try{ r=almocaNaCreche(p); }catch(e){ r=null; } /* silencioso de propósito: sem a leitura o selo fica quieto */
+    if(!r) return null;
+    if(r.almoca===true) return fichaSelo('Almoça na creche','ok');
+    if(r.almoca===false) return fichaSelo('Não almoça','sem');
+    return fichaSelo('Falta lançar','conferir');
+  }
   function abrirPeludinho(i){
     fichaTopicosGuardar(document.getElementById('pel-ficha'),pelAtual);
     const p=PELUDINHOS[i]; pelAtual=p; pelAtualIdx=i; pelFotoPend=null; const ex=pelExtra(p);
@@ -47822,12 +48206,12 @@ return { criar };
         <input id="pelFotoFile" type="file" accept="image/*" capture="environment" style="display:none" onchange="onPhotoPel(event)">
         ${ph}
         <div style="flex:1">
-          <div class="hf-nome">${can?`<input class="pel-nome-input" value="${escAttr(pelNome(p))}" onchange="onNomePel(this.value)" aria-label="Nome do peludinho">`:`${pelNome(p)}`}${p.apelido?` <span style="font-size:14px;color:var(--muted)">(${p.apelido})</span>`:''}</div>
+          <div class="hf-nome">${can?`<input class="pel-nome-input" value="${escAttr(pelNome(p))}" onchange="onNomePel(this.value)" aria-label="Nome do peludinho">`:`${pelNome(p)}`}<span id="pelApelidoCab" style="font-size:14px;color:var(--muted)">${(ex.apelido||p.apelido)?(' ('+escAttr(ex.apelido||p.apelido)+')'):''}</span></div>
           <div class="hf-meta">${[pelGet(p,'raca'),sexo,idade].filter(Boolean).join(' · ')}${castr==='Não'?' · <strong style="color:var(--z-daycare)">Não castrado</strong>':''}</div>
           <div class="hf-estadia">Tutor: ${escAttr(pelGet(p,'tutor'))}</div>
           <!-- "E onde for a informação dele precisa ir a medicação" (Adriana, 22/set/2026).
                No cabeçalho, antes de qualquer aba: quem abre a ficha já sabe. -->
-          <div id="pelMedLinha">${medLinhaDoPel(p,'Detalhes e alterações na aba Medicamentos.')}</div>
+          <div id="pelMedLinha">${medLinhaDoPel(p,'Detalhes e alterações em Saúde › Medicamentos.')}</div>
           <div id="pelTutorLinha">${(typeof fichaTutorLinhaHTML==='function')?fichaTutorLinhaHTML(p):''}</div>
           <div id="pelCategoriaEdit" style="margin-top:11px">${categoriaEditInner(p)}</div>
           <div id="pelDiasEdit" style="margin-top:9px">${diasEditInner(p)}</div>
@@ -47855,45 +48239,46 @@ return { criar };
            O cabeçalho não muda; a faixa junta os alertas fixos, os da estadia e as tarjas da ficha. -->
       <div id="pelFaixa">${faixaAtencaoHTML({p:p, onde:'ficha'})}</div>
 
-      <!-- ORDEM DAS ABAS (Adriana, 11/ago/2026): "ao abrir a ficha, a primeira coisa que
-           precisa aparecer para consultoras, gestão e supervisão é o PLANO".
-           Plano · Identificação · Comportamento · Prevenção · Rotina & Almoço · Atenção & Cuidados.
-           Quem NÃO pode ver plano (monitor, Encantador, plantonista, vet) abre em Identificação —
-           senão a ficha abriria numa aba invisível e pareceria vazia. Quem decide isso é
-           abaInicialPel(), logo abaixo do render. O bloco duplicado de "Atenção" que existia
-           escondido aqui foi removido: eram os MESMOS campos duas vezes na mesma página. -->
-      <div class="subtabs">
+      <!-- AS 8 ABAS (Adriana, 28/out/2026): a ficha passou a ser arrumada por ASSUNTO, não por quem grava. Resumo · Cadastro ·
+           Plano · Saúde · Prevenção · Comportamento · Rotina e alimentação · Com o tutor. Todo mundo abre no Resumo (só leitura, com
+           atalhos). Quem NÃO vê plano nem o histórico com o tutor (monitor, Encantador, plantonista, vet) não tem essas duas abas —
+           o CSS das .so-sensivel as esconde, como sempre. Cada bloco foi MOVIDO inteiro para a aba nova; nada foi reescrito. A barra
+           de abas gruda no topo ao rolar e vira uma faixa rolável de lado no celular. -->
+      <div class="subtabs ficha-abas" id="pelAbas">
+        <div class="subtab2" onclick="pelSubtab(this,'ps-resumo');fichaResumoRedesenhar()">Resumo</div>
+        <div class="subtab2" onclick="pelSubtab(this,'ps-ident')">Cadastro</div>
         <div class="subtab2 so-sensivel" onclick="pelSubtab(this,'ps-plano')">Plano</div>
-        <div class="subtab2" onclick="pelSubtab(this,'ps-ident')">Identificação</div>
-        <div class="subtab2" onclick="pelSubtab(this,'ps-comp')">Comportamento</div>
+        <!-- SAÚDE: a Emergência, a alergia e a restrição, os MEDICAMENTOS (a mesma agenda que a hospedagem usa — o Check-in
+             pré-preenche daqui, o despertador toca daqui, o check-out devolve daqui), a reavaliação da vet, o peso, o cio e os
+             exames do corpo. A lista de medicamentos se desenha ao abrir a aba. -->
+        <div class="subtab2" onclick="pelSubtab(this,'ps-saudeg');fmedRender()">Saúde</div>
         <div class="subtab2" onclick="pelSubtab(this,'ps-saude')">Prevenção</div>
-        <!-- MEDICAMENTOS (Adriana, 22/set/2026): "temos diversos cardíacos". Fica colado em
-             Prevenção de propósito: as duas abas respondem à mesma pergunta — o que este
-             FILHOt precisa para ficar bem. E é DAQUI que o Check-in da hospedagem puxa o
-             que vai ser perguntado ao tutor. -->
-        <div class="subtab2" onclick="pelSubtab(this,'ps-med');fmedRender()">Medicamentos</div>
-        <!-- COM O TUTOR (Adriana, 25/set/2026): "que vá tudo para uma ficha única do cliente e
-             que a informação não se perca". O que a ficha deve, o que ficou pendente de outro
-             dia e cada conversa com o tutor — quem mandou, quando e o que ele respondeu. Só
-             leitura: as fontes continuam onde sempre estiveram. Dado de cobrança = sensível. -->
+        <div class="subtab2" onclick="pelSubtab(this,'ps-comp')">Comportamento</div>
+        <div class="subtab2" onclick="pelSubtab(this,'ps-rotina')">Rotina e alimentação</div>
+        <!-- COM O TUTOR (Adriana, 25/set/2026): "que vá tudo para uma ficha única do cliente e que a informação não se perca".
+             O que a ficha deve, o que ficou pendente de outro dia e cada conversa com o tutor. Só leitura: as fontes continuam
+             onde sempre estiveram. Dado de cobrança = sensível. -->
         <div class="subtab2 so-sensivel" onclick="pelSubtab(this,'ps-tutor');fichaTutorRender(true)">Com o tutor</div>
-        <div class="subtab2" onclick="pelSubtab(this,'ps-rotina')">Rotina &amp; Almoço</div>
-        <div class="subtab2" onclick="pelSubtab(this,'ps-exames')">Exames do corpo</div>
-        <div class="subtab2" onclick="pelSubtab(this,'ps-atencao')">Atenção &amp; Cuidados</div>
       </div>
 
+      <!-- 1. RESUMO — só leitura: os cuidados de hoje e os atalhos para cada assunto (fichaResumoHTML) -->
+      <div class="ppanel2" id="ps-resumo">${fichaResumoHTML(p,ex)}</div>
+
+      <!-- 2. CADASTRO -->
       <div class="ppanel2" id="ps-ident"><div class="card">
-        <h2 style="font-size:20px">Dados do peludinho</h2>
+        <h2 style="font-size:20px">Cadastro</h2>
+        ${fichaSanfonaInicio('cad-dados','Dados do peludinho',fichaDadosSelo(p,ex,sexo,castr),true)}
+        <div class="hint" style="margin-top:8px">O nome fica no cabeçalho, no alto da ficha.</div>
         <div class="cad-grid">
+          <div class="field"><label>Apelido</label><input class="cad-in" value="${escAttr(ex.apelido||p.apelido||'')}" placeholder="Como o chamam em casa" onchange="pelApelidoSet(this.value)"></div>
           <div class="field"><label>Raça</label><input id="pelFichaRaca" class="cad-in" list="racasList" value="${escAttr(pelGet(p,'raca'))}" onchange="onRacaPel(this.value)"></div>
           <div class="field"><label>Data de nascimento</label><input type="date" class="cad-in" value="${pelNasc(p)||''}" onchange="setPelNasc(this.value,this)" min="${nascMinISO()}" max="${zHojeISO()}" onkeydown="return dataSoNoCalendario(event)"></div>
           <div class="field"><label>Sexo</label><div class="seg" data-single>${segBtnsPel('sexo',sexo,['Macho','Fêmea'])}</div></div>
           <div class="field"><label>Castrado?</label><div class="seg gold" data-single>${segBtnsPel('castrado',castr,['Sim','Não'])}</div></div>
           <div class="field"><label>Microchip</label><input class="cad-in" value="${escAttr(zChipNumero(ex))}" placeholder="Número do microchip" onchange="setPelExtra(pelAtual,zChipPatch(this.value))">${iaRevMarcaFicha(p,'microchip')}${pelChipNaoTemHTML(ex)}</div>
         </div>
-        <details class="ficha-topico" data-ficha-topico="ident-contatos" open>
-          <summary><span class="ficha-topico-nome">Família e contatos</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
-          <div class="ficha-topico-corpo"><div class="cad-grid">
+        ${fichaTopicoFim()}
+        ${fichaSanfonaInicio('ident-contatos','Família e contatos',null,true)}<div class="cad-grid">
           <div class="field"><label>Tutor 1 (nome)</label>${can
             ? `<input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" onchange="onTutorPel(this.value)">`
             : `<input class="cad-in" value="${escAttr(pelGet(p,'tutor'))}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="Só a recepção, a Supervisão ou a Gestão mudam o nome do tutor">`}</div>
@@ -47904,26 +48289,108 @@ return { criar };
           ${fieldSens('bairro','Bairro',`<input class="cad-in" value="${escAttr(ex.bairro||'')}" placeholder="Bairro" onchange="setPelExtra(pelAtual,{bairro:this.value})">`)}
           ${fieldSens('indicou','Quem indicou',`<input class="cad-in" value="${escAttr(ex.indicou||'')}" placeholder="Indicação" onchange="setPelExtra(pelAtual,{indicou:this.value})">`)}
           <div class="field"><label>Data de matrícula</label><input type="date" class="cad-in" value="${ex.matricula||''}" onchange="setPelExtra(pelAtual,{matricula:this.value})" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>
-          </div></div>
-        </details>
-        <details class="ficha-topico" data-ficha-topico="ident-plano">
-          <summary><span class="ficha-topico-nome">Plano atual</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
-          <div class="ficha-topico-corpo"><div class="cad-grid">
-          <!-- SOMENTE LEITURA (Adriana, 15/set/2026): estes dois campos gravavam o plano
-               direto, sem escolher plano, sem resumo e sem rastro — a segunda porta que
-               deixou a Cookie com plano de 2x e um dia só marcado. Agora só MOSTRAM; quem
-               altera é a aba Plano, com Confirmar, histórico e desfazer. Uma porta só. -->
-          <div class="field"><label>Plano Day Care — início</label><input type="date" class="cad-in" value="${(ex.renov&&(ex.renov.vig_inicio||ex.renov.inicio))||''}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="O plano se altera na aba Plano" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
-            <div class="hint" style="font-size:11px;margin-top:3px"><a href="#" onclick="irParaAbaPlano();return false" style="color:var(--z-blue);font-weight:800">Alterar na aba Plano</a> — com resumo antes de gravar e opção de desfazer.</div></div>
-          <div class="field"><label>Plano Day Care — fim (vencimento)</label><input type="date" class="cad-in" value="${(ex.renov&&ex.renov.fim)||''}" readonly style="background:var(--z-cream-warm);color:var(--muted)" title="O vencimento é calculado pelo sistema na aba Plano" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
-            <div class="hint" style="font-size:11px;margin-top:3px">Calculado pelo sistema a partir do plano e da data do pagamento. <a href="#" onclick="irParaAbaPlano();return false" style="color:var(--z-blue);font-weight:800">Alterar na aba Plano</a>.</div></div>
-          <div class="field"><label>Frequência (automática pelos dias)</label><input id="pelFreqInput" class="cad-in" value="${escAttr(pelFreq(p))} por semana${pelPlanoMesHoje(p)?' (hoje — os dias mudam por mês do plano)':''}" readonly></div>
-          </div></div>
-        </details>
+          </div>${fichaTopicoFim()}
+        <!-- Sair do Day Care ENCERRA o plano — por isso era mais uma coisa na aba Plano (Adriana, 11/ago/2026). Agora mora no Cadastro,
+             em sanfona própria, separada dos campos do plano, e com o histórico de saídas e voltas (antes só aparecia no dia da volta). -->
+        <div class="so-sensivel"><!-- morava na aba Plano, que é sensível: continua só para quem vê o plano -->
+        ${fichaSanfonaInicio('cad-saida','Saída do Day Care',fichaSaidaSelo(ex),false)}
+          <div class="hint" style="margin-bottom:8px">Só quando o FILHOt deixa de ser auluno. Ele sai das listas do dia, mas o cadastro e todo o histórico continuam guardados em Relatórios › Inativos.</div>
+          <div class="cad-grid">
+            ${camposSaidaFicha()}
+          </div>
+          <h3 class="cad-sub">Histórico de saídas e voltas</h3>
+          ${fichaSaidaHistoricoHTML(ex)}
+        ${fichaTopicoFim()}
+        </div>
         <div id="pel-saved" style="font-size:12px;color:var(--crm-ok);font-weight:700;margin-top:8px"></div>
-        ${blocoReposicaoFicha(p)}
       </div></div>
 
+      <!-- 3. PLANO (só quem vê plano) -->
+      <div class="ppanel2 so-sensivel" id="ps-plano"><div class="card">
+        <h2 style="font-size:20px">Plano</h2>
+        <div class="hint">Categoria e dias ficam no cabeçalho, como hoje.</div>
+        <div class="hint">Planos DayCare 2026. A tabela é por mês (a mensalidade); o valor do plano é a mensalidade vezes os meses do tipo (1 no mensal, 3 no trimestral, 6 no semestral), pago à vista. Desconto: 2º peludinho ${descontosPlano()[2]}%, 3º ${descontosPlano()[3]}%.</div>
+        ${blocoPlano(ex,p)}
+        ${fichaSanfonaInicio('plano-mensagens','Mensagens para o tutor',null,false)}<div class="renov-msgs">
+          <div class="renov-msg"><div class="renov-msg-tit">Plano finalizou &mdash; oferecer renovação</div>
+            <textarea class="gest-txt" readonly>${escAttr(msgPlanoFinalizou(p,ex))}</textarea>
+            <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button>
+            ${renovCobrancaFichaHTML(ex,p)}</div>
+          <div class="renov-msg"><div class="renov-msg-tit">Renovação confirmada</div>
+            <textarea class="gest-txt" readonly>${escAttr(msgRenovado(p,ex))}</textarea>
+            <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button></div>
+        </div>${fichaTopicoFim()}
+        <!-- REPOSIÇÕES: saiu da Identificação (movida inteira, igual). -->
+        ${fichaSanfonaInicio('pl-repos','Reposições',fichaReposSelo(p),false)}
+        ${blocoReposicaoFicha(p)}
+        ${fichaTopicoFim()}
+      </div></div>
+
+      <!-- 4. SAÚDE -->
+      <div class="ppanel2" id="ps-saudeg"><div class="card">
+        <h2 style="font-size:20px">Saúde</h2>
+        ${fichaSanfonaInicio('sg-emerg','Emergência — veterinário(a) de confiança do tutor',fichaEmergSelo(ex),true)}
+        <div class="cad-grid" style="margin-top:12px">
+          <!-- EMERGÊNCIA (Adriana, 31/ago/2026): o PDF do check-in precisa dos dados de
+               emergência — veterinário(a) de confiança do tutor, clínica e endereço.
+               Sem programador: os campos vivem na ficha e o PDF lê daqui. -->
+          <div class="field" style="grid-column:1/-1;background:rgba(200,60,45,.06);border-left:4px solid var(--crm-critico);border-radius:10px;padding:10px 12px">
+            <label style="font-size:13px;font-weight:800;color:var(--crm-critico)">EMERGÊNCIA — veterinário(a) de confiança do tutor</label>
+            <div class="cad-grid" style="margin-top:6px">
+              <div class="field"><label>Veterinário(a) — nome</label><input class="cad-in" value="${escAttr(ex.vetNome||'')}" placeholder="Ex: Dra. Tanara" onchange="setPelExtra(pelAtual,{vetNome:this.value})"></div>
+              <div class="field"><label>Veterinário(a) — telefone</label><input class="cad-in" value="${escAttr(ex.vetTel||'')}" placeholder="(31) 9____-____" onchange="setPelExtra(pelAtual,{vetTel:this.value})"></div>
+              <div class="field"><label>Clínica — nome</label><input class="cad-in" value="${escAttr(ex.vetClinica||'')}" placeholder="Nome da clínica" onchange="setPelExtra(pelAtual,{vetClinica:this.value})"></div>
+              <div class="field"><label>Clínica — endereço</label><input class="cad-in" value="${escAttr(ex.vetEnd||'')}" placeholder="Rua, número, bairro" onchange="setPelExtra(pelAtual,{vetEnd:this.value})"></div>
+            </div>
+          </div>
+        </div>
+        ${fichaTopicoFim()}
+        ${fichaSanfonaInicio('sg-alerg','Alergia, restrição e problemas de saúde',fichaAlergSelo(ex),true)}
+        <div class="hint" style="margin-top:8px">Tudo que o monitor precisa saber antes de cuidar e dar o almoço.</div>
+        <div id="pelPills2">${alertPills(ex)}</div>
+        <div class="cad-grid">
+          <div class="field"><label>Alergia</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setPelExtra(pelAtual,{alergia:this.value});refreshPills()">${iaRevMarcaFicha(p,'alergia')}${pelNaoTemHTML(ex,'alergia','alergia')}</div>
+          <div class="field"><label>Restrição alimentar</label><input id="pelRestricaoInput" class="cad-in" value="${escAttr(ex.restricao||'')}" placeholder="Ex: sem grãos" onchange="pelRestrGravar(this.value)">${iaRevMarcaFicha(p,'restricao')}${pelNaoTemHTML(ex,'restricao','restrição alimentar')}
+            <div class="hint" style="margin-top:4px">Aparece também em Almoço na creche (Rotina e alimentação) e serve de base ao Enriquecimento ambiental.</div></div>
+          <!-- O bloco ALIMENTAÇÃO mora na aba Rotina e alimentação (Adriana, 01/set: "almoço em campo almoço"). -->
+          <div class="field"><label>Medicação (anotação antiga em texto)</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()">${iaRevMarcaFicha(p,'medicacao')}
+            <div class="hint" style="margin-top:4px">⚠ A lista oficial é a de <strong>Medicamentos</strong> logo abaixo.</div></div>
+          <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()">${iaRevMarcaFicha(p,'problema')}</div>
+        </div>
+        ${fichaTopicoFim()}
+        <!-- MEDICAMENTOS — a mesma agenda que a hospedagem usa (auaulandia/medicacao-agenda). Não existe nó paralelo: o que se
+             cadastra aqui é o que o Check-in pré-preenche, o que o despertador toca e o que o check-out devolve. Uma fonte só. -->
+        ${fichaSanfonaInicio('sg-med','Medicamentos',fichaMedSelo(p),true)}
+        <div class="hint">O que este FILHOt toma <strong>sempre</strong> — cardíaco, tireoide, dor crônica. Esta lista vai inteira para o <strong>Check-in da hospedagem</strong>, onde a Consultora confirma com o tutor item por item. Diga <strong>quando</strong> dar (&ldquo;45 min antes do jantar&rdquo;) que o app calcula a hora sozinho, pelo horário da refeição da casa. Nada grava antes de <strong>Salvar medicamentos</strong>. Aqui também aparecem as <strong>receitas da veterinária</strong> em vigor, como no Cuidado Vet.</div>
+        <div id="fmedItens" style="margin-top:12px"></div>
+        <div id="fmedAcoes"></div>
+        <div id="fmed-status" class="rel-status"></div>
+        ${fichaTopicoFim()}
+        <!-- REAVALIAÇÃO DA VETERINÁRIA (nova na ficha): só leitura, do que a vet marcou no Cuidado Vet -->
+        ${fichaSanfonaInicio('sg-reav','Reavaliação da veterinária',fichaVetReavSelo(p),false)}
+        <div id="pelVetReav"></div>
+        ${fichaTopicoFim()}
+        ${fichaSanfonaInicio('sg-peso','Peso',fichaPesoSelo(ex),false)}
+        ${blocoPeso(ex)}
+        ${fichaTopicoFim()}
+        ${(function(){ var cio=blocoCio(ex,p); return cio?(fichaSanfonaInicio('sg-cio','Cio',null,false)+cio+fichaTopicoFim()):''; })()}
+        <!-- EXAMES DO CORPO: a aba inteira, movida para cá. O histórico e as fotos se carregam ao abrir a ficha. -->
+        ${fichaSanfonaInicio('sg-exames','Exames do corpo',null,false)}
+        <div class="hint">Em todo check-in e check-out do Day Care, o monitor examina o corpo inteiro, ponto a ponto, com foto obrigatória do que estiver alterado. <strong>"Tudo normal"</strong> quer dizer que <strong>todos</strong> os pontos abaixo foram olhados e nada chamou a atenção.</div>
+        <div class="hint" style="margin-top:6px;padding:8px 10px;background:var(--z-cream-warm);border-radius:8px"><strong>O que é analisado em cada exame:</strong> ${(typeof CK_PONTOS!=='undefined'?CK_PONTOS.map(function(pt){ return pt.t; }).filter(Boolean).join(' · '):'')}. Se o cocô vier alterado, há protocolo próprio.</div>
+        <h3 class="cad-sub">Histórico de check-ins</h3>
+        <div id="pelHistCk"><div class="hint">Carregando…</div></div>
+        <!-- Fotos do corpo: o que foi fotografado em cada check-in, guardado por 21 dias
+             (Adriana, 15/set/2026). Só aparece para quem a tabela PERM autoriza. -->
+        <div id="pelFotosCorpoWrap" style="display:none">
+          <h3 class="cad-sub">Fotos do corpo</h3>
+          <div class="hint">Cada alteração marcada no check-in guarda a foto aqui por 21 dias. Toque na foto para ver em tamanho grande, baixar ou enviar ao tutor e à veterinária.</div>
+          <div id="pelFotosCorpo"></div>
+        </div>
+        ${fichaTopicoFim()}
+      </div></div>
+
+      <!-- 5. PREVENÇÃO — igual à de hoje, menos a Emergência, o Peso e o Cio (foram para Saúde) -->
       <div class="ppanel2" id="ps-saude"><div class="card">
         <h2 style="font-size:20px">Prevenção</h2>
         <div class="hint">Obrigatório para frequentar o Day Care. O que estiver vencido aparece como urgente para a Gestão, a Supervisora e a Consultora. Nos tópicos com <strong>Salvar</strong>, confirme no fim do bloco; check-up e escova atualizam ao escolher.</div>
@@ -47951,21 +48418,6 @@ return { criar };
         </div>
         ${escovaFichaHTML(ex)}
         ${fichaTopicoFim()}
-        <div class="cad-grid" style="margin-top:12px">
-          <!-- EMERGÊNCIA (Adriana, 31/ago/2026): o PDF do check-in precisa dos dados de
-               emergência — veterinário(a) de confiança do tutor, clínica e endereço.
-               Sem programador: os campos vivem na ficha e o PDF lê daqui. -->
-          <div class="field" style="grid-column:1/-1;background:rgba(200,60,45,.06);border-left:4px solid var(--crm-critico);border-radius:10px;padding:10px 12px">
-            <label style="font-size:13px;font-weight:800;color:var(--crm-critico)">EMERGÊNCIA — veterinário(a) de confiança do tutor</label>
-            <div class="cad-grid" style="margin-top:6px">
-              <div class="field"><label>Veterinário(a) — nome</label><input class="cad-in" value="${escAttr(ex.vetNome||'')}" placeholder="Ex: Dra. Tanara" onchange="setPelExtra(pelAtual,{vetNome:this.value})"></div>
-              <div class="field"><label>Veterinário(a) — telefone</label><input class="cad-in" value="${escAttr(ex.vetTel||'')}" placeholder="(31) 9____-____" onchange="setPelExtra(pelAtual,{vetTel:this.value})"></div>
-              <div class="field"><label>Clínica — nome</label><input class="cad-in" value="${escAttr(ex.vetClinica||'')}" placeholder="Nome da clínica" onchange="setPelExtra(pelAtual,{vetClinica:this.value})"></div>
-              <div class="field"><label>Clínica — endereço</label><input class="cad-in" value="${escAttr(ex.vetEnd||'')}" placeholder="Rua, número, bairro" onchange="setPelExtra(pelAtual,{vetEnd:this.value})"></div>
-            </div>
-          </div>
-        </div>
-
         ${blocoOportunidades(p)}
 
         <h3 class="cad-sub">Vacinas</h3>
@@ -47979,65 +48431,14 @@ return { criar };
         ${blocoColeira(pbEx('col'))}
         ${blocoVerm(pbEx('verm'))}
         ${blocoFezes(pbEx('fezes'))}
-        ${blocoCio(ex,p)}
 
-        <h3 class="cad-sub">Peso</h3>
-        ${blocoPeso(ex)}
       </div></div>
 
-      <!-- MEDICAMENTOS — a mesma agenda que a hospedagem usa (auaulandia/medicacao-agenda).
-           Não existe nó paralelo: o que se cadastra aqui é o que o Check-in pré-preenche, o
-           que o despertador toca e o que o check-out devolve. Uma fonte só. -->
-      <div class="ppanel2" id="ps-med"><div class="card">
-        <h2 style="font-size:20px">Medicamentos de uso contínuo</h2>
-        <div class="hint">O que este FILHOt toma <strong>sempre</strong> — cardíaco, tireoide, dor crônica. Esta lista vai inteira para o <strong>Check-in da hospedagem</strong>, onde a Consultora confirma com o tutor item por item. Diga <strong>quando</strong> dar (&ldquo;45 min antes do jantar&rdquo;) que o app calcula a hora sozinho, pelo horário da refeição da casa. Nada grava antes de <strong>Salvar medicamentos</strong>.</div>
-        <div id="fmedItens" style="margin-top:12px"></div>
-        <div id="fmedAcoes"></div>
-        <div id="fmed-status" class="rel-status"></div>
-      </div></div>
-
-      <div class="ppanel2" id="ps-tutor"><div id="fichaTutorRoot"><div class="card"><div class="hint">Montando o histórico com o tutor&hellip;</div></div></div></div>
-
-      <div class="ppanel2" id="ps-rotina"><div class="card">
-        <h2 style="font-size:20px">Rotina &amp; alimentação</h2>
-        <div class="cad-grid">
-          <div class="field"><label>Alimentação em casa (ração / dose)</label><input class="cad-in" value="${escAttr(ex.alimentacao||'')}" placeholder="Ex: Ração X · 80g 2x/dia" onchange="setPelExtra(pelAtual,{alimentacao:this.value})"></div>
-          <div class="field"><label>Passeia?</label><div class="seg gold" data-single>${segBtnsPel('passeia',ex.passeia||'',['Sim','Não'])}</div></div>
-          <div class="field"><label>Xixi e cocô</label><input class="cad-in" value="${escAttr(ex.banheiro||'')}" placeholder="Ex: fora de casa" onchange="setPelExtra(pelAtual,{banheiro:this.value})"></div>
-          <!-- ALIMENTAÇÃO — Adriana, 22/ago/2026: "essa informação é obrigatória e visível,
-               ração + comida = quantidade e as vezes no dia, café, almoço, jantar; num card
-               ACIMA de medicação". Quem serve não pode ter de adivinhar nem perguntar. -->
-          <div class="field" style="grid-column:1/-1;background:rgba(222,180,40,.10);border-left:4px solid var(--z-gold);border-radius:10px;padding:10px 12px">
-            <label style="font-size:13px;font-weight:800;color:var(--z-blue)">ALIMENTAÇÃO — o que e quanto ele come</label>
-            <div class="cad-grid" style="margin-top:6px">
-              <div class="field"><label>Ração (marca)</label><input class="cad-in" value="${escAttr(ex.alim_racao_marca||ex.alimentacao||'')}" placeholder="Ex: Hills Gastrointestinal" onchange="setPelExtra(pelAtual,{alim_racao_marca:this.value});refreshPills()">${iaRevMarcaFicha(p,'alim_racao_marca')}</div>
-              <div class="field"><label>Quanto de ração por refeição</label><input class="cad-in" value="${escAttr(ex.alim_racao_qtd||'')}" placeholder="Ex: 60 gramas" onchange="setPelExtra(pelAtual,{alim_racao_qtd:this.value})">${iaRevMarcaFicha(p,'alim_racao_qtd')}</div>
-              <div class="field"><label>Comida natural (o quê)</label><input class="cad-in" value="${escAttr(ex.alim_nat||'')}" placeholder="Ex: patê gastrô — ou vazio" onchange="setPelExtra(pelAtual,{alim_nat:this.value})">${iaRevMarcaFicha(p,'alim_nat')}</div>
-              <div class="field"><label>Quanto de natural por refeição</label><input class="cad-in" value="${escAttr(ex.alim_nat_qtd||'')}" placeholder="Ex: 1 colher" onchange="setPelExtra(pelAtual,{alim_nat_qtd:this.value})">${iaRevMarcaFicha(p,'alim_nat_qtd')}</div>
-              <div class="field" style="grid-column:1/-1"><label>Horários das refeições</label><input class="cad-in" value="${escAttr(ex.alim_horarios||'')}" placeholder="Ex: 07:00, 12:00 e 18:00" onchange="setPelExtra(pelAtual,{alim_horarios:this.value})">${iaRevMarcaFicha(p,'alim_horarios')}</div>
-              <div class="field" style="grid-column:1/-1"><label>Em quais refeições</label><div class="seg gold">${['Café da manhã','Almoço','Jantar'].map(function(r){var on=(String(ex.alim_refs||'').indexOf(r)>=0);return '<button type="button" class="'+(on?'on':'')+'" onclick="pelAlimRef(\''+r+'\')">'+r+'</button>';}).join('')}</div>
-                <div class="hint" style="margin-top:3px">${escAttr(ex.alim_refs||'')||'<span style="color:var(--crm-critico);font-weight:800">Nenhuma refeição marcada.</span>'}</div></div>
-              <div class="field" style="grid-column:1/-1"><label>Mistura ração com natural?</label><div class="seg gold" data-single>${segBtnsPel('alim_mistura',ex.alim_mistura||'',['Sim','Nao'])}</div></div>
-              <div class="field" style="grid-column:1/-1"><label>Observação da comida</label><input class="cad-in" value="${escAttr(ex.alim_obs||'')}" placeholder="Ex: come devagar, comedouro lento" onchange="setPelExtra(pelAtual,{alim_obs:this.value})">${iaRevMarcaFicha(p,'alim_obs')}</div>
-            </div>
-          </div>
-        </div>
-        <!-- O almoço da creche mora AQUI, junto da rotina — é onde a consultora procura.
-             É o MESMO dado que aparece na grade do Day Care, não uma cópia. -->
-        <details class="ficha-topico" data-ficha-topico="rotina-almoco" open>
-          <summary><span class="ficha-topico-nome">Almoço na creche — aparece na grade do Day Care</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
-          <div class="ficha-topico-corpo">
-            <div id="pelAlmocoAviso">${avisoAlmocoFicha()}</div>
-            <div class="cad-grid">
-              ${camposAlmocoFicha()}
-            </div>
-          </div>
-        </details>
-      </div></div>
-
+      <!-- 6. COMPORTAMENTO -->
       <div class="ppanel2" id="ps-comp"><div class="card">
         <h2 style="font-size:20px">Comportamento</h2>
         ${alertasFixosSanfonaHTML(p)}
+        ${fichaSanfonaInicio('comp-como','Como ele é',null,true)}
         <div class="cad-grid">
           <div class="field"><label>Em casa</label><input class="cad-in" value="${escAttr(ex.comp_casa||'')}" onchange="setPelExtra(pelAtual,{comp_casa:this.value})"></div>
           <div class="field"><label>Com pessoas</label><input class="cad-in" value="${escAttr(ex.comp_pessoas||'')}" onchange="setPelExtra(pelAtual,{comp_pessoas:this.value})"></div>
@@ -48045,78 +48446,12 @@ return { criar };
           <div class="field"><label>Medos</label><input class="cad-in" value="${escAttr(ex.medos||'')}" placeholder="Ex: fogos" onchange="setPelExtra(pelAtual,{medos:this.value})"></div>
           <div class="field"><label>Já atacou outro peludo?</label><div class="seg" data-single>${segBtnsPel('atacou',ex.atacou||'',['Não','Sim'])}</div></div>
           <div class="field"><label>Brincadeira favorita</label><input class="cad-in" value="${escAttr(ex.brincadeira||'')}" placeholder="Ex: bolinha" onchange="setPelExtra(pelAtual,{brincadeira:this.value})"></div>
-        </div>
-      </div></div>
-
-      <div class="ppanel2 so-sensivel" id="ps-plano"><div class="card">
-        <h2 style="font-size:20px">Plano</h2>
-        <div class="hint">Planos DayCare 2026. A tabela é por mês (a mensalidade); o valor do plano é a mensalidade vezes os meses do tipo (1 no mensal, 3 no trimestral, 6 no semestral), pago à vista. Desconto: 2º peludinho ${descontosPlano()[2]}%, 3º ${descontosPlano()[3]}%.</div>
-        ${blocoPlano(ex,p)}
-        <details class="ficha-topico" data-ficha-topico="plano-mensagens">
-          <summary><span class="ficha-topico-nome">Mensagens para o tutor</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
-          <div class="ficha-topico-corpo"><div class="renov-msgs">
-          <div class="renov-msg"><div class="renov-msg-tit">Plano finalizou &mdash; oferecer renovação</div>
-            <textarea class="gest-txt" readonly>${escAttr(msgPlanoFinalizou(p,ex))}</textarea>
-            <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button>
-            ${renovCobrancaFichaHTML(ex,p)}</div>
-          <div class="renov-msg"><div class="renov-msg-tit">Renovação confirmada</div>
-            <textarea class="gest-txt" readonly>${escAttr(msgRenovado(p,ex))}</textarea>
-            <button class="btn btn-gold" style="padding:7px 14px;font-size:13px;margin-top:6px" onclick="copiarGest(this)">Copiar para o tutor</button></div>
-        </div></div>
-        </details>
-        <!-- Sair do Day Care ENCERRA o plano — por isso mora aqui (Adriana, 11/ago/2026).
-             Mas em bloco próprio, separado por linha e no FIM da aba: nunca misturado com os
-             campos de plano, que era o que confundia. -->
-        <details class="ficha-topico" data-ficha-topico="plano-saida">
-          <summary><span class="ficha-topico-nome">Saída do Day Care</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
-          <div class="ficha-topico-corpo" style="border-top:2px solid var(--line);margin-top:8px;padding-top:16px">
-          <div class="hint" style="margin-bottom:8px">Só quando o FILHOt deixa de ser auluno. Ele sai das listas do dia, mas o cadastro e todo o histórico continuam guardados em Relatórios › Inativos.</div>
-          <div class="cad-grid">
-            ${camposSaidaFicha()}
-          </div>
-          </div>
-        </details>
-      </div></div>
-
-      <!-- Atenção · Saúde e Cuidados — agora é aba, não mais um bloco fixo no topo -->
-      <div class="ppanel2" id="ps-exames"><div class="card">
-        <h2 style="font-size:20px">Exames do corpo</h2>
-        <div class="hint">Em todo check-in e check-out do Day Care, o monitor examina o corpo inteiro, ponto a ponto, com foto obrigatória do que estiver alterado. <strong>"Tudo normal"</strong> quer dizer que <strong>todos</strong> os pontos abaixo foram olhados e nada chamou a atenção.</div>
-        <div class="hint" style="margin-top:6px;padding:8px 10px;background:var(--z-cream-warm);border-radius:8px"><strong>O que é analisado em cada exame:</strong> ${(typeof CK_PONTOS!=='undefined'?CK_PONTOS.map(function(pt){ return pt.t; }).join(' · '):'')} — e ainda xixi, cocô (com protocolo próprio para alteração) e vômito.</div>
-        <h3 class="cad-sub">Histórico de check-ins</h3>
-        <div id="pelHistCk"><div class="hint">Carregando…</div></div>
-        <!-- Fotos do corpo: o que foi fotografado em cada check-in, guardado por 21 dias
-             (Adriana, 15/set/2026). Só aparece para quem a tabela PERM autoriza. -->
-        <div id="pelFotosCorpoWrap" style="display:none">
-          <h3 class="cad-sub">Fotos do corpo</h3>
-          <div class="hint">Cada alteração marcada no check-in guarda a foto aqui por 21 dias. Toque na foto para ver em tamanho grande, baixar ou enviar ao tutor e à veterinária.</div>
-          <div id="pelFotosCorpo"></div>
-        </div>
-      </div></div>
-
-      <div class="ppanel2" id="ps-atencao"><div class="alert-card" style="margin-bottom:0">
-        <h2 style="font-size:19px;margin-bottom:3px">Atenção · Saúde e Cuidados</h2>
-        <div class="hint">Tudo que o monitor precisa saber antes de cuidar e dar o almoço.</div>
-        <div id="pelPills2">${alertPills(ex)}</div>
-        <div class="cad-grid">
-          <div class="field"><label>Alergia</label><input class="cad-in" value="${escAttr(ex.alergia||'')}" placeholder="Ex: frango — ou deixe vazio" onchange="setPelExtra(pelAtual,{alergia:this.value});refreshPills()">${iaRevMarcaFicha(p,'alergia')}${pelNaoTemHTML(ex,'alergia','alergia')}</div>
-          <div class="field"><label>Restrição alimentar</label><input class="cad-in" value="${escAttr(ex.restricao||'')}" placeholder="Ex: sem grãos" onchange="setPelExtra(pelAtual,{restricao:this.value});refreshPills()">${iaRevMarcaFicha(p,'restricao')}${pelNaoTemHTML(ex,'restricao','restrição alimentar')}</div>
-          <!-- O bloco ALIMENTAÇÃO mudou para a aba Rotina & Alimentação (Adriana, 01/set: "almoço em campo almoço"). -->
-          <div class="field"><label>Medicação</label><input class="cad-in" value="${escAttr(ex.medicacao||'')}" placeholder="Nome, dose, horário" onchange="setPelExtra(pelAtual,{medicacao:this.value});refreshPills()">${iaRevMarcaFicha(p,'medicacao')}</div>
-          <div class="field"><label>Algum problema de saúde</label><input class="cad-in" value="${escAttr(ex.problema||'')}" placeholder="Ex: cardíaco — ou vazio" onchange="setPelExtra(pelAtual,{problema:this.value});refreshPills()">${iaRevMarcaFicha(p,'problema')}</div>
-          <!-- O veterinário de emergência mudou para a aba Prevenção, junto do Check-up (Adriana, 01/set). -->
-        </div>
-        <details class="ficha-topico" data-ficha-topico="atencao-rotina">
-          <summary><span class="ficha-topico-nome">Rotina, adaptação e relato do tutor</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
-          <div class="ficha-topico-corpo"><div class="cad-grid">
-          <div class="field" style="grid-column:1/-1"><label>O que o tutor contou</label><input class="cad-in" value="${escAttr(ex.obs_tutor||'')}" placeholder="Check-up, cio, mudanças em casa — o que veio na resposta do tutor" onchange="setPelExtra(pelAtual,{obs_tutor:this.value})">${iaRevMarcaFicha(p,'obs_tutor')}</div>
-          ${(function(){ var ev=ex.entrevista; if(!(ev&&ev.itens&&ev.itens.length)) return '';
-            return '<div class="field" style="grid-column:1/-1;background:rgba(35,77,103,.06);border-left:4px solid var(--z-blue);border-radius:10px;padding:10px 12px">'
-              +'<label style="font-size:13px;font-weight:800;color:var(--z-blue)">ENTREVISTA COM O TUTOR'+(ev.quando?(' — respondida em '+escAttr(repBRdata?repBRdata(ev.quando):ev.quando)):'')+'</label>'
-              +ev.itens.map(function(it){ return '<div style="margin-top:7px"><div style="font-size:12px;color:var(--muted);font-weight:600">'+escAttr(it.p||'')+'</div>'
-                +'<div style="font-size:13.5px;font-weight:700;color:var(--ink,#333)">'+escAttr(it.r||'—')+'</div></div>'; }).join('')
-              +'</div>'; })()}
           <div class="field"><label>Manias</label><input class="cad-in" value="${escAttr(ex.manias||'')}" placeholder="Ex: protege a comida" onchange="setPelExtra(pelAtual,{manias:this.value});refreshPills()">${iaRevMarcaFicha(p,'manias')}</div>
+          ${fichaBrinquedosHospHTML(p)}
+        </div>
+        ${fichaTopicoFim()}
+        ${fichaSanfonaInicio('comp-adapt','Adaptação',fichaAdaptSelo(ex),false)}
+        <div class="cad-grid">
           <div class="field"><label>Em adaptacao (45 dias)?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao',ex.adaptacao||'',['Sim','Nao'])}</div></div>
           <div class="field"><label>Adaptacao comecou em</label><input type="date" class="cad-in" value="${escAttr(ex.adaptacao_desde||'')}" onchange="setPelExtra(pelAtual,{adaptacao_desde:this.value});renderPelFicha()" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)">
             <div class="hint" style="margin-top:4px">${adaptTextoFicha(ex)}</div></div>
@@ -48124,12 +48459,20 @@ return { criar };
                decide se a contagem de 45 dias corridos roda. Ficha sem tipo é Day Care. -->
           <div class="field"><label>Adaptacao de que?</label><div class="seg gold" data-single>${segBtnsPel('adaptacao_tipo',ex.adaptacao_tipo||'Day Care',['Day Care','Hospedagem'])}</div>
             <div class="hint" style="margin-top:4px">Day Care conta ${ADAPT_DIAS} dias corridos. Hospedagem só registra a data — sem contagem automática.</div></div>
-          <div class="field"><label>Come em comedouro lento?</label><div class="seg gold" data-single>${segBtnsPel('ansioso',ex.ansioso||'',['Sim','Nao'])}</div></div>
-          </div></div>
-        </details>
-        <details class="ficha-topico" data-ficha-topico="atencao-ea">
-          <summary><span class="ficha-topico-nome">Enriquecimento ambiental</span><span class="ficha-topico-seta" aria-hidden="true">⌄</span></summary>
-          <div class="ficha-topico-corpo"><div class="cad-grid">
+        </div>
+        ${fichaTopicoFim()}
+        ${fichaSanfonaInicio('comp-relato','Relato do tutor',null,false)}
+        <div class="cad-grid">
+          <div class="field" style="grid-column:1/-1"><label>O que o tutor contou</label><input class="cad-in" value="${escAttr(ex.obs_tutor||'')}" placeholder="Check-up, cio, mudanças em casa — o que veio na resposta do tutor" onchange="setPelExtra(pelAtual,{obs_tutor:this.value})">${iaRevMarcaFicha(p,'obs_tutor')}</div>
+          ${(function(){ var ev=ex.entrevista; if(!(ev&&ev.itens&&ev.itens.length)) return '';
+            return '<div class="field" style="grid-column:1/-1;background:rgba(35,77,103,.06);border-left:4px solid var(--z-blue);border-radius:10px;padding:10px 12px">'
+              +'<label style="font-size:13px;font-weight:800;color:var(--z-blue)">ENTREVISTA COM O TUTOR'+(ev.quando?(' — respondida em '+escAttr(repBRdata?repBRdata(ev.quando):ev.quando)):'')+'</label>'
+              +ev.itens.map(function(it){ return '<div style="margin-top:7px"><div style="font-size:12px;color:var(--muted);font-weight:600">'+escAttr(it.p||'')+'</div>'
+                +'<div style="font-size:13.5px;font-weight:700;color:var(--ink,#333)">'+escAttr(it.r||'—')+'</div></div>'; }).join('')
+              +'</div>'; })()}
+        </div>
+        ${fichaTopicoFim()}
+        ${fichaSanfonaInicio('atencao-ea','Enriquecimento ambiental',fichaEASelo(ex),false)}<div class="cad-grid">
           <!-- MICROCHIP (Adriana, 19/ago/2026): "preciso de relatório de cães sem microchip".
                O campo não existia — sem ele o relatório listaria todo mundo. Guarda o número;
                quem fica em branco é exatamente quem falta. -->
@@ -48151,10 +48494,58 @@ return { criar };
           <!-- O EA acontece em DUAS matilhas: pequeno e médio porte. É por elas que a tela
                do EA se divide em duas colunas. -->
           <div class="field"><label>Matilha (EA)</label><div class="seg gold" data-single>${segBtnsPel('matilha',ex.matilha||'',['Pequeno porte','Médio porte','Outro'])}</div></div>
-          </div></div>
-        </details>
-        <!-- O histórico dos check-ins mudou para a aba Exames do corpo (Adriana, 01/set). -->
+          </div>${fichaTopicoFim()}
       </div></div>
+
+      <!-- 7. ROTINA E ALIMENTAÇÃO -->
+      <div class="ppanel2" id="ps-rotina"><div class="card">
+        <h2 style="font-size:20px">Rotina &amp; alimentação</h2>
+        ${fichaSanfonaInicio('ro-ali','Alimentação — o que e quanto come',fichaAlimSelo(ex),true)}
+        <div class="cad-grid">
+          <!-- ALIMENTAÇÃO — Adriana, 22/ago/2026: "essa informação é obrigatória e visível,
+               ração + comida = quantidade e as vezes no dia, café, almoço, jantar; num card
+               ACIMA de medicação". Quem serve não pode ter de adivinhar nem perguntar. -->
+          <div class="field" style="grid-column:1/-1;background:rgba(222,180,40,.10);border-left:4px solid var(--z-gold);border-radius:10px;padding:10px 12px">
+            <label style="font-size:13px;font-weight:800;color:var(--z-blue)">ALIMENTAÇÃO — o que e quanto ele come</label>
+            <div class="cad-grid" style="margin-top:6px">
+              <div class="field"><label>Ração (marca)</label><input class="cad-in" value="${escAttr(ex.alim_racao_marca||ex.alimentacao||'')}" placeholder="Ex: Hills Gastrointestinal" onchange="setPelExtra(pelAtual,{alim_racao_marca:this.value});refreshPills()">${iaRevMarcaFicha(p,'alim_racao_marca')}</div>
+          <div class="field" style="grid-column:1/-1"><label>Alimentação em casa (ração / dose)</label><input class="cad-in" value="${escAttr(ex.alimentacao||'')}" placeholder="Ex: Ração X · 80g 2x/dia" onchange="setPelExtra(pelAtual,{alimentacao:this.value})"><div class="hint" style="margin-top:3px">Anotação antiga: quando «Ração (marca)» está vazia, ela mostra este texto. Os dois ficam à vista; nada foi apagado.</div></div>
+              <div class="field"><label>Quanto de ração por refeição</label><input class="cad-in" value="${escAttr(ex.alim_racao_qtd||'')}" placeholder="Ex: 60 gramas" onchange="setPelExtra(pelAtual,{alim_racao_qtd:this.value})">${iaRevMarcaFicha(p,'alim_racao_qtd')}</div>
+              <div class="field"><label>Comida natural (o quê)</label><input class="cad-in" value="${escAttr(ex.alim_nat||'')}" placeholder="Ex: patê gastrô — ou vazio" onchange="setPelExtra(pelAtual,{alim_nat:this.value})">${iaRevMarcaFicha(p,'alim_nat')}</div>
+              <div class="field"><label>Quanto de natural por refeição</label><input class="cad-in" value="${escAttr(ex.alim_nat_qtd||'')}" placeholder="Ex: 1 colher" onchange="setPelExtra(pelAtual,{alim_nat_qtd:this.value})">${iaRevMarcaFicha(p,'alim_nat_qtd')}</div>
+              <div class="field" style="grid-column:1/-1"><label>Horários das refeições</label><input class="cad-in" value="${escAttr(ex.alim_horarios||'')}" placeholder="Ex: 07:00, 12:00 e 18:00" onchange="setPelExtra(pelAtual,{alim_horarios:this.value})">${iaRevMarcaFicha(p,'alim_horarios')}</div>
+              <div class="field" style="grid-column:1/-1"><label>Em quais refeições</label><div class="seg gold">${['Café da manhã','Almoço','Jantar'].map(function(r){var on=(String(ex.alim_refs||'').indexOf(r)>=0);return '<button type="button" class="'+(on?'on':'')+'" onclick="pelAlimRef(\''+r+'\')">'+r+'</button>';}).join('')}</div>
+                <div class="hint" style="margin-top:3px">${escAttr(ex.alim_refs||'')||'<span style="color:var(--crm-critico);font-weight:800">Nenhuma refeição marcada.</span>'}</div></div>
+              <div class="field" style="grid-column:1/-1"><label>Mistura ração com natural?</label><div class="seg gold" data-single>${segBtnsPel('alim_mistura',ex.alim_mistura||'',['Sim','Nao'])}</div></div>
+              <div class="field" style="grid-column:1/-1"><label>Observação da comida</label><input class="cad-in" value="${escAttr(ex.alim_obs||'')}" placeholder="Ex: come devagar, comedouro lento" onchange="setPelExtra(pelAtual,{alim_obs:this.value})">${iaRevMarcaFicha(p,'alim_obs')}</div>
+              <div class="field" style="grid-column:1/-1"><label>Comedouro lento?</label><div id="pelLentoBox">${pelLentoHTML(p,ex)}</div>
+                <div class="hint" style="margin-top:3px">Um campo só: grava no cadastro do FILHOt (é o que acende a tarja ANSIOSO) e no cadastro do almoço (é o que a grade do Day Care lê).</div></div>
+            </div>
+          </div>
+        </div>
+        ${fichaTopicoFim()}
+        <!-- O almoço da creche mora AQUI, junto da rotina — é onde a consultora procura.
+             É o MESMO dado que aparece na grade do Day Care, não uma cópia. -->
+        ${fichaSanfonaInicio('rotina-almoco','Almoço na creche — aparece na grade do Day Care',fichaAlmocoSelo(p),true)}
+            <div id="pelAlmocoAviso">${avisoAlmocoFicha()}</div>
+            <div class="cad-grid">
+              ${camposAlmocoFicha()}
+            </div>
+        ${fichaTopicoFim()}
+        ${fichaSanfonaInicio('ro-hosp','Plano alimentar da hospedagem',null,false)}
+        ${fichaPlanoAlimHospHTML(ex)}
+        ${fichaTopicoFim()}
+        ${fichaSanfonaInicio('ro-day','Rotina do Day Care',null,false)}
+        <div class="cad-grid">
+          <div class="field"><label>Passeia?</label><div class="seg gold" data-single>${segBtnsPel('passeia',ex.passeia||'',['Sim','Não'])}</div></div>
+          <div class="field"><label>Xixi e cocô</label><input class="cad-in" value="${escAttr(ex.banheiro||'')}" placeholder="Ex: fora de casa" onchange="setPelExtra(pelAtual,{banheiro:this.value})"></div>
+          ${fichaBanhoRecHTML(p)}
+        </div>
+        ${fichaTopicoFim()}
+      </div></div>
+
+      <!-- 8. COM O TUTOR (igual) -->
+      <div class="ppanel2" id="ps-tutor"><div id="fichaTutorRoot"><div class="card"><div class="hint">Montando o histórico com o tutor&hellip;</div></div></div></div>
 
       <div class="actions" style="margin-top:4px">
         <button class="btn btn-primary" onclick="salvarFichaPel()">🔎 Conferir alterações</button>
@@ -48163,6 +48554,9 @@ return { criar };
       <div id="pel-saved2" style="text-align:center;font-size:13px;font-weight:700;color:var(--crm-ok);margin-top:8px;min-height:18px"></div>`;
     fichaTopicosRestaurar(f,p);
     fichaTopicosPreparar(f);
+    fichaVetReavDesenhar();   // Saúde › Reavaliação da veterinária (só leitura, dos caches do Cuidado Vet)
+    // A barra de abas gruda logo abaixo do que já gruda no topo (o cabeçalho da tela e, no celular, a barra de cima).
+    try{ var _tp=0; ['.mobtop','.head'].forEach(function(sel){ var e=document.querySelector(sel); if(e && e.offsetParent!==null) _tp=Math.max(_tp, e.offsetHeight||0); }); f.style.setProperty('--ficha-abas-topo', _tp+'px'); }catch(e){} /* silencioso de propósito: enfeite de tela — sem a medida a barra gruda no topo da janela */
     if(!can){
       f.querySelectorAll('input,select,textarea').forEach(el=>{ el.disabled=true; });
       f.querySelectorAll('.seg button, .vac-row button').forEach(el=>{ el.disabled=true; });
@@ -48242,7 +48636,7 @@ return { criar };
   }
   function abrirAbaInicialPel(){
     try{
-      const alvo=podeVerPlano()?'ps-plano':'ps-ident';
+      const alvo='ps-resumo';   // 28/out/2026: o Resumo abre primeiro para todos (antes: o Plano para quem vê plano, a Identificação para os outros)
       document.querySelectorAll('.ppanel2').forEach(function(x){ x.classList.remove('active'); });
       const p=document.getElementById(alvo); if(p) p.classList.add('active');
       const tabs=document.querySelectorAll('.subtab2');
@@ -48321,11 +48715,15 @@ return { criar };
   }
   // Os de uso contínuo primeiro; os encerrados descem, como registro do que já foi.
   function fmedOrdem(){
+    const hoje=(typeof zHojeISO==='function')?zHojeISO():'';
     const ids=Object.keys(FMED_ITENS||{}).filter(function(i){ return !medItemAnulado(FMED_ITENS[i]); });   // 6.58: o anulado tem seção própria
     const vivos=ids.filter(function(i){ return (FMED_ITENS[i]||{}).continuo===true; });
-    const parados=ids.filter(function(i){ return (FMED_ITENS[i]||{}).continuo!==true; });
+    // 28/out/2026: a ficha passou a mostrar também as RECEITAS DA VETERINÁRIA em vigor (o Cuidado Vet mostra todas); o que já
+    // terminou continua em «Já não toma mais».
+    const receitas=ids.filter(function(i){ return fmedEhReceitaVigor(FMED_ITENS[i], hoje); });
+    const parados=ids.filter(function(i){ return (FMED_ITENS[i]||{}).continuo!==true && receitas.indexOf(i)<0; });
     const anulados=Object.keys(FMED_ITENS||{}).filter(function(i){ return medItemAnulado(FMED_ITENS[i]); });
-    return {vivos:vivos, parados:parados, anulados:anulados};
+    return {vivos:vivos, receitas:receitas, parados:parados, anulados:anulados};
   }
   function fmedDesenhar(){
     const wrap=document.getElementById('fmedItens'); if(!wrap) return;
@@ -48336,12 +48734,17 @@ return { criar };
     wrap.querySelectorAll('.magitem[data-id^="fmn_"]').forEach(function(el){ rascunhos.push(el.outerHTML); });
     const resumoMed=[];
     resumoMed.push(o.vivos.length===1 ? '1 medicamento de uso contínuo cadastrado.' : o.vivos.length+' medicamentos de uso contínuo cadastrados.');
+    if(o.receitas.length) resumoMed.push(o.receitas.length===1 ? '1 receita da veterinária em vigor.' : o.receitas.length+' receitas da veterinária em vigor.');
     if(o.parados.length) resumoMed.push(o.parados.length===1 ? '1 encerrado permanece no histórico.' : o.parados.length+' encerrados permanecem no histórico.');
     if(o.anulados.length) resumoMed.push(o.anulados.length===1 ? '1 lançamento por engano permanece identificado.' : o.anulados.length+' lançamentos por engano permanecem identificados.');
     let h='<div class="hint" style="margin-bottom:8px"><strong>Resumo da lista:</strong> '+resumoMed.join(' ')+'</div>';
+    h+='<h3 class="cad-sub" style="margin-top:12px">Uso contínuo</h3>';
     if(!o.vivos.length && !rascunhos.length) h+='<div class="hint">Nenhum medicamento de uso contínuo cadastrado.</div>';
     h+=o.vivos.map(function(id){ return medAgendaRowHTML(id, FMED_ITENS[id], {ficha:true}); }).join('');
     h+=rascunhos.join('');
+    h+='<h3 class="cad-sub" style="margin-top:16px">Receitas da veterinária</h3>';
+    if(!o.receitas.length) h+='<div class="hint">Nenhuma receita da veterinária em vigor.</div>';
+    h+=o.receitas.map(function(id){ return medAgendaRowHTML(id, FMED_ITENS[id], {ficha:true}); }).join('');
     if(o.parados.length){
       h+='<h3 class="cad-sub" style="margin-top:16px">Já não toma mais</h3>'
         +'<div class="hint" style="margin-bottom:8px">Fica registrado: o que foi dado um dia não se apaga. Para voltar a dar, acrescente de novo com a data de hoje.</div>'
@@ -48355,6 +48758,8 @@ return { criar };
     }
     wrap.innerHTML=h;
     medQuandoSyncTodos('#fmedItens');
+    // O selo da sanfona «Medicamentos» acompanha o que está na lista agora.
+    try{ const sl=document.getElementById('fichaSelo_sg-med'); if(sl){ const n=o.vivos.length+o.receitas.length; sl.textContent=n?(n+' em uso'):'Nenhum cadastrado'; sl.className='ficha-topico-estado ficha-topico-'+(n?'ok':'sem'); } }catch(e){} /* silencioso de propósito: enfeite do selo — a lista já está na tela */
     // Quem só lê não recebe campo editável que não grava — vira leitura, sem mentira.
     if(!pode) wrap.querySelectorAll('input,button').forEach(function(el){ el.setAttribute('disabled','disabled'); });
     const ac=document.getElementById('fmedAcoes');
@@ -48466,7 +48871,7 @@ return { criar };
       if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Medicamentos salvos. O Check-in da hospedagem já traz esta lista para confirmar com o tutor.'+(rg.frases.length?(' '+rg.frases.join(' ')):''); }
       if(typeof audit==='function') audit('ficha-medicamentos', resumo.join(' | '),
         {alvo:FMED_KEY, pet:pelNome(pelAtual)||'', quem:quem});
-      try{ const l=document.getElementById('pelMedLinha'); if(l) l.innerHTML=medLinhaDoPel(pelAtual,'Detalhes e alterações na aba Medicamentos.'); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      try{ const l=document.getElementById('pelMedLinha'); if(l) l.innerHTML=medLinhaDoPel(pelAtual,'Detalhes e alterações em Saúde › Medicamentos.'); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
     }).catch(function(e){
       _logFalhaGrav('auaulandia/medicacao-agenda/ (fmedSalvar)', e);
@@ -48510,7 +48915,7 @@ return { criar };
       if(typeof audit==='function') audit('ficha-medicamentos',
         'PAROU DE TOMAR — '+(it.nome||'')+' — motivo: '+(motivo||'não informado'),
         {alvo:FMED_KEY, pet:(pelAtual?pelNome(pelAtual):''), item:id, quem:quem});
-      try{ const l=document.getElementById('pelMedLinha'); if(l) l.innerHTML=medLinhaDoPel(pelAtual,'Detalhes e alterações na aba Medicamentos.'); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+      try{ const l=document.getElementById('pelMedLinha'); if(l) l.innerHTML=medLinhaDoPel(pelAtual,'Detalhes e alterações em Saúde › Medicamentos.'); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
       if(typeof carregarAgendaMedTodos==='function') carregarAgendaMedTodos();
     }).catch(function(e){
       _logFalhaGrav('auaulandia/medicacao-agenda/ (fmedParou)', e);
@@ -86236,7 +86641,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     if(i<0){ zAlertao('NÃO ACHEI A FICHA', ['Essa ficha não está no cadastro deste aparelho. Atualize a tela e tente de novo.'], {botao:'Entendi'}); return; }
     HOSP_CORR=null; hospCorrRender();
     pelOrigem='hospedes'; irParaView('ficha'); abrirPeludinho(i);
-    if(aba) setTimeout(function(){ try{ var bt=Array.prototype.find.call(document.querySelectorAll('.subtab2'), function(b){ return (b.getAttribute('onclick')||'').indexOf("'"+aba+"'")>=0; }); if(bt) bt.click(); }catch(e){} /* silencioso de propósito: enfeite de tela */ }, 60);
+    if(aba) setTimeout(function(){ try{ fichaIrPara(aba); }catch(e){} /* silencioso de propósito: enfeite de tela */ }, 60);   // 28/out/2026: ps-med, ps-exames e ps-atencao viraram sanfonas da aba Saúde — o fichaIrPara faz o caminho
   }
   function hospCopiar(t){
     try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(String(t||'')); zAlertao('TEXTO COPIADO', ['Cole na conversa com quem vai receber.'], {ok:true, botao:'Certo'}); return; } }catch(e){} /* silencioso de propósito: sem a área de transferência, o texto continua na tela para copiar à mão */
@@ -100391,14 +100796,14 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',tentar,{once:true});else tentar();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
-<script src="agenda-marcia/dados.js?v=2026-10-28-02"></script>
-<script src="agenda-marcia/entrevistas.js?v=2026-10-28-02"></script>
-<script src="agenda-marcia/composta.js?v=2026-10-28-02"></script>
-<script src="agenda-marcia/painel.js?v=2026-10-28-02"></script>
-<script src="marcia129/painel.js?v=2026-10-28-02"></script>
-<script src="marcia129/dados.js?v=2026-10-28-02"></script>
-<script src="marcia129/app.js?v=2026-10-28-02"></script>
-<script src="agenda-marcia/app.js?v=2026-10-28-02"></script>
+<script src="agenda-marcia/dados.js?v=2026-10-28-04"></script>
+<script src="agenda-marcia/entrevistas.js?v=2026-10-28-04"></script>
+<script src="agenda-marcia/composta.js?v=2026-10-28-04"></script>
+<script src="agenda-marcia/painel.js?v=2026-10-28-04"></script>
+<script src="marcia129/painel.js?v=2026-10-28-04"></script>
+<script src="marcia129/dados.js?v=2026-10-28-04"></script>
+<script src="marcia129/app.js?v=2026-10-28-04"></script>
+<script src="agenda-marcia/app.js?v=2026-10-28-04"></script>
 </body>
 <script>
 (function(raiz, fabrica){
