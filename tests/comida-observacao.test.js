@@ -528,11 +528,19 @@ prova('A', 'AC5.4 e AC15 — de ponta a ponta no banco de mentira: abrir e salva
   const c = cartao(almoco(S, { estadias: { e1: o.estTodas } }).grid, 'Teste 01');
   assert.ok(c.indexOf(OBS_CERTA) >= 0 && c.indexOf(OBS_ERRADA) < 0, 'o cartão mostra o texto novo');
 });
-prova('A', 'AC6 — nenhuma permissão nova: «mudar-comida-remedio» é a mesma, PERM com 45 chaves e o mesmo conteúdo da base; as três portas da tela iguais', () => {
+// Alertas fixos (28/out/2026, tests/alertas-fixos160.test.js). Antes: PERM com 45 chaves, o conteúdo inteiro idêntico ao da base.
+// Depois: 47 chaves — as duas novas, 'alerta-fixo-ligar' e 'alerta-fixo-desligar'; as 45 de antes seguem idênticas à base, chave por chave
+// e na mesma ordem. Por quê: a faixa «ATENÇÃO — LEIA ANTES» precisa de uma capacidade para ligar e outra para desligar; nenhuma regra desta
+// story (comida e remédio) mudou — só a lista cresceu, e a prova nova confere os papéis das duas.
+const PERM_SEM_ALERTA_FIXO = "(function(){ var o={}; Object.keys(PERM).filter(function(k){ return k.indexOf('alerta-fixo-')!==0; }).forEach(function(k){ o[k]=PERM[k]; }); return JSON.stringify(o); })()";
+prova('A', 'AC6 — nenhuma permissão nova: «mudar-comida-remedio» é a mesma, PERM com 48 chaves (as 45 da base + as três dos alertas fixos) e o mesmo conteúdo da base nas 45; as três portas da tela iguais', () => {
   const SBx = base();
   igual(S.J("PERM['mudar-comida-remedio']"), SBx.J("PERM['mudar-comida-remedio']"));
-  igual(S.J('Object.keys(PERM).length'), 45);
-  igual(h16(S.run('JSON.stringify(PERM)')), h16(SBx.run('JSON.stringify(PERM)')));
+  // Antes: 47 chaves. Depois: 48 — a capacidade nova 'alerta-fixo-outro' (digitar um alerta de convivência ou de comportamento: só Gestão,
+  // Supervisão e Diretoria; Adriana, 28/out/2026). Por quê: o «＋ Outro…» da faixa ATENÇÃO precisa de uma capacidade própria, mais estreita
+  // que a de ligar (a Monitora liga os prontos mas não digita). As 45 da base seguem idênticas (o filtro abaixo tira só as 'alerta-fixo-*').
+  igual(S.J('Object.keys(PERM).length'), 48);
+  igual(h16(S.run(PERM_SEM_ALERTA_FIXO)), h16(SBx.run('JSON.stringify(PERM)')));
   ['mcrPode', 'mcrBotaoHospedesHTML', 'mcrBotaoCheckinHTML', 'mcrBotaoPlantaoHTML', 'mcrAbrirDoPlantao', 'mcrAbrirEstadia'].forEach((f) => igual(h16(S.run('String(' + f + ')')), h16(SBx.run('String(' + f + ')')), f));
 });
 // Sonda R2-Q3 do QA independente, rodada 2 (defeito QA2-r4: o campo só aparecia com «Guardar também na ficha» ligado, M.ficha; sumia
@@ -809,7 +817,11 @@ prova('B', 'M1 — o hóspede que é aluno: o vermelho do Almoço é o de antes 
   const ga = alunoNoCafe(S);
   assert.ok(ga.indexOf('Teste 19') >= 0, 'o aluno está no café');
   igual(vermelhos(ga), [], 'nenhum vermelho novo');
-  igual(ga, alunoNoCafe(base()), 'o cartão do aluno no café é o da base');
+  // Antes: o cartão do aluno no Café era idêntico ao da base. Depois: idêntico à base MENOS o selo «⚠ ALERGIA A …» que a ficha com alergia ganhou
+  // (Adriana, 28/out/2026: «alergia precisa aparecer em destaque em tudo que o peludo aparecer»). Por quê: o selo é a única coisa nova no cartão;
+  // tirado o selo, o cartão tem de continuar byte a byte o da base.
+  assert.ok(ga.indexOf('<span class="alergia-selo" role="note">⚠ ALERGIA A CORANTE</span>') >= 0, 'o selo de alergia aparece no cartão do aluno no café');
+  igual(ga.split('<span class="alergia-selo" role="note">⚠ ALERGIA A CORANTE</span>').join(''), alunoNoCafe(base()), 'o cartão do aluno no café é o da base (fora o selo de alergia)');
 });
 prova('B', 'M1 — a constante da pergunta 73 em false não tira a ficha do vermelho: volta a juntar «ficha · observação», no Almoço e no Café', () => {
   fichaDoHospede(S, 'frango', 'corante');
@@ -947,7 +959,7 @@ prova('R', 'AC14.1 — área protegida: as funções ck*/ckt*/pt* e pendAvisarCh
   igual(nN, nB, 'nenhuma função nova com ck, ckt ou pt');
   const txt = (S0, ns) => ns.map((n) => n + '\n' + S0.run('String(' + n + ')')).join('\n');
   igual(h16(txt(S, nN)), h16(txt(SBx, nB)), 'o texto das ' + nN.length + ' funções');
-  igual(h16(S.run('JSON.stringify(PERM)')), h16(SBx.run('JSON.stringify(PERM)')));
+  igual(h16(S.run(PERM_SEM_ALERTA_FIXO)), h16(SBx.run('JSON.stringify(PERM)')), 'PERM igual (fora as duas capacidades dos alertas fixos)');
   const daycare = (html) => { const L = html.split('\n'); const i = L.findIndex((l) => l.indexOf('<section class="view" id="v-daycare">') >= 0); let j = i + 1; while (j < L.length && L[j].indexOf('<section class="view"') < 0) j++; return L.slice(i, j).join('\n'); };
   igual(h16(daycare(ARQ.html)), h16(daycare(arqBase().html)), '#v-daycare');
   const ver = (h) => (/const APP_VERSAO='([^']+)';/.exec(h) || [])[1];
