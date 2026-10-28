@@ -59954,7 +59954,7 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
       Object.keys(mao).forEach(function(dia){
         if(String(dia).slice(0,7)!==ym) return;
         var itens=mao[dia]||{};
-        if(Object.keys(itens).some(function(k){ return itens[k] && Object.keys(itens[k]).length; }))
+        if(Object.keys(itens).some(function(k){ var lista=k==='avaliacao'?dashAgendaMarciaFiltrar133(k,itens[k]):itens[k]; return lista && Object.keys(lista).length; }))
           DASH_CAL_TEM[dia]=true;
       });
       Object.keys(auto).forEach(function(dia){
@@ -59997,7 +59997,7 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
   function dashAgendaMarciaPublicavel133(reg){
     if(!dashAgendaMarciaRegistro133(reg))return true;
     var a=reg.det.avaliacao129||{},p=a.pagamento||{};
-    if(a.estado==='cancelada'||a.cancelada===true||a.cancelamento&&a.cancelamento.ativo===true)return false;
+    if(a.remarcacao159||a.estado==='cancelada'||a.cancelada===true||a.cancelamento&&a.cancelamento.ativo===true)return false;
     return p.recebido===true&&p.valorPagoCentavos===8000&&typeof p.autorId==='string'&&!!p.autorId.trim()&&typeof p.autorNome==='string'&&!!p.autorNome.trim()&&typeof p.ts==='number'&&Number.isFinite(p.ts)&&p.ts>0;
   }
   function dashAgendaMarciaFiltrar133(k,lista){
@@ -60052,6 +60052,15 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
       }finally{
         var liberada=await ref.transaction(function(cur){if(!cur||cur.lockAgenda133!==lease)return;var out=JSON.parse(JSON.stringify(cur)),pAtual=dashAgendaMarciaProjecao133(cur);if(pAtual&&pAtual.opId===alvo.opId&&pAtual.revisao===alvo.revisao&&resultado.ok!==true){out.planilha_tent=(Number(cur.planilha_tent)||0)+1;if(out.planilha_tent>=5)out.planilha_desisti=true;}delete out.lockTs;delete out.lockAgenda133;return out;});
         pos=liberada&&liberada.snapshot&&liberada.snapshot.val?liberada.snapshot.val():null;
+      }
+      // Atualiza apenas a avaliação remarcada do dia aberto, usando o retorno
+      // confirmado da transação. Ausência de leitura nunca é lista vazia.
+      var a159=pos&&pos.det&&pos.det.avaliacao129;
+      if(a159&&(a159.remarcacao159||a159.origem159)&&typeof DASH_DADOS!=='undefined'&&dia===dashDia()){
+        if(!DASH_DADOS.avaliacao)DASH_DADOS.avaliacao={};
+        if(dashAgendaMarciaPublicavel133(pos))DASH_DADOS.avaliacao[id]=JSON.parse(JSON.stringify(pos));
+        else delete DASH_DADOS.avaliacao[id];
+        if(typeof dashAtualizarCard==='function')dashAtualizarCard('avaliacao',{origem:'agenda-remarcar159'});
       }
       // Cancelamento concorrente vence um envio que já estava em andamento.
       var nova=dashAgendaMarciaProjecao133(pos);
