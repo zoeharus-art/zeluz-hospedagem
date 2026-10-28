@@ -676,7 +676,7 @@
   body[data-role="monitor"] #card-cadastro, body[data-role="plantonista"] #card-cadastro, body[data-role="tutor"] #card-cadastro{display:none}
   body[data-role="monitor"] #card-texto, body[data-role="plantonista"] #card-texto, body[data-role="tutor"] #card-texto{display:none}
   /* Protocolo do Plantão = SÓ o plantonista (monitor, gestão, supervisão e tutor não veem) */
-  body:not([data-role="plantonista"]) #card-checkout-plantao{display:none !important}
+  body:not([data-role="plantonista"]) #card-checkout-plantao, body:not([data-role="plantonista"]) #prevSec_plantao-protocolo{display:none !important}
   /* Onda 5 — Plantonista só RELATA: lê a Agenda de Medicação e registra a dose ("Dei agora" / avulsa),
      mas não acrescenta, edita nem remove item (isso é da Consultora/Gestão/Supervisão/Vet). Guarda dupla:
      CSS aqui (visual + trava de clique) + JS nas funções (salvarMedAgenda/magAddNovoItem/magRemoverItem). */
@@ -1077,6 +1077,11 @@
   .prev-sec-corpo{padding:2px 14px 12px}
   .prev-sec-corpo>.card{box-shadow:none;border:none;border-left:none;padding:8px 0;margin:0;background:transparent}
   .prev-sec-corpo>.card>h2:first-child{display:none}
+  /* Sanfonas das outras telas (28/out/2026): o título da Pendências com o tutor segue sendo um h2 (leitor de tela pula por título);
+     nos grids de cartões (Conferência, Check-out) a sanfona ocupa a linha inteira. */
+  h2.prev-sec-nome{margin:0;font:inherit;color:inherit;letter-spacing:inherit}
+  .vet-grid>details.prev-sec{grid-column:1/-1}
+  .prev-sec-sub{font-size:12.5px;color:var(--muted);font-weight:600;margin:6px 0 10px}
   .prev-linha{border-top:1px solid var(--line);padding:11px 0}
   .prev-linha:first-child{border-top:none}
   .prev-acoes{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
@@ -2854,8 +2859,8 @@
 .z-painel44{--p44-blue:#234d67;--p44-soft:#3a6a85;--p44-cream:#fffdf6;--p44-warm:#faf5e9;--p44-gold:#deb428;--p44-line:#e7e0d2;--p44-muted:#7c8a93;box-sizing:border-box;max-width:1160px;padding:24px 38px 52px;background:var(--p44-cream);color:var(--p44-blue);font-family:Inter,Poppins,system-ui,sans-serif}.z-painel44 *{box-sizing:border-box}.z-painel44 [hidden]{display:none!important}.z-painel44 button{font:inherit}.z-painel44 button:focus-visible{outline:3px solid rgba(222,180,40,.55);outline-offset:3px}.z-painel44__topo{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.z-painel44__saudacao .pm-saud1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.12;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2{margin:8px 0 0;font-size:16px;font-weight:600;line-height:1.45;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2 b{font-size:21px;font-weight:800;color:#a57a00}.z-painel44__saudacao .pm-saud3{max-width:54ch;margin:5px 0 0;color:var(--p44-soft);font-size:15px;font-weight:500;font-style:italic;line-height:1.5}.z-painel44__saudacao .pm-traco{display:block;width:40px;height:3px;margin-top:13px;border-radius:2px;background:linear-gradient(90deg,var(--p44-gold),#a57a00)}.z-painel44__saudacao .pm-data{margin-top:14px;color:var(--p44-muted);font-size:12px;font-weight:600}.z-painel44__selo{flex:0 0 auto;padding:8px 11px;border:1px solid var(--p44-line);border-radius:999px;background:#fff;color:var(--p44-blue);font-size:12px;font-weight:700}.z-painel44__selo:before{content:'•';margin-right:5px;color:var(--p44-gold);font-size:18px}.z-painel44__sticker{display:block;width:62px;max-width:90px;height:68px;max-height:80px;object-fit:contain;margin:4px auto 0}.z-painel44__bem-estar{display:block;width:100%;margin-bottom:18px}.z-painel44__bem-estar>*{width:100%}.z-painel44__abas{display:flex;gap:7px;margin:0 0 16px}.z-painel44__abas button{padding:10px 14px;border:1px solid var(--p44-line);border-radius:10px;background:#fff;color:var(--p44-blue);font-size:14px;font-weight:700;cursor:pointer}.z-painel44__abas button[aria-selected=true]{border-color:var(--p44-blue);background:var(--p44-blue);color:var(--p44-cream)}.z-painel44__intro{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:12px 0}.z-painel44__intro h2,.z-painel44__equipe h2{margin:0;font-size:20px}.z-painel44__intro p,.z-painel44__equipe>p{margin:5px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__contagem{color:var(--p44-muted);font-size:12px;font-weight:700}.z-painel44__temas{display:grid;gap:9px}.z-painel44__tema{overflow:hidden;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__tema-cabeca{display:grid;grid-template-columns:36px 1fr auto 20px;align-items:center;gap:10px;width:100%;padding:14px 15px;border:0;background:transparent;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__tema-icone{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--p44-warm);font-size:17px}.z-painel44__tema-titulo,.z-painel44__tema-passo{display:block}.z-painel44__tema-titulo{font-size:15px;font-weight:800}.z-painel44__tema-passo{margin-top:3px;color:var(--p44-muted);font-size:12px}.z-painel44__pill{padding:4px 8px;border-radius:999px;background:#e9f5f7;color:#226477;font-size:11px;font-weight:800}.z-painel44__seta{color:var(--p44-soft);font-size:18px;transition:transform .16s}.z-painel44__tema.aberto .z-painel44__seta{transform:rotate(90deg)}.z-painel44__tema-corpo{margin:0 12px 12px;padding:14px 15px;border-top:1px solid var(--p44-line);background:var(--p44-warm)}.z-painel44__equipe{padding:18px;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__pessoas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}.z-painel44__pessoa{display:flex;align-items:center;gap:11px;width:100%;padding:13px;border:1px solid var(--p44-line);border-radius:12px;background:#fff;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__avatar{display:grid;place-items:center;width:39px;height:39px;flex:0 0 auto;border-radius:50%;background:var(--p44-blue);color:var(--p44-cream);font-size:12px;font-weight:800}.z-painel44__pessoa-info{min-width:0}.z-painel44__pessoa strong,.z-painel44__pessoa small{display:block}.z-painel44__pessoa strong{font-size:14px}.z-painel44__pessoa small{overflow:hidden;margin-top:3px;color:var(--p44-muted);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.z-painel44__pessoa-seta{margin-left:auto;color:#a57a00;font-size:18px}.z-painel44__pessoa-detalhe{margin-top:15px}.z-painel44__pessoa-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__pessoa-secao h3{margin:0;font-size:14px}.z-painel44__pessoa-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}.z-painel44__vazio{margin:15px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__zelozinha{display:block;width:100%;margin-top:16px;padding:12px;border:1px dashed var(--p44-gold);border-radius:11px;background:var(--p44-warm);color:#805d00;text-align:left;cursor:pointer}.z-painel44__zelozinha-titulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.z-painel44__canal{padding:3px 7px;border-radius:999px;background:#fff;color:var(--p44-muted);font-size:11px}.z-painel44__zelozinha-aviso{display:block;margin-top:7px;font-size:12px;line-height:1.45}.z-painel44__perfil{margin-top:15px}.z-painel44__voltar{margin-bottom:12px;padding:8px 11px;border:1px solid var(--p44-line);border-radius:9px;background:#fff;color:var(--p44-blue);font-size:13px;font-weight:700;cursor:pointer}.z-painel44__perfil-subtitulo{margin:4px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__perfil-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__perfil-secao h3{margin:0;font-size:14px}.z-painel44__perfil-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}@media(max-width:760px){.z-painel44{padding:18px}.z-painel44__topo,.z-painel44__intro{display:block}.z-painel44__selo{display:inline-block;margin-top:13px}.z-painel44__contagem{display:block;margin-top:8px}.z-painel44__tema-cabeca{grid-template-columns:32px 1fr auto 16px;padding:12px}.z-painel44__tema-corpo{margin:0 8px 8px;padding:12px}.z-painel44__pessoas,.z-painel44__perfil-conteudo,.z-painel44__pessoa-conteudo{grid-template-columns:1fr}}
 
 </style>
-<link rel="stylesheet" href="marcia129/painel.css?v=2026-10-28-04">
-<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-10-28-04">
+<link rel="stylesheet" href="marcia129/painel.css?v=2026-10-28-05">
+<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-10-28-05">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -3466,7 +3471,8 @@
         <div class="hint">Passe o plantão de cada peludinho primeiro. Depois toque aqui: eu monto o resumo do turno, mostro para você conferir e mando ao grupo da Gestão.</div>
         <button id="btnFecharTurno" class="btn btn-primary" style="width:100%;margin-top:12px" onclick="fecharTurnoEAvisar()">Fechar o turno e avisar a Gestão</button>
       </div>
-      <div class="card" id="card-checkout-plantao" style="margin-bottom:18px">
+      <details class="prev-sec" id="prevSec_plantao-protocolo" open ontoggle="prevSecVirar('plantao-protocolo',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Protocolo do Plantão</span><span class="prev-sec-contas" id="prevConta_plantao-protocolo"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
+      <div class="card" id="card-checkout-plantao">
         <h2 style="font-size:19px">Protocolo do Plantão</h2>
         <div class="hint">Regras imprescindíveis — valem durante todo o plantão.</div>
         <ol class="protocolo-regras">
@@ -3482,16 +3488,19 @@
         <button class="btn btn-primary" style="margin-top:14px;width:100%" onclick="salvarCheckoutPlantao()">Salvar check-list do plantão</button>
         <div id="status-checkout" class="rel-status"></div>
       </div>
+      </div></details>
       <!-- ===== CAFE DA MANHA (Adriana, 13/ago/2026) ==============================
            Mora na AuAulandia, nao no Day Care: "so pega hospedes e e focada na
            AuAulandia". Mesmo protocolo do almoco — cada um come o que e dele. -->
-      <div class="card" id="card-cafe" style="margin-bottom:18px">
+      <details class="prev-sec" id="prevSec_plantao-cafe" open ontoggle="prevSecVirar('plantao-cafe',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Café da manhã</span><span class="prev-sec-contas" id="prevConta_plantao-cafe"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
+      <div class="card" id="card-cafe">
         <h2 style="font-size:19px">Café da manhã</h2>
         <div class="hint">Só quem dormiu aqui. Cada um come <strong>o que está na ficha dele</strong> — nenhuma alimentação pode ser trocada. Marque conforme for servindo.</div>
         <div id="cafeBarraTempo"></div>
         <div id="cafeResumo"></div>
         <div class="pets-grid" id="cafeGrid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))"></div>
       </div>
+      </div></details>
       <div class="pets-grid" id="hospGrid"></div>
     </div>
 
@@ -4398,27 +4407,32 @@
   </section>
 
   <section class="view" id="v-recepcao">
-    <h2 style="font-size:19px;margin-top:2px">Perguntas do Day Care</h2>
+    <details class="prev-sec" id="prevSec_rcp-chamados" ontoggle="prevSecVirar('rcp-chamados',this.open,this.dataset.padrao==='1')"><summary><h2 class="prev-sec-nome">Perguntas do Day Care</h2><span class="prev-sec-contas" id="prevConta_rcp-chamados"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
     <div class="role-note"><span data-icon="message"></span><span><strong>O Day Care precisa de uma resposta agora.</strong> Quando um FILHOt chega sem o que precisa — comida, por exemplo — a monitora pergunta aqui. Quase sempre a resposta já existe: o tutor deixou comida guardada. Responda e o nome dele aparece piscando na tela de quem está com ele.</span></div>
     <div id="chamadosRecepcaoList"></div>
+    </div></details>
 
-    <h2 style="font-size:19px;margin-top:22px">Avisos de estoque de medicação</h2>
+    <details class="prev-sec" id="prevSec_rcp-estoque" ontoggle="prevSecVirar('rcp-estoque',this.open,this.dataset.padrao==='1')"><summary><h2 class="prev-sec-nome">Avisos de estoque de medicação</h2><span class="prev-sec-contas" id="prevConta_rcp-estoque"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
     <div class="role-note"><span data-icon="paw"></span><span><strong>Avisos de estoque de medicação.</strong> Quando um remédio de um hóspede está acabando, o aviso chega aqui — rastreado. Registre cada providência (liguei para o tutor, ele traz amanhã) até resolver. Nada verbal: tudo fica escrito, com quem, quando e o que foi feito.</span></div>
     <div id="avisosEstoqueList"></div>
-    <h2 style="font-size:19px;margin-top:22px">Avisos de ração</h2>
+    </div></details>
+    <details class="prev-sec" id="prevSec_rcp-racao" ontoggle="prevSecVirar('rcp-racao',this.open,this.dataset.padrao==='1')"><summary><h2 class="prev-sec-nome">Avisos de ração</h2><span class="prev-sec-contas" id="prevConta_rcp-racao"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
     <div class="role-note"><span data-icon="paw"></span><span><strong>Ração insuficiente para a estadia.</strong> Gerado pela Conferência do check-in quando a ração pesada não cobre os dias hospedados. Mesmo padrão pendente → resolvido — registre a providência até resolver.</span></div>
     <div id="avisosRacaoList"></div>
-    <h2 style="font-size:19px;margin-top:22px">Ocorrências dos hóspedes</h2>
+    </div></details>
+    <details class="prev-sec" id="prevSec_rcp-ocorr-hosp" ontoggle="prevSecVirar('rcp-ocorr-hosp',this.open,this.dataset.padrao==='1')"><summary><h2 class="prev-sec-nome">Ocorrências dos hóspedes</h2><span class="prev-sec-contas" id="prevConta_rcp-ocorr-hosp"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
     <!-- Adriana, 04/set/2026: "o que é da hospedagem fica na hospedagem." Aqui entram SÓ as
          ocorrências nascidas na AuAulândia (Conferência do check-in e plantão). As do Day Care
          ganharam a seção própria logo abaixo — continuam com as Consultoras, que são quem fala
          com o tutor, mas sem se misturar com as da estadia. -->
     <div class="role-note"><span data-icon="paw"></span><span><strong>O que aconteceu com o FILHOt durante a estadia.</strong> Registrado por quem viu — na Conferência do check-in ou no plantão — e chega aqui para quem fala com o tutor (Consultoras e Supervisão). Depois de ligar, registre <strong>o que foi dito</strong> e marque "avisei o tutor". Nada verbal: fica escrito, com quem e quando.</span></div>
     <div id="ocorrRecepcaoList"></div>
+    </div></details>
 
-    <h2 style="font-size:19px;margin-top:22px">Ocorrências do Day Care</h2>
+    <details class="prev-sec" id="prevSec_rcp-ocorr-dc" ontoggle="prevSecVirar('rcp-ocorr-dc',this.open,this.dataset.padrao==='1')"><summary><h2 class="prev-sec-nome">Ocorrências do Day Care</h2><span class="prev-sec-contas" id="prevConta_rcp-ocorr-dc"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
     <div class="role-note"><span data-icon="paw"></span><span><strong>O que o check-in e o check-out do Day Care encontraram.</strong> Alteração no corpo ou cocô alterado vira ocorrência aqui — inclusive de hóspede que participou do Day Care durante o dia. Mesmo padrão: avise o tutor, registre o que foi dito e dê o desfecho.</span></div>
     <div id="ocorrDayCareRecepcaoList"></div>
+    </div></details>
   </section>
 
   <!-- ===== Onda 3 — CUIDADO VET (veterinária) ===== -->
@@ -17917,10 +17931,13 @@ return { criar };
       +'<button class="btn" '+(guarda.ok?'':'disabled aria-disabled="true"')+' style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="encerrarCafe()">&#9632; Encerrar</button>'
       +'</div></div>';
     var rz=document.getElementById('cafeResumo');
+    var _cafeSan=function(servidos, faltam){   // sanfona do Plantão (28/out/2026): aberta enquanto falta servir; fechada sem hóspede ou com todos servidos
+      prevSecSincronizar('plantao-cafe', faltam>0?('<span class="prev-sec-conta prev-sec-venc">'+faltam+' faltam</span>'):(servidos>0?'<span class="prev-sec-conta">tudo servido</span>':'<span class="prev-sec-conta">0</span>'), faltam>0);
+    };
     if(cafeFalhaLeitura()){ grid.innerHTML='<div class="hint" style="grid-column:1/-1"><strong>Não foi possível confirmar os registros do café.</strong> As marcas e o turno anteriores foram preservados, mas nada pode ser servido ou registrado até uma nova leitura bem-sucedida.</div>'; if(rz) rz.innerHTML=''; return; }
     if(!cafeLeituraPronta()||!leitura.pronto){ grid.innerHTML='<div class="hint" style="grid-column:1/-1">Ainda lendo os check-ins e os registros confirmados do café. Não vou montar a lista no escuro.</div>'; if(rz) rz.innerHTML=''; return; }
     var avisos=cafeAlunoAviso()+cafeAvisos(leitura.conferencias||[])+cafeAlunoPedidosHTML();
-    if(!itens.length){ grid.innerHTML=avisos+'<div class="hint" style="grid-column:1/-1">Nenhum hóspede com café confirmado no check-in para hoje.</div>'; if(rz) rz.innerHTML=''; return; }
+    if(!itens.length){ grid.innerHTML=avisos+'<div class="hint" style="grid-column:1/-1">Nenhum hóspede com café confirmado no check-in para hoje.</div>'; if(rz) rz.innerHTML=''; _cafeSan(0, 0); return; }
     var _est=itens.map(function(o){ return cafeEstado(cafeKey(o.hospede)); });
     var naochegou=_est.filter(function(e){ return e==='naochegou'; }).length;
     var servidos=_est.filter(function(e){ return e&&e!=='naochegou'; }).length;
@@ -17928,6 +17945,7 @@ return { criar };
     if(rz) rz.innerHTML='<div class="dc-resumo"><div class="dc-stat ok"><b>'+servidos+'</b>servidos</div>'
       +'<div class="dc-stat pend"><b>'+faltam+'</b>faltam</div>'
       +(naochegou?'<div class="dc-stat"><b>'+naochegou+'</b>não chegou ainda</div>':'')+'</div>';
+    _cafeSan(servidos, faltam);
     grid.innerHTML=avisos+itens.map(function(o){
       var h=o.hospede||{}, plano=o.plano||{}, por=o.porcao||{}, k=cafeKey(h), m=cafeEstado(k), pendente=!!cafeMarcasPendentes[k], rf=h.cafeAluno?'':alimRestricaoDaFicha(h).join(' · '), obsCi=alimObsCheckinCartao(rf, plano.restricao);
       var foto=(typeof fotoDe==='function')?fotoDe(h):'';
@@ -20430,6 +20448,9 @@ return { criar };
   }
 
   // ---- Recepção: lista e trilha dos avisos de estoque (mesmo padrão pendente→resolvido da ração) ----
+  // As cinco sanfonas de «Pendências com o tutor» (28/out/2026): o título traz a conta do que está sem desfecho; com pendência
+  // a sanfona nasce aberta, sem nenhuma ela nasce fechada (mostrando 0); o que a pessoa abriu ou fechou o aparelho lembra.
+  function rcpSanfona(id, n, rotulo){ prevSecSincronizar(id, prevSecContaPend(n, rotulo), (Number(n)||0)>0); }
   function carregarAvisosEstoque(){ renderAvisosEstoque(); renderAvisosRacao(); renderOcorrenciasRecepcao(); try{ carregarOcorrenciasDayCare(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */ try{ renderChamadosRecepcao(); }catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */ }
   // ===== O QUE O DAY CARE PERGUNTOU À RECEPÇÃO (Adriana, 13/ago/2026) ===============
   // "Kakinho veio para o Day Care, pela ficha ele almoça, mas não trouxe comida. Qual a
@@ -20438,7 +20459,8 @@ return { criar };
   function renderChamadosRecepcao(){
     var el=document.getElementById('chamadosRecepcaoList'); if(!el) return;
     var ids=Object.keys(PT_CHAMADOS||{});
-    if(!ids.length){ el.innerHTML='<div class="hint" style="color:var(--crm-ok);font-weight:700">Nenhuma pergunta do Day Care agora.</div>'; return; }
+    if(!ids.length){ el.innerHTML='<div class="hint" style="color:var(--crm-ok);font-weight:700">Nenhuma pergunta do Day Care agora.</div>'; rcpSanfona('rcp-chamados', 0, ''); return; }
+    rcpSanfona('rcp-chamados', ids.filter(function(k){ var c=PT_CHAMADOS[k]||{}; return !c.cancelado && !c.resposta; }).length, 'aguardando');
     ids.sort(function(a,b){ return (PT_CHAMADOS[a].ts||0)-(PT_CHAMADOS[b].ts||0); });
     el.innerHTML=ids.map(function(k){
       var c=PT_CHAMADOS[k]||{};
@@ -20623,6 +20645,7 @@ return { criar };
       abertos.length, fechados.length, 'REMÉDIO(S) ACABANDO — sem providência registrada',
       abertos.map(function(id){ return (AVISOS_ESTOQUE_CACHE[id]||{}).pet||''; }).filter(Boolean),
       'Nenhum aviso de estoque de medicação. Tudo em dia por aqui.', 'gvEstoque')+avisoRetiradosHTML('estoque', retirados);
+    rcpSanfona('rcp-estoque', abertos.length, 'sem providência');
   }
   function avisoAddEntrada(id){
     var acao=((document.getElementById('avr_acao_'+id)||{}).value||'').trim();
@@ -21167,14 +21190,20 @@ return { criar };
   }
   function renderOcorrenciasRecepcao(){
     var el=document.getElementById('ocorrRecepcaoList');
-    if(el) el.innerHTML=_ocorrPainelHTML(
-      ocorrenciasLoja().sort(function(a,b){ return (b.ts||0)-(a.ts||0); }), 'gvOcorr')
-      +cfOcorrAnuladasHTML(ocorrenciasLojaAnuladas());   // 6.67 (AC8.4): as da hospedagem lançadas por engano, riscadas
+    if(el){
+      var _lj=ocorrenciasLoja().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+      el.innerHTML=_ocorrPainelHTML(_lj, 'gvOcorr')
+        +cfOcorrAnuladasHTML(ocorrenciasLojaAnuladas());   // 6.67 (AC8.4): as da hospedagem lançadas por engano, riscadas
+      rcpSanfona('rcp-ocorr-hosp', _lj.filter(function(o){ return !o.avisado; }).length, 'sem desfecho');
+    }
     var elDc=document.getElementById('ocorrDayCareRecepcaoList');
     // 6.56: depois da fila e dos resolvidos, a gaveta das «Lançadas por engano», riscadas.
-    if(elDc) elDc.innerHTML=_ocorrPainelHTML(
-      ocorrenciasDayCare().sort(function(a,b){ return (b.ts||0)-(a.ts||0); }), 'gvOcorrDc')
-      +ocorrDcAnuladasHTML(ocorrenciasDayCareAnuladas());
+    if(elDc){
+      var _ld=ocorrenciasDayCare().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+      elDc.innerHTML=_ocorrPainelHTML(_ld, 'gvOcorrDc')
+        +ocorrDcAnuladasHTML(ocorrenciasDayCareAnuladas());
+      rcpSanfona('rcp-ocorr-dc', _ld.filter(function(o){ return !o.avisado; }).length, 'sem desfecho');
+    }
   }
   function _ocorrSplit(id){ var i=(id||'').indexOf('__'); return i<0?null:{estadiaId:id.slice(0,i), ocId:id.slice(i+2)}; }
   // Desfecho da ocorrência — vale para as duas origens (hospedagem e Day Care).
@@ -22286,6 +22315,7 @@ return { criar };
       abertos.length, fechados.length, 'SEM RAÇÃO SUFICIENTE — sem providência registrada',
       abertos.map(function(id){ return (AVISOS_RACAO_CACHE[id]||{}).pet||''; }).filter(Boolean),
       'Nenhum aviso de ração. Tudo em dia por aqui.', 'gvRacao')+avisoRetiradosHTML('racao', retirados);
+    rcpSanfona('rcp-racao', abertos.length, 'sem providência');
   }
   function avisoRacaoAddEntrada(id){
     var acao=((document.getElementById('avrr_acao_'+id)||{}).value||'').trim();
@@ -31414,7 +31444,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-10-28-04';
+  const APP_VERSAO='2026-10-28-05';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -44211,6 +44241,23 @@ return { criar };
       +'<span class="prev-sec-seta" aria-hidden="true">⌄</span></summary>'
       +'<div class="prev-sec-corpo">'+corpo+'</div></details>';
   }
+  // Sanfona que já está escrita no HTML (Pendências com o tutor, Protocolo e Café do Plantão): o conteúdo de dentro é
+  // preenchido por id por outras funções, então o <details> fica fixo e esta função só põe o selo da conta, o padrão de
+  // nascença (`data-padrao`, que o ontoggle da casca lê) e o aberto/fechado guardado no aparelho (28/out/2026).
+  function prevSecSincronizar(id, contaHTML, padraoAberta){
+    try{
+      var sec=document.getElementById('prevSec_'+id); if(!sec) return;
+      var ct=document.getElementById('prevConta_'+id); if(ct && contaHTML!=null) ct.innerHTML=contaHTML;
+      sec.dataset.padrao=padraoAberta?'1':'0';
+      var ab=prevSecAberta(id, !!padraoAberta);
+      if(sec.open!==ab) sec.open=ab;
+    }catch(e){} /* silencioso de propósito: enfeite de tela (selo e aberto/fechado) — falhar não muda dado nenhum */
+  }
+  // O selo da conta de uma sanfona de pendência: vermelho quando há o que fazer, discreto no zero.
+  function prevSecContaPend(n, rotulo){
+    n=Number(n)||0;
+    return '<span class="prev-sec-conta'+(n>0?' prev-sec-venc':'')+'">'+n+(n>0&&rotulo?(' '+rotulo):'')+'</span>';
+  }
   function prevSecoesItensHTML(lista){
     var hoje=hojeISO(), busca=String((document.getElementById('prevBusca')||{}).value||'').trim();
     var ordem={invalida:0, venc:1, sem:2, avencer:3};
@@ -50431,6 +50478,7 @@ return { criar };
     dcAtiv='cafe';
     if(typeof irParaView==='function') irParaView('hospedagem');
     try{ cafeCarregar(); }catch(e){}
+    try{ var _sc=document.getElementById('prevSec_plantao-cafe'); if(_sc && !_sc.open) _sc.open=true; }catch(e){} /* silencioso de propósito: enfeite de tela — a sanfona do Café abre para quem veio atrás dele */
     setTimeout(function(){ try{ var card=document.getElementById('card-cafe'); if(card) card.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} },60);
     if(typeof closeNav==='function') closeNav();
     return true;
@@ -58723,6 +58771,9 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
     if(st){ st.style.color='var(--crm-ok)'; st.textContent='✅ Check-list do plantão salvo! Bom descanso.'; } }
   function renderCheckoutPlantao(){ const el=document.getElementById('checkoutPlantaoList'); if(!el) return;
     el.innerHTML=CHECKOUT_PLANTAO.map((t,i)=>{ const on=!!coPlantao[i]; return `<label class="todo-item ${on?'on':''}" onclick="toggleCheckoutPlantao(${i})"><span class="todo-box">${on?'&#10003;':''}</span>${t}</label>`; }).join('');
+    // Sanfona (28/out/2026): o selo diz quantos itens do check-list já foram; nasce aberta enquanto falta item, fechada com tudo feito.
+    const feitos=CHECKOUT_PLANTAO.filter((t,i)=>!!coPlantao[i]).length, falta=CHECKOUT_PLANTAO.length-feitos;
+    prevSecSincronizar('plantao-protocolo', '<span class="prev-sec-conta'+(falta>0?' prev-sec-venc':'')+'">'+feitos+' de '+CHECKOUT_PLANTAO.length+'</span>', falta>0);
   }
   carregarCheckoutPlantao();
 
@@ -68653,14 +68704,12 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
       var aberto=null;
       if(PREV_CORRIGE_ORIGEM==='resumo')
         (g.alvos||[]).forEach(function(a){ if(!aberto && prevCorrigeAlvo(a.chave,a.k)===PREV_CORRIGE_ABERTO) aberto=a; });
-      h+='<div style="margin-top:9px">'
-        +'<div style="font-size:12.5px;font-weight:800;color:'
-        +(g.v==='aberto'?'#1F5F69':'var(--z-blue)')+'">'+escAttr(g.rotulo)
-        +' <span style="opacity:.65">('+g.nomes.length+')</span></div>'
-        +'<div style="font-size:14px;font-weight:600;color:var(--z-blue);line-height:1.8;display:flex;flex-wrap:wrap;gap:6px;align-items:center">'
+      // Cada grupo é uma sanfona (28/out/2026, prevSecHTML, ids «venc-g-»): quem está devendo exige ação, então nasce aberta; o painel
+      // de correção aberto por um toque num nome mantém a sua sanfona aberta (forçada, sem gravar a escolha).
+      h+=prevSecHTML('venc-g-'+g.v, g.rotulo+' ('+g.nomes.length+')', '',
+        '<div style="font-size:14px;font-weight:600;color:var(--z-blue);line-height:1.8;display:flex;flex-wrap:wrap;gap:6px;align-items:center">'
         +linha+'</div>'
-        +(aberto?prevCorrigePainelHTML(aberto.chave,'venc',hoje,'resumo'):'')
-        +'</div>';
+        +(aberto?prevCorrigePainelHTML(aberto.chave,'venc',hoje,'resumo'):''), !!aberto, true);
     });
     return h+'<textarea id="vencResumoTxt" class="gest-txt" rows="8" style="width:100%;display:none;margin-top:10px"></textarea></div>';
   }
@@ -68750,14 +68799,20 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
       +vencResumoHTML(L, dia, hoje)
       // O quadro das respostas pendentes de TODOS os dias, aqui também: a consultora que
       // abre esta tela precisa ver o que ficou para trás sem trocar de tela.
-      +'<div class="card"><h2 style="font-size:18px;margin-bottom:2px">Respostas pendentes</h2>'
-      +'<div class="hint" style="margin-bottom:6px">Mensagens já mandadas, de <strong>qualquer dia</strong>, que ainda não tiveram resposta. '
-      +'Responda aqui mesmo — o assunto só fecha quando o que o tutor disse estiver registrado.</div>'
-      +vencPendListaHTML(0)+'</div>');
+      +vencPendSanfonaHTML());
     L.forEach(function(o){ h+=vencCartaoHTML(o, dia, hoje); });
     raiz.innerHTML=h;
     try{ vencAtualizarBadge(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
     try{ vencMarcarDiaAtivo(); }catch(e){ /* silencioso de propósito: enfeite de menu — falhar não muda dado nenhum */ }
+  }
+  // «Respostas pendentes» como sanfona (28/out/2026, prevSecHTML, id «venc-pend»): com resposta pendente nasce aberta; sem nenhuma, fechada, com 0.
+  function vencPendSanfonaHTML(){
+    var c=null; try{ c=vencPendContagem(); }catch(e){ c=null; } /* silencioso de propósito: sem a conta a sanfona sai sem selo e a lista continua dizendo o que há */
+    var n=c?c.total:0;
+    return prevSecHTML('venc-pend','Respostas pendentes', c?prevSecContaPend(n,'sem resposta'):'',
+      '<div class="hint" style="margin-bottom:6px">Mensagens já mandadas, de <strong>qualquer dia</strong>, que ainda não tiveram resposta. '
+      +'Responda aqui mesmo — o assunto só fecha quando o que o tutor disse estiver registrado.</div>'
+      +vencPendListaHTML(0), false, !c||n>0);
   }
   function vencCartaoHTML(o, dia, hoje){
     var r=vencRegDe(o.chave)||{};
@@ -88282,7 +88337,8 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     var tit=function(txt,cor,sub){ return '<div style="grid-column:1/-1;margin:4px 0 2px"><div style="font-weight:800;font-size:16px;color:'+cor+'">'+txt+'</div>'+(sub?'<div style="font-size:12.5px;color:var(--muted);font-weight:600">'+sub+'</div>':'')+'</div>'; };
     var h='';
     if(idxPend.length) h+=tit('⚠️ FALTA CONFERIR ('+idxPend.length+')','#B3261E','Confira estes antes de qualquer outra coisa.')+grade(idxPend);
-    if(idxSem.length) h+=tit('Sem check-in ('+idxSem.length+')','var(--muted)','Estão hospedados mas ninguém fez o check-in — avise a recepção.')+grade(idxSem);
+    // Sanfona (28/out/2026, prevSecHTML, id «conf-»): o que exige ação hoje nasce aberta — a recepção precisa ser avisada.
+    if(idxSem.length) h+=prevSecHTML('conf-sem-checkin','Sem check-in ('+idxSem.length+')','','<div class="prev-sec-sub">Estão hospedados mas ninguém fez o check-in — avise a recepção.</div>'+grade(idxSem),false,true);
     // Quem já foi embora sai daqui, mas não some calado: a saída em aberto é trabalho da recepção.
     try{
       var _venc=estadiasVencidas();
@@ -90221,11 +90277,11 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       if(String(e.status||'')==='finalizada' && e.checkout && e.checkout.ts && hospIsoDe(e.checkout.ts)===hoje) L.push({id:id, e:e}); }); }catch(x){ L=[]; } /* silencioso de propósito: sem as estadias, a lista fica vazia */
     if(!L.length) return '';
     L.sort(function(a, b){ return (b.e.checkout.ts||0)-(a.e.checkout.ts||0); });
-    return '<div style="grid-column:1/-1;margin:14px 0 2px"><div style="font-weight:800;font-size:16px;color:var(--muted)">Check-outs de hoje ('+L.length+')</div>'
-      +'<div style="font-size:12.5px;color:var(--muted);font-weight:600">A estadia que saiu errada (o tutor errado, a assinatura ruim) volta pela Gestão.</div>'
-      +L.map(function(o){ return '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding:8px 0">'
+    // Sanfona (28/out/2026): já saíram e foram assinados — concluído, nasce fechada.
+    return coSanfonaHTML('feitos','Check-outs de hoje ('+L.length+')','A estadia que saiu errada (o tutor errado, a assinatura ruim) volta pela Gestão.',
+      L.map(function(o){ return '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding:8px 0">'
         +'<div style="font-weight:800;color:var(--z-blue)">'+esc(o.e.nome||'—')+' <span style="font-weight:600;font-size:12.5px;color:var(--muted)">saiu às '+esc(ac667Hora(o.e.checkout.ts))+(o.e.checkout.assinado_por?(' · assinou '+esc(o.e.checkout.assinado_por)):'')+'</span></div>'
-        +'<button type="button" class="btn" style="min-height:44px;padding:8px 14px;font-weight:800;background:var(--crm-critico);color:#fff;border:0;border-radius:12px" onclick="coCheckoutReabrirAbrir(\''+jsAspas(o.id)+'\')">'+(CO_REABRIR_MEIO[o.id]?'Terminar agora (o check-out ainda não voltou)':'Reabrir o check-out')+'</button></div>'; }).join('')+'</div>';
+        +'<button type="button" class="btn" style="min-height:44px;padding:8px 14px;font-weight:800;background:var(--crm-critico);color:#fff;border:0;border-radius:12px" onclick="coCheckoutReabrirAbrir(\''+jsAspas(o.id)+'\')">'+(CO_REABRIR_MEIO[o.id]?'Terminar agora (o check-out ainda não voltou)':'Reabrir o check-out')+'</button></div>'; }).join(''), false);
   }
   // ---- Os pontos corrigíveis no Ritmo do Time (AC12.5) -------------------------------------
   var RITMO_PT_V={mes:'', v:{}};
@@ -90766,6 +90822,11 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
         +'</div>';
     });
   }
+  // Um bloco de «Quem vai embora hoje» como sanfona (28/out/2026, prevSecHTML, ids «saida-mon-» na tela dos monitores e «saida-rec-» na
+  // das consultoras): o título e o texto de apoio são os de antes; o que exige ação hoje nasce aberto, o concluído nasce fechado.
+  function coSanfonaHTML(id, titulo, sub, corpo, aberta){
+    return prevSecHTML('saida-'+(coModo==='conferencia'?'rec':'mon')+'-'+id, titulo, '', (sub?'<div class="prev-sec-sub">'+sub+'</div>':'')+corpo, false, aberta);
+  }
   function coRenderLista(){
     var el=document.getElementById('coGrid'); if(!el) return;
     // Não trate uma fonte ainda pendente como ausência de saídas; o ouvinte de estadias redesenha ao concluir.
@@ -90804,8 +90865,8 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     var grade=function(arr){ return '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">'+arr.map(card).join('')+'</div>'; };
     // As duas abas partem da mesma estadia formal e do mesmo cartão/ID. Só muda a orientação da etapa.
     var blocoSaidasHoje=function(){ if(!saiHoje.length) return ''; var recepcao=(coModo==='conferencia');
-      return tit('Quem vai embora hoje ('+saiHoje.length+')',recepcao?'var(--muted)':'#B3261E',
-        recepcao?'Acompanhe a etapa mostrada em cada cartão; a recepção só confere após o preparo.':'Veja a etapa mostrada em cada cartão e prepare somente quem ainda está A PREPARAR.')+grade(saiHoje); };
+      return coSanfonaHTML('hoje','Quem vai embora hoje ('+saiHoje.length+')',
+        recepcao?'Acompanhe a etapa mostrada em cada cartão; a recepção só confere após o preparo.':'Veja a etapa mostrada em cada cartão e prepare somente quem ainda está A PREPARAR.',grade(saiHoje),true); };
     var h='';
     if(coModo==='conferencia'){
       // Tela das consultoras: só quem os monitores já juntaram.
@@ -90814,19 +90875,19 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
           +(saiHoje.length?('<br><br><strong>'+saiHoje.length+'</strong> sai(em) hoje e ainda está(ão) sendo preparado(s) lá dentro.'):'')+'</div>';
         h+=blocoSaidasHoje();
       } else {
-        if(prontos.length) h+=tit('Conferir com o tutor e assinar ('+prontos.length+')','#1E8449','A bolsa já foi montada. Passe item por item COM O TUTOR, colha a assinatura e entregue o PDF.')+grade(prontos);
+        if(prontos.length) h+=coSanfonaHTML('conferir','Conferir com o tutor e assinar ('+prontos.length+')','A bolsa já foi montada. Passe item por item COM O TUTOR, colha a assinatura e entregue o PDF.',grade(prontos),true);
         h+=blocoSaidasHoje();
       }
-      if(saiAmanha.length) h+=tit('Saem AMANHÃ ('+saiAmanha.length+')','#DEB428','Avise a monitora para começar a juntar hoje — a saída se prepara na véspera.')+grade(saiAmanha);
+      if(saiAmanha.length) h+=coSanfonaHTML('amanha','Saem AMANHÃ ('+saiAmanha.length+')','Avise a monitora para começar a juntar hoje — a saída se prepara na véspera.',grade(saiAmanha),true);
       h+=coAvisoVencidas(vencidas,tit,grade);
       h+=coCheckoutsDeHojeHTML();   // 6.67 (AC12.1)
       el.innerHTML=h; return;
     }
     // Tela dos monitores: o que precisa ser juntado.
     h+=blocoSaidasHoje();
-    if(saiAmanha.length) h+=tit('Saem AMANHÃ — já pode ir juntando ('+saiAmanha.length+')','#DEB428','')+grade(saiAmanha);
-    if(resto.length) h+=tit('Outras estadias em curso ('+resto.length+')','var(--muted)','Ainda não é o dia da saída — só entre aqui se o tutor antecipou.')+grade(resto);
-    if(prontos.length) h+=tit('✅ Já entregues à recepção ('+prontos.length+')','#1E8449','Você já juntou. Agora é a consultora que confere com o tutor.')+grade(prontos);
+    if(saiAmanha.length) h+=coSanfonaHTML('amanha','Saem AMANHÃ — já pode ir juntando ('+saiAmanha.length+')','',grade(saiAmanha),true);
+    if(resto.length) h+=coSanfonaHTML('resto','Outras estadias em curso ('+resto.length+')','Ainda não é o dia da saída — só entre aqui se o tutor antecipou.',grade(resto),false);
+    if(prontos.length) h+=coSanfonaHTML('entregues','✅ Já entregues à recepção ('+prontos.length+')','Você já juntou. Agora é a consultora que confere com o tutor.',grade(prontos),false);
     h+=coAvisoVencidas(vencidas,tit,grade);
     if(!h) h='<div class="av-empty" style="grid-column:1/-1"><div class="big">Nenhum hóspede para sair</div>Quando alguém tiver saída marcada, ele aparece aqui.</div>';
     if(coEhRecepcao()) h+=coCheckoutsDeHojeHTML();   // 6.67 (AC12.1)
@@ -90836,9 +90897,9 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
   // aberto que estava entupindo a Conferência (Stopa saiu em 25/jul e ainda aparecia).
   function coAvisoVencidas(vencidas,tit,grade){
     if(!vencidas||!vencidas.length) return '';
-    return tit('⏳ Passaram da data e continuam abertas ('+vencidas.length+')','#B3261E',
-      'A saída nunca foi registrada. Enquanto ficarem assim, eles voltam a aparecer nas listas do dia. Abra cada um e finalize o check-out — ou corrija a data em Hóspedes de hoje.')
-      +grade(vencidas);
+    return coSanfonaHTML('vencidas','⏳ Passaram da data e continuam abertas ('+vencidas.length+')',
+      'A saída nunca foi registrada. Enquanto ficarem assim, eles voltam a aparecer nas listas do dia. Abra cada um e finalize o check-out — ou corrija a data em Hóspedes de hoje.',
+      grade(vencidas),true);
   }
   // ===== ITEM 2 — CHECK-OUT EM DUAS ETAPAS ==========================================
   // Adriana: "quando vai embora, o peludinho passa por um check-out (pelos monitores,
@@ -101394,14 +101455,14 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',tentar,{once:true});else tentar();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
-<script src="agenda-marcia/dados.js?v=2026-10-28-04"></script>
-<script src="agenda-marcia/entrevistas.js?v=2026-10-28-04"></script>
-<script src="agenda-marcia/composta.js?v=2026-10-28-04"></script>
-<script src="agenda-marcia/painel.js?v=2026-10-28-04"></script>
-<script src="marcia129/painel.js?v=2026-10-28-04"></script>
-<script src="marcia129/dados.js?v=2026-10-28-04"></script>
-<script src="marcia129/app.js?v=2026-10-28-04"></script>
-<script src="agenda-marcia/app.js?v=2026-10-28-04"></script>
+<script src="agenda-marcia/dados.js?v=2026-10-28-05"></script>
+<script src="agenda-marcia/entrevistas.js?v=2026-10-28-05"></script>
+<script src="agenda-marcia/composta.js?v=2026-10-28-05"></script>
+<script src="agenda-marcia/painel.js?v=2026-10-28-05"></script>
+<script src="marcia129/painel.js?v=2026-10-28-05"></script>
+<script src="marcia129/dados.js?v=2026-10-28-05"></script>
+<script src="marcia129/app.js?v=2026-10-28-05"></script>
+<script src="agenda-marcia/app.js?v=2026-10-28-05"></script>
 </body>
 <script>
 (function(raiz, fabrica){
