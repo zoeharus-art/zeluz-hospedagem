@@ -14,7 +14,11 @@
  *   MOSTRAR_PEDIDOS=1 node tools/montar-site.js ...     mostra quem pede cada arquivo (página:linha)
  *
  *   Sai com código 0 quando aprova e 1 em qualquer falha. Usa só módulos do Node (fs, path,
- *   child_process), roda no Node 18 ou mais novo, sem `npm install` e sem rede.
+ *   child_process) e o acorn guardado em tools/vendor; roda no Node 18 ou mais novo, sem
+ *   `npm install` e sem rede.
+ *
+ *   Na cópia, .html e .js vão para o ar SEM COMENTÁRIOS (tools/tirar-comentarios.js, com a prova
+ *   de que o código ficou igual peça por peça). O repositório continua com todos os comentários.
  *
  *   A pasta de saída é APAGADA antes de montar, então só vale pasta DENTRO do repositório, sem nome
  *   oculto (nada de .git), sem arquivo versionado e sem .git dentro. Se ela já existe, só é apagada
@@ -50,6 +54,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const tirar = require('./tirar-comentarios.js');
 
 const RAIZ = path.resolve(__dirname, '..');
 const MODOS_ARQUIVO = new Set(['100644', '100755']);
@@ -570,11 +575,35 @@ function listarSaida(dir) {
   return { arquivos: arquivos, problemas: problemas };
 }
 
+/**
+ * Conteúdo de .html e .js para o ar, sem os comentários (tools/tirar-comentarios.js). Devolve null
+ * quando o arquivo deve ir como está: não é texto UTF-8 limpo, ou nada saiu. Nunca bloqueia.
+ */
+function semComentarios(origem, c, relatorio) {
+  if (!/\.(?:html?|js)$/i.test(c)) return null;
+  const bruto = fs.readFileSync(origem);
+  const texto = bruto.toString('utf8');
+  if (!Buffer.from(texto, 'utf8').equals(bruto)) { relatorio.recusados.push(c + ': não é UTF-8 limpo'); return null; }
+  let r;
+  try {
+    r = /\.js$/i.test(c) ? tirar.tirarDeJS(texto) : tirar.tirarDeHTML(texto);
+  } catch (e) { relatorio.recusados.push(c + ': ' + e.message); return null; }
+  if (r.ok === false) { relatorio.recusados.push(c + ': ' + r.motivo); return null; }
+  (r.recusados || []).forEach(function (m) { relatorio.recusados.push(c + ': ' + m); });
+  if (!r.tirou) return null;
+  const saida = Buffer.from(r.texto, 'utf8');
+  relatorio.bytes += bruto.length - saida.length;
+  return saida;
+}
+
 function copiarEConferir(publicados, raiz, saidaAbs) {
+  const comentarios = { bytes: 0, recusados: [] };
   publicados.forEach(function (c) {
     const destino = path.join(saidaAbs, c);
     fs.mkdirSync(path.dirname(destino), { recursive: true });
-    fs.copyFileSync(path.join(raiz, c), destino);
+    const limpo = semComentarios(path.join(raiz, c), c, comentarios);
+    if (limpo) fs.writeFileSync(destino, limpo);
+    else fs.copyFileSync(path.join(raiz, c), destino);
   });
   // Conferência final: a saída é exatamente a lista; nada da regra fixa, nada oculto, nenhum link.
   const problemas = [];
@@ -590,7 +619,7 @@ function copiarEConferir(publicados, raiz, saidaAbs) {
   publicados.forEach(function (c) { if (!real.has(c)) problemas.push(c + ': está na lista e não chegou à saída.'); });
   let bytes = 0;
   ls.arquivos.forEach(function (a) { bytes += fs.statSync(path.join(saidaAbs, a)).size; });
-  return { problemas: problemas, bytes: bytes, total: ls.arquivos.length };
+  return { problemas: problemas, bytes: bytes, total: ls.arquivos.length, comentarios: comentarios };
 }
 
 function formatarNumero(n) {
@@ -659,6 +688,8 @@ function principal(argv) {
   }
   marcarSaida(RAIZ, saidaNoRepo);                              // da próxima vez, o montador sabe que a pasta é dele
   console.log('APROVADO: ' + feito.total + ' arquivos, ' + formatarNumero(feito.bytes) + ' bytes; ' + prova.pedidos.size + ' arquivos pedidos pelas telas, todos na lista.');
+  console.log('Comentários: ' + formatarNumero(feito.comentarios.bytes) + ' bytes a menos no ar (o repositório continua com eles).');
+  feito.comentarios.recusados.forEach(function (m) { console.log('  foi como estava: ' + m); });
   const relSaida = path.relative(process.cwd(), saidaAbs);
   const mostraSaida = relSaida.indexOf('..') === 0 || path.isAbsolute(relSaida) ? saidaAbs : relSaida;
   console.log('(' + entradas.length + ' entradas + ' + (feito.total - entradas.length) + ' arquivos = ' + feito.total + ' publicados em ' + mostraSaida.split(path.sep).join('/') + '/)');

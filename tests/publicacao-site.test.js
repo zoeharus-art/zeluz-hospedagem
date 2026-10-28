@@ -80,6 +80,9 @@ function criarBase() {
     copiar(origem, path.join(BASE, i.caminho));
   });
   copiar(MONTADOR, path.join(BASE, 'tools', 'montar-site.js'));
+  // O montador tira os comentários na cópia (tools/tirar-comentarios.js + o acorn em tools/vendor).
+  copiar(path.join(path.dirname(MONTADOR), 'tirar-comentarios.js'), path.join(BASE, 'tools', 'tirar-comentarios.js'));
+  fs.cpSync(path.join(path.dirname(MONTADOR), 'vendor'), path.join(BASE, 'tools', 'vendor'), { recursive: true });
   copiar(LISTA, path.join(BASE, '.github', 'site-permitidos.txt'));
   git(BASE, ['init', '-q']);
   git(BASE, ['add', '-A']);
