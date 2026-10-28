@@ -302,7 +302,7 @@
     if (!pronto(fontes.dashboard)) return { estado: falhou(fontes.dashboard) ? 'falha' : 'carregando', itens: [] };
     var peludinhos = lista(cad.peludinhos), grupo = valor(fontes.dashboard).avaliacao;
     var fonteConferenciaPronta = pronto(fontes.avaliacoesGestao), conferencias = valor(fontes.avaliacoesGestao);
-    var itens = registros(grupo).filter(function(it){var a=objeto(objeto(it.reg.det).avaliacao129);return a.estado!=='cancelada'&&objeto(a.cancelamento).ativo!==true;}).map(function (it, ordem) {
+    var itens = registros(grupo).filter(function(it){var a=objeto(objeto(it.reg.det).avaliacao129);return !a.remarcacao159&&a.estado!=='remarcada'&&a.estado!=='cancelada'&&objeto(a.cancelamento).ativo!==true;}).map(function (it, ordem) {
       var p = cad.pronto === true ? associarCadastro(deps, peludinhos, it.reg, false) : null;
       var v = separarValor(it.reg), conf = conferenciaEfetiva(deps, dia, p, it.reg, conferencias[it.id], fonteConferenciaPronta);
       return {
@@ -794,7 +794,7 @@
           if (autor.id !== autorInicio.id || autor.nome !== autorInicio.nome) { motivo131 = 'AUTORIA_ALTERADA'; return; }
           atual = objeto(atual);
           var det = objeto(atual.det), aAtual = objeto(det.avaliacao129), revisaoReal = Number(aAtual.revisao) || 0;
-          if (!agendaMarcia131(atual) || revisaoReal !== revisaoEsperada || fingerprintAgenda131(atual) !== fingerprintEsperado) {
+          if (aAtual.remarcacao159 || aAtual.estado === 'remarcada' || !agendaMarcia131(atual) || revisaoReal !== revisaoEsperada || fingerprintAgenda131(atual) !== fingerprintEsperado) {
             motivo131 = 'AVALIACAO_DESATUALIZADA'; return;
           }
           var rel = relogioSP(deps.agora), revisao = revisaoReal + 1, a = copiar(aAtual), reg = copiar(atual);

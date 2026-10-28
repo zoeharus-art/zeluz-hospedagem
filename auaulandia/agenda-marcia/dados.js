@@ -128,10 +128,11 @@
   function publicavel(reg) {
     reg = objeto(reg);
     var a = objeto(objeto(reg.det).avaliacao129);
-    return pagamentoSeguro(a.pagamento).recebido === true && a.estado !== 'cancelada' && cancelamentoSeguro(a.cancelamento).ativo !== true;
+    return !a.remarcacao159 && pagamentoSeguro(a.pagamento).recebido === true && a.estado !== 'cancelada' && cancelamentoSeguro(a.cancelamento).ativo !== true;
   }
   function estadoRegistro(reg) {
     var a = objeto(objeto(objeto(reg).det).avaliacao129);
+    if (a.remarcacao159) return 'remarcada';
     if (a.estado === 'cancelada' || cancelamentoSeguro(a.cancelamento).ativo) return 'cancelada';
     return publicavel(reg) ? 'confirmada' : 'pendente';
   }
@@ -178,7 +179,7 @@
       pagamento: pagamentoSeguro(a.pagamento), revisao: Number(a.revisao) || 0,
       autorId: texto(a.autorId), autorNome: texto(a.autorNome), ts: Number(a.ts) || 0, quando: texto(a.quando),
       agendaMarcia: marcada, estado: estado, confirmada: estado === 'confirmada', cancelada: estado === 'cancelada',
-      cancelamento: canc, projecao: copiar(objeto(a.projecao))
+      cancelamento: canc, remarcacao159: copiar(a.remarcacao159 || null), projecao: copiar(objeto(a.projecao))
     };
   }
   function serialCampos(d) {
@@ -189,7 +190,7 @@
       experiencia: d.experiencia, saude: d.saude, observacoes: d.observacoes,
       pagamento: { recebido: d.pagamento.recebido, valorPagoCentavos: d.pagamento.valorPagoCentavos,
         autorId: d.pagamento.autorId, ts: d.pagamento.ts },
-      estado: d.estado, cancelamento: { ativo: canc.ativo === true, autorId: texto(canc.autorId),
+      remarcacao159: d.remarcacao159, estado: d.estado, cancelamento: { ativo: canc.ativo === true, autorId: texto(canc.autorId),
         ts: Number.isFinite(canc.ts) ? canc.ts : 0, motivo: texto(canc.motivo) }
     };
     if(d.vacina.plano||d.vermifugo.plano||d.carrapaticida.plano)serial.planos=[d.vacina,d.vermifugo,d.carrapaticida].map(function(v){return [v.plano||'',v.detalhe||''];});
@@ -206,7 +207,7 @@
       vacina: d.vacina, vermifugo: d.vermifugo, carrapaticida: d.carrapaticida,
       experiencia: d.experiencia, saude: d.saude, observacoes: d.observacoes,
       pagamento: { recebido: d.pagamento.recebido, valorCent: d.pagamento.valorPagoCentavos, quem: d.pagamento.quem, quando: d.pagamento.quando },
-      estado: d.estado, confirmada: d.confirmada, cancelada: d.cancelada,
+      remarcacao159: copiar(d.remarcacao159), estado: d.estado, confirmada: d.confirmada, cancelada: d.cancelada,
       cancelamento: d.cancelada ? { motivo: d.cancelamento.motivo, quem: d.cancelamento.quem, quando: d.cancelamento.quando } : null,
       espelhoOk: estadoProjecao === 'pendente' ? false : (estadoProjecao === 'confirmada' ? true : null),
       revisao: d.revisao, fingerprint: fingerprintRegistro(reg), quem: d.autorNome, quando: d.quando
@@ -277,7 +278,17 @@
           var ok = function (s) {
             if (!sessao.ativo || mesesAtivos[mes] !== sessao) return;
             var v = s && typeof s.val === 'function' ? s.val() : null;
-            sessao.dias[dia] = !!(v && typeof v === 'object' && Object.keys(v).length);
+            /* A consulta curta continua sendo o padrão. Uma origem remarcada pode ser
+               a primeira chave; só nesse dia passamos a observar todos os registros. */
+            if (!sessao.completos) sessao.completos = {};
+            if (!sessao.completos[dia] && Object.keys(objeto(v)).some(function (id) { return objeto(objeto(objeto(v[id]).det).avaliacao129).remarcacao159; })) {
+              sessao.completos[dia] = true;
+              var completo = { cb: function (sn) { ok(sn); } };
+              sessao.assinaturas.push({ query: ref, ok: completo.cb });
+              try { ref.on('value', completo.cb, erro); } catch (_) { erro(); }
+              return;
+            }
+            sessao.dias[dia] = Object.keys(objeto(v)).some(function (id) { var m = objeto(objeto(objeto(v[id]).det).avaliacao129).remarcacao159; return !m || m.estado !== 'concluida'; });
             sessao.resolvidos[dia] = true; delete sessao.erros[dia];
             cacheMeses[mes] = copiar(sessao.dias); publicarMes(sessao);
           };
@@ -286,8 +297,9 @@
             sessao.erros[dia] = true; delete sessao.resolvidos[dia]; delete sessao.dias[dia];
             if (cacheMeses[mes]) delete cacheMeses[mes][dia]; publicarMes(sessao);
           };
-          sessao.assinaturas.push({ query: query, ok: ok });
-          try { query.on('value', ok, erro); } catch (_) { erro(); }
+          var curta159 = function (s) { if (!sessao.completos || !sessao.completos[dia]) ok(s); };
+          sessao.assinaturas.push({ query: query, ok: curta159 });
+          try { query.on('value', curta159, erro); } catch (_) { erro(); }
         });
       } else {
         sessao.assinantes.push(assinatura);
@@ -378,6 +390,7 @@
     }
     function salvar(cmd) {
       cmd = cmd || {};
+      if (cmd.acao === 'remarcar' || cmd.acao === 'retomar_remarcacao') return remarcar(cmd);
       var dia = texto(cmd.dia), id = texto(cmd.id), token = texto(cmd.requestId || cmd.token), acao = texto(cmd.acao) || (id ? 'editar' : 'criar');
       var entradaCampos = cmd.avaliacao && typeof cmd.avaliacao === 'object' ? cmd.avaliacao : cmd, campos = null, pagamento = null, cuidadosGravados = null;
       var mutacaoCadastro = acao === 'criar' || acao === 'editar', editando = acao !== 'criar';
@@ -416,6 +429,7 @@
         if (editando && (!existe || dAtual.revisao !== revisaoEsperada || fingerprintRegistro(regAtual) !== base)) {
           motivo = 'AGENDAMENTO_DESATUALIZADO'; return;
         }
+        if (objeto(objeto(regAtual.det).avaliacao129).remarcacao159) { motivo = 'AGENDAMENTO_REMARCADO'; return; }
         if (acao === 'cancelar' && dAtual.cancelada) { motivo = 'AGENDAMENTO_JA_CANCELADO'; return; }
         if (acao === 'reativar' && !dAtual.cancelada) { motivo = 'AGENDAMENTO_NAO_CANCELADO'; return; }
         var rel = relogioSP(deps.agora), reg = copiar(regAtual), det = copiar(objeto(reg.det)), aAtual = objeto(det.avaliacao129), a = copiar(aAtual);
@@ -437,6 +451,7 @@
             pagamento: pg, cancelamento: copiar(aAtual.cancelamento), projecao: copiar(aAtual.projecao),
             revisao: revisao, autorId: autor.id, autorNome: autor.nome, ts: rel.ts, quando: rel.quando, historico: hist
           };
+          if (aAtual.origem159) a.origem159 = copiar(aAtual.origem159);
           cuidadosGravados={vacina:prevLido(a.vacina),vermifugo:prevLido(a.vermifugo),carrapaticida:prevLido(a.carrapaticida)};
           if (a.cancelamento === undefined) delete a.cancelamento;
           if (a.projecao === undefined) delete a.projecao;
@@ -512,6 +527,98 @@
       });
       emVoo[voo] = promessa.then(function (x) { delete emVoo[voo]; return x; }, function (e) { delete emVoo[voo]; throw e; });
       return emVoo[voo];
+    }
+    /* Protocolo em etapas, sem transação ampla: primeiro fecha a origem; somente
+       após a retirada confirmada cria o destino. Cada etapa pode ser retomada. */
+    async function remarcar(cmd) {
+      var dia = texto(cmd.dia), id = texto(cmd.id), request = texto(cmd.requestId), retomar = cmd.acao === 'retomar_remarcacao';
+      if (!dataValida(dia) || !idValido(id)) throw Error('DIA_OU_ID_INVALIDO');
+      var novoDia = texto(cmd.novoDia), novaHora = retomar ? '' : hora(cmd.novaHora);
+      if (!retomar && (!dataValida(novoDia) || !idValido(request) || request.length > 80)) throw Error('DESTINO_INVALIDO');
+      if (!Number.isInteger(cmd.expectedRevision) || !texto(cmd.expectedFingerprint)) throw Error('BASE_OBRIGATORIA');
+      if (!autorizado()) throw Error('SEM_PERMISSAO');
+      var autor = autorValido(); if (!autor) throw Error('AUTORIA_OBRIGATORIA');
+      if (!db || typeof db.ref !== 'function') throw Error('BANCO_INDISPONIVEL');
+      function conferir() { if (!autorizado()) throw Error('SEM_PERMISSAO'); if (!mesmaAutoria(autor)) throw Error('AUTORIA_ALTERADA'); }
+      var ref = db.ref(caminhoDia(dia) + '/' + id), motivo = '', origem;
+      var res = await ref.transaction(function (cur) {
+        motivo = ''; try { conferir(); } catch(e) { motivo=e.message; return; }
+        if (!cur || !ehAgenda(cur)) { motivo='AGENDAMENTO_DESATUALIZADO'; return; }
+        var a = objeto(objeto(cur.det).avaliacao129), m = objeto(a.remarcacao159);
+        if (a.remarcacao159) {
+          if (retomar && a.revisao === cmd.expectedRevision && fingerprintRegistro(cur) === cmd.expectedFingerprint ||
+              !retomar && m.requestId === request && m.destino.dia === novoDia && m.destino.hora === novaHora) return cur;
+          motivo='AGENDAMENTO_REMARCADO'; return;
+        }
+        if (retomar || a.revisao !== cmd.expectedRevision || fingerprintRegistro(cur) !== cmd.expectedFingerprint || estadoRegistro(cur)==='cancelada') { motivo='AGENDAMENTO_DESATUALIZADO'; return; }
+        if (objeto(a.projecao).estado==='pendente' || cur.lockTs && Date.now()-cur.lockTs<120000) { motivo='PROJECAO_PENDENTE'; return; }
+        if (novoDia===dia && novaHora===texto(cur.hora)) { motivo='DESTINO_IGUAL'; return; }
+        var reg=copiar(cur), det=reg.det, rel=relogioSP(deps.agora), rev=(Number(a.revisao)||0)+1;
+        a=det.avaliacao129;
+        a.remarcacao159={requestId:request,estado:'pendente',origem:{dia:dia,id:id,hora:texto(cur.hora)},destino:{dia:novoDia,id:'am159-'+request,hora:novaHora},autorId:autor.id,autorNome:autor.nome,ts:rel.ts,quando:rel.quando};
+        a.historico=(Array.isArray(a.historico)?a.historico:[]).slice(-(LIMITE_HISTORICO-1));
+        a.historico.push({acao:'remarcar',revisao:rev,origem:copiar(a.remarcacao159.origem),destino:copiar(a.remarcacao159.destino),autorId:autor.id,autorNome:autor.nome,ts:rel.ts});
+        a.revisao=rev; a.estado='remarcada'; a.autorId=autor.id; a.autorNome=autor.nome; a.ts=rel.ts; a.quando=rel.quando;
+        var retirar=publicavel(cur)||espelhoLegadoComprovado(cur);
+        delete reg.edicao_pendente;
+        if(retirar){
+          a.projecao={opId:'am159-remover-'+request,revisao:rev,acao:'remover',estado:'pendente',solicitadoTs:rel.ts,solicitadoQuando:rel.quando,solicitadoPor:copiar(autor),antes:{valor:texto(cur.valor),hora:texto(cur.hora),planilhaLinha:Number(cur.planilha_linha)||0},depois:{valor:texto(cur.valor),hora:texto(cur.hora)}};
+          reg.planilha_ok=null; reg.planilha_tent=0; delete reg.planilha_desisti;
+          reg.planilha_msg='remarcação: retirada do dia anterior pendente';
+        } else delete a.projecao;
+        return reg;
+      });
+      if (!res || res.committed!==true) throw Error(motivo||'AGENDAMENTO_DESATUALIZADO');
+      origem=res.snapshot.val();
+      function ack(concluida,destino,espelho) {
+        return {ok:true,acao:'remarcar',dia:dia,id:id,revisao:dados131(origem).revisao,item:itemDeRegistro(dia,id,origem),concluida:concluida,destino:destino||null,espelhoOk:espelho===true};
+      }
+      async function projetar(d,i,reg) {
+        var p=objeto(objeto(objeto(reg.det).avaliacao129).projecao);
+        if(p.estado!=='pendente') return true;
+        if(typeof deps.aoSalvar!=='function')return false;
+        conferir();
+        var r;try {r=await deps.aoSalvar({acao:'remarcar',acaoProjecao:p.acao,dia:d,id:i,registro:copiar(reg),projecao:copiar(p)});}catch(_){return false;}
+        if(!r || r.ok!==true)return false;
+        try {await confirmarProjecao({dia:d,id:i,opId:p.opId,revisao:p.revisao},autor);return true;}catch(_){return false;}
+      }
+      var m=origem.det.avaliacao129.remarcacao159;
+      if (!await projetar(dia,id,origem)) return ack(false);
+      /* Relê a confirmação: ACK tardio de uma operação diferente nunca libera destino. */
+      conferir(); origem=(await ref.once('value')).val();
+      if(!origem || !origem.det || !origem.det.avaliacao129 || !origem.det.avaliacao129.remarcacao159 || origem.det.avaliacao129.remarcacao159.requestId!==m.requestId)throw Error('AGENDAMENTO_DESATUALIZADO');
+      var origemA=origem.det.avaliacao129;
+      if(objeto(origemA.projecao).estado==='pendente')return ack(false);
+      var destinoRef=db.ref(caminhoDia(m.destino.dia)+'/'+m.destino.id), destinoReg;
+      motivo='';
+      var criado=await destinoRef.transaction(function(cur){
+        try{conferir();}catch(e){motivo=e.message;return;}
+        if(cur){var vinculo=objeto(objeto(objeto(cur.det).avaliacao129).origem159);if(vinculo.dia===dia&&vinculo.id===id&&vinculo.requestId===m.requestId)return cur;motivo='DESTINO_OCUPADO';return;}
+        var reg=copiar(origem),a=reg.det.avaliacao129,rel=relogioSP(deps.agora);
+        delete a.remarcacao159; delete a.projecao; delete reg.planilha_linha; delete reg.lockTs; delete reg.lockAgenda133; delete reg.planilha_ok; delete reg.planilha_msg; delete reg.planilha_tent; delete reg.planilha_desisti; delete reg.edicao_pendente;
+        a.origem159={dia:dia,id:id,requestId:m.requestId};
+        reg.hora=m.destino.hora; a.hora=m.destino.hora;
+        a.estado=pagamentoSeguro(a.pagamento).recebido?'confirmada':'pendente';
+        if(publicavel(reg)){
+          a.projecao={opId:'am159-lancar-'+m.requestId,revisao:a.revisao,acao:'lancar',estado:'pendente',solicitadoTs:rel.ts,solicitadoQuando:rel.quando,solicitadoPor:copiar(autor),antes:{valor:'',hora:''},depois:{valor:texto(reg.valor),hora:reg.hora}};
+          reg.planilha_ok=false;reg.planilha_tent=0;reg.planilha_msg='remarcação: lançamento do novo dia pendente';
+        }
+        return reg;
+      });
+      if(!criado || criado.committed!==true)throw Error(motivo||'DESTINO_OCUPADO');
+      destinoReg=criado.snapshot.val();
+      conferir();
+      var fim=await ref.transaction(function(cur){
+        try{conferir();}catch(_){return;}
+        var a=objeto(objeto(objeto(cur).det).avaliacao129),v=objeto(a.remarcacao159);
+        if(v.requestId!==m.requestId)return;
+        var reg=copiar(cur);reg.det.avaliacao129.remarcacao159.estado='concluida';return reg;
+      });
+      if(!fim || fim.committed!==true)return ack(false);
+      origem=fim.snapshot.val();
+      var espelho=await projetar(m.destino.dia,m.destino.id,destinoReg);
+      if(!cache[dia])cache[dia]={};cache[dia][id]=copiar(origem);
+      return ack(true,{dia:m.destino.dia,id:m.destino.id,hora:m.destino.hora},espelho);
     }
     function salvarConferencia(cmd) {
       cmd = cmd || {}; var dia = texto(cmd.dia), id = texto(cmd.id), reg = cache[dia] && cache[dia][id];
