@@ -43399,8 +43399,12 @@ provaAsync('6.70 P36 (AC13, AC14, guarda) — a área protegida e o #v-daycare i
   // 788fb9e); depois: 'b669eb67f9c850ec'. Por quê: sem elas, o FILHOt trazido de volta não contaria naquela noite e o lançamento
   // movido contaria nas noites velhas e nas novas. Sem as duas linhas, o texto é o da base byte a byte (a «6.67 × 6.70 · D» confere);
   // a noite não paga conta certo, a paga e a fechada não mudam e, sem as marcas, o acerto é o da 6.70: «6.67 × 6.70 · A» a «· E».
+  // Varredura 360 (28/out/2026, ganho 2): a acertoDeduzirQuem passou a guardar a contagem de cada dia e a baixar de novo só o
+  // dia cujo último registro mudou (a auditoria só cresce). Antes: 'a519d2015c5b21cd'; depois: '538145d91bff25a9'. Por quê: ela
+  // baixava 31 dias inteiros de auditoria a cada abertura do painel. A conta é a mesma, dia a dia: a firebase-enxuto153 roda a
+  // função de antes (copiada lá) e a nova sobre a mesma auditoria inventada — primeira abertura, do guardado e com registro atrasado.
   const BASE = { acertoHospedesNaNoite: '3ae93e994c46ac7a', acertoPernoitesNaNoite: 'b669eb67f9c850ec', acertoCarregarPernoites: '6cfa53a0c43961b5', acertoQuemPelaAssinatura: '21994d0474f36070',
-    acertoAgruparNomes: 'd683509dddcd1fa2', acertoDeduzirQuem: 'a519d2015c5b21cd', acertoMarcarDobras: '67d82dcec9a47b77', plantOficial: '50a122f535002174', plantChave: 'a09ff8cb1da82b18',
+    acertoAgruparNomes: 'd683509dddcd1fa2', acertoDeduzirQuem: '538145d91bff25a9', acertoMarcarDobras: '67d82dcec9a47b77', plantOficial: '50a122f535002174', plantChave: 'a09ff8cb1da82b18',
     plantEhDuplo: 'e4192bc3a2b37243', plantPartes: 'dc2819ea9c684a47', acertoPessoasDa: '0fd80154d09d5f28', plantEquipe: '1c42bacc68c8a740', poCardAcerto: '84480709fff49824' };
   const agora = {}; Object.keys(BASE).forEach((n) => { agora[n] = h(runN('String(' + n + ')')); });
   igual(agora, BASE, 'as funções que não mudam');
