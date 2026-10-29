@@ -513,7 +513,10 @@ prova('regras da casa: sem alert/confirm/prompt novos, sem vocabulário proibido
   // a área protegida do check-in do Day Care: o mesmo texto do commit 870f235 (157 funções ck*/ckt*/pt*/pendAvisarChegada e o #v-daycare)
   const protegidas = json(run("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()"));
   assert.strictEqual(protegidas.length, 157, 'as mesmas funções ck*/ckt*/pt*/pendAvisarChegada');
-  assert.strictEqual(sha(protegidas.map((nm) => nm + '\n' + run('String(' + nm + ')')).join('\n')), '73e7f281aff59c01', 'o texto de cada uma, igual ao do 870f235');
+  // Antes: o hash era medido no texto inteiro das funções. Depois: medido sem a chamada `+alergiaSeloHTML(p)`.
+  // Por quê: a dona autorizou (28/out/2026) mexer no check-in do Day Care SÓ para mostrar o selo de alergia. Tirando
+  // a chamada, o texto tem de dar o mesmo hash de antes: prova que o selo foi a única mudança na área protegida.
+  assert.strictEqual(sha(protegidas.map((nm) => nm + '\n' + run('String(' + nm + ')').split('+alergiaSeloHTML(p)').join('')).join('\n')), '73e7f281aff59c01', 'o texto de cada uma, igual ao do 870f235');
   const iDc = html.indexOf('id="v-daycare"'), jDc = html.indexOf('id="v-', iDc + 10);
   assert.strictEqual(sha(html.slice(iDc, jDc)), '4c438983ed2b9c0a', 'o #v-daycare, igual ao do 870f235');
   // as regras do banco não foram tocadas

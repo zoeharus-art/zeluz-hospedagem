@@ -67,6 +67,10 @@ const fila = [];
 function prova(grupo, nome, fn) { fila.push({ grupo, nome: '6.121 ' + grupo + ' — ' + nome, fn }); }
 const igual = (a, b, msg) => assert.deepStrictEqual(JSON.parse(JSON.stringify(a)), b, msg);
 const h16 = (s) => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
+// O selo de alergia (Adriana, 28/out/2026) entrou logo depois do nome do FILHOt em várias telas — inclusive no check-in do
+// Day Care, com autorização dela. Antes: as funções eram comparadas com a base pelo texto inteiro. Depois: sem a chamada do selo.
+// Por quê: tirando `alergiaSeloHTML(…)`, o texto tem de ser o mesmo da base — prova que o selo foi a única mudança.
+const semSelo = (t) => String(t).replace(/\$\{alergiaSeloHTML\([^)]*\)\}|\+alergiaSeloHTML\([^)]*\)/g, '');
 
 // ---------------------------------------------------------------- o relógio: quarta, 21/10/2026, 08:00 (hora LOCAL; antes do corte de presença das 11h em
 // São Paulo nos dois fusos: em UTC são 05:00 de lá)
@@ -919,7 +923,7 @@ prova('C', 'AC13.1 — os valores gravados e as classes seguem sem acento: marca
 });
 prova('C', 'AC13.2 — nada fora de renderAlmoco muda de texto: hash por função igual à base em renderGenerico, avisoAlmoco2, empLista, empMensagem, iniciarAlmoco, encerrarAlmoco, marcarAlmoco, marcarAlmoco2; ATIVIDADES_DEFAULT byte a byte', () => {
   const SBx = base();
-  ['renderGenerico', 'avisoAlmoco2', 'empLista', 'empMensagem', 'iniciarAlmoco', 'encerrarAlmoco', 'marcarAlmoco', 'marcarAlmoco2'].forEach((f) => igual(h16(S.run('String(' + f + ')')), h16(SBx.run('String(' + f + ')')), f));
+  ['renderGenerico', 'avisoAlmoco2', 'empLista', 'empMensagem', 'iniciarAlmoco', 'encerrarAlmoco', 'marcarAlmoco', 'marcarAlmoco2'].forEach((f) => igual(h16(semSelo(S.run('String(' + f + ')'))), h16(SBx.run('String(' + f + ')')), f));
   igual(S.run('JSON.stringify(ATIVIDADES_DEFAULT)'), SBx.run('JSON.stringify(ATIVIDADES_DEFAULT)'));
 });
 prova('C', 'AC13.3 — as linhas que a Fase 0 confere por texto em renderAlmoco ficam como estão', () => {
@@ -947,7 +951,7 @@ prova('R', 'AC10.1 — o título da faixa aparece UMA vez no arquivo (dentro da 
 });
 prova('R', 'AC11 — hash por função IGUAL à base nas funções que não podem mudar; cafe-operacional.js e hospedes-atividades.js byte a byte', () => {
   const SBx = base();
-  const dif = NAO_MUDA.filter((f) => h16(S.run('String(' + f + ')')) !== h16(SBx.run('String(' + f + ')')));
+  const dif = NAO_MUDA.filter((f) => h16(semSelo(S.run('String(' + f + ')'))) !== h16(SBx.run('String(' + f + ')')));
   igual(dif, [], 'mudaram');
   igual(h16(ARQ.cafe), h16(arqBase().cafe), 'cafe-operacional.js');
   igual(h16(ARQ.ativ), h16(arqBase().ativ), 'hospedes-atividades.js');
@@ -957,7 +961,7 @@ prova('R', 'AC14.1 — área protegida: as funções ck*/ckt*/pt* e pendAvisarCh
   const prot = (S0) => S0.J("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()");
   const nN = prot(S), nB = prot(SBx);
   igual(nN, nB, 'nenhuma função nova com ck, ckt ou pt');
-  const txt = (S0, ns) => ns.map((n) => n + '\n' + S0.run('String(' + n + ')')).join('\n');
+  const txt = (S0, ns) => ns.map((n) => n + '\n' + semSelo(S0.run('String(' + n + ')'))).join('\n');
   igual(h16(txt(S, nN)), h16(txt(SBx, nB)), 'o texto das ' + nN.length + ' funções');
   igual(h16(S.run(PERM_SEM_ALERTA_FIXO)), h16(SBx.run('JSON.stringify(PERM)')), 'PERM igual (fora as duas capacidades dos alertas fixos)');
   const daycare = (html) => { const L = html.split('\n'); const i = L.findIndex((l) => l.indexOf('<section class="view" id="v-daycare">') >= 0); let j = i + 1; while (j < L.length && L[j].indexOf('<section class="view"') < 0) j++; return L.slice(i, j).join('\n'); };

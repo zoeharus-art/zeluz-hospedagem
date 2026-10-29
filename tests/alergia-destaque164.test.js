@@ -326,8 +326,11 @@ tela('Peso (tela de pesar)', 'renderPesoTela', 'cheio', () => {
   run('PESOT_I=0; PESOT_BUSCA=""; renderPesoTela();');
   return els.pesoTelaPainel.innerHTML;
 });
+// A data de hoje no relógio do aparelho (como o app conta), não a do UTC: depois das 21h de Brasília o UTC já
+// está no dia seguinte, e o FILHOt inventado começaria a adaptação «amanhã» — a prova caía só à noite.
+function hojeLocal() { const d = new Date(), p = (x) => String(x).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
 tela('Em adaptação (cartão do Hoje na Zêluz)', 'renderAdaptPendentes', 'cheio', () => {
-  A.ctx.__cad2 = {}; A.ctx.__cad2[CHAVE] = Object.assign({}, A.ctx.__cad[CHAVE], { adaptacao: 'Sim', adaptacao_desde: new Date().toISOString().slice(0, 10), adaptacao_tipo: 'Day Care' });
+  A.ctx.__cad2 = {}; A.ctx.__cad2[CHAVE] = Object.assign({}, A.ctx.__cad[CHAVE], { adaptacao: 'Sim', adaptacao_desde: hojeLocal(), adaptacao_tipo: 'Day Care' });
   run('pelCadCache=__cad2; renderAdaptPendentes();');
   return els.adaptPendCard.innerHTML;
 });
@@ -429,18 +432,78 @@ prova('«ALERGIA A TUDO» na ficha segue a mesma permissão de editar a alergia:
   assert.ok(!Object.keys(lista(run('PERM'))).some((k) => /alergia/.test(k) && k !== 'editar-alergia'), 'nenhuma permissão nova de alergia');
 });
 
+// ---- O check-in do Day Care (#v-daycare): com a autorização da dona (28/out/2026), SÓ o selo entrou nas telas dele
+// A turma do dia é só o FILHOt inventado; o resto de cada tela roda como no app.
+function turmaSoBiscoito() {
+  run('turmaDoDia=function(){ return [{p:PELUDINHOS[0], i:0}]; }; ativTurmaPresente=function(){ return {lista:[{p:PELUDINHOS[0], i:0}]}; };');
+}
+tela('Chamada do Day Care', 'renderDaycare', 'cheio', () => {
+  turmaSoBiscoito(); run('dcChamada={}; renderDaycare();');
+  return els.dcGrid.innerHTML;
+});
+tela('Check-in do corpo (a grade)', 'renderCheckinExec', 'cheio', () => {
+  turmaSoBiscoito(); run("dcAtiv='checkin-corpo'; ckAtual=null; ckDados={}; renderCheckinExec();");
+  return els.ckGrid.innerHTML;
+});
+tela('Check-in do corpo (a ficha aberta)', 'ckFichaHtml', 'cheio', () => {
+  turmaSoBiscoito(); run("dcAtiv='checkin-corpo'; ckAtual={p:PELUDINHOS[0], i:0}; ckRascunho={pontos:{}};");
+  const h = run('ckFichaHtml()'); run('ckAtual=null; ckRascunho=null;');
+  return h;
+});
+tela('Pertences (a grade)', 'renderPertences', 'cheio', () => {
+  turmaSoBiscoito(); run("dcAtiv='checkin-pert'; ptAtual=null; ptDados={}; renderPertences();");
+  return els.ptGrid.innerHTML;
+});
+tela('Pertences (a ficha aberta)', 'ptFichaHtml', 'cheio', () => {
+  turmaSoBiscoito(); run("dcAtiv='checkin-pert'; ptAtual={p:PELUDINHOS[0], i:0}; ptRascunho={itens:{}};");
+  const h = run('ptFichaHtml()'); run('ptAtual=null; ptRascunho=null;');
+  return h;
+});
+tela('Almoço do Day Care', 'renderAlmoco', 'cheio', () => {
+  turmaSoBiscoito(); run('almMarcas={}; renderAlmoco();');
+  return els.almGrid.innerHTML;
+});
+tela('Outras atividades do Day Care', 'renderGenerico', 'cheio', () => {
+  turmaSoBiscoito(); run("dcAtiv='recreacao'; genMarcas={}; renderGenerico();");
+  return els.genGrid.innerHTML;
+});
+tela('Peso do dia (atividade)', 'renderPesoAtiv', 'cheio', () => {
+  turmaSoBiscoito(); run('renderPesoAtiv();');
+  return els.genGrid.innerHTML;
+});
+tela('Foto do dia (atividade)', 'renderFotoAtiv', 'cheio', () => {
+  turmaSoBiscoito(); run('renderFotoAtiv();');
+  return els.genGrid.innerHTML;
+});
+tela('Diária avulsa (a busca)', 'renderAvulsaResults', 'cheio', () => {
+  run("dcAvulsos=[]; document.getElementById('avBusca').value='biscoito'; renderAvulsaResults();");
+  return els.avResults.innerHTML;
+});
+// a tarja que já existia no check-in (sobre a foto) continua lá: o selo entrou ao lado, nada saiu
+prova('check-in do Day Care: a tarja de antes continua, e cada tela chama o selo uma vez só', () => {
+  cadastro('frango');
+  turmaSoBiscoito(); run('dcChamada={}; renderDaycare();');
+  assert.ok(/<span class="mini-alert">ALÉRGICO<\/span>/.test(els.dcGrid.innerHTML), 'a tarja ALÉRGICO segue na chamada');
+  ['renderDaycare', 'renderAlmoco', 'renderCheckinExec', 'renderPertences', 'renderGenerico', 'renderPesoAtiv', 'renderFotoAtiv', 'renderAvulsaResults', 'ckFichaHtml', 'ptFichaHtml']
+    .forEach((f) => assert.strictEqual(run('String(' + f + ')').split('alergiaSeloHTML(').length - 1, 1, f + ' chama o selo uma vez'));
+});
+
 // ---- A área protegida do check-in do Day Care fica igual à do commit 870f235
-prova('área protegida: as funções ck*/ckt*/pt*/pendAvisarChegada e o #v-daycare têm o texto do commit 870f235; as telas do Day Care não ganharam o selo', () => {
+prova('área protegida: as funções ck*/ckt*/pt*/pendAvisarChegada (sem a chamada do selo) e o #v-daycare têm o texto do commit 870f235; as telas do Day Care ganharam o selo', () => {
   const sha = (s) => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
   const protegidas = lista(run("Object.getOwnPropertyNames(globalThis).filter(function(k){ return typeof globalThis[k]==='function' && (/^(ck|ckt|pt)/.test(k) || k==='pendAvisarChegada'); }).sort()"));
   // (medidos no commit 870f235, neste mesmo sandbox: 157 funções e o #v-daycare; iguais aos do commit ecc4719 da parte A)
   assert.strictEqual(protegidas.length, 157, 'as mesmas funções');
-  assert.strictEqual(sha(protegidas.map((nm) => nm + '\n' + run('String(' + nm + ')')).join('\n')), '73e7f281aff59c01', 'o texto de cada uma, igual ao do 870f235');
+  // Antes: o hash era medido no texto inteiro das funções. Depois: medido sem a chamada `+alergiaSeloHTML(p)`.
+  // Por quê: a dona autorizou (28/out/2026) mexer no check-in do Day Care SÓ para mostrar o selo de alergia. Tirando
+  // a chamada, o texto tem de dar o mesmo hash de antes: prova que o selo foi a única mudança na área protegida.
+  assert.strictEqual(sha(protegidas.map((nm) => nm + '\n' + run('String(' + nm + ')').split('+alergiaSeloHTML(p)').join('')).join('\n')), '73e7f281aff59c01', 'o texto de cada uma, igual ao do 870f235');
   const iDc = html.indexOf('id="v-daycare"'), jDc = html.indexOf('id="v-', iDc + 10);
   assert.strictEqual(sha(html.slice(iDc, jDc)), '4c438983ed2b9c0a', 'o #v-daycare, igual ao do 870f235');
-  // as telas que moram no #v-daycare (chamada, almoço, pertences, medicação do dia, peso e foto da atividade) ficam como estão: nenhuma chama o selo
-  ['renderDaycare', 'renderAlmoco', 'renderAlmStep', 'renderAlmPrep', 'renderAlmExec', 'renderAlmFinal', 'renderCheckin', 'renderCheckinExec', 'renderPertences', 'renderGenerico', 'renderPesoAtiv', 'renderFotoAtiv', 'renderEA', 'renderAvulsaResults']
-    .forEach((f) => assert.ok(!/alergiaSelo/.test(run('String(' + f + ')')), f + ' mora no #v-daycare: sem o selo'));
+  // Antes: as telas do #v-daycare ficavam sem o selo. Depois (28/out/2026, com a autorização da dona): as que desenham o
+  // nome do FILHOt chamam o selo — a prova de cada uma está nas telas do Day Care, logo acima.
+  ['renderDaycare', 'renderAlmoco', 'renderCheckinExec', 'renderPertences', 'renderGenerico', 'renderPesoAtiv', 'renderFotoAtiv', 'renderAvulsaResults', 'ckFichaHtml', 'ptFichaHtml']
+    .forEach((f) => assert.ok(/alergiaSeloHTML\(/.test(run('String(' + f + ')')), f + ' mora no #v-daycare: com o selo'));
 });
 
 prova('o inventário está completo na prova: toda tela da lista foi montada com um FILHOt com alergia (selo cheio ou curto) e sem alergia (sem selo)', () => {
