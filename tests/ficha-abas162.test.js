@@ -669,7 +669,10 @@ prova('regras da casa: sem alert/confirm/prompt, sem vocabulário proibido, sem 
   //  mudou, nenhuma nasceu, e o #v-daycare tem o mesmo texto)
   const sha = (s) => require('crypto').createHash('sha256').update(s).digest('hex').slice(0, 16);
   assert.strictEqual(protegidas.length, 157, 'as mesmas funções ck*/ckt*/pt*/pendAvisarChegada');
-  assert.strictEqual(sha(protegidas.map((nm) => nm + '\n' + run('String(' + nm + ')')).join('\n')), '73e7f281aff59c01', 'o texto de cada uma, igual');
+  // Antes: o hash era medido no texto inteiro das funções. Depois: medido sem a chamada `+alergiaSeloHTML(p)`.
+  // Por quê: a dona autorizou (28/out/2026) mexer no check-in do Day Care SÓ para mostrar o selo de alergia. Tirando
+  // a chamada, o texto tem de dar o mesmo hash de antes: prova que o selo foi a única mudança na área protegida.
+  assert.strictEqual(sha(protegidas.map((nm) => nm + '\n' + run('String(' + nm + ')').split('+alergiaSeloHTML(p)').join('')).join('\n')), '73e7f281aff59c01', 'o texto de cada uma, igual');
   const iDc = html.indexOf('id="v-daycare"'), jDc = html.indexOf('id="v-', iDc + 10);
   assert.strictEqual(sha(html.slice(iDc, jDc)), '4c438983ed2b9c0a', 'o #v-daycare, igual');
   // a regras do banco não foram tocadas por esta mudança (quem publica é a dona)
