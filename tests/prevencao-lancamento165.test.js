@@ -265,7 +265,7 @@ prova('os ganchos: a linha, o conferir ao desenhar, o aviso depois do cartaz da 
   assert.ok(html.includes("if(typeof dashPrevFichaAvisarAoLancar==='function') return dashPrevFichaAvisarAoLancar(k, reg, __diaLanc, abriu);"));
   assert.ok(html.includes("try{ dashPrevFichaDesfazer(__diaTirar, k, id); }"));
   assert.ok(html.includes("'A data da Prevenção na ficha volta a ser a anterior.'"));
-  assert.ok(html.includes('+dashPrevFichaHintHTML(it, ex)'));
+  assert.ok(html.includes('+dashPrevFichaHintHTML(it, ex, o.p)'));
   ['dashPrevFichaPatch', 'dashPrevFichaAplicar', 'dashPrevFichaConciliar', 'dashPrevFichaLinhaHTML', 'dashPrevFichaAvisarAoLancar', 'dashPrevFichaDesfazer', 'dashPrevFichaHintHTML']
     .forEach((n) => assert.strictEqual(html.split('function ' + n + '(').length - 1, 1, 'nome repetido ou ausente: ' + n));
 });
@@ -282,6 +282,128 @@ prova('o aviso ao lançar: sem check-in pede para conferir; com o cartaz da pend
   run('__ALERTAS=[];');
   assert.strictEqual(await run("dashPrevFichaAvisarAoLancar('vermifugo', __r, '" + DIA + "', true)"), false);
   assert.strictEqual(run('__ALERTAS.length'), 0, 'o cartaz da pendência já falou');
+});
+
+// ------------------------------------------------------------------------- 6. não veio: sai do dia e vira pendência
+// 29/out/2026 (o Flock): a chamada «faltou» ou a falta avisada tiram do dia o que a Prevenção tinha lançado; a pendência
+// guarda o lançamento, a data da ficha volta, e a consultora vê na tela de Pendências e na ficha.
+run(`
+  var __ESP=[];
+  dashEspelhar=function(k, id, reg, acao, dia){ __ESP.push([k, id, acao, dia]); return Promise.resolve({ok:true}); };
+  dashPontePronta=function(){ return Promise.resolve({url:'x'}); };
+  renderDash=function(){};
+  dcDataKey=function(){ return ${JSON.stringify(DIA)}; };
+  ehHoje=function(){ return false; };
+  var __REP={};
+  repLancamentos=function(p){ return __REP[pelKey(p)]||[]; };
+`);
+const CH_P = run("dcKey('Pipoca','Tutora Exemplo')");
+const espera = () => new Promise((r) => setTimeout(r, 0));
+function dia(itens) { A.ctx.__d = itens; run("__por('daycare/dashboard/" + DIA + "', __d); __ESP=[]; PEND_ABERTAS={};"); }
+const noDia = (item, id) => lista(run("__ler('daycare/dashboard/" + DIA + "/" + item + "/" + id + "')"));
+const pend = (ch, item) => lista(run("__ler('daycare/pendencias/" + ch + "/" + item + "')"));
+prova('a chamada «faltou»: carrapaticida vira pendência e sai do dia e da planilha; medicação vira pendência e fica; quem veio fica', async () => {
+  zerar({});
+  dia({ carrapaticida: { L5: { valor: 'Biscoito/Beagle (PIPETA)', chave: CH_B } },
+    medicacao: { M1: { valor: 'Biscoito/Beagle (1 GOTA)', chave: CH_B } },
+    vermifugo: { L6: { valor: 'Pipoca/Poodle', chave: CH_P } } });
+  assert.strictEqual(await run("pendVarrerDia('" + DIA + "', [" + JSON.stringify(CH_B) + '])'), 2);
+  await espera();
+  assert.strictEqual(noDia('carrapaticida', 'L5'), null, 'o carrapaticida saiu do dia');
+  assert.ok(noDia('medicacao', 'M1'), 'a medicação tem regra própria: fica');
+  assert.ok(noDia('vermifugo', 'L6'), 'quem veio não é tocado');
+  const pc = pend(CH_B, 'carrapaticida');
+  assert.strictEqual(pc.status, 'aberta');
+  assert.strictEqual(pc.porque, 'faltou');
+  assert.strictEqual(pc.valor, 'Biscoito/Beagle (PIPETA)', 'a pendência guarda o lançamento');
+  assert.strictEqual(pc.saiu.L5.dia, DIA);
+  assert.strictEqual(pend(CH_B, 'medicacao').status, 'aberta');
+  assert.deepStrictEqual(lista(run('__ESP')), [['carrapaticida', 'L5', 'remover', DIA]], 'sai da planilha uma vez, no dia certo');
+  run('__ESP=[];');
+  await run("pendVarrerDia('" + DIA + "', [" + JSON.stringify(CH_B) + '])');
+  await espera();
+  assert.strictEqual(run('__ESP.length'), 0, 'varrer de novo não manda tirar da planilha outra vez');
+});
+prova('não veio depois do check-in ter gravado a ficha: a data da Prevenção volta à anterior', async () => {
+  zerar({ verm_doses: 'Dose única', verm_t: '2026-06-01', verm_p: '2026-10-01' });
+  await aplicar();
+  dia({ vermifugo: { L1: Object.assign({}, LINHA, { chave: CH_B }) } });
+  run('__GRAVOU=[];');
+  await run("pendVarrerDia('" + DIA + "', [" + JSON.stringify(CH_B) + '])');
+  await espera(); await espera();
+  assert.strictEqual(noDia('vermifugo', 'L1'), null);
+  assert.strictEqual(run('__GRAVOU.length'), 1);
+  assert.strictEqual(run('__GRAVOU[0].patch.verm_t'), '2026-06-01');
+  assert.strictEqual(lista(run("__ler('daycare/prev-ficha/" + DIA + "/vermifugo/L1')")).estado, 'desfeito');
+});
+prova('lançar para quem o tutor avisou da falta: a linha sai do dia na hora e o cartaz diz por quê; com a chamada «veio», fica', async () => {
+  zerar({});
+  run("__REP[pelKey(PELUDINHOS[0])]=[{_id:'fa-" + DIA + "', tipo:'credito', data:'" + DIA + "'}];");
+  A.ctx.__r = { valor: 'Biscoito/Beagle (1 COMPRIMIDO)', chave: CH_B };
+  dia({ vermifugo: { L7: A.ctx.__r } });
+  assert.strictEqual(await run("pendAvaliarLancamento('vermifugo', __r, '" + DIA + "', 'L7')"), true);
+  await espera();
+  assert.strictEqual(noDia('vermifugo', 'L7'), null);
+  assert.strictEqual(pend(CH_B, 'vermifugo').porque, 'avisada');
+  const l = run('__ALERTAS[0].l[0]');
+  assert.ok(l.indexOf('saiu dos Lançamentos do dia (e da planilha e da TV) e ficou guardado como PENDÊNCIA — o tutor avisou da falta.') > 0, l);
+  zerar({});
+  dia({ vermifugo: { L8: A.ctx.__r } });
+  run("__por('daycare/chamada/" + DIA + "/" + CH_B + "', 'veio');");
+  assert.strictEqual(await run("pendAvaliarLancamento('vermifugo', __r, '" + DIA + "', 'L8')"), false, 'avisou e veio mesmo assim (QA30)');
+  assert.ok(noDia('vermifugo', 'L8'));
+  run("__REP={};");
+});
+prova('a linha com alteração de hora pendente não é tirada: a pendência abre e a linha fica', async () => {
+  zerar({});
+  dia({ escova: { E1: { valor: 'Biscoito/Beagle', chave: CH_B, edicao_pendente: true } } });
+  await run("pendVarrerDia('" + DIA + "', [" + JSON.stringify(CH_B) + '])');
+  await espera();
+  assert.ok(noDia('escova', 'E1'));
+  assert.strictEqual(pend(CH_B, 'escova').status, 'aberta');
+  assert.strictEqual(run('__ESP.length'), 0);
+});
+prova('a falta avisada lançada nas Reposições varre os dias dela (menos o dia em que a chamada diz «veio»)', async () => {
+  zerar({});
+  dia({ coleira: { C1: { valor: 'Biscoito/Beagle (A COLEIRA VEIO)', chave: CH_B } } });
+  run("__por('daycare/chamada/" + DIA + "/" + CH_B + "', 'veio');");
+  assert.strictEqual(await run("pendFaltaAvisadaVarrer(" + JSON.stringify(CH_B) + ", ['" + DIA + "'])"), 0);
+  assert.ok(noDia('coleira', 'C1'));
+  run("__por('daycare/chamada/" + DIA + "/" + CH_B + "', null);");
+  assert.strictEqual(await run("pendFaltaAvisadaVarrer(" + JSON.stringify(CH_B) + ", ['" + DIA + "', '" + DIA + "'])"), 1, 'o mesmo dia duas vezes conta uma');
+  await espera();
+  assert.strictEqual(noDia('coleira', 'C1'), null);
+  assert.strictEqual(pend(CH_B, 'coleira').porque, 'avisada');
+});
+prova('a consultora vê: a tela de Pendências diz o porquê e que saiu do dia; a ficha mostra «Pendente» no item', () => {
+  A.ctx.__pa = {};
+  A.ctx.__pa[CH_B] = { carrapaticida: { status: 'aberta', dia: DIA, dias: [DIA], item: 'carrapaticida', valor: 'Biscoito/Beagle (PIPETA)', nome: 'Biscoito', porque: 'avisada', saiu: { L5: { dia: DIA } } } };
+  A.ctx.__pa[CH_P] = { escova: { status: 'aberta', dia: DIA, item: 'escova', valor: 'Pipoca/Poodle', nome: 'Pipoca', porque: 'faltou' } };
+  run('PEND_ABERTAS=__pa;');
+  const L = lista(run('pendLista()'));
+  assert.deepStrictEqual(L.map((r) => [r.item, r.porque, r.saiu]), [['carrapaticida', 'avisada', true], ['escova', 'faltou', false]]);
+  run("pendRender();");
+  const tela = String(run("document.getElementById('pendRoot').innerHTML") || '');
+  assert.ok(tela.indexOf('Não veio em <strong>29/10/2026</strong> · o tutor avisou da falta') >= 0, tela.slice(0, 600));
+  assert.ok(tela.indexOf(' · saiu dos Lançamentos do dia</div>') >= 0);
+  A.ctx.__it = { k: 'ecto_p', base: 'ecto_t' };
+  assert.strictEqual(run('dashPrevFichaHintHTML(__it, {}, PELUDINHOS[0])'),
+    '<div class="hint" style="margin:0 0 6px;color:var(--crm-atencao-text);font-weight:700">Pendente: lançado para 29/10 e ele não veio (o tutor avisou da falta). A recepção resolve em Pendências de prevenção quando ele vier.</div>');
+  A.ctx.__it = { k: 'escova_p', base: 'escova_t' };
+  assert.match(run('dashPrevFichaHintHTML(__it, {}, PELUDINHOS[1])'), /e ela não veio \(a chamada diz que faltou\)\. A recepção resolve em Pendências de prevenção quando ela vier\./);
+  A.ctx.__it = { k: 'col_p', base: 'col_t' };
+  assert.strictEqual(run('dashPrevFichaHintHTML(__it, {}, PELUDINHOS[0])'), '', 'sem pendência no item, nada');
+  run('PEND_ABERTAS={};');
+});
+prova('os ganchos da falta: o lançamento passa o id, a falta avisada varre, o dia das 12h varre as avisadas; as varreduras de antes continuam', () => {
+  assert.ok(html.includes('Promise.resolve(pendAvaliarLancamento(k, reg, dashDia(), ref.key)).then('));
+  assert.ok(html.includes("pendFaltaAvisadaVarrer(dcKey(p.n,p.tutor), regs.map(function(r){ return r.data; }));"));
+  assert.ok(html.includes("if(typeof faltouHoje==='function' && faltouHoje(o)){ avisadasPlan.push(k); return; }"));
+  assert.ok(html.includes("pendVarrerDia(hoje, avisadasPlan, 'avisada');"));
+  assert.ok(/pendVarrerDia\(hoje, marcados\.map\(function\(m\)\{ return m\.k; \}\)\)/.test(html));
+  assert.ok(/if\(next==='faltou' && typeof pendVarrerDia==='function'\) pendVarrerDia\(dcDataKey\(\), \[k\]\);/.test(html));
+  ['pendTirarDoDia', 'pendFaltaAvisadaVarrer', 'pendAvisadaNoDia', 'dashPrevFichaPendHTML']
+    .forEach((n) => assert.strictEqual(html.split('function ' + n + '(').length - 1, 1, 'nome repetido ou ausente: ' + n));
 });
 
 (async () => {
