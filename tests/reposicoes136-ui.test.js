@@ -176,12 +176,21 @@ async function provaSenhaAdrianaNosWriters() {
     },
   };
   vm.createContext(c);
-  vm.runInContext(funcao('repEstornarGravar') + '\n' + funcao('repLoteEstornarGravar'), c);
+  vm.runInContext(funcao('repQuemDe') + '\n' + funcao('repEstornarGravar') + '\n' + funcao('repLoteEstornarGravar'), c);
   const p = { n: 'Pingo' };
-  const cred = { _id: 'c1', data: '2026-11-03', motivo: 'viagem' };
+  const cred = { _id: 'c1', data: '2026-11-03', motivo: 'viagem', quem: 'Colaboradora Teste' };
   const outro = { por: 'Outro Gestor', papel: 'gestao', motivo: 'Lançamento feito por engano' };
   assert.strictEqual((await c.repEstornarGravar(p, cred, outro)).ok, false);
   assert.strictEqual(chamadas.gravar, 0);
+  // 29/out/2026 (Adriana): quem lançou cancela pelo login, sem senha — só a própria falta, nunca a de outra pessoa.
+  const outroPeloLogin = { por: 'Outro Gestor', papel: 'gestao', motivo: 'Lançamento feito por engano', assinatura: 'login' };
+  assert.strictEqual((await c.repEstornarGravar(p, cred, outroPeloLogin)).ok, false);
+  assert.strictEqual((await c.repEstornarGravar(p, { _id: 'c9', data: '2026-11-03' }, outroPeloLogin)).ok, false);
+  assert.strictEqual(chamadas.gravar, 0);
+  const autora = { por: 'Colaboradora Teste', papel: 'recepcao', motivo: 'Lancei no peludinho errado', assinatura: 'login' };
+  assert.strictEqual((await c.repEstornarGravar(p, cred, autora)).ok, true);
+  assert.strictEqual(chamadas.gravar, 1);
+  chamadas.gravar = 0;
   const infoNegada = {};
   assert.strictEqual((await c.repLoteEstornarGravar(p, 'L1', outro, ['c1'], infoNegada)).ok, false);
   assert.strictEqual(chamadas.transacao, 0);
@@ -199,7 +208,9 @@ async function provaSenhaAdrianaNosWriters() {
 (function contratoDoCartazDaAdriana() {
   const um = funcao('repEstornarAbrir');
   const lote = funcao('repLoteEstornarAbrir');
-  assert.match(um, /nivel:'adriana'/);
+  // 29/out/2026: o cartaz é de quem lançou (pelo login) quando o login é o de quem lançou; senão, o da Adriana.
+  assert.match(um, /nivel:proprio\?'quemLancou':'adriana'/);
+  assert.match(um, /eu===quemL/);
   assert.match(um, /adrianaOque:'cancela faltas lançadas'/);
   assert.match(um, /botao:'Cancelar falta lançada'/);
   assert.doesNotMatch(um, /nivel:'gestao'/);
@@ -208,6 +219,53 @@ async function provaSenhaAdrianaNosWriters() {
   assert.match(lote, /botao:'Cancelar faltas lançadas'/);
   assert.doesNotMatch(lote, /nivel:'gestao'/);
   assert.ok(!funcao('repDesmarcar').includes('corrRegDaAdriana'));
+})();
+
+(function provaAssinarPeloLogin() {
+  const mk = (login) => {
+    const c = { quemSou: () => login, _sessao: () => ({ role: 'recepcao' }) };
+    vm.createContext(c);
+    vm.runInContext(funcao('corrAssinarPeloLogin'), c);
+    return c;
+  };
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(mk('Colaboradora Teste').corrAssinarPeloLogin({ assinaNome: 'Colaboradora Teste' }))),
+    { ok: true, nome: 'Colaboradora Teste', papel: 'recepcao' });
+  assert.strictEqual(mk('Outra Pessoa').corrAssinarPeloLogin({ assinaNome: 'Colaboradora Teste' }).ok, false);
+  assert.strictEqual(mk('-').corrAssinarPeloLogin({ assinaNome: '-' }).ok, false);
+  assert.strictEqual(mk('').corrAssinarPeloLogin({ assinaNome: '' }).ok, false);
+  // o motivo de quem lançou pode ser curto («Errei»), mas não vazio; o cartaz diz isso e fecha sozinho ao gravar
+  const cm = {}; vm.createContext(cm); vm.runInContext(funcao('corrMotivoCurto'), cm);
+  assert.strictEqual(cm.corrMotivoCurto('Errei').ok, true);
+  assert.strictEqual(cm.corrMotivoCurto('   ').ok, false);
+  assert.strictEqual(cm.corrMotivoCurto('').ok, false);
+  assert.strictEqual(cm.corrMotivoCurto('...').ok, false);
+  assert.ok(funcao('corrConfirmar').includes("(op.nivel==='quemLancou')?corrMotivoCurto(motivo):motivoQuatroPalavras(motivo)"));
+  assert.ok(funcao('corrConfirmar').includes("if(op.nivel==='quemLancou' && S===CORR_ATUAL) corrFechar();"));
+  assert.ok(src.includes("'Motivo (pode ser curto, como «Errei»)':'Motivo (pelo menos 4 palavras)'"));
+  // o cartaz sem senha e o registro marcado
+  assert.ok(src.includes("(op.nivel==='quemLancou')?corrAssinarPeloLogin(op):corrAssinar(senha"));
+  assert.ok(funcao('corrRegistro').includes("if(op.nivel==='quemLancou') reg.assinatura='login';"));
+})();
+
+// Cada função nova existe uma vez só: com o nome repetido, a última declarada substitui a outra em silêncio (já existe
+// repJaLancadaTexto(ja), do lote — por isso a do «Um dia só» se chama repFaltaJaLancadaTexto).
+['corrAssinarPeloLogin', 'repFaltaJaLancadaTexto', 'repJaLancadaTexto'].forEach((n) => {
+  assert.strictEqual(src.split('function ' + n + '(').length - 1, 1, 'nome repetido: ' + n);
+});
+
+(function provaJaLancadaDaTroca() {
+  const c = {
+    repBRdata: (x) => x.split('-').reverse().join('/'),
+    repLancamentos: (p) => p.L,
+  };
+  vm.createContext(c);
+  vm.runInContext(['repDataCurta', 'repAnulados', 'repSaidaAntecipada', 'repTrocaViva', 'repFaltaJaLancadaTexto'].map(funcao).join('\n'), c);
+  const troca = { L: [{ _id: 'a', tipo: 'credito', data: '2026-10-30', troca: { de: '2026-10-30', para: '2026-10-29' }, volta: '2026-10-29' }] };
+  assert.match(c.repFaltaJaLancadaTexto(troca, '2026-10-30'), /^30\/10\/2026 já tem a troca 30\/10 → 29\/10 marcada/);
+  const desmarcada = { L: [{ _id: 'a', tipo: 'credito', data: '2026-10-30', troca: { de: '2026-10-30', para: '2026-10-29' }, volta: '' }] };
+  assert.match(c.repFaltaJaLancadaTexto(desmarcada, '2026-10-30'), /já foi lançada: está no Extrato e já conta no saldo/);
+  const estornada = { L: [troca.L[0], { _id: 'e', tipo: 'estorno', estornaId: 'a' }] };
+  assert.match(c.repFaltaJaLancadaTexto(estornada, '2026-10-30'), /já foi lançada/);
 })();
 
 provaSenhaAdrianaNosWriters().then(() => console.log('reposicoes136-ui: OK')).catch((e) => { console.error(e); process.exitCode = 1; });
