@@ -58,8 +58,9 @@ const digitandoMs = (r, cfg = PADRAO) => sorteio(r, cfg.digitandoMinMs, cfg.digi
 
 /* O próximo da fila: o «pronto» que entrou primeiro. Item sem texto ou sem telefone não sai. */
 function escolherProximo(fila) {
-  const prontos = Object.keys(objeto(fila) ? fila : {}).map((k) => fila[k])
-    .filter((it) => objeto(it) && it.estado === 'pronto' && texto(it.texto) && /^55\d{10,11}$/.test(texto(it.para)) && texto(it.dcKey));
+  /* o item só vale na chave dele: dcKey de dentro = chave da fila */
+  const prontos = Object.keys(objeto(fila) ? fila : {}).filter((k) => objeto(fila[k]) && texto(fila[k].dcKey) === k).map((k) => fila[k])
+    .filter((it) => it.estado === 'pronto' && texto(it.texto) && /^55\d{10,11}$/.test(texto(it.para)));
   prontos.sort((a, b) => (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0) || (a.dcKey < b.dcKey ? -1 : 1));
   return prontos[0] || null;
 }
@@ -88,6 +89,12 @@ function entradaConfirmada(v) {
   return /^\d{10,13}$/.test(s) ? Number(s) > 0 : !!s && Number.isFinite(Date.parse(s));
 }
 
+/* As chaves do app: pelKey = (nome+'__'+tutor) minúsculo com .#$[]/ trocados por '-';
+   dcKey = a mesma dupla normalizada (sem acento, espaços juntos) e espaço também vira '-'.
+   Por isso a dcKey sai da pelKey (é a dcKeyDoPelKey do familia92). */
+function jsNorm(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/\s+/g, ' '); }
+function dcKeyDoPelKey(pelKey) { return jsNorm(pelKey).replace(/[.#$[\]/ ]/g, '-'); }
+
 function telefone(v) {
   const d = String(v == null ? '' : v).replace(/\D/g, '');
   if (/^55\d{10,11}$/.test(d)) return d;
@@ -110,12 +117,16 @@ function responsavel(cad, nomeLegado) {
    aprovado (MensagemUnica41) para aqueles cuidados. Qualquer diferença: nada sai. */
 function conferirItem({ item, cadastro, checkin, gerar }) {
   const recusa = (motivo) => ({ ok: false, motivo });
+  if (!texto(item.pelKey) || dcKeyDoPelKey(item.pelKey) !== texto(item.dcKey)) return recusa('A ficha não corresponde ao FILHOt da fila; nada foi enviado.');
   if (!entradaConfirmada(checkin)) return recusa('Não achei o check-in de hoje deste FILHOt; nada foi enviado.');
   if (!objeto(cadastro) || cadastro.excluido === true) return recusa('A ficha do FILHOt não foi encontrada; nada foi enviado.');
   const r = responsavel(cadastro, texto(item.tutor));
   if (!r.ok || r.telefone !== texto(item.para)) return recusa('O telefone não confere com o tutor principal da ficha; nada foi enviado.');
   const nome = texto(item.nome), sexo = item.sexo === 'F' || item.sexo === 'M' ? item.sexo : undefined;
-  if (!nome || nome.length > 60 || /[\r\n*_~]/.test(nome)) return recusa('O nome do FILHOt na fila não é válido; nada foi enviado.');
+  if (!/^[\p{L}\p{M}' .-]{1,40}$/u.test(nome)) return recusa('O nome do FILHOt na fila não é válido; nada foi enviado.');
+  /* o nome tem de ser o da ficha: o que está na chave da ficha ou o gravado nela */
+  const chaveNome = texto(item.pelKey).split('__')[0];
+  if (chaveNome !== nome.toLowerCase().replace(/[.#$[\]/]/g, '-') && jsNorm(texto(cadastro.n)) !== jsNorm(nome)) return recusa('O nome do FILHOt não confere com a ficha; nada foi enviado.');
   const itens = Array.isArray(item.itens) ? item.itens : [];
   const m = typeof gerar === 'function' ? gerar({ nomeTutor: r.nome, nomePeludo: nome, sexo, dia: texto(item.dia), presencaConfirmada: true,
     cuidados: itens.map((x) => ({ itemK: texto(x && x.itemK), vence: texto(x && x.vence) })),
@@ -147,4 +158,4 @@ function interpretarEnvio(r, jid) {
 }
 
 module.exports = { FILA, SAUDE, CONTROLE, VERSAO, PADRAO, lerConfig, partesSP, diaSP, naJanela, proximoIntervalo, digitandoMs,
-  escolherProximo, abandonados, saidaConfirmada, entradaConfirmada, telefone, responsavel, conferirItem, interpretarNumero, interpretarEnvio };
+  escolherProximo, abandonados, saidaConfirmada, entradaConfirmada, dcKeyDoPelKey, telefone, responsavel, conferirItem, interpretarNumero, interpretarEnvio };

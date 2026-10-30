@@ -208,8 +208,9 @@ function evoFalso(op) {
   return e;
 }
 const MSv = require('../zelozinha/simples/mensagem-unica41');
+const K = (dc) => N.dcKeyDoPelKey('filhot ' + dc + '__família fictícia');
 function itemS(dc, criadoEm, extra) {
-  const it = { v: 1, dia: SEG, dcKey: dc, pelKey: 'pk-' + dc, nome: 'FILHOt ' + dc.toUpperCase(), sexo: '', tutor: 'Família Fictícia', para: NUM, itens: [{ itemK: 'verm_p', vence: SEG }], estado: 'pronto', criadoEm };
+  const it = { v: 1, dia: SEG, dcKey: K(dc), pelKey: 'filhot ' + dc + '__família fictícia', nome: 'FILHOt ' + dc.toUpperCase(), sexo: '', tutor: 'Família Fictícia', para: NUM, itens: [{ itemK: 'verm_p', vence: SEG }], estado: 'pronto', criadoEm };
   it.texto = MSv.gerarMensagem({ nomeTutor: 'Família Fictícia', nomePeludo: it.nome, dia: SEG, presencaConfirmada: true, cuidados: it.itens }).texto;
   return Object.assign(it, extra || {});
 }
@@ -221,6 +222,14 @@ function bancoServico(itens, extra) {
   Object.keys(extra || {}).forEach((k) => { d[k] = Object.assign(d[k] || {}, extra[k]); });
   return bancoFalso({ daycare: d });
 }
+
+prova('a chave do FILHOt sai da chave da ficha do mesmo jeito que no app', () => {
+  const pegar = (re) => { const m = html.match(re); assert.ok(m, String(re)); return m[0]; };
+  const f = new Function(pegar(/function jsNorm\(s\)\{[^\n]*\}/) + '\n' + pegar(/function pelKey\(p\)\{[^\n]*\}/) + '\n' + pegar(/function dcKey\(name,tutor\)\{[^\n]*\}/) + '\nreturn {pelKey,dcKey};')();
+  [['Paçoca', 'Família Fictícia'], ['Dr. Bóris', 'Ana  Maria / Zé'], ['Mel#1', 'Joana [Tutor] $'], ['ÍCARO', 'jo.ão']].forEach(([n, tutor]) => {
+    assert.equal(N.dcKeyDoPelKey(f.pelKey({ n, tutor })), f.dcKey(n, tutor), n + ' / ' + tutor);
+  });
+});
 
 prova('o serviço usa uma cópia idêntica do texto aprovado do app', () => {
   const copia = fs.readFileSync(path.resolve(__dirname, '../zelozinha/simples/mensagem-unica41.js'), 'utf8');
@@ -234,6 +243,12 @@ prova('serviço não confia na fila: texto mexido, telefone trocado ou sem check
   assert.match(N.conferirItem({ item: Object.assign({}, base, { para: '5500911111111' }), cadastro: cad(), checkin: ck, gerar }).motivo, /telefone/);
   assert.match(N.conferirItem({ item: base, cadastro: cad(), checkin: null, gerar }).motivo, /check-in/);
   assert.match(N.conferirItem({ item: Object.assign({}, base, { nome: 'X\nLinha extra' }), cadastro: cad(), checkin: ck, gerar }).motivo, /nome/);
+  assert.match(N.conferirItem({ item: Object.assign({}, base, { pelKey: 'outro filhot__outra família' }), cadastro: cad(), checkin: ck, gerar }).motivo, /ficha não corresponde/);
+  const outroNome = Object.assign({}, base, { nome: 'Rex' });
+  outroNome.texto = MSv.gerarMensagem({ nomeTutor: 'Família Fictícia', nomePeludo: 'Rex', dia: SEG, presencaConfirmada: true, cuidados: base.itens }).texto;
+  assert.match(N.conferirItem({ item: outroNome, cadastro: cad(), checkin: ck, gerar }).motivo, /nome do FILHOt não confere/);
+  assert.equal(N.conferirItem({ item: outroNome, cadastro: cad({ n: 'Rex' }), checkin: ck, gerar }).ok, true, 'FILHOt renomeado na ficha passa pelo nome gravado nela');
+  assert.equal(N.escolherProximo({ 'chave-errada': base }), null, 'item fora da sua chave não sai');
 });
 
 prova('serviço: um de cada vez, com «digitando…», e o próximo só depois do intervalo', async () => {
@@ -246,7 +261,7 @@ prova('serviço: um de cada vez, com «digitando…», e o próximo só depois d
   assert.equal(await s.passo(), 'enviado');
   assert.equal(evo.envios[0].t, itemS('b', 1).texto, 'quem entrou primeiro sai primeiro');
   assert.equal(evo.envios[0].d, 6500); assert.equal(evo.envios[0].jid, JIDT);
-  assert.equal(db.ler(`${N.FILA}/${SEG}/b`).estado, 'enviado'); assert.equal(db.ler(`${N.FILA}/${SEG}/b`).msgId, 'msg-1');
+  assert.equal(db.ler(`${N.FILA}/${SEG}/${K('b')}`).estado, 'enviado'); assert.equal(db.ler(`${N.FILA}/${SEG}/${K('b')}`).msgId, 'msg-1');
   t += 60000; assert.equal(await s.passo(), 'esperando', 'o intervalo ainda não passou');
   t += 4 * 60000; assert.equal(await s.passo(), 'enviado');
   assert.equal(evo.envios.length, 2);
@@ -266,7 +281,7 @@ prova('serviço: sem resposta do WhatsApp vira Conferir e nunca é reenviado soz
 
 prova('serviço: quem saiu antes do envio é cancelado; pausa e fora do horário não mandam', async () => {
   let t = Date.parse(SEG + 'T10:00:00-03:00');
-  const db = bancoServico([itemS('a', 1), itemS('b', 2)], { 'checkout-corpo': { [SEG]: { a: { tipo: 'saida', fim: t - 1000 } } } });
+  const db = bancoServico([itemS('a', 1), itemS('b', 2)], { 'checkout-corpo': { [SEG]: { [K('a')]: { tipo: 'saida', fim: t - 1000 } } } });
   const evo = evoFalso();
   const s = criarServico({ db, evo, cfg: CFG.cfg, agora: () => t, aleatorio: () => 0 });
   await s.iniciar();
@@ -275,7 +290,7 @@ prova('serviço: quem saiu antes do envio é cancelado; pausa e fora do horário
   assert.equal(await s.passo(), 'esperando');
   db.gravar(N.CONTROLE, { pausado: false });
   t = Date.parse(SEG + 'T13:30:00-03:00'); assert.equal(await s.passo(), 'esperando');
-  assert.equal(db.ler(`${N.FILA}/${SEG}/b`).estado, 'pronto');
+  assert.equal(db.ler(`${N.FILA}/${SEG}/${K('b')}`).estado, 'pronto');
 });
 
 prova('serviço: reinício no meio do envio manda o item para Conferir; número fora do ar tenta de novo depois', async () => {
@@ -284,12 +299,12 @@ prova('serviço: reinício no meio do envio manda o item para Conferir; número 
   const evo = evoFalso({ numeroFalha: true });
   const s = criarServico({ db, evo, cfg: CFG.cfg, agora: () => t, aleatorio: () => 0 });
   await s.iniciar();
-  assert.equal(db.ler(`${N.FILA}/${SEG}/a`).estado, 'conferir');
+  assert.equal(db.ler(`${N.FILA}/${SEG}/${K('a')}`).estado, 'conferir');
   assert.equal(await s.passo(), 'esperando', 'o reinício respeita o intervalo do último envio');
   t += 3 * 60000; assert.equal(await s.passo(), 'numero-depois');
-  assert.equal(db.ler(`${N.FILA}/${SEG}/b`).estado, 'pronto'); assert.equal(db.ler(`${N.FILA}/${SEG}/b`).tentativasNumero, 1);
+  assert.equal(db.ler(`${N.FILA}/${SEG}/${K('b')}`).estado, 'pronto'); assert.equal(db.ler(`${N.FILA}/${SEG}/${K('b')}`).tentativasNumero, 1);
   t += 61000; await s.passo(); t += 61000; await s.passo();
-  assert.equal(db.ler(`${N.FILA}/${SEG}/b`).estado, 'falhou', 'três tentativas sem confirmar o número: Não enviada');
+  assert.equal(db.ler(`${N.FILA}/${SEG}/${K('b')}`).estado, 'falhou', 'três tentativas sem confirmar o número: Não enviada');
   assert.equal(evo.envios.length, 0);
 });
 
@@ -301,7 +316,7 @@ prova('serviço: item que não confere com o banco vira Não enviada, sem tocar 
   const s = criarServico({ db, evo, cfg: CFG.cfg, agora: () => t, aleatorio: () => 0 });
   await s.iniciar();
   assert.equal(await s.passo(), 'recusado');
-  assert.equal(db.ler(`${N.FILA}/${SEG}/a`).estado, 'falhou');
+  assert.equal(db.ler(`${N.FILA}/${SEG}/${K('a')}`).estado, 'falhou');
   assert.equal(evo.envios.length, 0); assert.equal(evo.numeros, 0);
 });
 

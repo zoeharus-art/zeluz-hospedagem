@@ -17,7 +17,9 @@ Pedido da Adriana (29/10/2026): «Quero que a zelozinha entre no app da forma ma
 5. **Pausa.** O botão da tela grava em `daycare/zelozinha-controle/estado`, e quem pode usar é a Diretoria ou a Supervisão. O serviço respeita a pausa no próximo passo.
 6. **Depois do envio, é humano.** Os botões dos cartões continuam os mesmos.
 
-O serviço não escolhe quem recebe: isso nasce no app. Ele também **não confia na fila**. Antes de cada envio, confere no banco três coisas:
+O serviço não escolhe quem recebe: isso nasce no app. Ele também **não confia na fila**. Antes de cada envio, confere no banco cinco coisas:
+- o item está na chave do FILHOt, e essa chave sai da chave da ficha (a mesma regra do app);
+- o nome do FILHOt é o da ficha;
 - o FILHOt tem check-in hoje;
 - o telefone é o do tutor principal da ficha;
 - o texto é exatamente o texto aprovado para aqueles cuidados, remontado pelo próprio serviço.
