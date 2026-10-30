@@ -28,13 +28,15 @@ Se algo não bater, nada sai e o item fica «Não enviada». Assim, nem quem con
 
 ## Regras que continuam
 
-- Vacina só entra na mensagem com a veterinária confirmada no dia, e nunca na quinta. Sem a confirmação, a mensagem sai com os outros cuidados, e a vacina aparece no cartão como contato humano.
+- Vacina só entra na mensagem nos dias da veterinária: segunda, terça, quarta e sexta (30/10/2026, pela agenda, sem confirmação diária). Na quinta e no sábado, ou com um registro do dia dizendo que ela não veio, a mensagem sai com os outros cuidados, e a vacina aparece no cartão como contato humano.
 - A troca da escova fica com a equipe.
 - Ficha com `comunicacaoZelozinha.modo: humano` não entra na fila.
 - Quem recebe é o tutor principal da ficha (Tutor 1 ou Tutor 2), com o telefone dele. Sem telefone, o check-in avisa a recepção.
 - Na dúvida, o item vai para Conferir. Nada é reenviado sozinho, nem depois de um reinício.
 
-**Diferença para a versão antiga:** irmãos com o mesmo tutor recebem uma mensagem por FILHOt, uma de cada vez, com o intervalo entre elas.
+**Irmãos (30/10/2026):** «tutor dono de dois peludinhos, sempre se tiver coisa junta mandar juntos, na mesma mensagem». Quando chega a vez de um FILHOt, os outros «prontos» do mesmo dia para o mesmo telefone saem na mesma mensagem, até cinco, com o texto aprovado para irmãos (`mensagem-irmaos.js`). Cada um é conferido antes, como sempre; quem não confere ou já saiu fica de fora. Todos os cartões ficam «ENVIADA», e «Ver mensagem» mostra o texto que saiu (`textoEnviado`). O irmão que entra na fila depois que a mensagem saiu recebe uma mensagem separada.
+
+**A fila se completa sozinha (30/10/2026):** além do check-in, todo aparelho logado olha os check-ins do dia e põe na fila quem tem check-in e cuidado vencendo e ainda não está nela. Gravar é «só se não existir», então nada se duplica.
 
 ## Arquivos
 
@@ -43,6 +45,7 @@ Se algo não bater, nada sai e o item fica «Não enviada». Assim, nem quem con
 | `nucleo.js` | As decisões, sem rede e sem banco: horário, intervalo, próximo da fila e leitura das respostas do WhatsApp |
 | `zelozinha.js` | O serviço: escuta a fila e a pausa, confere, envia, marca e dá sinal de vida |
 | `mensagem-unica41.js` | Cópia idêntica do texto aprovado que está no app. A prova falha se as duas ficarem diferentes |
+| `mensagem-irmaos.js` | O texto aprovado para irmãos do mesmo tutor, também idêntico ao do app (`<script id="mensagem-irmaos">`) |
 | `package.json` | Uma dependência só: `firebase-admin` 14.5.0 |
 | `zelozinha.service` | A unidade do systemd |
 

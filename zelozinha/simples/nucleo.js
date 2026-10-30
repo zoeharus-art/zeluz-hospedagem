@@ -6,7 +6,7 @@
 const FILA = 'daycare/zelozinha-fila';
 const SAUDE = 'daycare/zelozinha-saude/vps';
 const CONTROLE = 'daycare/zelozinha-controle/estado';
-const VERSAO = 'simples-1';
+const VERSAO = 'simples-2';
 const JID = /^\d{6,20}@s\.whatsapp\.net$/;
 
 const PADRAO = Object.freeze({
@@ -63,6 +63,17 @@ function escolherProximo(fila) {
     .filter((it) => it.estado === 'pronto' && texto(it.texto) && /^55\d{10,11}$/.test(texto(it.para)));
   prontos.sort((a, b) => (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0) || (a.dcKey < b.dcKey ? -1 : 1));
   return prontos[0] || null;
+}
+
+/* Irmãos (Adriana, 30/out/2026: "tutor dono de dois peludinhos, sempre se tiver coisa junta mandar juntos"):
+   os outros «prontos» do mesmo dia para o mesmo telefone saem na mesma mensagem, na vez do primeiro. */
+const IRMAOS_MAX = 5;
+function irmaos(fila, principal) {
+  if (!objeto(principal)) return [];
+  return Object.keys(objeto(fila) ? fila : {}).filter((k) => k !== principal.dcKey && objeto(fila[k]) && texto(fila[k].dcKey) === k).map((k) => fila[k])
+    .filter((it) => it.estado === 'pronto' && it.dia === principal.dia && texto(it.texto) && texto(it.para) === texto(principal.para))
+    .sort((a, b) => (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0) || (a.dcKey < b.dcKey ? -1 : 1))
+    .slice(0, IRMAOS_MAX - 1);
 }
 
 /* Quem ficou «enviando» quando o serviço caiu nunca é reenviado sozinho: vai para Conferir. */
@@ -158,4 +169,4 @@ function interpretarEnvio(r, jid) {
 }
 
 module.exports = { FILA, SAUDE, CONTROLE, VERSAO, PADRAO, lerConfig, partesSP, diaSP, naJanela, proximoIntervalo, digitandoMs,
-  escolherProximo, abandonados, saidaConfirmada, entradaConfirmada, dcKeyDoPelKey, telefone, responsavel, conferirItem, interpretarNumero, interpretarEnvio };
+  escolherProximo, irmaos, abandonados, saidaConfirmada, entradaConfirmada, dcKeyDoPelKey, telefone, responsavel, conferirItem, interpretarNumero, interpretarEnvio };
