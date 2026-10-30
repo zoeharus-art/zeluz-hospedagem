@@ -101900,6 +101900,66 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
 <script src="marcia129/dados.js?v=2026-10-30-03"></script>
 <script src="marcia129/app.js?v=2026-10-30-03"></script>
 <script src="agenda-marcia/app.js?v=2026-10-30-03"></script>
+<script id="menu-contadores171">'use strict';
+/* 30/out/2026 — contadores vermelhos no menu (maquete aprovada pela Adriana).
+   «Márcia Gestão»: cuidados das avaliações de HOJE ainda não revisados + alertas de reação ainda sem «Tutor avisado».
+   «Quem não comeu hoje»: a conta que a tela já faz (empLista: os de hoje ainda não avisados) — o número aparecia só
+   depois de abrir a tela; agora os três nós pequenos do dia ficam ouvidos e o número se acerta sozinho.
+   Leitura: só o dia (daycare/dashboard/{hoje}/avaliacao; daycare/almoco/{hoje}, daycare/atividade/{hoje}/almoco2 e
+   daycare/avisos-comida/{hoje}), só para quem vê o item no menu. Some quando zero. Nada aqui grava. */
+(function(root){
+  if(root.__menuContadores171)return;root.__menuContadores171=true;
+  var D=root.ZeluzMarciaDados129,P=root.ZeluzMarcia129;
+  function obj(v){return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}
+  /* A conta da Márcia Gestão a partir dos registros do dia — a MESMA régua da tela (estadoCuidado171 + registroCuidado171). */
+  function contarGestao(avaliacoes){
+    var n={revisar:0,alertas:0};if(!D||!P||typeof D.registroCuidado171!=='function'||typeof P.estadoCuidado171!=='function')return null;
+    Object.keys(obj(avaliacoes)).forEach(function(id){
+      var reg=obj(avaliacoes[id]),det=obj(reg.det),a=obj(det.avaliacao129);
+      if(!(det.agendaMarcia===true||a.agendaMarcia===true||Number(a.versao)===131||Number(a.versao)===133))return;
+      if(a.remarcacao159||a.estado==='remarcada'||a.estado==='cancelada'||obj(a.cancelamento).ativo===true)return;
+      ['vacina','vermifugo','carrapaticida'].forEach(function(k){var raw=obj(a[k]),e=P.estadoCuidado171(Object.assign({plano:raw.plano},D.registroCuidado171(raw)));if(e==='aberto')n.revisar++;else if(e==='alerta')n.alertas++;});
+    });
+    return n;
+  }
+  function visivel(view){try{var l=root.document.querySelector('#nav a[data-v="'+view+'"]');return !!l&&root.getComputedStyle(l).display!=='none';}catch(_){return false;}}
+  function db(){try{return typeof DB!=='undefined'&&DB&&typeof DB.ref==='function'?DB:null;}catch(_){return null;}}
+  function logado(){try{return typeof usuarioAtual==='function'&&!!usuarioAtual();}catch(_){return false;}}
+  function podeGestao(){try{return logado()&&typeof podePapel==='function'&&podePapel('painel-operacao')===true&&visivel('gestaomarcia');}catch(_){return false;}}
+  function podeComeu(){return logado()&&visivel('emporio');}
+  function marcar(view,n,titulo){try{if(typeof navPend==='function'){navPend(view,n>0?n:0,titulo);if(typeof navPendSubirParaOPai==='function')navPendSubirParaOPai();}}catch(_){/* o menu se acerta na próxima conta */}}
+  var ouv={gestao:null,comeu:null},dados={a1:null,a2:null,av:null};
+  function desligar(k){var o=ouv[k];if(!o)return;o.refs.forEach(function(r){try{r.ref.off('value',r.fn);}catch(_){}});ouv[k]=null;}
+  function ligarGestao(){
+    var base=db(),dia=P&&typeof P.dataSP==='function'?P.dataSP():'';
+    if(!base||!dia||!podeGestao()){if(ouv.gestao){desligar('gestao');marcar('gestaomarcia',0);}return;}
+    if(ouv.gestao&&ouv.gestao.dia===dia)return;desligar('gestao');
+    var ref=base.ref('daycare/dashboard/'+dia+'/avaliacao'),fn=function(s){var n=contarGestao(s&&typeof s.val==='function'?s.val():null);if(!n)return;var t=n.revisar+n.alertas;marcar('gestaomarcia',t,'{n} na agenda da Márcia hoje: '+n.revisar+' cuidado'+(n.revisar===1?'':'s')+' para revisar'+(n.alertas?' · '+n.alertas+' alerta'+(n.alertas===1?'':'s')+' de reação':''));};
+    ouv.gestao={dia:dia,refs:[{ref:ref,fn:fn}]};try{ref.on('value',fn,function(){marcar('gestaomarcia',0);});}catch(_){desligar('gestao');}
+  }
+  /* Os dados do dia vão para os mesmos lugares que a tela «Quem não comeu hoje» usa; a conta e o número no menu continuam
+     sendo os do app (contarPendencias → empLista → navPend('emporio')). */
+  function publicarComeu(){
+    if(!dados.a1||!dados.a2||!dados.av)return;
+    try{root.__empAlm1=dados.a1;root.__empAlm2=dados.a2;if(typeof EMP_AVISOS!=='undefined')EMP_AVISOS=dados.av;}catch(_){}
+    try{if(typeof atualizarPendenciasNav==='function')atualizarPendenciasNav();}catch(_){}
+  }
+  function ligarComeu(){
+    var base=db(),dia=typeof empDataKey==='function'?empDataKey():'';
+    if(!base||!dia||!podeComeu()){if(ouv.comeu)desligar('comeu');return;}
+    if(ouv.comeu&&ouv.comeu.dia===dia)return;desligar('comeu');dados={a1:null,a2:null,av:null};
+    var refs=[['a1','daycare/almoco/'+dia],['a2','daycare/atividade/'+dia+'/almoco2'],['av','daycare/avisos-comida/'+dia]].map(function(p){var ref=base.ref(p[1]),fn=function(s){dados[p[0]]=obj(s&&typeof s.val==='function'?s.val():null);publicarComeu();};return {ref:ref,fn:fn};});
+    ouv.comeu={dia:dia,refs:refs};refs.forEach(function(r){try{r.ref.on('value',r.fn);}catch(_){}});
+  }
+  function conferir(){ligarGestao();ligarComeu();}
+  root.menuContadores171={contarGestao:contarGestao,conferir:conferir};
+  function iniciar(){
+    conferir();setInterval(conferir,30000);/* o dia vira e a permissão muda: a cada 30 s se confere, sem leitura nova quando nada mudou */
+    try{if(typeof root.MutationObserver==='function')new root.MutationObserver(function(){setTimeout(conferir,0);}).observe(root.document.body,{attributes:true,attributeFilter:['data-role']});}catch(_){}
+  }
+  if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',iniciar,{once:true});else iniciar();
+}(typeof window!=='undefined'?window:globalThis));
+</script>
 </body>
 <script>
 (function(raiz, fabrica){
