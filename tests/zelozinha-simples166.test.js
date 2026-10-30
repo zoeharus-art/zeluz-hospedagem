@@ -209,15 +209,17 @@ function evoFalso(op) {
 }
 const MSv = require('../zelozinha/simples/mensagem-unica41');
 const K = (dc) => N.dcKeyDoPelKey('filhot ' + dc + '__família fictícia');
+/* cada FILHOt inventado tem um telefone próprio (o «a» usa o NUM): tutores diferentes não viram irmãos */
+const telDe = (dc) => (dc === 'a' ? NUM : '55009000000' + String(dc.charCodeAt(0)).slice(-2));
 function itemS(dc, criadoEm, extra) {
-  const it = { v: 1, dia: SEG, dcKey: K(dc), pelKey: 'filhot ' + dc + '__família fictícia', nome: 'FILHOt ' + dc.toUpperCase(), sexo: '', tutor: 'Família Fictícia', para: NUM, itens: [{ itemK: 'verm_p', vence: SEG }], estado: 'pronto', criadoEm };
+  const it = { v: 1, dia: SEG, dcKey: K(dc), pelKey: 'filhot ' + dc + '__família fictícia', nome: 'FILHOt ' + dc.toUpperCase(), sexo: '', tutor: 'Família Fictícia', para: telDe(dc), itens: [{ itemK: 'verm_p', vence: SEG }], estado: 'pronto', criadoEm };
   it.texto = MSv.gerarMensagem({ nomeTutor: 'Família Fictícia', nomePeludo: it.nome, dia: SEG, presencaConfirmada: true, cuidados: it.itens }).texto;
   return Object.assign(it, extra || {});
 }
 /* o banco de mentira do serviço: a fila, a ficha e o check-in de cada FILHOt da fila */
 function bancoServico(itens, extra) {
   const filaDia = {}, cadastro = {}, checkin = {};
-  itens.forEach((it) => { filaDia[it.dcKey] = it; cadastro[it.pelKey] = cad(); checkin[it.dcKey] = { tipo: 'entrada', quem: 'Pessoa Fictícia', fim: Date.parse(SEG + 'T07:30:00-03:00') }; });
+  itens.forEach((it) => { filaDia[it.dcKey] = it; cadastro[it.pelKey] = cad({ tel: it.para.slice(2) }); checkin[it.dcKey] = { tipo: 'entrada', quem: 'Pessoa Fictícia', fim: Date.parse(SEG + 'T07:30:00-03:00') }; });
   const d = { 'zelozinha-fila': { [SEG]: filaDia }, cadastro, 'checkin-corpo': { [SEG]: checkin } };
   Object.keys(extra || {}).forEach((k) => { d[k] = Object.assign(d[k] || {}, extra[k]); });
   return bancoFalso({ daycare: d });
@@ -260,7 +262,7 @@ prova('serviço: um de cada vez, com «digitando…», e o próximo só depois d
   assert.equal(db.ler(N.SAUDE).whatsapp, 'open'); assert.equal(db.ler(N.SAUDE).versao, N.VERSAO);
   assert.equal(await s.passo(), 'enviado');
   assert.equal(evo.envios[0].t, itemS('b', 1).texto, 'quem entrou primeiro sai primeiro');
-  assert.equal(evo.envios[0].d, 6500); assert.equal(evo.envios[0].jid, JIDT);
+  assert.equal(evo.envios[0].d, 6500); assert.equal(evo.envios[0].jid, telDe('b') + '@' + 's.whatsapp' + '.net');
   assert.equal(db.ler(`${N.FILA}/${SEG}/${K('b')}`).estado, 'enviado'); assert.equal(db.ler(`${N.FILA}/${SEG}/${K('b')}`).msgId, 'msg-1');
   t += 60000; assert.equal(await s.passo(), 'esperando', 'o intervalo ainda não passou');
   t += 4 * 60000; assert.equal(await s.passo(), 'enviado');
