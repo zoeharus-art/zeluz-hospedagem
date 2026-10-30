@@ -1,0 +1,22 @@
+[Unit]
+Description=Zelozinha simples: manda a fila do dia pelo WhatsApp, devagar
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=zeluz-piloto
+Group=zeluz-piloto
+WorkingDirectory=/opt/zelozinha
+Environment=NODE_ENV=production
+Environment=GOOGLE_APPLICATION_CREDENTIALS=/etc/zeluz-piloto/firebase-adc.json
+Environment=NODE_EXTRA_CA_CERTS=/etc/zeluz-piloto/evolution-ca.pem
+ExecStart=/usr/bin/node /opt/zelozinha/zelozinha.js --config /etc/zeluz-piloto/automatico80.json
+Restart=always
+RestartSec=30
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

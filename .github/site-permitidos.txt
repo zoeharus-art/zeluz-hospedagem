@@ -54,10 +54,6 @@ auaulandia/historico-checkins.js
 auaulandia/historico-checkins-pdf.js
 auaulandia/orcamento-acompanhamento.js
 auaulandia/dash-lancamentos-performance.js
-auaulandia/ponte121/contrato116.js
-auaulandia/ponte121/transporte116.js
-auaulandia/ponte121/config-publica116.js
-auaulandia/ponte121/inicializador116.js
 # O require do ramo CommonJS do UMD não é carregado pelo navegador.
 nao-e-arquivo auaulandia/contrato116.js
 auaulandia/reserva-cadastro.js
