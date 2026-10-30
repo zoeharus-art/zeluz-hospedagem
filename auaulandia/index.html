@@ -103438,6 +103438,46 @@ renderAtual=function(){
     classificarFilas117:classificarFilas117,chaveRascunho137:chaveRascunho137,retornosAnteriores143:retornosAnteriores143,retornoAnterior143:retornoAnterior143};
 });
 </script>
+<script id="zelozinha-ficha171">'use strict';
+/* «Tutor já fez» simplificado (30/out/2026, maquete aprovada pela Adriana). As funções puras: a ficha já tem a data?,
+   qual é o próximo vencimento que ela guarda, a frase do cuidado e a mensagem APROVADA ao tutor. Nada aqui lê ou grava;
+   quem grava a ficha é o mesmo caminho do «Salvar» do formulário (prevLancar), chamado pela tela da Zelozinha. */
+(function(root){
+  /* Os nomes e os artigos são os de `mensagem-unica41` (texto aprovado, que não muda): copiados aqui, em minúscula,
+     porque aquele bloco só exporta a mensagem da manhã. A prova confere que continuam iguais. */
+  var NOMES={vac_mult_p:'vacina múltipla',vac_gripe_p:'vacina contra gripe',vac_raiva_p:'vacina antirrábica',verm_p:'vermífugo',verm_dose2_p:'2ª dose do vermífugo',ecto_p:'proteção contra pulgas e carrapatos',col_p:'coleira repelente'};
+  var ARTIGOS={vac_mult_p:'a',vac_gripe_p:'a',vac_raiva_p:'a',verm_p:'o',verm_dose2_p:'a',ecto_p:'a',col_p:'a'};
+  /* Onde a ficha guarda a data de cada cuidado (a mesma de PREV_ITENS: `base`, e o campo antigo `altBase`). */
+  var BASES={vac_mult_p:['vac_mult_t'],vac_gripe_p:['vac_gripe_t'],vac_raiva_p:['vac_raiva_t'],ecto_p:['ecto_t','carrapaticida_t'],col_p:['col_t'],verm_p:['verm_t','vermifugo_t'],verm_dose2_p:['verm_dose2_t'],fezes_p:['fezes_t']};
+  function txt(v){return typeof v==='string'?v.trim():'';}
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);});}
+  function iso(v){var s=txt(v);if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return '';var p=s.split('-').map(Number),d=new Date(Date.UTC(p[0],p[1]-1,p[2]));return d.getUTCFullYear()===p[0]&&d.getUTCMonth()===p[1]-1&&d.getUTCDate()===p[2]?s:'';}
+  function br(v){var s=iso(v);return s?s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4):'';}
+  function obj(v){return v&&typeof v==='object'?v:{};}
+  /* A ficha já tem a data que o tutor informou? (então ela foi atualizada — por este fluxo ou à mão) */
+  function fichaTemData(ex,itemK,dataISO){var d=iso(dataISO),b=BASES[txt(itemK)];if(!d||!b)return false;ex=obj(ex);return txt(ex[b[0]])===d||(!!b[1]&&!txt(ex[b[0]])&&txt(ex[b[1]])===d);}
+  /* O próximo vencimento que a ficha guarda depois de lançar (a 2ª dose leva ao próximo vermífugo). */
+  function proximoDe(ex,itemK){ex=obj(ex);var k=txt(itemK);if(k==='verm_dose2_p')return iso(ex.verm_p);if(k==='ecto_p')return iso(ex.ecto_p)||iso(ex.carrapaticida_p);if(k==='verm_p')return iso(ex.verm_p)||iso(ex.vermifugo_p);return iso(ex[k]);}
+  function cuidadoNaFrase(itemK){var k=txt(itemK);if(!NOMES[k])return null;return {artigo:ARTIGOS[k],nome:NOMES[k],feito:ARTIGOS[k]==='a'?'feita':'feito'};}
+  function daDo(sexo){var s=txt(sexo);return /^f/i.test(s)?'da':/^m/i.test(s)?'do':'de';}
+  /* TEXTO APROVADO pela Adriana (30/out/2026). Muda só o artigo e os nomes. */
+  function mensagem(info,itemK,dataISO,proximoISO){
+    info=obj(info);var tutor=txt(info.tutor).split(/[\s\/,]+/)[0],pet=txt(info.pet),c=cuidadoNaFrase(itemK),d=br(dataISO),p=br(proximoISO);
+    if(!tutor||!pet||!c||!d||!p)return '';
+    return 'Obrigada, '+tutor+'! 💛\nJá atualizamos a ficha '+daDo(info.sexo)+' '+pet+': '+c.artigo+' '+c.nome+' foi '+c.feito+' em '+d+' e o próximo é em '+p+'.\nQuando estiver chegando perto, a gente avisa por aqui.';
+  }
+  /* O bloco verde depois de gravar: a confirmação, o selo e a mensagem com «Copiar mensagem» e «Abrir no WhatsApp»
+     (os mesmos botões das caixas da tela: data-zt694-acao="copiar" e "whats-texto"). */
+  function resultadoHTML(o){
+    o=obj(o);var d=br(o.data),p=br(o.proximo),texto=txt(o.texto),i=String(o.indice||0);
+    var h='<div class="zt694-ficha171" data-zt694-ficha171="'+esc(i)+'"><p class="zt694-ficha171-ok" role="status">✓ Ficha atualizada — '+esc(o.cuidado)+' feito em '+esc(d)+(p?' · próximo em '+esc(p):'')+'</p>'+(p?'<span class="zt694-ficha171-selo">EM DIA ATÉ '+esc(p)+'</span>':'');
+    if(texto)h+='<div class="zt694-copia" data-zt694-copia="f171-'+esc(i)+'" data-zt694-tipo="ficha171"><p class="zt694-copia-tit">Mensagem para o tutor</p><div class="zt694-texto" data-zt694-texto tabindex="0">'+esc(texto)+'</div><div class="zt694-copia-bt"><button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="copiar">Copiar mensagem</button>'+(o.temTelefone?'<button type="button" class="btn zt694-acao" data-zt694-acao="whats-texto">Abrir no WhatsApp</button>':'')+'</div><span class="zt694-sub" aria-live="polite" data-zt694-copia-st>'+esc(o.copiaMsg||'')+'</span>'+(o.temTelefone?'':'<p class="zt694-sub">Sem telefone na ficha: use Copiar.</p>')+'</div>';
+    h+='<button type="button" class="btn-link zt694-ficha171-corrigir" data-zt694-acao="corrigir-data171" data-zt694-ciclo="'+esc(i)+'">Corrigir a data</button></div>';
+    return h;
+  }
+  root.ZelozinhaFicha171={NOMES:NOMES,ARTIGOS:ARTIGOS,BASES:BASES,fichaTemData:fichaTemData,proximoDe:proximoDe,cuidadoNaFrase:cuidadoNaFrase,daDo:daDo,mensagem:mensagem,resultadoHTML:resultadoHTML,dataBR:br};
+}(typeof window!=='undefined'?window:globalThis));
+</script>
 <script id="zelozinha-contatos89-ui">'use strict';
 /* «Contatos e respostas de hoje» — a tela da Zelozinha (Story 6.94: as quatro respostas em um toque, o que cada uma faz à vista, sem salto de tela).
    Só grava pelas portas que já existem: ZeluzRespostaApp88.registrar (a resposta), estado.api.marcar/marcarRetorno (o contato humano), o `det` da linha do Day Care
@@ -103508,6 +103548,11 @@ renderAtual=function(){
       '.zt694-sem .zt694-quando{flex:1 1 auto;min-width:0}',
       '.zt694-copia{margin:16px 0 0;padding:16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--z-cream-warm)}',
       '.zt694-copia-tit{margin:0 0 8px;font-size:14px;font-weight:800;color:var(--z-blue)}',
+      /* «Tutor já fez» com a ficha atualizada (30/out/2026): a linha verde, o selo e a mensagem */
+      '.zt694-ficha171{margin-top:8px}.zt694-ficha171-ok{margin:0;padding:6px 10px;border-radius:10px;background:var(--crm-ok-soft);border:1px solid rgba(39,174,96,.5);color:var(--crm-ok-text);font-weight:800;font-size:14px;overflow-wrap:anywhere}',
+      '.zt694-ficha171-selo{display:inline-block;margin-top:6px;padding:3px 12px;border-radius:999px;background:#1E8449;color:#fff;font-size:12px;font-weight:800;letter-spacing:.03em}',
+      '.zt694-ficha171-corrigir{border:0;background:none;color:var(--z-blue);font-size:14px;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer;min-height:44px;padding:0 4px}',
+      '.zt694-ficha171-erro{color:var(--crm-critico-text);font-weight:700}',
       '.zt694-texto{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.5;padding:12px;border-radius:10px;background:var(--z-white);border:1px solid var(--line);user-select:text}',
       '.zt694-copia-bt{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}',
       '.zt694-snoopy{margin:0;padding:12px 0;font-size:14px;line-height:1.5;border-bottom:1px solid var(--line)}',
@@ -103718,7 +103763,9 @@ renderAtual=function(){
     var legenda='<p class="pair zt694-leg"><span>'+esc(cuidadoNome(cy))+'</span><small><span class="zt694-care-status '+classeStatusCuidado(v)+'">'+esc(v.st.rotulo)+'</span><br>'+esc(detalhe)+'</small></p>';
     if(c.saiuHoje===true||c.saidaNaoConfirmada===true){var pend=c.saidaNaoConfirmada===true?'Registro de saída não confirmado; conferir a presença antes de qualquer ação.':v.tstate&&v.tstate.id==='criada'?'Tarefa do Day Care pendente; não aplicar sem nova presença.':v.tstate&&v.tstate.id==='realizado'?'Cuidado registrado como realizado na tarefa.':v.valor==='autorizar_loja'||v.valor==='autorizar_bolsa'?'Resposta registrada; tarefa a conferir, sem aplicação após a saída.':v.valor==='aguardar'||v.valor==='autorizar_externo'?'Acompanhamento humano pendente.':'Resposta ainda pendente de conferência.';return '<div class="zt694-care" role="group" data-z104-care="'+ck+'" aria-label="'+esc(cuidadoNome(cy))+'">'+legenda+'<p class="zt694-aviso" data-zt694-saiu-cuidado>'+esc(pend)+'</p></div>';}
     var botoes=T.RESPOSTAS.map(function(r){var aria=r[1]+' para '+cuidadoNome(cy),on=v.valor===r[0];return '<button type="button" class="btn zt694-btn" data-zt694-acao="resp" data-zt694-valor="'+r[0]+'" data-zt694-ciclo="'+i+'" aria-label="'+esc(aria)+'" aria-pressed="'+(on?'true':'false')+'"'+(travado||pendenciaFicha?' disabled':'')+'>'+esc(r[1])+'</button>';}).join('');
-    var dataKey=T.chaveRascunho137(c.dcKey,cy.cycleKey,cy.itemK),dataId='zt694-tutor-fez-'+encodeURIComponent(dataKey),dataFez=Object.prototype.hasOwnProperty.call(estado.datasTutor137,dataKey)?estado.datasTutor137[dataKey]:(confTutor&&confTutor.dataAplicacao||pendenciaFicha&&v.retorno143.confirmacaoTutor137.dataAplicacao||''),atualizarFicha=confTutor?'<button type="button" class="btn zt694-acao" data-zt694-acao="atualizar-ficha" data-zt694-ciclo="'+i+'"'+(travado?' disabled':'')+'>Atualizar ficha</button>':'',fez='<div class="zt694-tutor-fez" data-zt694-tutor-fez><label class="cad-lb" for="'+esc(dataId)+'">Data real em que o tutor fez</label><div class="zt694-btns"><input class="cad-in" type="date" id="'+esc(dataId)+'" data-zt694-data-fez data-zt694-cycle-key="'+esc(encodeURIComponent(cy.cycleKey))+'" data-zt694-item-k="'+esc(encodeURIComponent(cy.itemK))+'" value="'+esc(dataFez)+'" max="'+esc(hojeSP137())+'"'+(travado?' disabled':'')+'><button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="tutor-fez" data-zt694-ciclo="'+i+'"'+(travado?' disabled':'')+'>'+(pendenciaFicha?'Conferir data e registrar':'Tutor já fez')+'</button>'+atualizarFicha+'</div><p class="zt694-sub">'+(confTutor?'Resposta registrada. Data informada: '+esc(dataBR(confTutor.dataAplicacao))+' · Atualizar ficha — pendente. A ficha ainda não foi atualizada.':pendenciaFicha?'Data informada antes: '+esc(dataBR(v.retorno143.confirmacaoTutor137.dataAplicacao))+'. Confira e registre hoje para abrir a atualização da ficha.':'Informe a data para registrar; a ficha não será atualizada automaticamente.')+'</p><div data-z138-editor-slot></div></div>';
+    var f171=ficha171De(c,cy,confTutor,i),st171=!f171.ok&&f171.msg?'<p class="zt694-sub'+(f171.estado==='falhou'?' zt694-ficha171-erro':'')+'" role="status" data-zt694-ficha171-st>'+esc(f171.msg)+'</p>':'';
+    var dataKey=T.chaveRascunho137(c.dcKey,cy.cycleKey,cy.itemK),dataId='zt694-tutor-fez-'+encodeURIComponent(dataKey),dataFez=Object.prototype.hasOwnProperty.call(estado.datasTutor137,dataKey)?estado.datasTutor137[dataKey]:(confTutor&&confTutor.dataAplicacao||pendenciaFicha&&v.retorno143.confirmacaoTutor137.dataAplicacao||''),atualizarFicha=confTutor?'<button type="button" class="btn zt694-acao" data-zt694-acao="atualizar-ficha" data-zt694-ciclo="'+i+'"'+(travado?' disabled':'')+'>Atualizar ficha</button>':'',fez='<div class="zt694-tutor-fez" data-zt694-tutor-fez><label class="cad-lb" for="'+esc(dataId)+'">Data real em que o tutor fez</label><div class="zt694-btns"><input class="cad-in" type="date" id="'+esc(dataId)+'" data-zt694-data-fez data-zt694-cycle-key="'+esc(encodeURIComponent(cy.cycleKey))+'" data-zt694-item-k="'+esc(encodeURIComponent(cy.itemK))+'" value="'+esc(dataFez)+'" max="'+esc(hojeSP137())+'"'+(travado?' disabled':'')+'><button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="tutor-fez" data-zt694-ciclo="'+i+'"'+(travado?' disabled':'')+'>'+(pendenciaFicha?'Conferir data e registrar':'Tutor já fez')+'</button>'+atualizarFicha+'</div><p class="zt694-sub">'+(confTutor?'Resposta registrada. Data informada: '+esc(dataBR(confTutor.dataAplicacao))+' · Atualizar ficha — pendente. A ficha ainda não foi atualizada.':pendenciaFicha?'Data informada antes: '+esc(dataBR(v.retorno143.confirmacaoTutor137.dataAplicacao))+'. Confira e registre hoje para abrir a atualização da ficha.':'Informe a data: a resposta fica registrada e a ficha é atualizada com essa data.')+'</p>'+st171+'<div data-z138-editor-slot></div></div>';
+    if(f171.ok)fez=f171.html;
     var aviso=estado.avisos[c.dcKey+'|'+i]?'<p class="zt694-aviso" data-zt694-aviso>'+esc(estado.avisos[c.dcKey+'|'+i])+'</p>':'';
     if(v.retorno143){var h=v.retorno143;aviso+='<p class="zt694-aviso" data-zt694-retorno143>Resposta de '+esc(dataBR(h.dia))+' · '+esc(h.humanoNome)+'. '+esc(h.tipo==='atualizar_ficha'?'Tutor já fez em '+dataBR(h.confirmacaoTutor137.dataAplicacao)+'. Atualizar ficha internamente; não cobrar o tutor de novo.':h.tipo==='acompanhar_fora'?'Cuidado fora da Zêluz: acompanhar com o tutor nesta presença.':'Equipe precisa retomar a resposta do tutor nesta presença.')+'</p>';}
     var bloq=v.bloqueado?'<p class="zt694-sub">'+(c.identidadeAmbigua?'Há mais de uma ficha possível para este peludinho. Confirme o cadastro; nenhuma resposta será salva até o alvo ficar único.':'Atualize para confirmar o vínculo deste cuidado antes de registrar.')+'</p>':'';
@@ -103744,7 +103791,8 @@ renderAtual=function(){
     if(!b||typeof b.textoEmCasa!=='function'||!tutor)return out;
     vms.forEach(function(v){
       if(v.valor!=='autorizar_externo')return;
-      var fez=confirmacaoTutorDe137(v.atual),x=fez&&typeof b.textoTutorJaFez==='function'?b.textoTutorJaFez({tutor:tutor,pet:pet},v.cy.itemK,fez.dataAplicacao):b.textoEmCasa({tutor:tutor},v.cy.itemK);
+      var fez=confirmacaoTutorDe137(v.atual);if(fez&&ficha171De(c,v.cy,fez,0).ok)return;
+      var x=fez&&typeof b.textoTutorJaFez==='function'?b.textoTutorJaFez({tutor:tutor,pet:pet},v.cy.itemK,fez.dataAplicacao):b.textoEmCasa({tutor:tutor},v.cy.itemK);
       if(x&&!vistos[x]){vistos[x]=true;out.push({texto:x,vacina:/^vac_/.test(txt(v.cy.itemK)),tutorFez:!!fez});}
     });
     return out;
@@ -104111,6 +104159,43 @@ renderAtual=function(){
       campo.value=conf.dataAplicacao;campo.readOnly=true;quem.value='Tutor — informado por '+inicio.nome;quem.readOnly=true;window.Z138_FICHA_SELECAO=selecao;estado.rascunhoFicha138=null;prevRecalcular(pk,cy.itemK);
       var nota=document.createElement('p');nota.setAttribute('role','status');nota.className='hint';nota.style.cssText='margin:8px 0;color:var(--z-blue)';nota.textContent='Resposta registrada. Confira produto, regime e vencimento; a ficha só muda depois de tocar em Salvar e receber a confirmação.';slot.insertBefore(nota,slot.firstChild);dizerNaLinha(dc,'');return true;
     }catch(e){window.Z138_FICHA_SELECAO=null;if(slot)slot.innerHTML='';avisoLinha(dc,i,txt(e&&e.message)||'Não consegui conferir a ficha. Nada foi salvo.');dizerNaLinha(dc,'');redesenharLinha(dc);return false;}
+  }
+  /* ===== «Tutor já fez» simplificado (30/out/2026, maquete aprovada) =====
+     Depois de registrar a resposta com a data, a ficha é atualizada pelo MESMO caminho do «Salvar» do formulário da
+     ficha: abre o formulário de sempre (abrirFichaTutor138, com a data do tutor travada) e chama o mesmo prevLancar,
+     que calcula o próximo vencimento como o app já calcula. Se algo pedir conferência (um produto que falta, uma data
+     fora do esquema), o formulário fica aberto com o aviso — e «Atualizar ficha» continua como plano B. */
+  function chave171(dc,cycleKey,itemK){return dc+'|'+cycleKey+'|'+itemK;}
+  function ficha171De(c,cy,confTutor,i){
+    var Z=window.ZelozinhaFicha171;estado.ficha171=estado.ficha171||{};estado.corrigir171=estado.corrigir171||{};
+    var k=chave171(c.dcKey,cy.cycleKey,cy.itemK),st=estado.ficha171[k]||null,out={ok:false,estado:st&&st.estado||'',msg:st&&st.msg||''};
+    if(!Z||!confTutor||estado.corrigir171[k])return out;
+    var ex=null;try{ex=typeof pelExtra==='function'&&c.row&&c.row.p?pelExtra(c.row.p):null;}catch(_){ex=null;}
+    if(!ex||!Z.fichaTemData(ex,cy.itemK,confTutor.dataAplicacao))return out;
+    var prox=Z.proximoDe(ex,cy.itemK),texto=Z.mensagem({tutor:tutorNome(c),pet:nomePet(c),sexo:txt(ex.sexo)},cy.itemK,confTutor.dataAplicacao,prox);
+    out.ok=true;out.html=Z.resultadoHTML({indice:i,cuidado:itemNome(cy),data:confTutor.dataAplicacao,proximo:prox,texto:texto,temTelefone:!!telDe(c),copiaMsg:copiaMsg(c,'f171-'+i,texto)});
+    return out;
+  }
+  async function fichaDepoisTutorFez171(dc,cycleKey,itemK,data){
+    estado.ficha171=estado.ficha171||{};
+    var k=chave171(dc,cycleKey,itemK),c=estado.itens[dc];if(!c)return false;
+    var i=(c.ciclos||[]).findIndex(function(x){return x&&x.cycleKey===cycleKey&&x.itemK===itemK;});if(i<0)return false;
+    var cy=c.ciclos[i],v=vmCuidado(c,cy),conf=confirmacaoTutorDe137(v.atual);
+    if(!conf||conf.dataAplicacao!==data)return false;/* a resposta não ficou registrada com essa data: a linha já diz por quê */
+    var ex=null;try{ex=typeof pelExtra==='function'&&c.row&&c.row.p?pelExtra(c.row.p):null;}catch(_){ex=null;}
+    if(ex&&window.ZelozinhaFicha171&&window.ZelozinhaFicha171.fichaTemData(ex,itemK,data)){delete estado.ficha171[k];redesenharLinha(dc);return true;}/* a ficha já tem essa data */
+    function falhou(msg){estado.ficha171[k]={estado:'falhou',msg:msg};redesenharLinha(dc);return false;}
+    var art=document.querySelector('[data-zt694-pet="'+encodeURIComponent(dc)+'"]'),care=art&&art.querySelector('[data-zt694-care="'+i+'"]');
+    if(!care||typeof prevLancar!=='function')return falhou('Resposta registrada, mas não consegui atualizar a ficha daqui. Use «Atualizar ficha».');
+    estado.ficha171[k]={estado:'gravando',msg:'Atualizando a ficha com essa data…'};redesenharLinha(dc);
+    care=document.querySelector('[data-zt694-pet="'+encodeURIComponent(dc)+'"] [data-zt694-care="'+i+'"]')||care;
+    var abriu=false;try{abriu=await abrirFichaTutor138(c,v,i,care);}catch(_){abriu=false;}
+    if(!abriu)return falhou('Resposta registrada, mas a ficha não foi atualizada. Use «Atualizar ficha».');
+    var sf=window.Z138_FICHA_SELECAO;if(!sf||sf.dcKey!==dc||sf.cycleKey!==cycleKey||sf.itemK!==itemK)return falhou('Resposta registrada, mas a ficha mudou. Use «Atualizar ficha».');
+    var r=null;try{r=await Promise.resolve(prevLancar(sf.pelKey,sf.itemK));}catch(e){r={ok:false,erro:txt(e&&e.message)};}
+    if(r&&r.ok===true){delete estado.ficha171[k];redesenharLinha(dc);return true;}
+    if(r&&r.ok===false)return falhou('A ficha não foi atualizada'+(txt(r.erro)?': '+txt(r.erro):'')+'. Confira o formulário abaixo e toque em Salvar, ou use «Atualizar ficha».');
+    return falhou('A ficha ainda não foi atualizada: confira o formulário abaixo e toque em Salvar.');
   }
   window.zTutor138DepoisSalvar=function(s){estado.rascunhoFicha138=null;Promise.resolve(atualizarLinha(s.dcKey)).then(function(){redesenharLinha(s.dcKey);});};
   window.zTutor138DepoisFalhar=function(s,r){if(r&&r.fichaSalva===true){dizerNaLinha(s.dcKey,'A ficha foi atualizada, mas falta confirmar o recibo. Use “Tentar confirmar de novo” neste cartão; não é preciso lançar o cuidado novamente.');return;}dizerNaLinha(s.dcKey,'A ficha não foi salva: '+(txt(r&&r.erro)||'confira os campos e tente novamente')+'. O que foi digitado continua no cartão.');};
@@ -104509,8 +104594,11 @@ renderAtual=function(){
       var vf=cy&&vmCuidado(c,cy);if(vf&&vf.retorno143&&vf.retorno143.tipo==='atualizar_ficha'&&(!estado.historico143||!estado.presenca[c.dcKey]||estado.presenca[c.dcKey].presente!==true)){avisoLinha(c.dcKey,ic,'Não consegui confirmar a presença e a resposta anterior. Atualize e confira.');redesenharLinha(c.dcKey);return;}
       try{if(!cy||!window.ZeluzResposta88||typeof window.ZeluzResposta88.normalizarConfirmacaoTutor137!=='function')throw Error('registro indisponível');window.ZeluzResposta88.normalizarConfirmacaoTutor137(meta,{decisao:'autorizar',origem:'externo'},new Date(agora()).toISOString());}
       catch(_){avisoLinha(c.dcKey,ic,'Informe a data real em que o tutor fez o cuidado. A data não pode estar no futuro.');redesenharLinha(c.dcKey);return;}
-      responder(c,[ic],'autorizar_externo',el,{confirmacaoTutor137:meta});return;
+      estado.corrigir171=estado.corrigir171||{};delete estado.corrigir171[c.dcKey+'|'+cy.cycleKey+'|'+cy.itemK];
+      var dc171=c.dcKey,ck171=cy.cycleKey,ik171=cy.itemK;
+      Promise.resolve(responder(c,[ic],'autorizar_externo',el,{confirmacaoTutor137:meta})).then(function(){return fichaDepoisTutorFez171(dc171,ck171,ik171,data);}).catch(function(){/* o aviso já está na linha; «Atualizar ficha» continua como plano B */});return;
     }
+    if(acao==='corrigir-data171'){if(cy){estado.corrigir171=estado.corrigir171||{};estado.corrigir171[c.dcKey+'|'+cy.cycleKey+'|'+cy.itemK]=true;redesenharLinha(c.dcKey);var campo171=document.querySelector('[data-zt694-pet="'+encodeURIComponent(c.dcKey)+'"] [data-zt694-care="'+ic+'"] [data-zt694-data-fez]');if(campo171&&campo171.focus)campo171.focus();}return;}
     if(acao==='atualizar-ficha'){if(cy)abrirFichaTutor138(c,vmCuidado(c,cy),ic,care);return;}
     if(acao==='salvar-ficha'){var sf=window.Z138_FICHA_SELECAO;if(!cy||!sf||sf.dcKey!==c.dcKey||sf.cycleKey!==cy.cycleKey||sf.itemK!==cy.itemK){avisoLinha(c.dcKey,ic,'A resposta ou o cuidado mudou. Feche e confira novamente.');redesenharLinha(c.dcKey);return;}Promise.resolve(prevLancar(sf.pelKey,sf.itemK)).then(function(r){if(r&&r.ok===false)window.zTutor138DepoisFalhar(sf,r);});return;}
     if(acao==='fechar-ficha'){if(cy)fecharFichaTutor138(c,cy,care);return;}
