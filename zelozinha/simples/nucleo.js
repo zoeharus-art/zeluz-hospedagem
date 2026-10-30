@@ -6,7 +6,9 @@
 const FILA = 'daycare/zelozinha-fila';
 const SAUDE = 'daycare/zelozinha-saude/vps';
 const CONTROLE = 'daycare/zelozinha-controle/estado';
-const VERSAO = 'simples-1';
+const QR = 'daycare/zelozinha-qr/vps';                        // o QR de reconexão, só enquanto o WhatsApp está fora
+const RECONEXAO = 'daycare/zelozinha-controle/reconexao';     // «Já escaneei» no app: confere a conexão na hora
+const VERSAO = 'simples-2';
 const JID = /^\d{6,20}@s\.whatsapp\.net$/;
 
 const PADRAO = Object.freeze({
@@ -28,7 +30,9 @@ function lerConfig(bruto) {
   const cfg = Object.assign({}, PADRAO, {
     firebaseUrl: texto(banco.firebaseUrl), serviceUid: texto(banco.serviceUid),
     evolution: { baseUrl: texto(evo.baseUrl).replace(/\/+$/, ''), chaveAcesso: texto(evo.apiKey), instancia: texto(evo.instanceName),
-      httpTimeoutMs: Number.isInteger(evo.httpTimeoutMs) && evo.httpTimeoutMs >= 1000 && evo.httpTimeoutMs <= 30000 ? evo.httpTimeoutMs : PADRAO.httpTimeoutMs }
+      httpTimeoutMs: Number.isInteger(evo.httpTimeoutMs) && evo.httpTimeoutMs >= 1000 && evo.httpTimeoutMs <= 30000 ? evo.httpTimeoutMs : PADRAO.httpTimeoutMs,
+      /* o número do WhatsApp da Zêluz, só dígitos. Sem ele, o QR fica desligado e o serviço segue como antes. */
+      numeroZeluz: /^\d{10,15}$/.test(String(evo.numeroZeluz == null ? '' : evo.numeroZeluz).replace(/\D/g, '')) ? String(evo.numeroZeluz).replace(/\D/g, '') : '' }
   });
   Object.keys(PADRAO).forEach((k) => { if (Number.isFinite(ajuste[k]) && ajuste[k] >= 0) cfg[k] = ajuste[k]; });
   const falta = [];
@@ -157,5 +161,37 @@ function interpretarEnvio(r, jid) {
   return { estado: 'conferir', motivo: `O WhatsApp respondeu com erro (código ${r.status}); a mensagem pode ter saído.` };
 }
 
-module.exports = { FILA, SAUDE, CONTROLE, VERSAO, PADRAO, lerConfig, partesSP, diaSP, naJanela, proximoIntervalo, digitandoMs,
-  escolherProximo, abandonados, saidaConfirmada, entradaConfirmada, dcKeyDoPelKey, telefone, responsavel, conferirItem, interpretarNumero, interpretarEnvio };
+/* ---------- reconexão por QR (Adriana, 30/out/2026: "Ela não pode parar por falta de conexão, um humano
+   tem que assumir, e quem estiver na loja no momento.") ---------- */
+
+/* Uma checagem de conexão: quantas seguidas fora do ar, e se já é hora de mostrar o QR.
+   Uma só pode ser um soluço da rede; duas seguidas (40 s) já é queda de verdade. */
+function passoConexao(estado, foraAntes) {
+  const fora = estado === 'open' ? 0 : (Number(foraAntes) || 0) + 1;
+  return { fora, buscarQr: fora >= 2 };
+}
+
+/* Resposta de /instance/connect: o QR em imagem (data:image/png) e o código que muda a cada troca. */
+function interpretarQr(r) {
+  const c = r && objeto(r.corpo) ? r.corpo : null;
+  if (!c || r.status !== 200) return { ok: false };
+  if (objeto(c.instance) && c.instance.state === 'open') return { ok: false, conectado: true };
+  const base64 = texto(c.base64), code = texto(c.code);
+  if (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(base64) || !code) return { ok: false };
+  return { ok: true, base64, code };
+}
+
+/* Resposta de /instance/fetchInstances: o número que está conectado (ownerJid) na instância da Zelozinha. */
+function interpretarDono(r, instancia) {
+  const lista = r && r.status === 200 ? (Array.isArray(r.corpo) ? r.corpo : [r.corpo]) : [];
+  const it = lista.map((x) => (objeto(x) && objeto(x.instance) ? x.instance : x)).filter((x) => objeto(x) && texto(x.name) === instancia);
+  if (it.length !== 1 || !texto(it[0].ownerJid)) return { ok: false };
+  return { ok: true, numero: texto(it[0].ownerJid).split('@')[0].split(':')[0].replace(/\D/g, '') };
+}
+
+/* Só o celular da Zêluz pode ficar conectado: qualquer outro número é desconectado na hora. */
+const numeroCerto = (dono, numeroZeluz) => !!(dono && dono.ok && numeroZeluz && dono.numero === numeroZeluz);
+
+module.exports = { FILA, SAUDE, CONTROLE, QR, RECONEXAO, VERSAO, PADRAO, lerConfig, partesSP, diaSP, naJanela, proximoIntervalo, digitandoMs,
+  escolherProximo, abandonados, saidaConfirmada, entradaConfirmada, dcKeyDoPelKey, telefone, responsavel, conferirItem, interpretarNumero, interpretarEnvio,
+  passoConexao, interpretarQr, interpretarDono, numeroCerto };
