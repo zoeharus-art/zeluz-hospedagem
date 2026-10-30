@@ -30,7 +30,9 @@ async function executar() {
   const html = Painel.desenhar(normalizado, { dia: DIA, podeSalvarAvaliacao: true });
   assert.match(html, /Telefone/);
   assert.match(html, /href="https:\/\/wa\.me\/5500900000000"/);
-  assert.match(html, /data-marcia-copiar-telefone="avaliacao-sintetica">Copiar<\/button>/);
+  /* 30/out/2026: o mesmo box da Agenda Márcia — WhatsApp à esquerda, copiar (ícone) à direita. */
+  assert.match(html, /data-marcia-copiar-telefone="avaliacao-sintetica" aria-label="Copiar telefone"/);
+  assert.match(html, /class="m171__tel-wa" href="https:\/\/wa\.me\/5500900000000"/);
   assert.match(html, /Rascunho sintético preservado/);
 
   const semTelefone = Painel.normalizar(snap([{ ...item, telefone: '' }]), DIA);
@@ -42,12 +44,15 @@ async function executar() {
   await adiar();
   const antes = raiz.innerHTML;
   const contato = { children: [], querySelector() { return null; }, appendChild(x) { this.children.push(x); } };
-  const botao = { parentNode: contato, closest() { return this; }, hasAttribute(n) { return n === 'data-marcia-copiar-telefone'; }, getAttribute(n) { return n === 'data-marcia-copiar-telefone' ? 'avaliacao-sintetica' : null; } };
+  const box = { parentNode: contato, classList: { v: new Set(), add(c) { this.v.add(c); }, remove(c) { this.v.delete(c); }, contains(c) { return c === 'm171__tel-box' || this.v.has(c); } } };
+  const botao = { parentNode: box, classList: { contains(c) { return c === 'm171__btn-icone'; } }, closest() { return this; }, hasAttribute(n) { return n === 'data-marcia-copiar-telefone'; }, getAttribute(n) { return n === 'data-marcia-copiar-telefone' ? 'avaliacao-sintetica' : null; } };
   raiz.handlers.click({ target: botao });
   await adiar();
   assert.deepEqual(copiados, ['+5500900000000']);
   assert.equal(raiz.innerHTML, antes, 'cópia atualiza só o feedback e não redesenha nem apaga a nota');
-  assert.equal(contato.children[0].textContent, 'Telefone copiado.');
+  /* copiou: o ícone vira ✓ e aparece «Copiado» por 2 s (a classe `copiado` no box) */
+  assert.equal(box.classList.v.has('copiado'), true);
+  assert.equal(contato.children.length, 0, 'sem aviso de falha quando a cópia deu certo');
 
   console.log('marcia-telefone140: OK');
 }
