@@ -4722,6 +4722,7 @@
           <div data-zt694-andamento-list><p class="hint">Os peludinhos encaminhados aparecerão aqui.</p></div>
         </section>
         <section id="hub116-pane-snoopy" role="tabpanel" aria-labelledby="hub116-tab-snoopy" data-zt694-pane="snoopy" hidden>
+          <div data-zt694-agendados></div>
           <div data-zt694-snoopy-list><p class="hint">As pendências do Snoopy serão confirmadas para a data escolhida.</p></div>
         </section>
       </div>
@@ -7872,6 +7873,9 @@ return { criar };
       snapshot:function(r,p,a){var h=root.Zelozinha41Hook;return h&&typeof h.snapshot==='function'?h.snapshot(r,p,a):{ok:false,motivo:'a conferência da prevenção não carregou'};},
       /* 30/out/2026: a veterinária vale pela agenda (segunda, terça, quarta e sexta); só um registro do dia dizendo que ela não veio tira a vacina */
       veterinaria:function(d){var v=root.zelozinha47Veterinaria,ler=v&&typeof v.ler==='function'?Promise.resolve(v.ler()).catch(function(){return null;}):Promise.resolve(null);return ler.then(function(x){return root.ZelozinhaSimples.veterinariaNoDia(d,x);});},
+      /* «Agendou para»: cuidado agendado não entra na mensagem (a agenda é lida antes) */
+      agendaPronta:function(){var ZA=root.ZelozinhaAgenda,db=dbAtual();return ZA&&db?ZA.carregar(db):Promise.resolve();},
+      agendado:function(dc,itemK,d){var ZA=root.ZelozinhaAgenda;return !!(ZA&&ZA.bloqueiaMensagem(dc,itemK,d));},
       /* os vencimentos descem aqui quando faltam (no máximo uma vez a cada 10 min por aparelho) */
       carregarVencimentos:function(){var agora=Date.now();if(estado.vencEm&&agora-estado.vencEm<600000)return Promise.resolve();estado.vencEm=agora;return typeof vencPendCarregar==='function'?Promise.resolve(vencPendCarregar(true)):Promise.resolve();},
       /* cada check-in deixa na auditoria o que aconteceu com a fila; a fila que se completa sozinha só registra quem ela pôs na fila */
@@ -102422,6 +102426,108 @@ renderAtual=function(){
 .zs-conf .btn.zs-sec{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)}
 @media(max-width:480px){.zs-faixa{font-size:14px}}
 </style>
+<script id="zelozinha-agenda">'use strict';
+/* «AGENDOU PARA» (Adriana, 30/out/2026; maquete aprovada): "vão fazer, mas pediu para ser dia 03 — então
+   pode ter outro botão, «Agendou para»: colocamos a data e vai para o lançamento do dia correto para
+   confirmar horário. Se for carrapaticida, já assinalamos a pipeta etc. e manda para lá."
+   - O agendamento mora num lugar só, pequeno: daycare/agendamentos/{dcKey}/{itemK}.
+   - Até o dia marcado, a Zelozinha não manda mensagem sobre esse cuidado e o cartão vai para «Em andamento».
+   - No dia marcado, ele aparece no lançamento do dia (aba LANÇAR NO SNOOPY), com «Confirmar horário»; o
+     cartão volta a ter os botões de sempre para lançar o cuidado.
+   - Se o dia passar sem ser feito, o agendamento perde a validade e tudo volta ao normal. */
+(function(root,factory){var api=factory(root);if(typeof module==='object'&&module.exports)module.exports=api;else root.ZelozinhaAgenda=api;})(typeof globalThis!=='undefined'?globalThis:this,function(root){
+  var AGENDA='daycare/agendamentos',DIAS_VET=[1,2,3,5],SEMANA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+  var NOMES={vac_mult_p:'Vacina múltipla',vac_gripe_p:'Vacina de gripe',vac_raiva_p:'Vacina antirrábica',verm_p:'Vermífugo',verm_dose2_p:'2ª dose do vermífugo',ecto_p:'Carrapaticida',col_p:'Coleira repelente',escova_p:'Escova de dentes'};
+  function txt(v){return typeof v==='string'?v.trim():'';}
+  function obj(v){return !!v&&typeof v==='object'&&!Array.isArray(v);}
+  function iso(v){return /^\d{4}-\d{2}-\d{2}$/.test(txt(v));}
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function chave(k){return txt(k).replace(/[.#$\[\]\/]/g,'-');}
+  function br(d){return iso(d)?d.slice(8,10)+'/'+d.slice(5,7):'';}
+  function semana(d){return iso(d)?SEMANA[new Date(d+'T00:00:00Z').getUTCDay()]:'';}
+  function agoraServidor(){try{return root.firebase.database.ServerValue.TIMESTAMP;}catch(_){return Date.now();}}
+  /* as escolhas do carrapaticida são as mesmas do lançamento (pipeta é o tubo inteiro) */
+  function listaQtd(){try{return root.DASH_QTD_PIP||DASH_QTD_PIP;}catch(_){return [{v:'PIPETA',t:'Pipeta (o tubo inteiro)'}];}}
+  function listaOnde(){try{return root.DASH_ONDE||DASH_ONDE;}catch(_){return [{v:'LOJA',t:'Comprado aqui na loja'},{v:'NA BOLSA',t:'Está na bolsa dele'},{v:'',t:'Nada a observar'}];}}
+  function rotulo(lista,v){var r=(lista||[]).filter(function(x){return x&&x.v===v;})[0];return r?r.t:'';}
+  var mem={db:null,mapa:{},pronto:false,promessa:null,fns:[]};
+  function avisar(){mem.fns.forEach(function(fn){try{fn();}catch(_){}});}
+  /* lê uma vez e fica ouvindo (o nó é pequeno: só os agendamentos em aberto) */
+  function carregar(db){
+    if(!db||typeof db.ref!=='function')return Promise.resolve({});
+    if(mem.db===db&&mem.promessa)return mem.promessa;
+    mem.db=db;mem.pronto=false;mem.mapa={};
+    var ref=db.ref(AGENDA);
+    mem.promessa=new Promise(function(res){var primeiro=true;ref.on('value',function(s){mem.mapa=obj(s&&s.val())?s.val():{};mem.pronto=true;if(primeiro){primeiro=false;res(mem.mapa);}avisar();},function(){mem.pronto=true;if(primeiro){primeiro=false;res(mem.mapa);}});});
+    return mem.promessa;
+  }
+  function aoMudar(fn){if(typeof fn==='function'&&mem.fns.indexOf(fn)<0)mem.fns.push(fn);}
+  function de(dcKey,itemK){var p=mem.mapa[chave(dcKey)];return obj(p)&&obj(p[chave(itemK)])?p[chave(itemK)]:null;}
+  /* vale do dia em que foi marcado até o dia agendado (inclusive) */
+  function ativo(reg,hoje){return !!(obj(reg)&&iso(reg.para)&&iso(hoje)&&reg.para>=hoje);}
+  /* a Zelozinha não manda mensagem de cuidado agendado (nem no próprio dia) */
+  function bloqueiaMensagem(dcKey,itemK,hoje){return ativo(de(dcKey,itemK),hoje);}
+  function validarData(hoje,dia,itemK){
+    if(!iso(dia))return {ok:false,motivo:'Escolha o dia do agendamento.'};
+    if(!iso(hoje)||dia<=hoje)return {ok:false,motivo:'O agendamento é para depois de hoje.'};
+    var ds=new Date(dia+'T00:00:00Z').getUTCDay();
+    if(ds===0)return {ok:false,motivo:'A Zêluz não abre aos domingos.'};
+    if(txt(itemK).indexOf('vac_')===0&&DIAS_VET.indexOf(ds)<0)return {ok:false,motivo:'A veterinária não vem nesse dia. Escolha segunda, terça, quarta ou sexta.'};
+    return {ok:true};
+  }
+  function precisaQtd(itemK){return itemK==='ecto_p';}
+  function agendar(db,e){
+    e=e||{};var v=validarData(e.hoje,e.para,e.itemK);if(!v.ok)return Promise.resolve(v);
+    if(!txt(e.dcKey)||!txt(e.itemK))return Promise.resolve({ok:false,motivo:'Não achei o cuidado deste FILHOt.'});
+    if(precisaQtd(e.itemK)&&!txt(e.qtd))return Promise.resolve({ok:false,motivo:'Escolha a pipeta ou a quantidade.'});
+    var reg={v:1,para:e.para,itemK:txt(e.itemK),dcKey:txt(e.dcKey),pelKey:txt(e.pelKey),nome:txt(e.nome),tutor:txt(e.tutor),qtd:txt(e.qtd),onde:typeof e.onde==='string'?e.onde:'',diaOrigem:txt(e.hoje),por:txt(e.por)||'equipe',em:agoraServidor()};
+    return db.ref(AGENDA+'/'+chave(e.dcKey)+'/'+chave(e.itemK)).set(reg).then(function(){return {ok:true,registro:reg};},function(){return {ok:false,motivo:'Não consegui gravar o agendamento. Confira a conexão e tente de novo.'};});
+  }
+  function desfazer(db,dcKey,itemK){return db.ref(AGENDA+'/'+chave(dcKey)+'/'+chave(itemK)).remove().then(function(){return true;},function(){return false;});}
+  function confirmarHorario(db,dcKey,itemK,hora,por){
+    if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(txt(hora)))return Promise.resolve({ok:false,motivo:'Escolha o horário.'});
+    return db.ref(AGENDA+'/'+chave(dcKey)+'/'+chave(itemK)).update({horario:txt(hora),horarioPor:txt(por)||'equipe',horarioEm:agoraServidor()}).then(function(){return {ok:true};},function(){return {ok:false,motivo:'Não consegui gravar o horário.'};});
+  }
+  function doDia(dia){var r=[];Object.keys(mem.mapa).forEach(function(dc){var p=mem.mapa[dc];if(!obj(p))return;Object.keys(p).forEach(function(k){var x=p[k];if(obj(x)&&x.para===dia)r.push(x);});});return r.sort(function(a,b){return (txt(a.horario)||'99')<(txt(b.horario)||'99')?-1:1;});}
+  function escolhasTexto(reg){var p=[];if(txt(reg.qtd))p.push(rotulo(listaQtd(),reg.qtd)||reg.qtd);if(txt(reg.qtd))p.push(reg.onde===''?'Nada a observar':(rotulo(listaOnde(),reg.onde)||reg.onde));return p.join(' · ');}
+  function rotuloSelo(reg,hoje){return reg.para===hoje?'AGENDADO PARA HOJE':'AGENDADO · '+br(reg.para);}
+  function motivoSelo(reg,hoje){return reg.para===hoje?'Agendado para hoje: confirme o horário no lançamento do dia e lance o cuidado.':'Vai para o lançamento de '+semana(reg.para)+', '+br(reg.para)+', para confirmar o horário.';}
+  /* o que o cuidado mostra quando já está agendado */
+  function infoHTML(reg,hoje,i){
+    var e2=escolhasTexto(reg),futuro=reg.para>hoje;
+    return '<div class="zt694-pos" data-zt694-agendado><p class="zt694-aviso">'+esc(motivoSelo(reg,hoje))+(e2?' '+esc(e2)+'.':'')+(txt(reg.horario)?' Horário: '+esc(reg.horario)+'.':'')+'</p>'
+      +(futuro?'<button type="button" class="btn zs-sec zt694-acao" data-zt694-acao="agendar-desfazer" data-zt694-ciclo="'+i+'">Desfazer</button>':'')+'</div>';
+  }
+  function chips(rot,campo,lista,atual,i){
+    return '<div class="zt694-chips" role="group" aria-label="'+esc(rot)+'"><label class="cad-lb" style="margin-top:9px;display:block">'+esc(rot)+'</label><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">'
+      +(lista||[]).map(function(o){var on=atual===o.v;return '<button type="button" class="btn zt694-chip" style="padding:6px 12px;font-size:12.5px;font-weight:800;border:1.5px solid '+(on?'var(--z-blue)':'var(--line)')+';background:'+(on?'var(--z-blue)':'var(--z-cream-warm)')+';color:'+(on?'var(--z-cream)':'var(--z-blue)')+'" data-zt694-acao="agendar-esc" data-zt694-campo="'+campo+'" data-zt694-valor="'+esc(o.v)+'" data-zt694-ciclo="'+i+'" aria-pressed="'+(on?'true':'false')+'">'+esc(o.t)+'</button>';}).join('')+'</div></div>';
+  }
+  /* o formulário que abre no cuidado ao tocar em «Agendou para» */
+  function formHTML(itemK,hoje,i,r){
+    r=r||{};var ecto=precisaQtd(itemK);
+    return '<div class="zt694-pos" data-zt694-agenda-form><label class="cad-lb" style="display:block">Para qual dia?</label>'
+      +'<input class="cad-in" type="date" data-zt694-agenda-data data-zt694-ciclo="'+i+'" value="'+esc(r.data||'')+'" min="'+esc(hoje)+'">'
+      +(ecto?chips('Qual produto/quantidade?','qtd',listaQtd(),txt(r.qtd),i)+chips('Onde?','onde',listaOnde(),typeof r.onde==='string'?r.onde:null,i):'')
+      +(r.erro?'<p class="zt694-aviso" data-zt694-agenda-erro>'+esc(r.erro)+'</p>':'')
+      +'<button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="agendar-salvar" data-zt694-ciclo="'+i+'">Agendar</button></div>';
+  }
+  /* o lançamento do dia: quem foi agendado para esta data, com «Confirmar horário» */
+  function lancamentoHTML(dia){
+    var lista=doDia(dia);if(!lista.length)return '';
+    return '<section class="z149-snoopy-grupo" data-zt694-agendados-dia="'+esc(dia)+'"><h3>Agendados para este dia ('+lista.length+')</h3>'+lista.map(function(x){
+      var e2=escolhasTexto(x),k=esc(encodeURIComponent(x.dcKey)+'|'+encodeURIComponent(x.itemK));
+      return '<article class="rep-row zt694-familia"><div class="rp-txt"><span class="rp-nome zt694-resumo-nome">'+esc((x.nome||'FILHOt')+(x.tutor?' · '+x.tutor:''))+'</span>'
+        +'<span class="zt694-resumo-linha">'+esc((NOMES[x.itemK]||x.itemK)+(e2?' · '+e2:''))+'</span>'
+        +'<span class="zt694-resumo-linha" style="color:var(--muted)">Agendado na Zelozinha em '+esc(br(x.diaOrigem))+' por '+esc(x.por||'equipe')+'</span>'
+        +(txt(x.horario)?'<span class="zt694-resumo-linha"><strong>Horário confirmado · '+esc(x.horario)+'</strong>'+(x.horarioPor?' por '+esc(x.horarioPor):'')+'</span>'
+          :'<span class="zt694-resumo-linha" style="display:flex;gap:6px;align-items:center;margin-top:6px"><input class="cad-in" type="time" style="max-width:130px" data-zt694-agenda-hora="'+k+'"><button type="button" class="btn btn-gold" data-zt694-agenda-confirmar="'+k+'">Confirmar horário</button></span>')
+        +'</div></article>';}).join('')+'</section>';
+  }
+  return {AGENDA:AGENDA,carregar:carregar,aoMudar:aoMudar,de:de,ativo:ativo,bloqueiaMensagem:bloqueiaMensagem,validarData:validarData,precisaQtd:precisaQtd,
+    agendar:agendar,desfazer:desfazer,confirmarHorario:confirmarHorario,doDia:doDia,escolhasTexto:escolhasTexto,rotuloSelo:rotuloSelo,motivoSelo:motivoSelo,
+    infoHTML:infoHTML,formHTML:formHTML,lancamentoHTML:lancamentoHTML,_mem:mem};
+});
+</script>
 <script id="mensagem-irmaos">/* mensagem-irmaos/index.js */
 'use strict';
 
@@ -102606,7 +102712,8 @@ renderAtual=function(){
   function criarFabrica(op){
     function registrar(recibo,r){if(typeof op.registrar==='function'){try{op.registrar(recibo,r,txt(recibo&&recibo.origem)||'check-in');}catch(_){}}return r;}
     return {receber:function(recibo,portas,ator){
-      return Promise.resolve().then(function(){
+      /* a agenda («Agendou para») é lida antes: cuidado agendado não entra na mensagem */
+      return Promise.resolve(typeof op.agendaPronta==='function'?op.agendaPronta():null).catch(function(){}).then(function(){
         var db=op.db();if(!db||typeof db.ref!=='function')return pendente('o banco não está pronto');
         if(!recibo||txt(recibo.dia)!==op.hoje())return {ok:true,status:'outro-dia'};
         if(!portas||typeof portas.peludinhos!=='function'||typeof portas.dcKey!=='function')return pendente('o cadastro ainda não está pronto');
@@ -102618,13 +102725,14 @@ renderAtual=function(){
     }};
     function seguir(db,recibo,portas,ator,s){
         if(!s||s.ok!==true)return pendente((s&&s.motivo)||'a prevenção não foi conferida');
-        if(!s.prevencoes.length)return {ok:true,status:'sem-cuidados'};
+        var prevs=s.prevencoes.filter(function(x){return !(typeof op.agendado==='function'&&op.agendado(s.ficha.dcKey,x&&x.itemK,recibo.dia));});
+        if(!prevs.length)return {ok:true,status:'sem-cuidados',motivo:s.prevencoes.length?'o cuidado está agendado («Agendou para»)':''};
         var fichas=(portas.peludinhos()||[]).filter(function(p){try{return portas.dcKey(p.n,p.tutor)===s.ficha.dcKey;}catch(_){return false;}}),p=fichas.length===1?fichas[0]:null;
-        var temVacina=s.prevencoes.some(function(x){return txt(x&&x.itemK).indexOf('vac_')===0;});
+        var temVacina=prevs.some(function(x){return txt(x&&x.itemK).indexOf('vac_')===0;});
         return Promise.all([ler(db,'daycare/cadastro/'+s.ficha.pelKey),temVacina?Promise.resolve(op.veterinaria(recibo.dia)).catch(function(){return false;}):false]).then(function(lido){
           var m=montar({dia:recibo.dia,cadastro:lido[0],veterinariaConfirmada:lido[1]===true,
             ficha:{dcKey:s.ficha.dcKey,pelKey:s.ficha.pelKey,nome:p?portas.pelNome(p):txt(recibo.nome),tutor:s.ficha.base&&s.ficha.base.tutor,sexo:p&&p.sexo},
-            prevencoes:s.prevencoes.map(function(x){return {itemK:x.itemK,vence:x.dueDate};})});
+            prevencoes:prevs.map(function(x){return {itemK:x.itemK,vence:x.dueDate};})});
           if(!m.ok)return m.humano||m.vazio?{ok:true,status:m.humano?'humano':'sem-cuidados',motivo:m.motivo}:pendente(m.motivo);
           return enfileirar(db,m.item,{criadoEm:agoraServidor(),criadoPor:atorId(ator)||'equipe'}).then(function(r){return {ok:true,status:r.criado?'na-fila':'ja-estava-na-fila'};});
         });
@@ -103249,6 +103357,14 @@ renderAtual=function(){
   var T=window.ZelozinhaTela94;
   var estado={linhas:{},api:null,alvos:[],seq:0,itens:{},grupos:[],ordemDepois:false,inFlight:null,projecao:null,resultado:null,dia:'',vet:null,sujo:true,projEm:'',fonteSig:'',lidoEm:0,atualizacaoFalhou:false,contextoSessao:'',bancoSessao:null,permissaoSessao:null,presencaTimer:null,salvando:{},avisos:{},msgs:{},copiaSt:{},agora94:{},presenca:{},historico143:null,historicoManual144:false,abertos:{},fixosResolver:{},datasTutor137:{},rascunhoFicha138:null,registros139:{},diaCarregado:'',diaLendo:null,snoopyEstado:'novo',recarregarDia:true,obs:null,anexando:false,timer:null,scrollY:null,erro:''},FRESCOR89_MS=5*60*1000;
   if(window.ZelozinhaSimples)window.ZelozinhaSimples.aoMudar(function(){if(estado.resultado&&alvosAtuais().length)pintar(alvosAtuais(),true);});
+  /* «Agendou para»: a agenda mudou (aqui ou em outro aparelho) → repinta os cartões e o lançamento do dia */
+  function pintarAgendados(){try{var ZA=window.ZelozinhaAgenda,el=document.querySelector('[data-zt694-agendados]');if(el&&ZA)el.innerHTML=ZA.lancamentoHTML(estado.dia||diaAtual());}catch(_){}}
+  if(window.ZelozinhaAgenda)window.ZelozinhaAgenda.aoMudar(function(){if(estado.resultado&&alvosAtuais().length)pintar(alvosAtuais(),true);pintarAgendados();});
+  if(typeof document!=='undefined'&&typeof document.addEventListener==='function')document.addEventListener('click',function(ev){
+    var b=ev.target&&ev.target.closest?ev.target.closest('[data-zt694-agenda-confirmar]'):null;if(!b||b.disabled||!window.ZelozinhaAgenda)return;
+    var k=b.getAttribute('data-zt694-agenda-confirmar'),p=k.split('|'),dc=decodeURIComponent(p[0]||''),item=decodeURIComponent(p[1]||''),box=b.parentNode,hora=box&&box.querySelector('[data-zt694-agenda-hora]'),a=atorFicha138();
+    b.disabled=true;window.ZelozinhaAgenda.confirmarHorario(DB,dc,item,hora&&hora.value,a.nome||a.papel||'equipe').then(function(r){if(!r.ok){b.disabled=false;b.textContent=r.motivo;}});
+  });
   function instalarEstilo(){
     if(!document||!document.createElement||!document.head||document.getElementById&&document.getElementById('zelozinha-contatos89-style'))return;
     var st=document.createElement('style');st.id='zelozinha-contatos89-style';
@@ -103349,7 +103465,10 @@ renderAtual=function(){
     /* 30/out/2026: a mensagem da Zelozinha simples não tem o grupo de envio antigo; a resposta do tutor é
        registrada pelo contato da equipe (o groupKey do cartão), senão os botões ficavam travados */
     var grupo=st.enviada&&!st.zs?grupoDoCiclo(c,cy):txt(c.groupKey);
-    return{cy:cy,proj:proj,st:st,grupo:grupo,bloqueado:c.identidadeAmbigua===true||!grupo,atual:atual,valor:valorAtual(atual),retorno143:retorno,tarefa:tarefa,tstate:T.estadoDaTarefa(tarefa,atual)};
+    /* «Agendou para» (30/out/2026): enquanto valer, o selo diz o dia agendado */
+    var ZA=window.ZelozinhaAgenda,agendado=ZA&&!atual?ZA.de(c.dcKey,cy&&cy.itemK):null;if(agendado&&!ZA.ativo(agendado,c.dia))agendado=null;
+    if(agendado)st=Object.assign({},st,{rotulo:ZA.rotuloSelo(agendado,c.dia),motivo:ZA.motivoSelo(agendado,c.dia),agendado:true});
+    return{cy:cy,proj:proj,st:st,grupo:grupo,bloqueado:c.identidadeAmbigua===true||!grupo,atual:atual,valor:valorAtual(atual),retorno143:retorno,tarefa:tarefa,tstate:T.estadoDaTarefa(tarefa,atual),agendado:agendado};
   }
   function bloqueadoTotal(c){return c.identidadeAmbigua===true||c.estado==='identidade_ambigua';}
   function vmsDe(c){return(c.ciclos||[]).map(function(cy){return vmCuidado(c,cy);});}
@@ -103357,6 +103476,8 @@ renderAtual=function(){
     var l=v.tarefa&&v.tarefa.linha,linha=l&&l.id&&l.item?linhaDoDia(c,l.item,l.id):null,linhaObrigatoria=daLinha(v.valor);
     var linhaConfirmada=linhaObrigatoria&&!!l&&T.linhaDoLancamentoConfirmada({contato:c,ciclo:v.cy,tarefa:v.tarefa,resposta:v.atual,linha:linha,item:l.item,id:l.id,groupKey:v.grupo});
     var tarefaOrfa=!linhaObrigatoria&&!!v.valor&&!!v.tarefa&&(v.tarefa.estado==='criada'||v.tarefa.estado==='reservada');
+    /* agendado para outro dia: está resolvido por hoje (vai para «Em andamento»); no dia marcado volta a pedir o lançamento */
+    if(v.agendado&&v.agendado.para>c.dia)return{respostaSalva:true,linhaObrigatoria:false,linhaConfirmada:false,bloqueado:false,tarefaOrfa:false,cuidadoEmAberto:false};
     return{respostaSalva:!!v.atual&&!!v.valor,linhaObrigatoria:linhaObrigatoria,linhaConfirmada:linhaConfirmada,bloqueado:v.bloqueado===true,tarefaOrfa:tarefaOrfa,cuidadoEmAberto:!!v.valor&&(v.valor==='aguardar'||v.valor==='autorizar_externo'||(linhaObrigatoria&&v.tstate.id!=='realizado'))};
   }
   function classificacao117(){
@@ -103512,7 +103633,13 @@ renderAtual=function(){
     if(v.retorno143){var h=v.retorno143;aviso+='<p class="zt694-aviso" data-zt694-retorno143>Resposta de '+esc(dataBR(h.dia))+' · '+esc(h.humanoNome)+'. '+esc(h.tipo==='atualizar_ficha'?'Tutor já fez em '+dataBR(h.confirmacaoTutor137.dataAplicacao)+'. Atualizar ficha internamente; não cobrar o tutor de novo.':h.tipo==='acompanhar_fora'?'Cuidado fora da Zêluz: acompanhar com o tutor nesta presença.':'Equipe precisa retomar a resposta do tutor nesta presença.')+'</p>';}
     var bloq=v.bloqueado?'<p class="zt694-sub">'+(c.identidadeAmbigua?'Há mais de uma ficha possível para este peludinho. Confirme o cadastro; nenhuma resposta será salva até o alvo ficar único.':'Atualize para confirmar o vínculo deste cuidado antes de registrar.')+'</p>':'';
     var vet=/^vac_/.test(txt(cy.itemK))?'<p class="zt694-sub" data-zt694-vet>'+esc(vetTexto(c))+'</p>':'';
-    return '<div class="zt694-care" role="group" data-z89-resposta data-z104-care="'+ck+'" data-zt694-care="'+i+'" aria-label="'+esc(cuidadoNome(cy))+'">'+legenda+'<div class="zt694-btns">'+botoes+'</div>'+fez+aviso+bloq+vet+posHTML(c,v,i)+'</div>';
+    /* «Agendou para» (30/out/2026): o quinto botão abre data (e, no carrapaticida, a pipeta/quantidade); agendado para
+       outro dia, o cuidado mostra só o aviso com «Desfazer»; no dia marcado, o aviso e os botões de sempre */
+    var ZA=window.ZelozinhaAgenda,agHtml='',agFuturo=!!(v.agendado&&v.agendado.para>c.dia);
+    if(ZA&&v.agendado)agHtml=ZA.infoHTML(v.agendado,c.dia,i);
+    else if(ZA&&!v.valor&&!travado&&!pendenciaFicha&&c.dia===diaAtual()){var ra=estado.agenda&&estado.agenda[c.dcKey+'|'+i];botoes+='<button type="button" class="btn zt694-btn" data-zt694-acao="agendar-abrir" data-zt694-ciclo="'+i+'" aria-pressed="'+(ra&&ra.aberto?'true':'false')+'" aria-label="'+esc('Agendou para, '+cuidadoNome(cy))+'">Agendou para</button>';if(ra&&ra.aberto)agHtml=ZA.formHTML(cy.itemK,c.dia,i,ra);}
+    if(agFuturo)return '<div class="zt694-care" role="group" data-z89-resposta data-z104-care="'+ck+'" data-zt694-care="'+i+'" aria-label="'+esc(cuidadoNome(cy))+'">'+legenda+agHtml+aviso+'</div>';
+    return '<div class="zt694-care" role="group" data-z89-resposta data-z104-care="'+ck+'" data-zt694-care="'+i+'" aria-label="'+esc(cuidadoNome(cy))+'">'+legenda+'<div class="zt694-btns">'+botoes+'</div>'+agHtml+fez+aviso+bloq+vet+posHTML(c,v,i)+'</div>';
   }
   function todosHTML(c,vms){
     var sem=vms.filter(function(v){return !v.valor;});
@@ -103765,6 +103892,7 @@ renderAtual=function(){
   async function render(forcar){
     if(!conferirContexto89())return;
     if(window.ZelozinhaSimples)window.ZelozinhaSimples.ligar(DB,diaAtual());
+    if(window.ZelozinhaAgenda)window.ZelozinhaAgenda.carregar(DB).then(pintarAgendados);
     var alvos=alvosAtuais();estado.alvos=alvos;if(!alvos.length)return;
     var novos=alvos.filter(function(el){return el.getAttribute('data-zt694-ok')!=='1';});
     if(forcar===true){estado.sujo=true;if(estado.inFlight){await estado.inFlight;}return lerTudo(true);}
@@ -103936,6 +104064,23 @@ renderAtual=function(){
   }
   /* A guarda de «salvando» fecha ANTES do primeiro `await` (a leitura do Snoopy, por exemplo): o segundo toque de um toque duplo cai nela e não passa. Quem sai sem ter gravado
      (barrado, cartaz cancelado, erro) solta a guarda e a linha volta a ficar tocável; quem grava a solta ao terminar (`gravarRespostas`). */
+  /* «Agendou para» (30/out/2026): abrir, escolher (pipeta/quantidade e onde), agendar e desfazer */
+  function agendaAcao(acao,c,cy,i,el,care){
+    var ZA=window.ZelozinhaAgenda;if(!ZA)return;
+    estado.agenda=estado.agenda||{};var k=c.dcKey+'|'+i,r=estado.agenda[k]||(estado.agenda[k]={aberto:false,data:'',qtd:'',onde:null,erro:''});
+    var campo=care&&care.querySelector('[data-zt694-agenda-data]');if(campo)r.data=txt(campo.value);
+    if(acao==='agendar-abrir'){r.aberto=!r.aberto;r.erro='';redesenharLinha(c.dcKey);return;}
+    if(acao==='agendar-esc'){var qual=el.getAttribute('data-zt694-campo');if(qual==='onde')r.onde=el.getAttribute('data-zt694-valor')||'';else r.qtd=el.getAttribute('data-zt694-valor')||'';r.erro='';redesenharLinha(c.dcKey);return;}
+    if(acao==='agendar-desfazer'){el.disabled=true;ZA.desfazer(DB,c.dcKey,cy.itemK).then(function(ok){if(!ok)avisoLinha(c.dcKey,i,'Não consegui desfazer o agendamento. Tente de novo.');redesenharLinha(c.dcKey);});return;}
+    if(acao==='agendar-salvar'){
+      var a=atorFicha138(),pel=c.row&&c.row.p||{};el.disabled=true;
+      ZA.agendar(DB,{hoje:diaAtual(),para:r.data,itemK:cy.itemK,dcKey:c.dcKey,pelKey:c.pelKey,nome:txt(pel.n)||nomePet(c),tutor:txt(pel.tutor),qtd:r.qtd,onde:r.onde==null?'':r.onde,por:a.nome||a.papel||'equipe'}).then(function(res){
+        if(res&&res.ok){delete estado.agenda[k];avisoLinha(c.dcKey,i,'Agendado para '+r.data.slice(8,10)+'/'+r.data.slice(5,7)+'. Vai para o lançamento desse dia.');}
+        else r.erro=(res&&res.motivo)||'Não consegui agendar.';
+        redesenharLinha(c.dcKey);
+      });
+    }
+  }
   async function responder(c,idxs,valor,btn,extra){
     var dc=c.dcKey;if(estado.salvando[dc])return;
     var guarda={};estado.salvando[dc]=guarda;
@@ -104266,6 +104411,7 @@ renderAtual=function(){
     if(acao==='resp'){if(cy)responder(c,[i],valor,el);return;}
     if(acao==='todos'){var vms=vmsDe(c),idxs=[];vms.forEach(function(v,k){if(!v.valor)idxs.push(k);});if(idxs.length>=2)responder(c,idxs,valor,el);return;}
     var care=el.closest('[data-zt694-care]');var ic=care?Number(care.getAttribute('data-zt694-care')):i;cy=c.ciclos&&c.ciclos[ic];
+    if(acao==='agendar-abrir'||acao==='agendar-esc'||acao==='agendar-salvar'||acao==='agendar-desfazer'){if(cy)agendaAcao(acao,c,cy,ic,el,care);return;}
     if(acao==='tutor-fez'){
       var campo=care&&care.querySelector('[data-zt694-data-fez]'),data=txt(campo&&campo.value),meta={versao:137,tipo:'tutor_ja_fez',dataAplicacao:data,estado:'atualizar_ficha_pendente'};
       var vf=cy&&vmCuidado(c,cy);if(vf&&vf.retorno143&&vf.retorno143.tipo==='atualizar_ficha'&&(!estado.historico143||!estado.presenca[c.dcKey]||estado.presenca[c.dcKey].presente!==true)){avisoLinha(c.dcKey,ic,'Não consegui confirmar a presença e a resposta anterior. Atualize e confira.');redesenharLinha(c.dcKey);return;}
