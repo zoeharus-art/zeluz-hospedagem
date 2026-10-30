@@ -177,8 +177,8 @@ prova('a página: veterinária pela agenda, vencimentos sob demanda, registro e 
   assert.match(html, /var enviada=lista\[0\]\.st\.enviada&&!lista\[0\]\.st\.zs,/);
   assert.match(html, /ZS\.veterinariaNoDia\(c\.dia,v\)\?'Veterinária: está hoje':'Veterinária: não vem hoje'/);
   assert.equal(ZS.statusDoCiclo({ dia: SEG, dcKey: 'x' }, { itemK: 'verm_p' }), null, 'sem item na fila, o cartão segue como antes');
-  assert.match(html, /const APP_VERSAO='2026-10-30-02';/);
-  assert.equal(html.split('2026-10-30-02').length - 1, 11);
+  assert.match(html, /const APP_VERSAO='2026-10-30-03';/);
+  assert.equal(html.split('2026-10-30-03').length - 1, 11);
 });
 
 (async () => {
