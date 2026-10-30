@@ -103240,7 +103240,9 @@ renderAtual=function(){
     else retorno=null;
     if(humanoFeito)st={enviada:false,categoria:'humano-feito',rotulo:atual?'RESPOSTA REGISTRADA PELA EQUIPE':'CONTATO REGISTRADO PELA EQUIPE',motivo:'Registrado por '+(autor||'equipe')+(hora?' às '+hora:'')+'.'};
     else if(humano||(!proj&&txt(cy&&cy.itemK)==='escova_p'))st={enviada:false,categoria:'humano',rotulo:'CONTATO HUMANO',motivo:humano?(txt(c.motivoContato)||'Contato humano conforme configuração da ficha.'):'A troca da escova é acompanhada pela equipe.'};
-    var grupo=st.enviada?grupoDoCiclo(c,cy):txt(c.groupKey);
+    /* 30/out/2026: a mensagem da Zelozinha simples não tem o grupo de envio antigo; a resposta do tutor é
+       registrada pelo contato da equipe (o groupKey do cartão), senão os botões ficavam travados */
+    var grupo=st.enviada&&!st.zs?grupoDoCiclo(c,cy):txt(c.groupKey);
     return{cy:cy,proj:proj,st:st,grupo:grupo,bloqueado:c.identidadeAmbigua===true||!grupo,atual:atual,valor:valorAtual(atual),retorno143:retorno,tarefa:tarefa,tstate:T.estadoDaTarefa(tarefa,atual)};
   }
   function bloqueadoTotal(c){return c.identidadeAmbigua===true||c.estado==='identidade_ambigua';}
@@ -103305,7 +103307,7 @@ renderAtual=function(){
     voltarAncora(ancora);
   }
   /* ---------- as peças que a linha desenha ---------- */
-  function vetTexto(c){var v=estado.vet;return v&&v.ok===true&&v.dia===c.dia&&v.confirmada===true&&v.tipo==='confirmada'?'Veterinária: confirmada hoje':'Falta a veterinária confirmar a presença hoje';}
+  function vetTexto(c){var v=estado.vet,ZS=window.ZelozinhaSimples;/* 30/out/2026: vale a agenda da veterinária (segunda, terça, quarta e sexta) */if(ZS&&typeof ZS.veterinariaNoDia==='function')return ZS.veterinariaNoDia(c.dia,v)?'Veterinária: está hoje':'Veterinária: não vem hoje';return v&&v.ok===true&&v.dia===c.dia&&v.confirmada===true&&v.tipo==='confirmada'?'Veterinária: confirmada hoje':'Falta a veterinária confirmar a presença hoje';}
   function linhaPronta(dia){try{return typeof DASH_DADOS_DE!=='undefined'&&!!DASH_DADOS_DE&&DASH_DADOS_DE.ok===true&&DASH_DADOS_DE.dia===dia&&DASH_DADOS_DE.obj===DASH_DADOS;}catch(_){return false;}}
   /* A linha do Day Care vem de duas fontes: a que esta tela leu sozinha (só o nó daquele cuidado, `estado.linhas`) e, quando os Lançamentos do dia já foram lidos, a memória deles (`DASH_DADOS`). */
   function chaveLinha(dia,item,id){return dia+'|'+item+'|'+id;}
@@ -103806,7 +103808,7 @@ renderAtual=function(){
   };
   async function registrarGrupo(c,lista,valor,mapa,confirmacaoTutor137){
     var bridge=window.ZeluzRespostaApp88;if(!bridge||typeof bridge.registrar!=='function')throw Error('a resposta não está disponível agora');
-    var enviada=lista[0].st.enviada,gk=lista[0].grupo,fonteContato=c,pedido={cycleKeys:lista.map(function(v){return v.cy.cycleKey;}),itemKs:lista.map(function(v){return v.cy.itemK;})};
+    var enviada=lista[0].st.enviada&&!lista[0].st.zs,gk=lista[0].grupo,fonteContato=c,pedido={cycleKeys:lista.map(function(v){return v.cy.cycleKey;}),itemKs:lista.map(function(v){return v.cy.itemK;})};
     if(!enviada){
       var contatoAck;if(mapa[0]==='aguardar'){if(!estado.api||typeof estado.api.marcarRetorno!=='function')throw Error('acompanhamento humano indisponível');contatoAck=await estado.api.marcarRetorno(c,pedido);}
       else{if(!estado.api||typeof estado.api.marcar!=='function')throw Error('contato humano indisponível');contatoAck=await estado.api.marcar(c,pedido);}

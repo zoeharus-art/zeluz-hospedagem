@@ -172,6 +172,11 @@ prova('a página: veterinária pela agenda, vencimentos sob demanda, registro e 
   /* a ponte não depende mais do instalador antigo: ela é instalada fora do try dele */
   const ini2 = html.indexOf('function tentar(){'), fim2 = html.indexOf('function bancoPronto(){', ini2), tentar = html.slice(ini2, fim2);
   assert.ok(tentar.indexOf('}catch(_){api=null;}') > 0 && tentar.indexOf('}catch(_){api=null;}') < tentar.indexOf('root.zelozinha42Instalar(estado.fabrica)'));
+  /* a resposta do tutor à mensagem da Zelozinha simples vai pelo contato da equipe: os botões não travam */
+  assert.match(html, /var grupo=st\.enviada&&!st\.zs\?grupoDoCiclo\(c,cy\):txt\(c\.groupKey\);/);
+  assert.match(html, /var enviada=lista\[0\]\.st\.enviada&&!lista\[0\]\.st\.zs,/);
+  assert.match(html, /ZS\.veterinariaNoDia\(c\.dia,v\)\?'Veterinária: está hoje':'Veterinária: não vem hoje'/);
+  assert.equal(ZS.statusDoCiclo({ dia: SEG, dcKey: 'x' }, { itemK: 'verm_p' }), null, 'sem item na fila, o cartão segue como antes');
   assert.match(html, /const APP_VERSAO='2026-10-30-02';/);
   assert.equal(html.split('2026-10-30-02').length - 1, 11);
 });
