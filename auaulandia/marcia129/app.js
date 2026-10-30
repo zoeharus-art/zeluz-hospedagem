@@ -48,6 +48,10 @@
       },salvarAvaliacao:function(pedido){
         if(!permitido()||typeof fonte.salvarAvaliacao!=='function')return Promise.reject(new Error('SEM_PERMISSAO'));
         return fonte.salvarAvaliacao(pedido);
+      },salvarCuidado:function(pedido){
+        /* 30/out/2026: «Revisei», «Feito» e «Tutor avisado» da agenda do dia (no mesmo registro do agendamento). */
+        if(!permitido()||typeof fonte.salvarCuidado!=='function')return Promise.reject(new Error('SEM_PERMISSAO'));
+        return fonte.salvarCuidado(pedido);
       }});
       if(typeof op.observarCaches==='function')removerCaches=op.observarCaches(function(){
         if(fonte===dados&&permitido()&&typeof fonte.recalcular==='function')fonte.recalcular();

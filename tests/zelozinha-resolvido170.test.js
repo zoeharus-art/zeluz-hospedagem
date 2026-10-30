@@ -101,7 +101,7 @@ prova('a página: registro da equipe sem o painel antigo, resposta e agendamento
   assert.match(html, /cancelarSePronto\(DB,c\.dia,c\.dcKey,'A equipe agendou o cuidado antes do envio\.'\)/);
   assert.match(html, /lerFila:function\(d\)\{var db=dbAtual\(\);return db\?db\.ref\('daycare\/zelozinha-fila\/'\+d\)\.once\('value'\)/);
   assert.match(html, /'resolvido-antes':'saiu da fila da Zelozinha: o cuidado foi resolvido antes do envio'/);
-  assert.match(html, /const APP_VERSAO='2026-10-30-03';/);
+  assert.match(html, /const APP_VERSAO='2026-10-30-04';/);
 });
 
 (async () => {
