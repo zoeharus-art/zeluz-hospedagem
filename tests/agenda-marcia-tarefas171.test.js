@@ -310,7 +310,8 @@ prova('menu: «Márcia Gestão» conta não revisados + reações sem aviso; «Q
   assert.equal(ultima('gestaomarcia')[1], 0, 'zero: navPend(…, 0) tira o número');
   // Quem não comeu: os dados do dia vão para a conta do app (empLista), que só conta quem ainda não foi avisado
   assert.deepEqual(ctx.__empAlm1, db.ler('daycare/almoco/' + dia)); assert.deepEqual(ctx.__empAlm2, db.ler('daycare/atividade/' + dia + '/almoco2'));
-  assert.ok(ctx.atualizacoes >= 1, 'o menu refaz a conta');
+  await new Promise((r) => setTimeout(r, 300));
+  assert.ok(ctx.atualizacoes >= 1, 'o menu refaz a conta (uma vez, logo depois de a grade parar de mudar)');
   const turma = [{ p: { n: 'Biscoito', tutor: 'Ciclano' } }, { p: { n: 'Amora', tutor: 'Beltrana' } }, { p: { n: 'Farofa', tutor: 'Fulana' } }];
   vm.runInContext('function turmaDoDia(){return __turma;}function dcKey(n,t){return (n+"__"+t).toLowerCase();}function pelExtra(){return {};}function jsNorm(s){return String(s);}var __turma=[];' + empListaDoApp(), ctx);
   ctx.__turma = turma;

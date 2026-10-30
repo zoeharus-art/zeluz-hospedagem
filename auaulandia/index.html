@@ -101942,7 +101942,8 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   function publicarComeu(){
     if(!dados.a1||!dados.a2||!dados.av)return;
     try{root.__empAlm1=dados.a1;root.__empAlm2=dados.a2;if(typeof EMP_AVISOS!=='undefined')EMP_AVISOS=dados.av;}catch(_){}
-    try{if(typeof atualizarPendenciasNav==='function')atualizarPendenciasNav();}catch(_){}
+    /* a grade do almoço muda a cada toque: a conta do menu espera um instante e roda uma vez só */
+    clearTimeout(publicarComeu.t);publicarComeu.t=setTimeout(function(){try{if(typeof atualizarPendenciasNav==='function')atualizarPendenciasNav();}catch(_){}},250);
   }
   function ligarComeu(){
     var base=db(),dia=typeof empDataKey==='function'?empDataKey():'';
