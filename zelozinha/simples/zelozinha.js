@@ -8,7 +8,7 @@ const fs = require('node:fs');
 const N = require('./nucleo');
 const Mensagem = require('./mensagem-unica41');   // cópia idêntica do texto aprovado do app (a prova confere)
 
-const PASSO_MS = 15000, SINAL_MS = 120000, ESPERA_NUMERO_MS = 60000, TENTATIVAS_NUMERO = 3;
+const PASSO_MS = 15000, SINAL_MS = 120000, CONEXAO_MS = 20000, ESPERA_NUMERO_MS = 60000, TENTATIVAS_NUMERO = 3;
 
 function criarEvolution(e, fetchImpl = globalThis.fetch) {
   const base = e.baseUrl, inst = encodeURIComponent(e.instancia);
@@ -27,14 +27,18 @@ function criarEvolution(e, fetchImpl = globalThis.fetch) {
     enviar: (jid, textoMsg, digitando) => chamar('POST', `/message/sendText/${inst}`, { number: jid.slice(0, jid.indexOf('@')), text: textoMsg, delay: digitando })
       .catch(() => ({ erro: true })),
     estado: () => chamar('GET', `/instance/connectionState/${inst}`)
-      .then((r) => (r.corpo && r.corpo.instance && typeof r.corpo.instance.state === 'string' ? r.corpo.instance.state : 'desconhecido'), () => 'desconhecido')
+      .then((r) => (r.corpo && r.corpo.instance && typeof r.corpo.instance.state === 'string' ? r.corpo.instance.state : 'desconhecido'), () => 'desconhecido'),
+    qr: () => chamar('GET', `/instance/connect/${inst}`).then(N.interpretarQr, () => ({ ok: false })),
+    dono: () => chamar('GET', `/instance/fetchInstances?instanceName=${inst}`).then((r) => N.interpretarDono(r, e.instancia), () => ({ ok: false })),
+    sair: () => chamar('DELETE', `/instance/logout/${inst}`).then((r) => r.status >= 200 && r.status < 300, () => false)
   };
 }
 
 /* op: db (Admin SDK, com a identidade técnica), evo, cfg, agora(), aleatorio(), log(), servidorAgora */
 function criarServico(op) {
   const { db, evo, cfg } = op, agora = op.agora || Date.now, aleatorio = op.aleatorio || Math.random, log = op.log || (() => {});
-  const est = { dia: '', fila: {}, refFila: null, pausado: false, proximoEm: 0, ocupado: false, whatsapp: 'desconhecido' };
+  const est = { dia: '', fila: {}, refFila: null, pausado: false, proximoEm: 0, ocupado: false, whatsapp: 'desconhecido',
+    fora: 0, qrCode: '', donoConferido: false, numeroErrado: false, conferindo: null };
 
   function guardar(s) { est.fila[s.key] = s.val(); }
   function tirar(s) { delete est.fila[s.key]; }
@@ -56,6 +60,9 @@ function criarServico(op) {
   }
   async function iniciar() {
     db.ref(N.CONTROLE).on('value', (s) => { const v = s.val(); est.pausado = !!(v && v.pausado === true); });
+    /* «Já escaneei» no app: confere a conexão na hora, sem esperar a próxima volta */
+    let primeiraLeitura = true;   // o primeiro aviso é só o valor antigo do banco, não um clique
+    db.ref(N.RECONEXAO).on('value', () => { if (primeiraLeitura) { primeiraLeitura = false; return; } conexao().catch((e) => log('conexao', e.message)); });
     const saude = (await db.ref(N.SAUDE).once('value')).val();
     const ultimo = Number(saude && saude.ultimoEnvioEm) || 0;
     if (ultimo) est.proximoEm = ultimo + cfg.intervaloMinMs;   // reinício não encurta o intervalo
@@ -65,7 +72,8 @@ function criarServico(op) {
   async function passo() {
     const t = agora(), dia = N.diaSP(t);
     if (dia !== est.dia) await trocarDia(dia);
-    if (est.ocupado || est.pausado || !N.naJanela(t, cfg) || t < est.proximoEm) return 'esperando';
+    /* WhatsApp fora (ou com número que não é o da Zêluz): as mensagens esperam na fila */
+    if (est.ocupado || est.pausado || est.whatsapp !== 'open' || !N.naJanela(t, cfg) || t < est.proximoEm) return 'esperando';
     const it = N.escolherProximo(est.fila);
     if (!it) return 'vazio';
     est.ocupado = true;
@@ -99,11 +107,49 @@ function criarServico(op) {
     log('envio', r.estado);
     return r.estado;
   }
+  /* A conexão, a cada 20 s. Com o número da Zêluz na configuração:
+     - fora do ar duas vezes seguidas: busca o QR e grava em daycare/zelozinha-qr/vps (só quando ele troca);
+     - de volta: apaga o QR e confere o número conectado; se não for o da Zêluz, desconecta na hora.
+     Sem o número na configuração, só acompanha o estado, como antes. Nunca registra número nem nome. */
+  function conexao() {
+    if (!est.conferindo) est.conferindo = conferirConexao().finally(() => { est.conferindo = null; });
+    return est.conferindo;
+  }
+  async function conferirConexao() {
+    const numeroZeluz = cfg.evolution && cfg.evolution.numeroZeluz, estado = await evo.estado(), p = N.passoConexao(estado, est.fora);
+    let final = estado;
+    est.fora = p.fora;
+    if (estado === 'open') {
+      if (est.qrCode) { await db.ref(N.QR).set(null); est.qrCode = ''; }
+      if (numeroZeluz && !est.donoConferido) {
+        const dono = await evo.dono();
+        if (!dono.ok) final = 'desconhecido';   // sem saber quem está conectado, nada sai; confere de novo na próxima volta
+        else if (!N.numeroCerto(dono, numeroZeluz)) {
+          await evo.sair(); est.numeroErrado = true; final = 'numero-errado';
+          log('conexao', 'número que não é o da Zêluz; desconectado');
+        } else { est.donoConferido = true; est.numeroErrado = false; }
+      }
+    } else {
+      est.donoConferido = false;
+      if (est.numeroErrado) final = 'numero-errado';
+      if (numeroZeluz && p.buscarQr) {
+        const q = await evo.qr();
+        if (q.ok && q.code !== est.qrCode) { await db.ref(N.QR).set({ base64: q.base64, em: op.servidorAgora || agora() }); est.qrCode = q.code; }
+      }
+    }
+    if (final !== est.whatsapp) {
+      const antes = est.whatsapp;
+      est.whatsapp = final;
+      if (antes !== 'desconhecido' || final !== 'open') log('conexao', final);
+      await db.ref(N.SAUDE).update({ whatsapp: final });
+    }
+    return final;
+  }
   async function sinal() {
-    est.whatsapp = await evo.estado();
+    await conexao();
     await db.ref(N.SAUDE).update({ vivoEm: op.servidorAgora || agora(), whatsapp: est.whatsapp, proximoEm: est.proximoEm || null, pausado: est.pausado, versao: N.VERSAO });
   }
-  return { iniciar, passo, sinal, trocarDia, _est: est };
+  return { iniciar, passo, sinal, conexao, trocarDia, _est: est };
 }
 
 async function principal() {
@@ -120,6 +166,8 @@ async function principal() {
   console.log(JSON.stringify({ ok: true, zelozinha: N.VERSAO, dia: servico._est.dia }));
   setInterval(() => servico.passo().catch((e) => console.error('passo:', e.message)), PASSO_MS);
   setInterval(() => servico.sinal().catch((e) => console.error('sinal:', e.message)), SINAL_MS);
+  setInterval(() => servico.conexao().catch((e) => console.error('conexao:', e.message)), CONEXAO_MS);
+  if (!cfg.evolution.numeroZeluz) console.log('aviso: sem evolution.numeroZeluz na configuração; o QR de reconexão fica desligado');
 }
 
 if (require.main === module) principal().catch((e) => { console.error('não iniciou:', e.message); process.exit(1); });
