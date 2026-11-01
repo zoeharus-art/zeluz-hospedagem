@@ -41,8 +41,10 @@ class Raiz {
   querySelector() { return null; }
 }
 function form(id, v = {}) {
+  /* 30/out/2026: salvar exige as três escolhas; «Vai fazer na Zêluz» com o «Qual?» mantém conferido falso, como antes. */
   const d = Object.assign({ nome: 'Maya', raca: 'SRD', tutor: 'Família Maya', telefone: '(00) 90000-0000', hora: '09:30',
     'vacina-conferido': false, 'vermifugo-conferido': false, 'carrapaticida-conferido': false,
+    'vacina-plano': 'na_zeluz', 'vacina-detalhe': 'Vacina fictícia', 'vermifugo-plano': 'na_zeluz', 'vermifugo-detalhe': 'Produto fictício', 'carrapaticida-plano': 'na_zeluz', 'carrapaticida-detalhe': 'Produto fictício',
     experiencia: '', saude: '', observacoes: '', 'pagamento-recebido': false }, v);
   return { closest() { return this; }, getAttribute(n) { return n === 'data-am-form' ? id : null; },
     querySelector(s) { const m = /^\[name="(.+)"\]$/.exec(s); return m ? { value: d[m[1]] == null ? '' : d[m[1]], checked: d[m[1]] === true } : null; } };

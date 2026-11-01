@@ -227,9 +227,20 @@
     if (situacao === 'vencido' && (!dataISO || dataISO >= dia)) return null;
     return { situacao: situacao, dataISO: dataISO };
   }
+  /* 30/out/2026 (agenda da Márcia): o que a Márcia registra DENTRO de cada cuidado do agendamento — quem revisou, o que
+     foi feito e se o tutor foi avisado de uma reação. Só se lê o que tem autoria e horário; o resto é ignorado. */
+  var REACOES171 = ['bem', 'dor', 'vomito', 'diarreia', 'outro'];
+  function registroCuidado171(v) {
+    v = objeto(v); var out = {}, r = objeto(v.revisao), f = objeto(v.feito), t = objeto(v.tutorAvisado);
+    if (texto(r.por) && Number(r.em) > 0) out.revisao = { por: texto(r.por), em: Number(r.em) };
+    if (texto(f.por) && Number(f.em) > 0) out.feito = { oQue: texto(f.oQue), usado: texto(f.usado), qtd: texto(f.qtd), reacoes: lista(f.reacoes).map(texto).filter(function (x) { return REACOES171.indexOf(x) >= 0; }), obs: texto(f.obs), por: texto(f.por), em: Number(f.em) };
+    if (texto(t.por) && Number(t.em) > 0) out.tutorAvisado = { por: texto(t.por), em: Number(t.em) };
+    return out;
+  }
+  function comReacao171(reacoes) { var r = lista(reacoes); return r.length > 0 && r.indexOf('bem') < 0; }
   function prevCheckConferencia(v, dia) {
     v = objeto(v);
-    if (typeof v.conferido === 'boolean') {var out={conferido:v.conferido};if(['em_dia','antes','na_zeluz','a_conferir'].indexOf(v.plano)>=0){out.plano=v.plano;out.detalhe=texto(v.detalhe);}return out;}
+    if (typeof v.conferido === 'boolean') {var out={conferido:v.conferido};if(['em_dia','antes','na_zeluz','a_conferir'].indexOf(v.plano)>=0){out.plano=v.plano;out.detalhe=texto(v.detalhe);}return Object.assign(out,registroCuidado171(v));}
     var legado = prevConferencia(v, dia);
     return { conferido: !!legado && legado.situacao === 'em-dia' };
   }
@@ -283,7 +294,7 @@
       quando: origemAutoritativa ? (texto(origem.quando) || quandoBR(origem.ts)) : (fontePronta ? (texto(r.quando) || quandoBR(r.ts)) : '')
     };
   }
-  function prevAgenda(v) { var r={conferido:!!(v&&v.conferido)};if(v&&v.plano){r.plano=v.plano;r.detalhe=texto(v.detalhe);}return r; }
+  function prevAgenda(v) { var r={conferido:!!(v&&v.conferido)};if(v&&v.plano){r.plano=v.plano;r.detalhe=texto(v.detalhe);}return Object.assign(r,registroCuidado171(v)); }
   function observacoesConferencia(p, conf) {
     var out = [];
     function por(rotulo, v) { if (texto(v)) out.push({ rotulo: rotulo, valor: texto(v) }); }
@@ -307,7 +318,7 @@
       var v = separarValor(it.reg), conf = conferenciaEfetiva(deps, dia, p, it.reg, conferencias[it.id], fonteConferenciaPronta);
       return {
         id: 'avaliacao-' + hash(it.id), codigoOrigem: it.id, hora: texto(it.reg.hora),
-        nome: v.nome, raca: v.raca, tutor: conf.tutor, telefone: texto(objeto(objeto(it.reg.det).avaliacao129).telefone),
+        nome: v.nome, raca: v.raca, idade: texto(objeto(objeto(it.reg.det).avaliacao129).idade), tutor: conf.tutor, telefone: texto(objeto(objeto(it.reg.det).avaliacao129).telefone),
         vacina: prevAgenda(conf.vacina), vermifugo: prevAgenda(conf.vermifugo), carrapaticida: prevAgenda(conf.carrapaticida),
         observacoes: observacoesConferencia(p, conf), conferencia: conf,
         agendaMarcia: agendaMarcia131(it.reg), pagamento: pagamentoAgenda131(it.reg), _ordem: ordem
@@ -877,8 +888,79 @@
         return { id: id, codigoOrigem: codigoOrigem, agenda: copiar(agenda), conferencia: copiar(agenda.conferencia) };
       });
     }
-    return { carregar: carregar, observar: observar, recalcular: recalcular, fechar: desligar, salvarTarefa: salvarTarefa, salvarAvaliacao: salvarAvaliacao };
+    /* 30/out/2026 — a agenda do dia da Márcia: «Revisei», «Feito» (o que foi feito, o que foi usado e como o peludinho
+       ficou) e «Tutor avisado». Grava no MESMO registro do agendamento (daycare/dashboard/{dia}/avaliacao/{id}), em campos
+       novos dentro de cada cuidado, sem apagar nada e sem mexer na revisão do cadastro (o formulário aberto continua valendo).
+       Só para agendamento da Agenda Márcia: registro lançado à mão não tem esse bloco e não ganha um. */
+    function feitoEntrada171(v, k) {
+      v = objeto(v);
+      var r = { oQue: campoTexto(v.oQue, 300, true, 'O_QUE'), usado: campoTexto(v.usado, 200, true, 'USADO'), qtd: campoTexto(v.qtd, 60, k === 'carrapaticida', 'QTD'), obs: campoTexto(v.obs, 500, false, 'OBS') };
+      var reacoes = lista(v.reacoes).map(texto);
+      if (!reacoes.length || reacoes.some(function (x) { return REACOES171.indexOf(x) < 0; }) || (reacoes.indexOf('bem') >= 0 && reacoes.length > 1)) throw new Error('REACOES_INVALIDAS');
+      r.reacoes = reacoes.filter(function (x, i) { return reacoes.indexOf(x) === i; });
+      return r;
+    }
+    function salvarCuidado(cmd) {
+      cmd = cmd || {};
+      var dia = texto(cmd.dia), id = texto(cmd.id), k = texto(cmd.cuidado), acao = texto(cmd.acao), feito = null;
+      if (!dataValida(dia)) return Promise.reject(new Error('DIA_INVALIDO'));
+      if (!/^avaliacao-[a-z0-9]+$/.test(id)) return Promise.reject(new Error('ID_INVALIDO'));
+      if (['vacina', 'vermifugo', 'carrapaticida'].indexOf(k) < 0) return Promise.reject(new Error('CUIDADO_INVALIDO'));
+      if (['revisar', 'feito', 'tutor_avisado'].indexOf(acao) < 0) return Promise.reject(new Error('ACAO_INVALIDA'));
+      try { exigirPermissao(); } catch (e) { return Promise.reject(e); }
+      var autorInicio = autorValido();
+      if (!autorInicio) return Promise.reject(new Error('AUTORIA_OBRIGATORIA'));
+      if (acao === 'feito') { try { feito = feitoEntrada171(cmd.feito, k); } catch (e) { return Promise.reject(e); } }
+      var ultimo = ultimos[dia], fonteDia = fontesUltimas[dia];
+      var item = ultimo && ultimo.agenda && ultimo.agenda.estado === 'pronto' && ultimo.agenda.itens.filter(function (x) { return x.id === id; })[0];
+      if (!item || !texto(item.codigoOrigem)) return Promise.reject(new Error('AVALIACAO_DESATUALIZADA'));
+      if (!fonteDia || !pronto(fonteDia.dashboard)) return Promise.reject(new Error('FONTE_AVALIACOES_INDISPONIVEL'));
+      var codigoOrigem = texto(item.codigoOrigem), regDashboard = objeto(objeto(valor(fonteDia.dashboard).avaliacao)[codigoOrigem]);
+      if (/[.#$\[\]\/]/.test(codigoOrigem) || codigoOrigem.length > 160) return Promise.reject(new Error('AVALIACAO_DESATUALIZADA'));
+      if (!agendaMarcia131(regDashboard)) return Promise.reject(new Error('CUIDADO_FORA_DA_AGENDA'));
+      if (!db || typeof db.ref !== 'function') return Promise.reject(new Error('BANCO_INDISPONIVEL'));
+      var ref = db.ref('daycare/dashboard/' + dia + '/avaliacao/' + codigoOrigem), motivo = '';
+      return Promise.resolve(ref.transaction(function (atual) {
+        /* Firebase pode repetir esta função: permissão, autoria e o estado do cuidado são conferidos a cada tentativa. */
+        if (!autorizado()) { motivo = 'SEM_PERMISSAO'; return; }
+        var autor = autorValido();
+        if (!autor) { motivo = 'AUTORIA_OBRIGATORIA'; return; }
+        if (autor.id !== autorInicio.id || autor.nome !== autorInicio.nome) { motivo = 'AUTORIA_ALTERADA'; return; }
+        if (!atual || typeof atual !== 'object' || !agendaMarcia131(atual)) { motivo = 'AVALIACAO_DESATUALIZADA'; return; }
+        var reg = copiar(atual), det = objeto(reg.det), a = objeto(det.avaliacao129);
+        if (a.remarcacao159 || a.estado === 'remarcada' || a.estado === 'cancelada' || objeto(a.cancelamento).ativo === true) { motivo = 'AVALIACAO_DESATUALIZADA'; return; }
+        var c = objeto(a[k]), rel = relogioSP(deps.agora), quem = { por: autor.nome, porId: autor.id, em: rel.ts };
+        if (c.plano === 'em_dia') { motivo = 'CUIDADO_EM_DIA'; return; }
+        if (acao === 'revisar') { if (objeto(c.revisao).em) { motivo = 'CUIDADO_JA_REVISADO'; return; } c.revisao = quem; }
+        else if (acao === 'feito') {
+          if (!objeto(c.revisao).em) { motivo = 'REVISAR_ANTES'; return; }
+          if (objeto(c.feito).em) { motivo = 'CUIDADO_JA_FEITO'; return; }
+          c.feito = Object.assign({}, feito, quem);
+        } else {
+          if (!objeto(c.feito).em || !comReacao171(objeto(c.feito).reacoes)) { motivo = 'SEM_REACAO'; return; }
+          if (objeto(c.tutorAvisado).em) { motivo = 'TUTOR_JA_AVISADO'; return; }
+          c.tutorAvisado = quem;
+        }
+        a[k] = c; det.avaliacao129 = a; reg.det = det;
+        motivo = ''; return reg;
+      })).then(function (res) {
+        if (!res || res.committed !== true) throw new Error(motivo || 'AVALIACAO_DESATUALIZADA');
+        var reg = res.snapshot && typeof res.snapshot.val === 'function' ? objeto(res.snapshot.val()) : {}, c = objeto(objeto(objeto(reg.det).avaliacao129)[k]);
+        var campo = acao === 'revisar' ? 'revisao' : acao === 'feito' ? 'feito' : 'tutorAvisado';
+        if (texto(objeto(c[campo]).porId) !== autorInicio.id || !(Number(objeto(c[campo]).em) > 0)) throw new Error('CONFIRMACAO_INVALIDA');
+        var dashAtual = copiar(valor(fonteDia.dashboard)), avaliacoes = copiar(objeto(dashAtual.avaliacao));
+        avaliacoes[codigoOrigem] = copiar(reg); dashAtual.avaliacao = avaliacoes;
+        fonteDia.dashboard = { estado: 'pronto', valor: dashAtual };
+        var atualizado;
+        if (ativoObs && ativoObs.dia === dia && typeof ativoObs.publicar === 'function') atualizado = ativoObs.publicar();
+        else atualizado = copiar(memorizar(dia, montarSnapshot(deps, dia, fonteDia), fonteDia));
+        var agenda = atualizado && atualizado.agenda.itens.filter(function (x) { return x.id === id; })[0];
+        if (!agenda) throw new Error('CONFIRMACAO_INVALIDA');
+        return { ok: true, id: id, codigoOrigem: codigoOrigem, cuidado: k, acao: acao, agenda: copiar(agenda) };
+      });
+    }
+    return { carregar: carregar, observar: observar, recalcular: recalcular, fechar: desligar, salvarTarefa: salvarTarefa, salvarAvaliacao: salvarAvaliacao, salvarCuidado: salvarCuidado };
   }
 
-  return { criar: criar };
+  return { criar: criar, registroCuidado171: registroCuidado171, REACOES171: REACOES171 };
 });

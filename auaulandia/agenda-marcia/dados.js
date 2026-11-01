@@ -83,6 +83,8 @@
     return {
       nome: campo(cmd.nome, 80, true, 'NOME'), raca: campo(cmd.raca, 80, true, 'RACA'),
       tutor: campo(cmd.tutor, 140, true, 'TUTOR'), telefone: telefoneBR(cmd.telefone, true), hora: hora(cmd.hora),
+      /* Idade (30/out/2026): texto curto e opcional, como a recepção escreve («2 anos»). */
+      idade: campo(cmd.idade, 30, false, 'IDADE'),
       vacina: prev(cmd.vacina, 'VACINA'), vermifugo: prev(cmd.vermifugo, 'VERMIFUGO'),
       carrapaticida: prev(cmd.carrapaticida, 'CARRAPATICIDA'),
       experiencia: campo(cmd.experiencia, 500, false, 'EXPERIENCIA'),
@@ -172,7 +174,7 @@
       /* O protocolo nativo de edição altera o resumo superior. Em 131 ele é canônico;
          o bloco interno não pode ressuscitar nome/raça/hora antigos. */
       nome: marcada ? v.nome : (texto(a.nome) || v.nome), raca: marcada ? v.raca : (texto(a.raca) || v.raca),
-      tutor: texto(a.tutor), telefone: telefoneBR(a.telefone, false), hora: marcada ? texto(reg.hora) : (texto(a.hora) || texto(reg.hora)),
+      tutor: texto(a.tutor), telefone: telefoneBR(a.telefone, false), hora: marcada ? texto(reg.hora) : (texto(a.hora) || texto(reg.hora)), idade: texto(a.idade),
       vacina: prevLido(a.vacina), vermifugo: prevLido(a.vermifugo),
       carrapaticida: prevLido(a.carrapaticida),
       experiencia: texto(a.experiencia), saude: texto(a.saude), observacoes: texto(a.observacoes),
@@ -193,6 +195,8 @@
       remarcacao159: d.remarcacao159, estado: d.estado, cancelamento: { ativo: canc.ativo === true, autorId: texto(canc.autorId),
         ts: Number.isFinite(canc.ts) ? canc.ts : 0, motivo: texto(canc.motivo) }
     };
+    /* A idade só entra quando existe: o carimbo dos registros antigos (sem idade) não muda. */
+    if(d.idade)serial.idade=d.idade;
     if(d.vacina.plano||d.vermifugo.plano||d.carrapaticida.plano)serial.planos=[d.vacina,d.vermifugo,d.carrapaticida].map(function(v){return [v.plano||'',v.detalhe||''];});
     return JSON.stringify(serial);
   }
@@ -203,7 +207,7 @@
   function itemDeRegistro(dia, id, reg) {
     var d = dados131(reg), estadoProjecao = texto(objeto(d.projecao).estado);
     return {
-      id: texto(id), dia: dia, hora: d.hora, nome: d.nome, raca: d.raca, tutor: d.tutor, telefone: d.telefone,
+      id: texto(id), dia: dia, hora: d.hora, nome: d.nome, raca: d.raca, idade: d.idade, tutor: d.tutor, telefone: d.telefone,
       vacina: d.vacina, vermifugo: d.vermifugo, carrapaticida: d.carrapaticida,
       experiencia: d.experiencia, saude: d.saude, observacoes: d.observacoes,
       pagamento: { recebido: d.pagamento.recebido, valorCent: d.pagamento.valorPagoCentavos, quem: d.pagamento.quem, quando: d.pagamento.quando },
@@ -451,6 +455,7 @@
             pagamento: pg, cancelamento: copiar(aAtual.cancelamento), projecao: copiar(aAtual.projecao),
             revisao: revisao, autorId: autor.id, autorNome: autor.nome, ts: rel.ts, quando: rel.quando, historico: hist
           };
+          if (campos.idade) a.idade = campos.idade;
           if (aAtual.origem159) a.origem159 = copiar(aAtual.origem159);
           cuidadosGravados={vacina:prevLido(a.vacina),vermifugo:prevLido(a.vermifugo),carrapaticida:prevLido(a.carrapaticida)};
           if (a.cancelamento === undefined) delete a.cancelamento;
@@ -499,7 +504,7 @@
       })).then(function (res) {
         if (!res || res.committed !== true) throw new Error(motivo || 'AGENDAMENTO_DESATUALIZADO');
         var reg = res.snapshot && typeof res.snapshot.val === 'function' ? objeto(res.snapshot.val()) : {}, item = itemDeRegistro(dia, id, reg), dConfirmado = dados131(reg);
-        if (!dConfirmado.agendaMarcia || (mutacaoCadastro && (item.nome !== campos.nome || item.raca !== campos.raca || item.telefone !== campos.telefone || item.hora !== campos.hora || !['vacina','vermifugo','carrapaticida'].every(function(k){return item[k].conferido===cuidadosGravados[k].conferido&&(!cuidadosGravados[k].plano||(item[k].plano===cuidadosGravados[k].plano&&item[k].detalhe===cuidadosGravados[k].detalhe));})))) throw new Error('CONFIRMACAO_INVALIDA');
+        if (!dConfirmado.agendaMarcia || (mutacaoCadastro && (item.nome !== campos.nome || item.raca !== campos.raca || item.idade !== campos.idade || item.telefone !== campos.telefone || item.hora !== campos.hora || !['vacina','vermifugo','carrapaticida'].every(function(k){return item[k].conferido===cuidadosGravados[k].conferido&&(!cuidadosGravados[k].plano||(item[k].plano===cuidadosGravados[k].plano&&item[k].detalhe===cuidadosGravados[k].detalhe));})))) throw new Error('CONFIRMACAO_INVALIDA');
         if (!cache[dia]) cache[dia] = {}; cache[dia][id] = copiar(reg);
         function ack(ok, itemFinal) {
           var final = itemFinal || item;

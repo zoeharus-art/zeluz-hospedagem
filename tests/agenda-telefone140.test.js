@@ -30,7 +30,8 @@ class FakeRef {
 function comando(extra = {}) {
   return Object.assign({
     nome: 'Aurora', raca: 'SRD', tutor: 'Responsável', telefone: '(00) 90000-0000', hora: '09:30',
-    vacina: { conferido: true }, vermifugo: { conferido: false }, carrapaticida: { conferido: true },
+    /* 30/out/2026: salvar exige as três escolhas (Em dia ou Vai fazer na Zêluz). */
+    vacina: { conferido: true, plano: 'em_dia', detalhe: '' }, vermifugo: { conferido: false, plano: 'na_zeluz', detalhe: 'Produto fictício' }, carrapaticida: { conferido: true, plano: 'em_dia', detalhe: '' },
     experiencia: '', saude: '', observacoes: '', pagamento: { recebido: false, valorCent: 0 }
   }, extra);
 }
@@ -72,7 +73,8 @@ async function executar() {
   const htmlReaberto = Painel.desenhar(reaberto.at(-1), { novo: {}, rascunhos: {}, erros: {}, pendentes: {} });
   assert.match(htmlReaberto, /name="telefone"[^>]*value="\+5500900000000"/);
   assert.match(htmlReaberto, /href="https:\/\/wa\.me\/5500900000000"/);
-  assert.match(htmlReaberto, />Copiar<\/button>/);
+  assert.match(htmlReaberto, /data-am-copiar-campo aria-label="Copiar telefone"/, 'o box do telefone tem o copiar à direita');
+  assert.match(htmlReaberto, /class="am171__tel-wa" data-am-wa href="https:\/\/wa\.me\/5500900000000"/, 'e o WhatsApp à esquerda');
 
   const raizBusca = painelRaiz();
   Painel.montar(raizBusca, { dia: DIA, clientes: [{ id: 'cadastro-sintetico', nome: 'Aurora', raca: 'SRD', tutor: 'Responsável', telefone: '(00) 90000-0000' }], carregar: () => Promise.resolve({ dia: DIA, estado: 'pronto', itens: [] }) });
@@ -106,13 +108,15 @@ async function executar() {
   Painel.montar(raiz, { dia: DIA, carregar: () => Promise.resolve({ dia: DIA, estado: 'pronto', itens: [itemUI] }), salvar() {}, copiarTexto: v => { valoresCopiados.push(v); return Promise.resolve(); } });
   await new Promise(r => setImmediate(r));
   const textoAntesDaCopia = raiz.innerHTML;
-  const contato = { children: [], querySelector() { return null; }, appendChild(x) { this.children.push(x); } };
+  const contato = { children: [], classList: { v: new Set(), add(c) { this.v.add(c); }, remove(c) { this.v.delete(c); }, contains(c) { return this.v.has(c); } }, querySelector() { return null; }, appendChild(x) { this.children.push(x); } };
   const botao = { parentNode: contato, closest() { return this; }, hasAttribute(n) { return n === 'data-am-copiar-telefone'; }, getAttribute(n) { return n === 'data-am-copiar-telefone' ? 'salvo' : null; } };
   raiz.handlers.click({ target: botao });
   await new Promise(r => setImmediate(r));
   assert.deepEqual(valoresCopiados, ['+5500900000000']);
   assert.equal(raiz.innerHTML, textoAntesDaCopia, 'feedback de cópia não redesenha o formulário nem apaga notas em rascunho');
-  assert.equal(contato.children[0].textContent, 'Telefone copiado.');
+  /* 30/out/2026: copiou, o ícone vira ✓ e aparece «Copiado» por 2 s (a classe `copiado` no box). */
+  assert.equal(contato.classList.contains('copiado'), true);
+  assert.equal(contato.children.length, 0, 'sem aviso de falha quando a cópia deu certo');
 
   console.log('agenda-telefone140: OK');
 }

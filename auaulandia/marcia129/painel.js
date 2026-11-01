@@ -65,7 +65,7 @@
       var b = itemBase(x);
       function prev(v) {
         v = v && typeof v === 'object' ? v : {};
-        var out={conferido:v.conferido===true};if(['em_dia','antes','na_zeluz','a_conferir'].indexOf(v.plano)>=0){out.plano=v.plano;out.detalhe=texto(v.detalhe);}return out;
+        var out={conferido:v.conferido===true};if(['em_dia','antes','na_zeluz','a_conferir'].indexOf(v.plano)>=0){out.plano=v.plano;out.detalhe=texto(v.detalhe);}return Object.assign(out,registro171(v));
       }
       var c = x.conferencia && typeof x.conferencia === 'object' ? x.conferencia : {};
       function prevComConferencia(nome) {
@@ -74,7 +74,7 @@
         return prev(Object.assign({}, visual, canonico, { conferido: typeof canonico.conferido === 'boolean' ? canonico.conferido : visual.conferido }));
       }
       return Object.assign(b, {
-        codigoOrigem: texto(x.codigoOrigem), hora: texto(x.hora),
+        codigoOrigem: texto(x.codigoOrigem), hora: texto(x.hora), idade: texto(x.idade),
         agendaMarcia:x.agendaMarcia===true, pagamento:{recebido:!!(x.pagamento&&x.pagamento.recebido===true&&x.pagamento.valorCent===8000),valorCent:x.pagamento&&x.pagamento.valorCent===8000?8000:0,quem:texto(x.pagamento&&x.pagamento.quem),quando:texto(x.pagamento&&x.pagamento.quando)},
         vacina: prevComConferencia('vacina'), vermifugo: prevComConferencia('vermifugo'), carrapaticida: prevComConferencia('carrapaticida'),
         tutor: texto(c.tutor) || b.tutor, telefone: telefoneBR(x.telefone),
@@ -160,10 +160,117 @@
     var plano=valor.plano||(valor.conferido?'em_dia':'a_conferir'),rot=({em_dia:'Em dia',antes:'Vai fazer antes da avaliação',na_zeluz:'Vai fazer na Zêluz',a_conferir:'A conferir'})[plano]||'A conferir';return '<li><span>'+esc(rotulo)+'</span><span class="marcia129__situacao marcia129__situacao--'+(plano==='em_dia'?'conferido':'conferir')+'">'+esc(rot)+'</span>'+(valor.detalhe?'<small>'+esc(valor.detalhe)+'</small>':'')+(!valor.plano&&valor.conferido?'<small>origem não registrada</small>':'')+'</li>';
   }
 
+  var ICONE_WA = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true" focusable="false"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>';
+  var ICONE_COPIAR = '<svg class="m171__i-copiar" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><svg class="m171__i-ok" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+  /* O mesmo box de telefone da Agenda Márcia (30/out/2026): WhatsApp dentro, à esquerda; copiar à direita (vira ✓ e «Copiado» por 2 s). */
   function telefoneHTML(item) {
-    var tel = telefoneBR(item && item.telefone);
+    var tel = telefoneBR(item && item.telefone), link = linkWhatsApp(tel);
     if (!tel) return '<p class="marcia129__telefone-aviso" role="status">Telefone do tutor não informado neste registro.</p>';
-    return '<div class="marcia129__contato"><span class="marcia129__telefone-rotulo">Telefone</span><a class="marcia129__telefone" href="' + esc(linkWhatsApp(tel)) + '" target="_blank" rel="noopener noreferrer" aria-label="Abrir conversa com o tutor no WhatsApp">' + esc(tel) + '</a><button type="button" class="marcia129__copiar" data-marcia-copiar-telefone="' + esc(item.id) + '">Copiar</button></div>';
+    return '<div class="marcia129__contato"><span class="marcia129__telefone-rotulo">Telefone</span><div class="m171__tel-box"><a class="m171__tel-wa" href="' + esc(link) + '" target="_blank" rel="noopener noreferrer" aria-label="Abrir o WhatsApp do tutor">' + ICONE_WA + '</a><a class="marcia129__telefone m171__tel-link" href="' + esc(link) + '" target="_blank" rel="noopener noreferrer" aria-label="Abrir conversa com o tutor no WhatsApp">' + esc(tel) + '</a><span class="m171__tel-ok" role="status">Copiado</span><button type="button" class="marcia129__copiar m171__btn-icone" data-marcia-copiar-telefone="' + esc(item.id) + '" aria-label="Copiar telefone">' + ICONE_COPIAR + '</button></div></div>';
+  }
+
+  /* ===== 30/out/2026 — a agenda do dia da Márcia (maquete aprovada pela Adriana) =====
+     Cada avaliação mostra os três cuidados como checklist: «Em dia» já vem marcado (apagado); «Vai fazer na Zêluz» (e os
+     registros antigos «antes», «a conferir» ou sem escolha) ficam abertos para «Revisei», depois «Feito» com o registro
+     (o que foi feito, o que foi usado e como o peludinho ficou). Reação acende o alerta até alguém marcar «Tutor avisado». */
+  var CUIDADOS171 = [['vacina', 'Vacina'], ['vermifugo', 'Vermífugo'], ['carrapaticida', 'Carrapaticida']];
+  var REACOES171 = [['bem', 'Bem, sem reação'], ['dor', 'Dor'], ['vomito', 'Vômito'], ['diarreia', 'Diarreia'], ['outro', 'Outro']];
+  var QTD171 = [{ v: 'PIPETA', t: 'Pipeta (o tubo inteiro)' }, { v: 'MEIO COMPRIMIDO', t: '½ comprimido' }, { v: '1 COMPRIMIDO', t: '1 comprimido' }, { v: '2 COMPRIMIDOS', t: '2 comprimidos' }];
+  /* As quantidades do carrapaticida são as mesmas do app (DASH_QTD_PIP); fora do app, os mesmos rótulos. */
+  function qtdOpcoes171() { try { var g = typeof globalThis !== 'undefined' ? globalThis.DASH_QTD_PIP : null; if (Array.isArray(g) && g.length && g.every(function (o) { return o && typeof o.v === 'string' && typeof o.t === 'string'; })) return g; } catch (_) {} return QTD171; }
+  function qtdTexto171(v) { var o = qtdOpcoes171().filter(function (x) { return x.v === v; })[0]; return o ? o.t : texto(v); }
+  function registro171(v) {
+    v = v && typeof v === 'object' ? v : {}; var out = {}, r = v.revisao || {}, f = v.feito || {}, t = v.tutorAvisado || {}, ok = REACOES171.map(function (x) { return x[0]; });
+    if (texto(r.por) && Number(r.em) > 0) out.revisao = { por: texto(r.por), em: Number(r.em) };
+    if (texto(f.por) && Number(f.em) > 0) out.feito = { oQue: texto(f.oQue), usado: texto(f.usado), qtd: texto(f.qtd), reacoes: lista(f.reacoes).map(texto).filter(function (x) { return ok.indexOf(x) >= 0; }), obs: texto(f.obs), por: texto(f.por), em: Number(f.em) };
+    if (texto(t.por) && Number(t.em) > 0) out.tutorAvisado = { por: texto(t.por), em: Number(t.em) };
+    return out;
+  }
+  function comReacao171(reacoes) { var r = lista(reacoes); return r.length > 0 && r.indexOf('bem') < 0; }
+  function horaSP171(ts) { try { return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(Number(ts))); } catch (_) { return ''; } }
+  function reacoesTexto171(reacoes) { var r = lista(reacoes); if (!comReacao171(r)) return 'sem reação'; return r.map(function (v) { var o = REACOES171.filter(function (x) { return x[0] === v; })[0]; return o ? o[1].toLocaleLowerCase('pt-BR') : v; }).join(', '); }
+  /* Estado de UM cuidado na agenda do dia: em_dia, aberto (falta revisar), revisado, feito, alerta (reação sem «Tutor avisado») ou avisado. */
+  function estadoCuidado171(v) {
+    v = v || {};
+    if (v.plano === 'em_dia') return 'em_dia';
+    if (v.feito) return comReacao171(v.feito.reacoes) ? (v.tutorAvisado ? 'avisado' : 'alerta') : 'feito';
+    return v.revisao ? 'revisado' : 'aberto';
+  }
+  /* A conta da faixa do topo e do contador do menu: cuidados ainda não revisados + reações sem «Tutor avisado».
+     Só entra o agendamento da Agenda Márcia — é o único em que a Márcia consegue registrar pela tela. */
+  function contarCuidados171(itens) {
+    var out = { avaliacoes: 0, revisar: 0, alertas: 0 };
+    lista(itens).forEach(function (x) {
+      if (!x) return; out.avaliacoes += 1; if (x.agendaMarcia !== true) return;
+      CUIDADOS171.forEach(function (c) { var e = estadoCuidado171(x[c[0]]); if (e === 'aberto') out.revisar += 1; else if (e === 'alerta') out.alertas += 1; });
+    });
+    return out;
+  }
+  function planoLegado171(v) {
+    var p = v && v.plano;
+    if (p === 'antes') return 'Registro antigo: «Vai fazer antes da avaliação» — a revisar';
+    if (p === 'a_conferir') return 'Registro antigo: «A conferir» — a revisar';
+    if (p === 'na_zeluz') return '';
+    return v && v.conferido === true ? 'Registro antigo sem escolha (Em dia, origem não registrada) — a revisar' : 'Registro antigo sem escolha (A conferir) — a revisar';
+  }
+  /* «Mensagem para o tutor» quando o peludinho teve reação. TEXTO A APROVAR pela Adriana: neutro, sem emoji, mostrado na
+     tela antes de ser enviado (a pessoa copia ou abre o WhatsApp). Não sai sozinho. */
+  function mensagemReacao171(item, k, f) {
+    var tutor = texto(item && item.tutor).split(/[\s\/,]+/)[0], nome = texto(item && item.nome) || 'o peludinho', c = CUIDADOS171.filter(function (x) { return x[0] === k; })[0];
+    var usado = texto(f.usado) + (f.qtd ? ' · ' + qtdTexto171(f.qtd) : '');
+    return 'Olá' + (tutor ? ', ' + tutor : '') + '! Aqui é a Márcia, da Zêluz.\n'
+      + 'Hoje, na avaliação, ' + nome + ' recebeu ' + (c ? c[1].toLocaleLowerCase('pt-BR') : 'um cuidado') + ': ' + texto(f.oQue) + (usado ? ' (' + usado + ')' : '') + '.\n'
+      + 'Depois, apresentou: ' + reacoesTexto171(f.reacoes) + '.' + (texto(f.obs) ? ' Observação: ' + texto(f.obs) + '.' : '') + '\n'
+      + 'Estamos acompanhando de perto. Se notar algo diferente em casa, é só falar com a gente.';
+  }
+  function chave171(id, k) { return id + '|' + k; }
+  function registroFormHTML171(item, k, rot, r, ui) {
+    var id = item.id, base = 'm171-' + esc(id) + '-' + k, ch = chave171(id, k), busy = ui.cuidadosPendentes && ui.cuidadosPendentes[ch];
+    function chip(f, v, t, on, risco) { return '<button type="button" class="m171__chip' + (risco ? ' m171__chip--risco' : '') + '" data-m171-chip="' + esc(ch) + '" data-f="' + f + '" data-v="' + esc(v) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + esc(t) + '</button>'; }
+    var usado = '<label class="cad-lb" for="' + base + '-usado">' + (k === 'carrapaticida' ? 'Produto usado' : 'O que foi usado (produto e dose)') + '</label><input class="cad-in" id="' + base + '-usado" data-m171-campo="' + esc(ch) + '" data-f="usado" maxlength="200" autocomplete="off" value="' + esc(r.usado) + '">';
+    if (k === 'carrapaticida') usado += '<p class="cad-lb" id="' + base + '-qtd">Quanto foi usado</p><div class="m171__chips" role="group" aria-labelledby="' + base + '-qtd">' + qtdOpcoes171().map(function (o) { return chip('qtd', o.v, o.t, r.qtd === o.v, false); }).join('') + '</div>';
+    var risco = comReacao171(r.reacoes);
+    return '<div class="m171__reg" data-m171-form="' + esc(ch) + '"><label class="cad-lb" for="' + base + '-oque">O que foi feito</label><input class="cad-in" id="' + base + '-oque" data-m171-campo="' + esc(ch) + '" data-f="oQue" maxlength="300" autocomplete="off" value="' + esc(r.oQue) + '">' + usado
+      + '<p class="cad-lb" id="' + base + '-reacao">Como o peludinho ficou depois</p><div class="m171__chips" role="group" aria-labelledby="' + base + '-reacao">' + REACOES171.map(function (o) { return chip('reacao', o[0], o[1], lista(r.reacoes).indexOf(o[0]) >= 0, o[0] !== 'bem'); }).join('') + '</div>'
+      + '<div class="m171__obs"' + (risco ? '' : ' hidden') + '><label class="cad-lb" for="' + base + '-obs">Observação (o que aconteceu e quando)</label><textarea class="cad-in" id="' + base + '-obs" data-m171-campo="' + esc(ch) + '" data-f="obs" maxlength="500" rows="2">' + esc(r.obs) + '</textarea></div>'
+      + (ui.cuidadosErros && ui.cuidadosErros[ch] ? '<p class="marcia129__erro" role="alert">' + esc(ui.cuidadosErros[ch]) + '</p>' : '')
+      + '<div class="m171__acoes"><button type="button" class="m171__btn m171__btn--gold" data-m171-acao="salvar-feito" data-m171="' + esc(ch) + '"' + (busy ? ' disabled' : '') + '>' + (busy ? 'Salvando…' : 'Salvar o que foi feito') + '</button><button type="button" class="m171__btn m171__btn--sec" data-m171-acao="cancelar" data-m171="' + esc(ch) + '"' + (busy ? ' disabled' : '') + '>Cancelar</button></div></div>';
+  }
+  function cuidadoItemHTML171(item, k, rot, ui) {
+    var v = item[k] || {}, e = estadoCuidado171(v), ch = chave171(item.id, k), busy = ui.cuidadosPendentes && ui.cuidadosPendentes[ch], erro = ui.cuidadosErros && ui.cuidadosErros[ch];
+    var attr = ' data-m171="' + esc(ch) + '"' + (busy ? ' disabled' : '');
+    var erroHTML = erro ? '<p class="marcia129__erro" role="alert">' + esc(erro) + '</p>' : '';
+    if (e === 'em_dia') return '<li class="m171__it is-feito"><span class="m171__caixa ok" aria-hidden="true">✓</span><div class="m171__txt"><strong>' + rot + '</strong><small>Em dia</small></div></li>';
+    var qual = v.plano === 'na_zeluz' ? (texto(v.detalhe) ? '<p class="m171__qual">Qual: ' + esc(v.detalhe) + '</p>' : '<p class="m171__qual">Qual: não informado</p>') : '<p class="m171__qual">' + esc(planoLegado171(v)) + (texto(v.detalhe) ? ' · ' + esc(v.detalhe) : '') + '</p>';
+    if (item.agendaMarcia !== true) return '<li class="m171__it is-aberto"><span class="m171__caixa" aria-hidden="true"></span><div class="m171__txt"><strong>' + rot + '</strong>' + qual + '<span class="m171__pend">Lançado fora da Agenda Márcia: confira na ficha.</span></div></li>';
+    if (e === 'feito' || e === 'alerta' || e === 'avisado') {
+      var f = v.feito, usado = texto(f.usado) + (f.qtd ? ' · ' + qtdTexto171(f.qtd) : '');
+      var corpo = '<strong>' + rot + ': feito na Zêluz</strong><p class="m171__resumo">Feito por ' + esc(f.por) + ' às ' + esc(horaSP171(f.em)) + ' · ' + esc(f.oQue) + ' · ' + esc(reacoesTexto171(f.reacoes)) + '</p>' + (usado ? '<p class="m171__usado">Usado: ' + esc(usado) + '</p>' : '') + (texto(f.obs) ? '<p class="m171__usado">Observação: ' + esc(f.obs) + '</p>' : '');
+      if (e === 'alerta') {
+        var msg = mensagemReacao171(item, k, f), link = linkWhatsApp(item.telefone), aberta = ui.mensagensAbertas && ui.mensagensAbertas[ch], mid = 'm171-msg-' + esc(item.id) + '-' + k;
+        corpo += '<span class="m171__tag-alerta">Atenção: reação — avisar o tutor</span><div class="m171__acoes"><button type="button" class="m171__btn m171__btn--prim" data-m171-acao="mensagem"' + attr + ' aria-expanded="' + (aberta ? 'true' : 'false') + '">Mensagem para o tutor</button><button type="button" class="m171__btn m171__btn--sec" data-m171-acao="avisado"' + attr + '>' + (busy ? 'Salvando…' : 'Tutor avisado') + '</button></div>';
+        if (aberta) corpo += '<div class="m171__msg-cab"><span>Mensagem para o tutor</span><span class="m171__pilula">texto a aprovar</span></div><div class="m171__msg" id="' + mid + '">' + esc(msg) + '</div><div class="m171__acoes"><button type="button" class="m171__btn m171__btn--prim" data-m171-copiar="' + mid + '">Copiar mensagem</button>' + (link ? '<a class="m171__btn m171__btn--sec" href="' + esc(link + '?text=' + encodeURIComponent(msg)) + '" target="_blank" rel="noopener noreferrer">Abrir no WhatsApp</a>' : '<span class="m171__pend">Sem telefone no registro: use Copiar.</span>') + '</div>';
+        return '<li class="m171__it is-alerta" data-m171-alerta="1"><span class="m171__caixa alerta" aria-hidden="true">✓</span><div class="m171__txt">' + corpo + erroHTML + '</div></li>';
+      }
+      if (e === 'avisado') corpo += '<span class="m171__rev">Tutor avisado por ' + esc(v.tutorAvisado.por) + ' às ' + esc(horaSP171(v.tutorAvisado.em)) + '</span>';
+      return '<li class="m171__it is-feito"><span class="m171__caixa ok" aria-hidden="true">✓</span><div class="m171__txt">' + corpo + '</div></li>';
+    }
+    var rascunho = ui.cuidadosForm && ui.cuidadosForm[ch];
+    if (e === 'revisado' && rascunho) return '<li class="m171__it is-aberto"><span class="m171__caixa" aria-hidden="true"></span><div class="m171__txt"><strong>' + rot + ': registrar o que foi feito</strong>' + qual + registroFormHTML171(item, k, rot, rascunho, ui) + '</div></li>';
+    if (e === 'revisado') return '<li class="m171__it is-aberto"><span class="m171__caixa" aria-hidden="true"></span><div class="m171__txt"><strong>' + rot + '</strong><small>Vai fazer na Zêluz</small>' + qual + '<span class="m171__rev">Revisado por ' + esc(v.revisao.por) + ' às ' + esc(horaSP171(v.revisao.em)) + '</span><div class="m171__acoes"><button type="button" class="m171__btn m171__btn--gold" data-m171-acao="feito"' + attr + '>Feito</button></div>' + erroHTML + '</div></li>';
+    return '<li class="m171__it is-aberto" data-m171-pend="1"><span class="m171__caixa" aria-hidden="true"></span><div class="m171__txt"><strong>' + rot + '</strong><small>Vai fazer na Zêluz</small>' + qual + '<span class="m171__pend">Revisar antes da avaliação</span><div class="m171__acoes"><button type="button" class="m171__btn m171__btn--prim" data-m171-acao="revisar"' + attr + '>' + (busy ? 'Salvando…' : 'Revisei') + '</button></div>' + erroHTML + '</div></li>';
+  }
+  function cuidadosHTML171(item, ui) {
+    return '<ul class="m171__lista" aria-label="Cuidados de ' + esc(item.nome || 'FILHOt') + '">' + CUIDADOS171.map(function (c) { return cuidadoItemHTML171(item, c[0], c[1], ui || {}); }).join('') + '</ul>';
+  }
+  function faixaHTML171(bloco, dia) {
+    if (!bloco || bloco.estado !== 'pronto' || !bloco.itens.length) return '';
+    var n = contarCuidados171(bloco.itens), partes = [(dia === dataSP() ? 'Hoje: ' : 'Neste dia: ') + n.avaliacoes + (n.avaliacoes === 1 ? ' avaliação' : ' avaliações')];
+    if (n.revisar) partes.push(n.revisar + (n.revisar === 1 ? ' cuidado para revisar antes' : ' cuidados para revisar antes'));
+    if (n.alertas) partes.push(n.alertas + (n.alertas === 1 ? ' alerta de reação' : ' alertas de reação'));
+    if (n.alertas) return '<p class="m171__faixa m171__faixa--falta" role="status">' + esc(partes.join(' · ')) + ' <a href="#" data-m171-ir="alerta">Ir ao alerta</a></p>';
+    if (n.revisar) return '<p class="m171__faixa m171__faixa--atencao" role="status">' + esc(partes.join(' · ')) + ' <a href="#" data-m171-ir="pend">Ir ao primeiro em aberto</a></p>';
+    return '<p class="m171__faixa m171__faixa--ok" role="status">' + esc(partes[0]) + ' · nada para revisar antes.</p>';
   }
 
   function entrevistasHTML(bloco) {
@@ -171,7 +278,7 @@
     return '<details class="pm-card marcia129__entrevistas" data-marcia-secao="entrevistas"><summary><span>Entrevistas do dia ('+(bloco.estado==='pronto'?bloco.itens.length:'—')+')</span><span aria-hidden="true">⌄</span></summary>'+(status||'<div class="marcia129__avaliacoes">'+bloco.itens.slice().sort(function(a,b){return a.hora.localeCompare(b.hora)}).map(function(x){return '<article class="marcia129__avaliacao"><strong>'+esc(x.hora)+' · '+esc(x.nome)+'</strong><p>'+esc(x.vaga)+'</p>'+telefoneHTML(x).replace('Telefone do tutor não informado','Telefone não informado').replace('conversa com o tutor no WhatsApp','conversa no WhatsApp')+'</article>'}).join('')+'</div>')+'</details>';
   }
 
-  function agendaHTML(bloco, dia, podeSalvar, pendentes, erros) {
+  function agendaHTML(bloco, dia, podeSalvar, pendentes, erros, ui) {
     var e = estadoHTML(bloco, 'Nenhuma avaliação neste dia.');
     if (e) return e;
     return '<div class="marcia129__avaliacoes">' + bloco.itens.map(function (x) {
@@ -180,11 +287,12 @@
       var form = '';
       if (podeSalvar) {
         var dados = '<details class="marcia129__editar"' + (!x.tutor ? ' open' : '') + '><summary><span>Corrigir dados da avaliação</span><span class="marcia129__chevron" aria-hidden="true">⌄</span></summary><div class="marcia129__editar-corpo"><label class="cad-lb" for="marcia129-tutor-' + esc(x.id) + '">Tutor *</label><input class="cad-in" id="marcia129-tutor-' + esc(x.id) + '" name="tutor" required value="' + esc(x.tutor) + '"><label class="cad-lb" for="marcia129-experiencia-' + esc(x.id) + '">Experiência anterior em creche</label><textarea class="cad-in" id="marcia129-experiencia-' + esc(x.id) + '" name="experiencia" rows="2">' + esc(x.conferencia.experiencia) + '</textarea><label class="cad-lb" for="marcia129-saude-' + esc(x.id) + '">Doença ou restrição informada</label><textarea class="cad-in" id="marcia129-saude-' + esc(x.id) + '" name="saude" rows="2">' + esc(x.conferencia.saude) + '</textarea><label class="cad-lb" for="marcia129-observacoes-' + esc(x.id) + '">Observações</label><textarea class="cad-in" id="marcia129-observacoes-' + esc(x.id) + '" name="observacoes" rows="2">' + esc(x.conferencia.observacoes) + '</textarea></div></details>';
-        form = '<form class="marcia129__conferencia" data-marcia-form-avaliacao="' + esc(x.id) + '"><p class="marcia129__nota">Conferência da avaliação. A ficha original permanece preservada.</p><ul class="marcia129__prev">' + prevHTML('Vacina', x.vacina) + prevHTML('Vermífugo', x.vermifugo) + prevHTML('Pulgas e carrapatos', x.carrapaticida) + '</ul>' + dados + '<input type="hidden" name="expectedRevision" value="' + esc(x.conferencia.revisao) + '"><button type="submit" class="marcia129__salvar" data-marcia-salvar-avaliacao="' + esc(x.id) + '"' + (pendentes && pendentes[x.id] ? ' disabled' : '') + '>' + (pendentes && pendentes[x.id] ? 'Salvando…' : 'Salvar conferência') + '</button>' + (erros && erros[x.id] ? '<p class="marcia129__erro" role="alert">' + esc(erros[x.id]) + '</p>' : '') + '</form>';
+        form = '<form class="marcia129__conferencia" data-marcia-form-avaliacao="' + esc(x.id) + '"><p class="marcia129__nota">Conferência da avaliação. A ficha original permanece preservada.</p>' + dados + '<input type="hidden" name="expectedRevision" value="' + esc(x.conferencia.revisao) + '"><button type="submit" class="marcia129__salvar" data-marcia-salvar-avaliacao="' + esc(x.id) + '"' + (pendentes && pendentes[x.id] ? ' disabled' : '') + '>' + (pendentes && pendentes[x.id] ? 'Salvando…' : 'Salvar conferência') + '</button>' + (erros && erros[x.id] ? '<p class="marcia129__erro" role="alert">' + esc(erros[x.id]) + '</p>' : '') + '</form>';
       }
       if (x.conferencia.quem && x.conferencia.quando) form = '<p class="marcia129__situacao marcia129__situacao--conferido" role="status">Conferência salva · ' + esc(x.conferencia.quem) + ' · ' + esc(x.conferencia.quando) + '</p>' + form;
-      var prevLeitura = podeSalvar ? '' : '<ul class="marcia129__prev">' + prevHTML('Vacina', x.vacina) + prevHTML('Vermífugo', x.vermifugo) + prevHTML('Pulgas e carrapatos', x.carrapaticida) + '</ul>';
-      return '<details class="marcia129__avaliacao" data-marcia-avaliacao="' + esc(x.id) + '"><summary><span class="marcia129__hora">' + esc(x.hora || 'Horário a conferir') + '</span><span class="marcia129__avaliacao-resumo"><strong>' + esc(x.nome || 'FILHOt a conferir') + '</strong><small>' + esc(x.raca || 'Raça a conferir') + ' · ' + esc(x.tutor || 'Tutor a conferir') + '</small>' + (!completa ? '<em>Dados a conferir</em>' : '') + (x.agendaMarcia ? '<em class="'+(x.pagamento.recebido?'marcia129__pago':'marcia129__aguarda-pagamento')+'">'+(x.pagamento.recebido?'Confirmada · R$ 80,00 recebidos':'Pendente de pagamento · R$ 80,00')+'</em>' : '') + '</span><span class="marcia129__chevron" aria-hidden="true">⌄</span></summary><div class="marcia129__avaliacao-corpo">' + telefoneHTML(x) + prevLeitura + obs + form + '</div></details>';
+      /* 30/out/2026: os três cuidados viram checklist (ver cuidadosHTML171); a avaliação com algo em aberto já vem aberta. */
+      var prevLeitura = cuidadosHTML171(x, ui), conta171 = contarCuidados171([x]);
+      return '<details class="marcia129__avaliacao" data-marcia-avaliacao="' + esc(x.id) + '"' + (conta171.revisar || conta171.alertas ? ' open' : '') + '><summary><span class="marcia129__hora">' + esc(x.hora || 'Horário a conferir') + '</span><span class="marcia129__avaliacao-resumo"><strong>' + esc(x.nome || 'FILHOt a conferir') + '</strong><small>' + esc(x.raca || 'Raça a conferir') + (x.idade ? ' · ' + esc(x.idade) : '') + ' · ' + esc(x.tutor || 'Tutor a conferir') + '</small>' + (!completa ? '<em>Dados a conferir</em>' : '') + (x.agendaMarcia ? '<em class="'+(x.pagamento.recebido?'marcia129__pago':'marcia129__aguarda-pagamento')+'">'+(x.pagamento.recebido?'Confirmada · R$ 80,00 recebidos':'Pendente de pagamento · R$ 80,00')+'</em>' : '') + '</span><span class="marcia129__chevron" aria-hidden="true">⌄</span></summary><div class="marcia129__avaliacao-corpo">' + telefoneHTML(x) + prevLeitura + obs + form + '</div></details>';
     }).join('') + '</div>';
   }
 
@@ -247,7 +355,7 @@
     }).join('');
     var atualizado = s.atualizadoEm ? '<p class="marcia129__atualizado">Atualizado em ' + esc(s.atualizadoEm) + '</p>' : '';
     var agendaContagem = s.agenda.estado === 'pronto' ? s.agenda.itens.length : '—';
-    return '<div class="marcia129" data-marcia-dia-atual="' + s.dia + '"><header class="marcia129__cabecalho"><div><p class="marcia129__sobretitulo">Márcia · Gestão</p><h2>' + esc(nomeData(s.dia)) + '</h2>' + atualizado + '</div><button type="button" class="marcia129__hoje" data-marcia-hoje>Hoje</button></header><section class="pm-card marcia129__agenda" aria-labelledby="marcia129-agenda"><div class="marcia129__titulo"><h2 class="pm-tit" id="marcia129-agenda">Agenda da Márcia</h2><span class="marcia129__badge">Avaliações do dia (' + agendaContagem + ')</span></div><div class="dcal marcia129__cal"><div class="dcal-top"><button type="button" class="dcal-nav" data-marcia-mes="-1" aria-label="mês anterior">‹</button><span class="dcal-mes">' + esc(mesNome) + (mm.estado === 'carregando' ? '<small class="dcal-mes-estado" role="status"> atualizando</small>' : mm.estado === 'falha' ? '<small class="dcal-mes-estado" role="status"> marcações indisponíveis</small>' : '') + '</span><button type="button" class="dcal-nav" data-marcia-mes="1" aria-label="próximo mês">›</button></div><div class="dcal-grade">' + semana + dias + '</div></div><div class="marcia129__agenda-lista">' + agendaHTML(s.agenda, s.dia, ui.podeSalvarAvaliacao, ui.avaliacoesPendentes, ui.avaliacoesErros) + '</div></section>' + entrevistasHTML(s.entrevistas) + '<section class="pm-card marcia129__todo" aria-labelledby="marcia129-todo"><h2 class="pm-tit" id="marcia129-todo">O que fazer hoje</h2>' + tarefasHTML(s.tarefas, ui.pendentes, ui.erros) + '</section><section class="marcia129__quantidades" aria-labelledby="marcia129-quantidades"><h2 class="pm-tit" id="marcia129-quantidades">Visão do dia</h2>' + quantidadesHTML(s.quantidades) + '</section><section class="marcia129__detalhes" aria-label="Detalhes do dia">' + accordions + '</section></div>';
+    return '<div class="marcia129" data-marcia-dia-atual="' + s.dia + '"><header class="marcia129__cabecalho"><div><p class="marcia129__sobretitulo">Márcia · Gestão</p><h2>' + esc(nomeData(s.dia)) + '</h2>' + atualizado + '</div><button type="button" class="marcia129__hoje" data-marcia-hoje>Hoje</button></header><section class="pm-card marcia129__agenda" aria-labelledby="marcia129-agenda"><div class="marcia129__titulo"><h2 class="pm-tit" id="marcia129-agenda">Agenda da Márcia</h2><span class="marcia129__badge">Avaliações do dia (' + agendaContagem + ')</span></div><div class="dcal marcia129__cal"><div class="dcal-top"><button type="button" class="dcal-nav" data-marcia-mes="-1" aria-label="mês anterior">‹</button><span class="dcal-mes">' + esc(mesNome) + (mm.estado === 'carregando' ? '<small class="dcal-mes-estado" role="status"> atualizando</small>' : mm.estado === 'falha' ? '<small class="dcal-mes-estado" role="status"> marcações indisponíveis</small>' : '') + '</span><button type="button" class="dcal-nav" data-marcia-mes="1" aria-label="próximo mês">›</button></div><div class="dcal-grade">' + semana + dias + '</div></div><div class="marcia129__agenda-lista">' + faixaHTML171(s.agenda, s.dia) + agendaHTML(s.agenda, s.dia, ui.podeSalvarAvaliacao, ui.avaliacoesPendentes, ui.avaliacoesErros, ui) + '</div></section>' + entrevistasHTML(s.entrevistas) + '<section class="pm-card marcia129__todo" aria-labelledby="marcia129-todo"><h2 class="pm-tit" id="marcia129-todo">O que fazer hoje</h2>' + tarefasHTML(s.tarefas, ui.pendentes, ui.erros) + '</section><section class="marcia129__quantidades" aria-labelledby="marcia129-quantidades"><h2 class="pm-tit" id="marcia129-quantidades">Visão do dia</h2>' + quantidadesHTML(s.quantidades) + '</section><section class="marcia129__detalhes" aria-label="Detalhes do dia">' + accordions + '</section></div>';
   }
 
   function montar(root, opcoes) {
@@ -255,7 +363,7 @@
     opcoes = opcoes || {};
     if (typeof opcoes.carregar !== 'function' || typeof opcoes.salvarTarefa !== 'function') throw new TypeError('provider_invalido');
     var vivo = true, versao = 0, revisaoLive = 0, offMes = null, versaoMes = 0, cacheMes = {};
-    var ui = { dia: dataValida(opcoes.dia) ? opcoes.dia : dataSP(), mes: '', mesAvaliacoes: null, pendentes: {}, erros: {}, podeSalvarAvaliacao: typeof opcoes.salvarAvaliacao === 'function', avaliacoesPendentes: {}, avaliacoesErros: {} };
+    var ui = { dia: dataValida(opcoes.dia) ? opcoes.dia : dataSP(), mes: '', mesAvaliacoes: null, pendentes: {}, erros: {}, podeSalvarAvaliacao: typeof opcoes.salvarAvaliacao === 'function', avaliacoesPendentes: {}, avaliacoesErros: {}, cuidadosPendentes: {}, cuidadosErros: {}, cuidadosForm: {}, mensagensAbertas: {} };
     var atual = normalizar({ dia: ui.dia, agenda: { estado: 'carregando' }, quantidades: { estado: 'carregando' }, faltas: { estado: 'carregando' }, novatos: { estado: 'carregando' }, comida: { estado: 'carregando' }, saude: { estado: 'carregando' }, tempos: { estado: 'carregando' }, tarefas: { estado: 'carregando' } }, ui.dia);
 
     function pintar() {
@@ -279,7 +387,7 @@
     }
 
     function carregar(dia) {
-      var mudouMes = ui.mes !== dia.slice(0, 7); ui.dia = dia; ui.mes = dia.slice(0, 7); ui.erros = {}; ui.pendentes = {}; ui.avaliacoesPendentes = {}; ui.avaliacoesErros = {};
+      var mudouMes = ui.mes !== dia.slice(0, 7); ui.dia = dia; ui.mes = dia.slice(0, 7); ui.erros = {}; ui.pendentes = {}; ui.avaliacoesPendentes = {}; ui.avaliacoesErros = {}; ui.cuidadosPendentes = {}; ui.cuidadosErros = {}; ui.cuidadosForm = {}; ui.mensagensAbertas = {};
       if (mudouMes) observarMesVisivel();
       var minha = ++versao;
       var liveNoInicio = revisaoLive;
@@ -312,12 +420,9 @@
     }
 
     function copiarTelefone(id, botao) {
-      var item = atual.agenda.itens.concat(atual.entrevistas.itens).find(function (x) { return x.id === id; }), tel = telefoneBR(item && item.telefone), box = botao && botao.parentNode, doc = root.ownerDocument;
+      var item = atual.agenda.itens.concat(atual.entrevistas.itens).find(function (x) { return x.id === id; }), tel = telefoneBR(item && item.telefone), doc = root.ownerDocument;
+      var box = botao && botao.parentNode; box = box && box.parentNode && box.classList && box.classList.contains('m171__tel-box') ? box.parentNode : box;
       if (!tel || !box) return;
-      var copiar = typeof opcoes.copiarTexto === 'function' ? opcoes.copiarTexto : function (v) {
-        var nav = doc && doc.defaultView && doc.defaultView.navigator;
-        return nav && nav.clipboard && typeof nav.clipboard.writeText === 'function' ? nav.clipboard.writeText(v) : Promise.reject(new Error('clipboard_indisponivel'));
-      };
       function feedback(mensagem, falhou) {
         var antigo = box.querySelector && box.querySelector('[data-marcia-telefone-status]');
         if (antigo && antigo.parentNode) antigo.parentNode.removeChild(antigo);
@@ -329,10 +434,77 @@
         if (falhou) { var input = doc.createElement('input'); input.className = 'cad-in'; input.type = 'tel'; input.readOnly = true; input.value = tel; aviso.appendChild(input); }
         box.appendChild(aviso);
       }
-      Promise.resolve().then(function () { return copiar(tel); }).then(function () { feedback('Telefone copiado.', false); }, function () { feedback('Não foi possível copiar automaticamente. Selecione e copie o telefone.', true); });
+      /* 30/out/2026: deu certo, o ícone vira ✓ e aparece «Copiado» por 2 s (navigator.clipboard e, se falhar, o execCommand). */
+      copiar171(tel, botao).then(function () {}, function () { feedback('Não foi possível copiar automaticamente. Selecione e copie o telefone.', true); });
+    }
+
+    /* ---- 30/out/2026: «Revisei», «Feito» (registro), «Tutor avisado» e a mensagem para o tutor ---- */
+    function acharItem171(ch) { var p = String(ch || '').split('|'), id = p[0], k = p[1]; var item = atual.agenda.itens.find(function (x) { return x.id === id; }); return item && CUIDADOS171.some(function (c) { return c[0] === k; }) ? { id: id, k: k, item: item } : null; }
+    function faltasRegistro171(r, k) { var f = []; if (!texto(r.oQue)) f.push('o que foi feito'); if (!texto(r.usado)) f.push('o que foi usado'); if (k === 'carrapaticida' && !texto(r.qtd)) f.push('quanto foi usado'); if (!lista(r.reacoes).length) f.push('como o peludinho ficou depois'); return f; }
+    function salvarCuidado171(ch, acao) {
+      var h = acharItem171(ch); if (!h || ui.cuidadosPendentes[ch] || typeof opcoes.salvarCuidado !== 'function') return;
+      var pedido = { dia: ui.dia, id: h.id, cuidado: h.k, acao: acao };
+      if (acao === 'feito') {
+        var r = ui.cuidadosForm[ch] || {}, faltam = faltasRegistro171(r, h.k);
+        if (faltam.length) { ui.cuidadosErros[ch] = 'Falta: ' + faltam.join('; ') + '.'; pintar(); return; }
+        pedido.feito = { oQue: texto(r.oQue), usado: texto(r.usado), qtd: texto(r.qtd), reacoes: lista(r.reacoes).slice(), obs: comReacao171(r.reacoes) ? texto(r.obs) : '' };
+      }
+      ui.cuidadosPendentes[ch] = true; delete ui.cuidadosErros[ch]; pintar();
+      var diaPedido = ui.dia, minha = versao;
+      Promise.resolve().then(function () { return opcoes.salvarCuidado(pedido); }).then(function (ack) {
+        if (!vivo || minha !== versao || diaPedido !== ui.dia) return;
+        if (!ack || ack.ok !== true || texto(ack.id) !== h.id || !ack.agenda || typeof ack.agenda !== 'object') throw new Error('confirmacao_cuidado_invalida');
+        var normal = normalizar({ dia: diaPedido, agenda: { estado: 'pronto', itens: [ack.agenda] } }, diaPedido).agenda.itens[0];
+        var pos = atual.agenda.itens.findIndex(function (x) { return x.id === h.id; }); if (pos >= 0) atual.agenda.itens[pos] = normal;
+        delete ui.cuidadosPendentes[ch]; if (acao === 'feito') delete ui.cuidadosForm[ch]; if (acao === 'avisado' || acao === 'tutor_avisado') delete ui.mensagensAbertas[ch];
+        pintar();
+      }).catch(function (e) {
+        if (!vivo || minha !== versao || diaPedido !== ui.dia) return; delete ui.cuidadosPendentes[ch];
+        var m = String(e && e.message || '');
+        ui.cuidadosErros[ch] = /JA_|DESATUALIZADA/.test(m) ? 'Outra pessoa já registrou este cuidado. A tela foi atualizada; confira.' : m === 'REVISAR_ANTES' ? 'Toque em «Revisei» antes de registrar o que foi feito.' : 'Não foi possível salvar. Tente novamente; o que foi digitado continua aqui.';
+        pintar();
+      });
+    }
+    function copiar171(texto, botao) {
+      var doc = root.ownerDocument, nav = doc && doc.defaultView && doc.defaultView.navigator;
+      function antigo() { var ta = doc.createElement('textarea'); ta.value = texto; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;left:-9999px;top:0'; doc.body.appendChild(ta); ta.select(); var ok = doc.execCommand('copy'); doc.body.removeChild(ta); if (!ok) throw new Error('copia_recusada'); }
+      var p = typeof opcoes.copiarTexto === 'function' ? Promise.resolve().then(function () { return opcoes.copiarTexto(texto); })
+        : (nav && nav.clipboard && typeof nav.clipboard.writeText === 'function' ? Promise.resolve().then(function () { return nav.clipboard.writeText(texto); }).catch(function () { antigo(); }) : Promise.resolve().then(antigo));
+      return p.then(function () { if (!botao) return; if (botao.classList && botao.classList.contains('m171__btn-icone')) { var box = botao.parentNode; if (box && box.classList) { box.classList.add('copiado'); clearTimeout(box._m171); box._m171 = setTimeout(function () { box.classList.remove('copiado'); }, 2000); } return; } if (botao._m171orig === undefined) botao._m171orig = botao.textContent; botao.textContent = 'Copiado ✓'; clearTimeout(botao._m171); botao._m171 = setTimeout(function () { botao.textContent = botao._m171orig; botao._m171orig = undefined; }, 2000); });
+    }
+    function clique171(alvo, ev) {
+      if (alvo.hasAttribute('data-m171-ir')) {
+        if (ev && ev.preventDefault) ev.preventDefault();
+        var el = root.querySelector(alvo.getAttribute('data-m171-ir') === 'alerta' ? '[data-m171-alerta="1"]' : '[data-m171-pend="1"]'); if (!el) return;
+        var det = el.closest && el.closest('details'); if (det) det.open = true;
+        el.setAttribute('tabindex', '-1'); if (el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (el.focus) el.focus({ preventScroll: true }); return;
+      }
+      if (alvo.hasAttribute('data-m171-copiar')) { var caixa = root.querySelector('#' + alvo.getAttribute('data-m171-copiar')); if (caixa) copiar171(caixa.textContent, alvo); return; }
+      if (alvo.hasAttribute('data-m171-chip')) {
+        var chc = alvo.getAttribute('data-m171-chip'), rr = ui.cuidadosForm[chc]; if (!rr) return;
+        var f = alvo.getAttribute('data-f'), v = alvo.getAttribute('data-v');
+        if (f === 'qtd') rr.qtd = rr.qtd === v ? '' : v;
+        else { var i = rr.reacoes.indexOf(v); if (i >= 0) rr.reacoes.splice(i, 1); else if (v === 'bem') rr.reacoes = ['bem']; else { rr.reacoes = rr.reacoes.filter(function (z) { return z !== 'bem'; }); rr.reacoes.push(v); } }
+        delete ui.cuidadosErros[chc]; pintar(); return;
+      }
+      var ch = alvo.getAttribute('data-m171'), acao = alvo.getAttribute('data-m171-acao');
+      if (alvo.disabled || !acharItem171(ch)) return;
+      if (acao === 'revisar') { salvarCuidado171(ch, 'revisar'); return; }
+      if (acao === 'feito') { ui.cuidadosForm[ch] = { oQue: '', usado: '', qtd: '', reacoes: [], obs: '' }; delete ui.cuidadosErros[ch]; pintar(); var campo = root.querySelector('#m171-' + ch.split('|')[0] + '-' + ch.split('|')[1] + '-oque'); if (campo && campo.focus) campo.focus(); return; }
+      if (acao === 'cancelar') { delete ui.cuidadosForm[ch]; delete ui.cuidadosErros[ch]; pintar(); return; }
+      if (acao === 'salvar-feito') { salvarCuidado171(ch, 'feito'); return; }
+      if (acao === 'mensagem') { ui.mensagensAbertas[ch] = !ui.mensagensAbertas[ch]; pintar(); return; }
+      if (acao === 'avisado') { salvarCuidado171(ch, 'tutor_avisado'); }
+    }
+    function entrada171(ev) {
+      var el = ev.target; if (!el || !el.getAttribute) return;
+      var ch = el.getAttribute('data-m171-campo'), f = el.getAttribute('data-f'); if (!ch || !f || !ui.cuidadosForm[ch]) return;
+      ui.cuidadosForm[ch][f] = String(el.value || ''); delete ui.cuidadosErros[ch];
     }
 
     function clique(ev) {
+      var a171 = ev.target.closest && ev.target.closest('[data-m171-acao],[data-m171-chip],[data-m171-copiar],[data-m171-ir]');
+      if (a171 && a171.hasAttribute && ['data-m171-acao', 'data-m171-chip', 'data-m171-copiar', 'data-m171-ir'].some(function (n) { return a171.hasAttribute(n); }) && root.contains(a171)) { clique171(a171, ev); return; }
       var alvo = ev.target.closest && ev.target.closest('[data-marcia-dia],[data-marcia-mes],[data-marcia-hoje],[data-marcia-tarefa],[data-marcia-copiar-telefone]');
       if (!alvo || !root.contains(alvo)) return;
       if (alvo.hasAttribute('data-marcia-copiar-telefone')) { copiarTelefone(alvo.getAttribute('data-marcia-copiar-telefone'), alvo); return; }
@@ -397,9 +569,10 @@
 
     root.addEventListener('click', clique);
     root.addEventListener('submit', submeter);
+    root.addEventListener('input', entrada171);
     carregar(ui.dia);
     return {
-      destroy: function () { vivo = false; versao += 1; versaoMes += 1; if (offMes) try { offMes(); } catch (e) {} root.removeEventListener('click', clique); root.removeEventListener('submit', submeter); root.innerHTML = ''; },
+      destroy: function () { vivo = false; versao += 1; versaoMes += 1; if (offMes) try { offMes(); } catch (e) {} root.removeEventListener('click', clique); root.removeEventListener('submit', submeter); root.removeEventListener('input', entrada171); root.innerHTML = ''; },
       carregar: carregar,
       atualizar: function (snapshot) {
         if (!vivo || !snapshot || snapshot.dia !== ui.dia) return false;
@@ -409,5 +582,6 @@
     };
   }
 
-  return { montar: montar, normalizar: normalizar, desenhar: desenhar, calendario: calendario, mesAvaliacoes: mesAvaliacoes, dataSP: dataSP, validarConferencia: validarConferencia };
+  return { montar: montar, normalizar: normalizar, desenhar: desenhar, calendario: calendario, mesAvaliacoes: mesAvaliacoes, dataSP: dataSP, validarConferencia: validarConferencia,
+    contarCuidados171: contarCuidados171, estadoCuidado171: estadoCuidado171, mensagemReacao171: mensagemReacao171, cuidadosHTML171: cuidadosHTML171, faixaHTML171: faixaHTML171 };
 });
