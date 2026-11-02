@@ -7,8 +7,10 @@
     if(!r || typeof r!=='object') return {estado:'sem-registro',tipo:tipo,origem:'sem-fonte'};
     var ligada=tem(r,'on')?r.on===true:null;
     var q={racao:texto(r.racao),natural:texto(r.natural),extra:texto(r.extra),hora:texto(r.hora)};
+    // Regra da Adriana (02/11/2026): número na ração com a Medida em branco é gramas. Texto ou fração continua a conferir.
+    var unidade=texto(a.unidade)||(/^\d+(?:[.,]\d+)?$/.test(q.racao)?'gramas':'');
     var base={tipo:tipo,origem:'checkin-hotel',referencia:'ficha.alim.refs.fixas.'+tipo,
-      quantidade:q,unidade:texto(a.unidade),marca:texto(a.marca||a.tipo),
+      quantidade:q,unidade:unidade,marca:texto(a.marca||a.tipo),
       restricao:texto(a.obs),semRacao:!!(e.alimentacao&&e.alimentacao.sem_racao)};
     if(ligada===false) return Object.assign(base,{estado:'nao-oferecer'});
     if(ligada!==true) return Object.assign(base,{estado:'conferir-refeicao'});
