@@ -11,7 +11,9 @@
 //   PROVAS=C1,C5 node tests/plantao-lacunas175.test.js    (só algumas)
 //   APP175=/outro/index.html node tests/…                 (a mesma prova em outra cópia — a base, por exemplo)
 //
-// No master d3a9e25 as provas C1 a C10 falham (cada uma é uma lacuna confirmada); as L… são controles e passam nos dois.
+// No master d3a9e25 falham L3, L4, L5 (as funções e o CSS da 6.122 ainda não existem), C1 a C10, C12, C13 e C14 (cada uma é uma lacuna
+// confirmada); L1, L2 e C11 são controles e passam nos dois. C13 e C14 e as partes novas de C2, C3, C6, C8, C10 e L3 vêm da rodada 1
+// do QA (03/11/2026) e falham também no 42bc54e; a parte nova da C5 (o toque antes de a agenda chegar) pega o defeito plantado pelo QA.
 
 const assert = require('assert');
 const crypto = require('crypto');
@@ -217,14 +219,21 @@ prova('L3', 'as funções novas da ficha não leem nem gravam no banco, não gua
   const novas = ['fichaPor', 'fichaHoraTxt', 'fichaListaTxt', 'fichaDiaCurto', 'fichaMedPendentes', 'fichaMedResumo', 'fichaMedAutoZerar', 'fichaMedAutoAbrir', 'relAriaSinc', 'fichaAriaSincTodos',
     'fichaTextoContido', 'fichaRestrAlmoco', 'fichaNaoPodeLista', 'fichaTarjasExtraHTML', 'fichaTarjasExtraPintar', 'fichaCafePrimeiro', 'fichaPratoTxt', 'fichaCafeTxt', 'fichaComidaResumo',
     'fichaAlimResumo', 'fichaAlimPintar', 'fichaOntemFaixaPintar', 'fichaMagDesatualizada', 'fichaMagOcupada', 'fichaRedesenharMag', 'fichaRelogioTick',
-    'fichaTarjaAmarela', 'fichaTarjasTopicosPintar', 'fichaDadosResumo', 'fichaMaisResumo'];
+    'fichaTarjaAmarela', 'fichaTarjasTopicosPintar', 'fichaDadosResumo', 'fichaMaisResumo',
+    // rodada 1 do QA (03/11/2026): o remédio de hoje com a ficha em ontem e a foto dos relatórios
+    'fichaMedHojeProximas', 'fichaMedHojeTxt', 'fichaDoseHojeChegou', 'fichaRelValor', 'fichaRelFotoAcertar', 'fichaRelRascunho', 'fichaEmUso', 'fichaVirarParaHoje'];
   novas.forEach((nm) => {
     const f = funcao(nm);
     assert.ok(!/DB\s*\.\s*ref|\.once\(|\.on\(|\.set\(|\.update\(|\.transaction\(|localStorage|sessionStorage|carregar[A-Z]/.test(f), nm + ' não lê nem grava');
     assert.ok(!/^(ck|ckt|pt)/.test(nm), nm);
     assert.ok(!/#[0-9a-fA-F]{3,6}\b/.test(f), nm + ' sem cor escrita à mão');
   });
-  // o relógio da ficha não chama nada que lê o banco
+  // A ficha segurada em ontem na hora da dose de hoje (AC-V1.4) passa para hoje SÓ pelo «Hoje» de sempre (fichaHoje: as leituras de
+  // tocar em «Hoje», que a C13 mede) e não grava nada; nenhuma outra função nova chama fichaHoje.
+  assert.ok(/\n    fichaHoje\(\);\n/.test(funcao('fichaVirarParaHoje')), 'fichaVirarParaHoje passa para hoje pelo fichaHoje()');
+  assert.deepStrictEqual(novas.filter((nm) => nm !== 'fichaVirarParaHoje' && /fichaHoje\(|fichaMudaDia\(|goToToday\(|changeDate\(/.test(funcao(nm))), [], 'nenhuma outra função nova troca o dia');
+  assert.ok(!/audit\(/.test(funcao('fichaVirarParaHoje')), 'sem rastro novo gravado');
+  // o relógio da ficha não chama nada que lê o banco (além da passagem para hoje, acima)
   const ini = html.indexOf('setInterval(function(){ try{ if(!document.hidden) fichaRelogioTick();');
   assert.ok(ini > 0, 'o relógio da ficha existe');
   assert.ok(/30000\)/.test(html.slice(ini, ini + 220)), 'de 30 em 30 segundos');
@@ -319,10 +328,12 @@ prova('C2', 'ficha aberta das 23h50 às 0h30, 2h e 7h10: «Ontem · 03/11», a f
       const r = await lerMed(page);
       assert.strictEqual(r.dataTela, '2026-11-03', hora + ': a ficha continua em 03/11 (a tela espera a ficha fechar)');
       assert.ok(/^Ontem · 03\/11\/2026/.test(r.rotulo), hora + ': o rótulo diz Ontem — ' + r.rotulo);
-      assert.strictEqual(r.faixa, 'Esta ficha é de ontem: toque para ver a de hoje', hora + ': a faixa no alto da ficha');
+      // às 7h10 a dose de hoje das 8h está a 50 minutos: a faixa e o resumo avisam (AC-V1.4); antes disso, a faixa de sempre
+      const remHoje = hora === '7h10';
+      assert.strictEqual(r.faixa, remHoje ? 'Esta ficha é de ontem. Remédio de hoje às 8h: toque para ver a de hoje' : 'Esta ficha é de ontem: toque para ver a de hoje', hora + ': a faixa no alto da ficha');
       assert.ok(!r.ok && !/tudo dado/.test(r.est), hora + ': nunca verde «tudo dado»');
       assert.ok(/Ficha de ontem/.test(r.est), hora + ': o estado neutro «Ficha de ontem» — ' + r.est);
-      assert.strictEqual(r.critico, '2 doses de 03/11 sem registro (20h e 22h)', hora + ': ' + r.sub);
+      assert.strictEqual(r.critico, '2 doses de 03/11 sem registro (20h e 22h)' + (remHoje ? ' | Remédio de hoje às 8h: Apoquel Teste' : ''), hora + ': ' + r.sub);
     }
     // a faixa leva para a de hoje (com a pergunta da dose de ontem, quando houver)
     await page.tap('#hf-ontem-faixa'); await esperar(500);
@@ -334,21 +345,36 @@ prova('C2', 'ficha aberta das 23h50 às 0h30, 2h e 7h10: «Ontem · 03/11», a f
   } finally { await ctx.close(); }
 });
 
-// C3 (AC-V2): os alertas só desta estadia ficam à vista, sem tocar; no resumo, vêm antes do fixo do cadastro.
-prova('C3', 'os alertas da estadia («Suspeita de virose…», «Dorme sozinho…») aparecem na primeira tela, sem tocar, e vêm primeiro no resumo do ALERTA', async () => {
+// C3 (AC-V2; bloqueio 5 da rodada 1 do QA): os alertas só desta estadia ficam à vista, sem tocar, numa tarja só; o resumo do ALERTA
+// mostra só o que a faixa do alto não mostra (o fixo de convivência), sem repetir a estadia nem a alergia.
+prova('C3', 'os alertas da estadia («Suspeita de virose…», «Dorme sozinho…») aparecem na primeira tela, sem tocar, numa tarja só; o resumo do ALERTA mostra só o que a faixa não mostra', async () => {
+  const ler = (page) => page.evaluate(() => {
+    const vis = (t) => Array.from(document.querySelectorAll('#hosp-ficha *')).filter((e) => e.children.length === 0 && e.innerText && e.innerText.indexOf(t) >= 0 && e.offsetParent !== null)
+      .map((e) => { const b = e.getBoundingClientRect(); return { bottom: Math.round(b.bottom + window.scrollY), fechadoEmTopico: !!e.closest('.rel-card.collapsed .rel-body') }; });
+    return { virose: vis('Suspeita de virose'), dorme: vis('Dorme sozinho'), sub: document.getElementById('tps-alerta').innerText, n: document.getElementById('tpn-alerta').innerText,
+      est: (document.getElementById('tpe-alerta') || {}).innerText || '', subVisivel: getComputedStyle(document.getElementById('tps-alerta')).display !== 'none',
+      tarjas: Array.from(document.querySelectorAll('#hf-pills-extra .alert-pill')).map((x) => x.innerText.replace(/\s+/g, ' ')) };
+  });
   const { ctx, page, erros } = await abrir('2026-11-03T19:40:00-03:00', cenario('2026-11-03'));
   try {
     await tocarHospede(page, 'Biscoito Teste');
-    const r = await page.evaluate(() => {
-      const vis = (t) => Array.from(document.querySelectorAll('#hosp-ficha *')).filter((e) => e.children.length === 0 && e.innerText && e.innerText.indexOf(t) >= 0 && e.offsetParent !== null)
-        .map((e) => { const b = e.getBoundingClientRect(); return { bottom: Math.round(b.bottom + window.scrollY), fechadoEmTopico: !!e.closest('.rel-card.collapsed .rel-body') }; });
-      return { virose: vis('Suspeita de virose'), dorme: vis('Dorme sozinho'), sub: document.getElementById('tps-alerta').innerText, alertaFechado: document.getElementById('tp-alerta').classList.contains('collapsed') };
-    });
-    assert.ok(r.virose.some((x) => x.bottom <= 667), 'a virose na primeira tela: ' + JSON.stringify(r.virose));
-    assert.ok(r.dorme.some((x) => x.bottom <= 667), '«Dorme sozinho» na primeira tela: ' + JSON.stringify(r.dorme));
-    assert.ok(/^Suspeita de virose — afastado dos outros · e mais 2/.test(r.sub), 'o resumo do ALERTA: ' + r.sub);
+    const r = await ler(page);
+    assert.ok(r.virose.some((x) => x.bottom <= 667 && !x.fechadoEmTopico), 'a virose na primeira tela: ' + JSON.stringify(r.virose));
+    assert.ok(r.dorme.some((x) => x.bottom <= 667 && !x.fechadoEmTopico), '«Dorme sozinho» na primeira tela: ' + JSON.stringify(r.dorme));
+    assert.deepStrictEqual(r.tarjas, ['ALERTA: Suspeita de virose — afastado dos outros · Dorme sozinho — não aceita os outros'], 'os dois alertas da estadia numa tarja só');
+    // tudo já está na faixa (a estadia na tarja ALERTA, a alergia na dela): o título do ALERTA fica sem resumo, com o número e o «⚠ LER»
+    assert.ok(r.sub === '' && !r.subVisivel && r.n === '3' && /LER/.test(r.est), 'o resumo do ALERTA não repete a faixa: ' + JSON.stringify(r));
     assert.deepStrictEqual(erros, [], 'sem erro de página');
   } finally { await ctx.close(); }
+  // um alerta fixo de convivência (não aparece na faixa do alto): é ele que o resumo mostra
+  const S = cenario('2026-11-03'); S.peludinhos[0].cad.alertas_fixos = { mach: { on: true, quem: 'Gestão Teste', ts: 1 } };
+  const b = await abrir('2026-11-03T19:40:00-03:00', S);
+  try {
+    await tocarHospede(b.page, 'Biscoito Teste');
+    const r = await ler(b.page);
+    assert.ok(r.sub === 'NÃO pode ficar com MACHOS' && r.subVisivel && r.n === '4', 'o resumo com o fixo que a faixa não mostra: ' + JSON.stringify(r));
+    assert.deepStrictEqual(b.erros, [], 'sem erro de página');
+  } finally { await b.ctx.close(); }
 });
 
 // C4 (AC-V3): o NÃO PODE na Alimentação, a restrição do almoço na faixa e a alergia editada com a ficha aberta.
@@ -436,6 +462,14 @@ prova('C5', 'a Medicação abre sozinha (19h40 e 19h00 com dose às 20h; dose da
     await page.tap('#tp-med .rel-head'); await esperar(300);
     await page.evaluate(() => { renderMedAgendaHoje(); fichaTopicosPintar(); fichaRelogioTick(); }); await esperar(300);
     assert.ok((await lerMed(page)).fechado, 'a pessoa fechou: continua fechada depois dos redesenhos');
+    // o toque ANTES de a agenda chegar também vale (rodada 1 do QA: o caso não tinha prova): abriu e fechou com a agenda ainda
+    // carregando; quando ela chega, a Medicação continua fechada
+    await voltar(page);
+    const cedo = await page.evaluate(() => { abrirPlantao(hospedes.findIndex((h) => /Biscoito/.test(h.nome))); const c = MAG_RESUMO.carregando === true; toggleRel('tp-med'); toggleRel('tp-med'); return c; });
+    assert.ok(cedo, 'os dois toques foram com a agenda ainda carregando');
+    await page.waitForFunction(() => !MAG_RESUMO.carregando, null, { timeout: 5000 }).catch(() => {});
+    await esperar(400); await page.evaluate(() => { fichaTopicosPintar(); fichaRelogioTick(); }); await esperar(200);
+    assert.ok((await lerMed(page)).fechado, 'tocou antes de a agenda chegar: a Medicação não abre sozinha depois');
     // trocar de hóspede volta ao fechado e decide de novo; o da Mel (sem remédio) não abre
     await voltar(page); await tocarHospede(page, 'Mel Teste');
     assert.ok((await lerMed(page)).fechado, 'Mel, sem remédio: fechada');
@@ -447,14 +481,14 @@ prova('C5', 'a Medicação abre sozinha (19h40 e 19h00 com dose às 20h; dose da
     await esperar(300);
     assert.ok((await lerMed(page)).fechado, 'a ficha de ontem: fechada');
     // nenhum relatório abre sozinho e o cronômetro de leitura continua zerado
-    const rel = await page.evaluate(() => ({ abertos: ['card-dia', 'card-inicio', 'card-noite'].filter((id) => !document.getElementById(id).classList.contains('collapsed')), t0: Object.keys(LEITURA_T0 || {}).filter((k) => LEITURA_T0[k]) }));
+    const rel = await page.evaluate(() => ({ abertos: ['card-dia', 'card-inicio', 'card-noite'].filter((id) => !document.getElementById(id).classList.contains('collapsed')), t0: ['dia', 'inicio', 'noite'].filter((k) => LEITURA_T0[k]) }));   // o cronômetro é dos relatórios (o toque na Medicação, acima, marca o dele)
     assert.deepStrictEqual(rel, { abertos: [], t0: [] }, 'os relatórios fechados e sem cronômetro');
     assert.deepStrictEqual(erros, [], 'sem erro de página');
   } finally { await ctx.close(); }
 });
 
 // C6 (AC-V5): o resumo da Alimentação diz o que ele come e quanto; o café entra; o ANSIOSO mora dentro; a comida mudada chega.
-prova('C6', 'Alimentação: resumo «NÃO PODE · Jantar: 80 gramas de ração · Café: 60 gramas…» (o café primeiro às 7h10), o café dentro, o ANSIOSO dentro, e a comida mudada chega sem reabrir', async () => {
+prova('C6', 'Alimentação: resumo «NÃO PODE · ANSIOSO: caixa própria · Jantar: 80 gramas de ração · Café: 60 gramas…» (o café primeiro às 7h10), o café dentro, o ANSIOSO dentro, e a comida mudada chega sem reabrir', async () => {
   const { ctx, page, erros } = await abrir('2026-11-03T19:40:00-03:00', cenario('2026-11-03'));
   try {
     const ler = () => page.evaluate(() => ({ sub: document.getElementById('tps-alim').innerText, info: document.getElementById('hf-alim-info').innerText.replace(/\s+/g, ' '),
@@ -462,7 +496,8 @@ prova('C6', 'Alimentação: resumo «NÃO PODE · Jantar: 80 gramas de ração �
       ansioso: Array.from(document.querySelectorAll('#tp-alim .rel-body .alert-pill')).map((x) => x.innerText).join(' | ') }));
     await tocarHospede(page, 'Biscoito Teste');
     let r = await ler();
-    assert.ok(/^NÃO PODE: frango · sem grãos · Jantar: 80 gramas de ração · Café: 60 gramas de ração · Falta marcar como comeu$/.test(r.sub), '19h40: ' + r.sub);
+    // o ANSIOSO à vista sem tocar (rodada 1 do QA: a tarja amarela saiu do alto na segunda rodada), logo depois do NÃO PODE
+    assert.ok(/^NÃO PODE: frango · sem grãos · ANSIOSO: caixa própria · Jantar: 80 gramas de ração · Café: 60 gramas de ração · Falta marcar como comeu$/.test(r.sub), '19h40: ' + r.sub);
     assert.ok(/Café de Biscoito Teste: 60 gramas de ração/.test(r.info) && r.cafePx >= 16, 'o café dentro, com 16 px ou mais: ' + r.info + ' ' + r.cafePx);
     assert.strictEqual(r.ansioso, 'ANSIOSO: come em caixa própria — servir logo após quem tem banho', 'o ANSIOSO dentro da Alimentação');
     // a comida mudada em outro aparelho (a estadia nova chega pelo ouvinte) aparece sem reabrir a ficha
@@ -475,8 +510,16 @@ prova('C6', 'Alimentação: resumo «NÃO PODE · Jantar: 80 gramas de ração �
     await page.clock.setSystemTime(new Date('2026-11-03T07:10:00-03:00'));
     await tocarHospede(page, 'Biscoito Teste');
     r = await ler();
-    assert.ok(/^NÃO PODE: frango · sem grãos · Café: 60 gramas de ração · Jantar: 100 gramas de ração/.test(r.sub), '7h10: ' + r.sub);
+    assert.ok(/^NÃO PODE: frango · sem grãos · ANSIOSO: caixa própria · Café: 60 gramas de ração · Jantar: 100 gramas de ração/.test(r.sub), '7h10: ' + r.sub);
     assert.ok(/60 gramas/.test(r.info), 'às 7h10 o «60» do café está na ficha');
+    // a Mel não é ansiosa: o resumo dela não fala de caixa própria
+    await voltar(page); await tocarHospede(page, 'Mel Teste');
+    r = await ler();
+    assert.ok(/^NÃO PODE: peixe · sem grãos · /.test(r.sub) && !/ANSIOSO/.test(r.sub), 'Mel: ' + r.sub);
+    // o Thor (pernoite sem check-in): o jantar repete o almoço do Day Care e diz de quê (rodada 1 do QA: «90 g» sozinho)
+    await voltar(page); await tocarHospede(page, 'Thor Teste');
+    r = await ler();
+    assert.ok(/Jantar: 90 g de Ração Teste Light \(do almoço do Day Care, confirme\)/.test(r.sub), 'Thor: ' + r.sub);
     assert.deepStrictEqual(erros, [], 'sem erro de página');
   } finally { await ctx.close(); }
 });
@@ -502,7 +545,7 @@ prova('C7', 'a instrução do remédio fica no alto do Medicamento; Dados gerais
 });
 
 // C8 (AC-V7): a primeira tela da ficha no celular.
-prova('C8', 'primeira tela: sem o cabeçalho da página (gruda 50 px ou menos), foto de até 72 px ao lado do nome, sem o selo, as tarjas vermelhas e os títulos do ALERTA e do MEDICAMENTO sem rolar', async () => {
+prova('C8', 'primeira tela: sem o cabeçalho da página (gruda 50 px ou menos), foto de até 72 px ao lado do nome, sem o selo, as tarjas vermelhas e o título e o resumo do ALERTA e do MEDICAMENTO sem rolar (Biscoito e Mel)', async () => {
   const { ctx, page, erros } = await abrir('2026-11-03T18:40:00-03:00', cenario('2026-11-03'));
   try {
     const medir = () => page.evaluate(() => {
@@ -522,12 +565,10 @@ prova('C8', 'primeira tela: sem o cabeçalho da página (gruda 50 px ou menos), 
       assert.ok(!m.headVisivel && m.gruda <= 50, nome + ': cabeçalho — ' + JSON.stringify(m));
       assert.ok(m.foto <= 72 && m.aoLado && !m.chip, nome + ': foto — ' + JSON.stringify(m));
       assert.ok(m.crit.length >= 2 && Math.max.apply(null, m.crit) <= 667, nome + ': tarjas vermelhas na primeira tela — ' + JSON.stringify(m.crit));
-      // AC-V7.3: o ALERTA e o MEDICAMENTO (título e resumo) dentro dos 667 px. A Mel (2 tarjas vermelhas) cabe; o Biscoito tem 4 tarjas
-      // vermelhas (alergia, restrição e os dois alertas da estadia, que o AC-V2.1 manda deixar à vista) e fica com o ALERTA inteiro na
-      // tela e o MEDICAMENTO logo abaixo. O número medido vai para a story.
-      if (nome === 'Mel Teste') assert.ok(m.alerta <= 667 && m.med <= 667, nome + ': ALERTA e MEDICAMENTO na primeira tela — ' + JSON.stringify(m));
-      else assert.ok(m.alerta <= 667 && m.med <= 800, nome + ': ALERTA na primeira tela e o MEDICAMENTO logo abaixo — ' + JSON.stringify(m));
-      console.log('      ' + nome + ': ALERTA termina em ' + m.alerta + ' px, MEDICAMENTO em ' + m.med + ' px, ALIMENTAÇÃO em ' + m.alim + ' px (tela de 667)');
+      // AC-V7.3: o ALERTA e o MEDICAMENTO (título e resumo) dentro dos 667 px — também o Biscoito (rodada 1 do QA, bloqueio 5), com a
+      // alergia, a restrição e os dois alertas da estadia (numa tarja só) no alto e o resumo do ALERTA sem repetir a faixa.
+      assert.ok(m.alerta <= 667 && m.alertaTit <= 667 && m.med <= 667, nome + ': ALERTA e MEDICAMENTO na primeira tela — ' + JSON.stringify(m));
+      console.log('      ' + nome + ': ALERTA termina em ' + Math.max(m.alerta, m.alertaTit) + ' px, MEDICAMENTO em ' + m.med + ' px, ALIMENTAÇÃO em ' + m.alim + ' px (tela de 667)');
       await voltar(page);
       const lista = await page.evaluate(() => getComputedStyle(document.querySelector('.main > .head')).display);
       assert.notStrictEqual(lista, 'none', 'de volta à lista, o cabeçalho volta');
@@ -604,10 +645,13 @@ prova('C10', 'os títulos são botões (role, tabindex, aria-expanded), abrem co
     const faltam = heads.map((h) => h.id).filter((id) => !vistos.has(id));
     assert.deepStrictEqual(faltam, [], 'o Tab não chegou a: ' + faltam.join(', '));
     // toque de 44 px
-    await page.evaluate(() => { ['tp-med', 'card-dia', 'card-inicio', 'card-noite'].forEach((id) => { const c = document.getElementById(id); if (c.classList.contains('collapsed')) toggleRel(id); }); });
+    // «Mais informações» aberto também: o «Reemitir ficha de check-in (PDF)» mora lá desde a segunda rodada (rodada 1 do QA: 33 px)
+    await page.evaluate(() => { ['tp-med', 'card-dia', 'card-inicio', 'card-noite', 'tp-mais'].forEach((id) => { const c = document.getElementById(id); if (c.classList.contains('collapsed')) toggleRel(id); }); });
     await esperar(300);
+    const reemitir = await page.evaluate(() => { const b = document.querySelector('#tp-mais button[onclick="reemitirFichaAtual()"]'); return b && b.offsetParent !== null ? Math.round(b.getBoundingClientRect().height) : -1; });
+    assert.ok(reemitir >= 44, '«Reemitir ficha de check-in» à vista em «Mais informações», com 44 px ou mais: ' + reemitir);
     const baixos = await page.evaluate(() => {
-      const sel = ['#hosp-ficha .back-btn', '#hosp-ficha .ficha-datenav button', '#hosp-ficha .hosp-head button', '#magHoje .btn-gold', '#hosp-ficha .rel-card .seg button', '#magAvUnidades button'];
+      const sel = ['#hosp-ficha .back-btn', '#hosp-ficha .ficha-datenav button', '#hosp-ficha .hosp-head button', '#magHoje .btn-gold', '#hosp-ficha .rel-card .seg button', '#magAvUnidades button', '#hosp-ficha #tp-mais .rel-body button'];
       const out = [];
       sel.forEach((s) => document.querySelectorAll(s).forEach((b) => { if (b.offsetParent === null) return; const h = b.getBoundingClientRect().height; if (h < 44) out.push(s + ' «' + b.innerText.trim().slice(0, 20) + '» ' + Math.round(h)); }));
       return out;
@@ -690,6 +734,101 @@ prova('C12', '«Dados gerais» com as tarjas amarelas MANIAS e ANSIOSO e a obser
     const cad = await g.page.evaluate(() => { const c = document.getElementById('card-cadastro'); return { aberto: c.style.display === 'block', dentro: !!c.closest('#tp-mais') }; });
     assert.ok(cad.aberto && cad.dentro, '«Editar cadastro» abre o cadastro dentro de Mais informações: ' + JSON.stringify(cad));
   } finally { await g.ctx.close(); }
+});
+
+// C13 (AC-V1.4; bloqueio 1 da rodada 1 do QA): a ficha segurada em ontem pela virada passa sozinha para hoje na hora de uma dose de
+// hoje, e o alarme de sempre (checarDespertadorMed, que não muda) toca por cima dela. Antes disso, a faixa e o resumo do Medicamento
+// avisam do remédio de hoje. Com o que foi escrito num relatório e ainda não salvo, ou com o cursor num campo, a ficha espera (o texto
+// não se perde) e avisa; desfeito o rascunho e fora do campo, passa e o alarme toca. O caso do QA: tudo de 03/11 dado, Colírio às 0h15.
+const LOG_0311_TUDO_DADO = { 'a1_08-00': { quem: 'Plantonista Teste', ts: 1 }, 'a1_20-00': { quem: 'Plantonista Teste', ts: 2 }, 'c1_00-15': { quem: 'Plantonista Teste', ts: 3 } };
+// a planilha com os três dias (02, 03 e 04/11): depois da meia-noite, a lista de hoje tem os mesmos hóspedes
+const planilhaTresDias = (page) => page.evaluate(() => {
+  const L = []; for (const d of [new Date(2026, 10, 2), new Date(2026, 10, 3), new Date(2026, 10, 4)]) L.push({ c: [{ v: 'Date(' + d.getFullYear() + ',' + d.getMonth() + ',' + d.getDate() + ')' }, { v: 'Biscoito Teste / Rita Teste / Spitz Alemão' }, { v: 'Mel Teste / Joana Teste / SRD' }] });
+  fetchSheet = function () { return Promise.resolve({ rows: L }); }; try { carregarHospedes(); } catch (e) { /* a lista se acerta na próxima leitura */ }
+});
+const estadoVirada = (page) => page.evaluate(() => ({ ficha: document.getElementById('hosp-ficha').style.display, dia: dataKeyAtual(), rotulo: document.getElementById('hf-datelabel').innerText,
+  faixa: (() => { const f = document.getElementById('hf-ontem-faixa'); return f && getComputedStyle(f).display !== 'none' ? f.innerText : ''; })(),
+  sub: document.getElementById('tps-med').innerText, critico: Array.from(document.querySelectorAll('#tps-med .tp-sub-critico')).map((x) => x.innerText).join(' | '),
+  alarme: (() => { const d = document.getElementById('despMed'); return d && getComputedStyle(d).display !== 'none' ? d.innerText.replace(/\s+/g, ' ') : ''; })() }));
+// o caminho com a data trocada por DIA e a chave do FILHOt por K (o tipo de leitura, não o nome: depois da meia-noite, a lista do dia
+// novo lê o relatório de cada hóspede dela, como no toque em «Hoje»)
+const caminhos = (L, desde) => Array.from(new Set(L.slice(desde || 0).map((x) => x.op + ' ' + x.path.replace(/\d{4}-\d{2}-\d{2}/g, 'DIA').replace(/[^/]*__[^/]*/g, 'K')))).sort();
+prova('C13', 'ficha aberta às 23h55, tudo de 03/11 dado e o Colírio às 0h15: às 0h05 a faixa e o resumo avisam do remédio de hoje; às 0h16 a ficha passou para hoje e o alarme toca por cima dela, sem leitura nem gravação nova; com texto não salvo no relatório ou o cursor num campo, espera sem perder o texto', async () => {
+  const { ctx, page, erros } = await abrir('2026-11-03T23:55:00-03:00', cenario('2026-11-03', { colirio: '00:15', logHoje: LOG_0311_TUDO_DADO }));
+  try {
+    await planilhaTresDias(page); await esperar(800);
+    await tocarHospede(page, 'Biscoito Teste');
+    await andar(page, 10 * 60 * 1000);   // 0h05
+    let r = await estadoVirada(page);
+    assert.ok(r.dia === '2026-11-03' && /^Ontem · 03\/11\/2026/.test(r.rotulo) && r.alarme === '', '0h05: a ficha ainda em ontem, sem alarme — ' + JSON.stringify(r));
+    assert.strictEqual(r.faixa, 'Esta ficha é de ontem. Remédio de hoje às 0h15: toque para ver a de hoje', '0h05: a faixa avisa do remédio de hoje');
+    assert.strictEqual(r.critico, 'Remédio de hoje às 0h15: Colírio Teste', '0h05: o resumo do Medicamento avisa, em vermelho — ' + r.sub);
+    assert.ok(/^Todas as doses de 03\/11 registradas · Remédio de hoje às 0h15: Colírio Teste$/.test(r.sub), '0h05: ' + r.sub);
+    const L = await page.evaluate(() => ({ l: __banco.log.leituras.length, g: __banco.log.gravacoes.length }));
+    const lidasAntes = await page.evaluate(() => __banco.log.leituras.map((x) => ({ op: x.op, path: x.path })));
+    const gravadasAntes = await page.evaluate(() => __banco.log.gravacoes.map((x) => ({ op: x.op, path: x.path })));
+    await page.mouse.move(20, 20);
+    await andar(page, 11 * 60 * 1000);   // 0h16
+    r = await estadoVirada(page);
+    assert.ok(r.ficha === 'block' && r.dia === '2026-11-04' && /^Hoje · 04\/11\/2026/.test(r.rotulo) && r.faixa === '', '0h16: a ficha passou para hoje, aberta — ' + JSON.stringify(r));
+    assert.ok(/Biscoito Teste toma Colírio Teste/.test(r.alarme), '0h16: o alarme do Colírio toca por cima da ficha — ' + JSON.stringify(r));
+    // a passagem para hoje lê o que o toque em «Hoje» lê e não grava nada além do que ele grava: o controle é o próprio «Hoje»,
+    // na mesma página (de volta a ontem pela seta, e «Hoje» de novo)
+    const depois = await page.evaluate(() => ({ l: __banco.log.leituras.map((x) => ({ op: x.op, path: x.path })), g: __banco.log.gravacoes.map((x) => ({ op: x.op, path: x.path })) }));
+    await semAlarme(page);
+    await page.evaluate(() => fichaMudaDia(-1)); await esperar(800);
+    const k = await page.evaluate(() => ({ l: __banco.log.leituras.length, g: __banco.log.gravacoes.length }));
+    await page.evaluate(() => fichaHoje(true)); await esperar(1200);
+    const hojeMao = await page.evaluate(() => ({ l: __banco.log.leituras.map((x) => ({ op: x.op, path: x.path })), g: __banco.log.gravacoes.map((x) => ({ op: x.op, path: x.path })) }));
+    const permitidasL = caminhos(lidasAntes).concat(caminhos(hojeMao.l, k.l), LEITURAS_DE_FUNDO);
+    const lidasNovas = caminhos(depois.l, L.l).filter((x) => permitidasL.indexOf(x) < 0);
+    assert.deepStrictEqual(lidasNovas, [], 'leitura que o «Hoje» não faz');
+    const permitidasG = caminhos(gravadasAntes).concat(caminhos(hojeMao.g, k.g));
+    const gravNovas = caminhos(depois.g, L.g).filter((x) => permitidasG.indexOf(x) < 0);
+    assert.deepStrictEqual(gravNovas, [], 'gravação que o «Hoje» não faz');
+    assert.deepStrictEqual(erros, [], 'sem erro de página');
+  } finally { await ctx.close(); }
+  // o relatório com texto não salvo: a ficha espera (o texto fica), a faixa avisa; desfeito o texto e fora do campo, passa e toca
+  const b = await abrir('2026-11-03T23:55:00-03:00', cenario('2026-11-03', { colirio: '00:15', logHoje: LOG_0311_TUDO_DADO }));
+  try {
+    const pg = b.page;
+    await planilhaTresDias(pg); await esperar(800);
+    await tocarHospede(pg, 'Biscoito Teste');
+    await pg.evaluate(() => toggleRel('card-inicio')); await esperar(200);
+    await pg.fill('#card-inicio textarea', 'Plantonista Teste escrevendo o jantar'); await pg.evaluate(() => document.activeElement && document.activeElement.blur());
+    await andar(pg, 21 * 60 * 1000);   // 0h16
+    let r = await estadoVirada(pg);
+    const texto = await pg.evaluate(() => document.querySelector('#card-inicio textarea').value);
+    assert.ok(r.dia === '2026-11-03' && texto === 'Plantonista Teste escrevendo o jantar', '0h16 com texto não salvo: a ficha espera e o texto fica — ' + JSON.stringify(r) + ' / ' + texto);
+    assert.strictEqual(r.faixa, 'Esta ficha é de ontem. Remédio de hoje às 0h15: toque para ver a de hoje', 'a faixa avisa');
+    assert.strictEqual(await pg.evaluate(() => fichaVirarParaHoje()), 'espera: relatório não salvo');
+    // o texto desfeito, mas o cursor no campo: ainda espera
+    await pg.fill('#card-inicio textarea', '');
+    assert.strictEqual(await pg.evaluate(() => fichaVirarParaHoje()), 'espera: campo com o cursor');
+    await pg.evaluate(() => document.activeElement && document.activeElement.blur());
+    await andar(pg, 1000);
+    await andar(pg, 1000);
+    r = await estadoVirada(pg);
+    assert.ok(r.dia === '2026-11-04' && /Biscoito Teste toma Colírio Teste/.test(r.alarme), 'sem rascunho e fora do campo: passou para hoje e o alarme toca — ' + JSON.stringify(r));
+    assert.deepStrictEqual(b.erros, [], 'sem erro de página');
+  } finally { await b.ctx.close(); }
+});
+
+// C14 (bloqueio 2 da rodada 1 do QA): no hóspede SEM RAÇÃO com check-in, a instrução da comida não vira «NÃO PODE».
+prova('C14', 'SEM RAÇÃO com check-in: a instrução da comida aparece como «Observação da alimentação: Servir morno, em pote raso» na Alimentação, e nunca como «NÃO PODE: Servir morno…»', async () => {
+  const S = cenario('2026-11-03'); S.estadias.est1.alimentacao = { sem_racao: true };
+  const { ctx, page, erros } = await abrir('2026-11-03T19:40:00-03:00', S);
+  try {
+    await tocarHospede(page, 'Biscoito Teste');
+    const r = await page.evaluate(() => { const c = document.getElementById('tp-alim'); if (c.classList.contains('collapsed')) toggleRel('tp-alim');
+      return { alim: document.querySelector('#tp-alim .rel-body').innerText, naoPode: (document.querySelector('#hf-alim-topo .hf-naopode') || {}).innerText || '',
+        obs: Array.from(document.querySelectorAll('#tp-alim .hf-alim-obs')).map((x) => x.innerText.replace(/\s+/g, ' ')), resumo: document.getElementById('tps-alim').innerText }; });
+    assert.ok(!/NÃO PODE: Servir morno/.test(r.alim), 'a instrução da comida não vira NÃO PODE: ' + r.alim);
+    assert.deepStrictEqual(r.obs, ['Observação da alimentação: Servir morno, em pote raso'], 'a instrução com o rótulo certo');
+    assert.strictEqual(r.naoPode, 'NÃO PODE: frango · sem grãos', 'o NÃO PODE verdadeiro continua no alto');
+    assert.ok(/SEM RAÇÃO — Biscoito Teste come a comida úmida da casa hoje/.test(r.alim) && /SEM RAÇÃO: comida úmida da casa/.test(r.resumo), 'o aviso SEM RAÇÃO continua: ' + r.resumo);
+    assert.deepStrictEqual(erros, [], 'sem erro de página');
+  } finally { await ctx.close(); }
 });
 
 // ================================================================== a rodada
