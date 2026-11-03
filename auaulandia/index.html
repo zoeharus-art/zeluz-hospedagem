@@ -45205,6 +45205,9 @@ return { criar };
     var antes=prevCorrAntes(p,patch),q=corrQuemAgora(),dig=prevLanceDigitado(chave,k);
     var volta=function(){ try{ prevRedesenhar(); }catch(e){} prevCorrDigitadoVolta(dig); };
     if(Object.keys(patch||{}).every(function(c){ return prevLanceMesmo(antes[c],patch[c]); })){
+      // 6.124 (AC11): a ficha já está em dia com estes mesmos dados (a Zelozinha lançou no toque). No «Conferir cuidado» do Encãotador
+      // (envelope cuidado57 já revalidado), a execução ainda precisa do recibo dela: grava só o rastro, sem mexer na ficha.
+      if(prevLanceSoRastro174(o)) return prevLanceSoRastroGravar174(p,chave,k,antes,patch,q,o,alvo,volta);
       PREV_LANCE_ESTADO[alvo]={passo:'sem-alteracao',ts:Date.now()}; volta(); return Promise.resolve({ok:true,semAlteracao:true});
     }
     var env=prevLanceMontarEnv(p,chave,k,antes,patch,q,o);
@@ -45220,6 +45223,23 @@ return { criar };
       PREV_LANCE_ESTADO[alvo]={passo:'rastreando',ts:Date.now(),opId:env.opId,corrId:env.corrId}; volta();
       return prevLanceFinalizarRastro(env,volta).then(function(rr){ return rr&&rr.ok?r:{ok:false,erro:(rr&&rr.erro)||'rastro pendente',fichaSalva:true,pendenteRastro:true}; });
     });
+    var retorno=pr.then(function(r){ delete PREV_LANCE_PROMESSAS[alvo]; return r; },function(e){ delete PREV_LANCE_PROMESSAS[alvo]; return {ok:false,erro:e}; });
+    PREV_LANCE_PROMESSAS[alvo]=retorno; return retorno;
+  }
+  // 6.124 (AC11): o «Salvar» do Encãotador depois que a ficha já ficou em dia (pela Zelozinha) com os MESMOS dados. Só no fluxo
+  // cuidado57 revalidado (envelope com a operação pré-alocada): o recibo (rastro) é gravado pelo caminho de sempre e a ficha não muda.
+  function prevLanceSoRastro174(o){
+    var e=o&&o.execucaoPrevencao,a=e&&e.autorizacaoRef,pre=o&&o.cuidado57Prealocado;
+    return !!(o&&o.cuidado57Validado===true&&a&&a.protocolo==='cuidado57'&&pre&&String(pre.corrId||'')&&String(pre.opId||'')==='prev-lance-'+String(pre.corrId||''));
+  }
+  function prevLanceSoRastroGravar174(p,chave,k,antes,patch,q,o,alvo,volta){
+    var env=prevLanceMontarEnv(p,chave,k,antes,patch,q,o);
+    if(!env){ PREV_LANCE_ESTADO[alvo]={passo:'falhou',erro:'não consegui preparar o recibo do cuidado',ts:Date.now()}; volta(); return Promise.resolve({ok:false,erro:'não consegui preparar o recibo do cuidado'}); }
+    var validacao=prevLanceValidarAgora(env);
+    if(!validacao.ok){ PREV_LANCE_ESTADO[alvo]={passo:'falhou',erro:validacao.erro,ts:Date.now()}; volta(); return Promise.resolve(validacao); }
+    prevLancePendenteGuardar(env);
+    PREV_LANCE_ESTADO[alvo]={passo:'rastreando',ts:Date.now(),opId:env.opId,corrId:env.corrId}; volta();
+    var pr=prevLanceFinalizarRastro(env,volta).then(function(rr){ return rr&&rr.ok?{ok:true,semAlteracao:true,soRastro:true}:{ok:false,erro:(rr&&rr.erro)||'rastro pendente',fichaSalva:true,pendenteRastro:true}; });
     var retorno=pr.then(function(r){ delete PREV_LANCE_PROMESSAS[alvo]; return r; },function(e){ delete PREV_LANCE_PROMESSAS[alvo]; return {ok:false,erro:e}; });
     PREV_LANCE_PROMESSAS[alvo]=retorno; return retorno;
   }
@@ -45240,11 +45260,14 @@ return { criar };
       if(String(chave)!==String(tutor138.pelKey)||String(pelKey(p))!==String(tutor138.pelKey)||String(k)!==String(tutor138.itemK)){window.Z138_FICHA_SELECAO=null;tutor138=null;}
     }
     if(tutor138){
-      if(String(o&&o.dt||'')!==String(tutor138.dataAplicacao)||!/^Tutor\b/.test(String(o&&o.quem||'')))return Promise.resolve({ok:false,erro:'Use a data informada pelo tutor e confirme quem fez antes de salvar.'});
+      /* 6.124: a seleção 174 é a da Zelozinha em loja/bolsa (data de hoje, «Quem fez: Day Care — registrado por …»); a 138 é a do tutor */
+      var loja174=tutor138.versao===174;
+      if(loja174&&(String(o&&o.dt||'')!==String(tutor138.dataAplicacao)||!/^Day Care\b/.test(String(o&&o.quem||''))))return Promise.resolve({ok:false,erro:'Use a data de hoje e confirme quem fez antes de salvar.'});
+      if(!loja174&&(String(o&&o.dt||'')!==String(tutor138.dataAplicacao)||!/^Tutor\b/.test(String(o&&o.quem||''))))return Promise.resolve({ok:false,erro:'Use a data informada pelo tutor e confirme quem fez antes de salvar.'});
       if(typeof window.zTutor138ValidarAntes!=='function')return Promise.resolve({ok:false,erro:'Não consegui conferir a resposta do tutor. Nada foi salvo.'});
       return Promise.resolve(window.zTutor138ValidarAntes(tutor138,p,k)).then(function(v){
         if(!v||v.ok!==true)return{ok:false,erro:(v&&v.motivo)||'A resposta, a ficha ou o cuidado mudou. Nada foi salvo.'};
-        var base=(String(k)==='verm_dose2_p')?'verm_dose2':String(k).replace(/_p$/,'');patch=Object.assign({},patch);patch[base+'_ondefoi']='Tutor em casa';
+        var base=(String(k)==='verm_dose2_p')?'verm_dose2':String(k).replace(/_p$/,'');patch=Object.assign({},patch);if(loja174)patch[base+'_ondefoi']='Day Care';else patch[base+'_ondefoi']='Tutor em casa';
         return prevLanceGravar35(p,chave,k,it,patch,o).then(function(r){if(r&&r.ok===true&&window.Z138_FICHA_SELECAO===tutor138){window.Z138_FICHA_SELECAO=null;try{if(typeof window.zTutor138DepoisSalvar==='function')window.zTutor138DepoisSalvar(tutor138,r);}catch(_){/* confirmação visual não muda o ACK do writer */}}else if(r&&r.ok===false){try{if(typeof window.zTutor138DepoisFalhar==='function')window.zTutor138DepoisFalhar(tutor138,r);}catch(_){/* o formulário e seus dados continuam na tela */}}return r;});
       },function(){return{ok:false,erro:'Não consegui reler a ficha. Nada foi salvo.'};});
     }
@@ -103479,6 +103502,56 @@ renderAtual=function(){
   root.ZelozinhaFicha171={NOMES:NOMES,ARTIGOS:ARTIGOS,BASES:BASES,fichaTemData:fichaTemData,proximoDe:proximoDe,cuidadoNaFrase:cuidadoNaFrase,daDo:daDo,mensagem:mensagem,resultadoHTML:resultadoHTML,dataBR:br};
 }(typeof window!=='undefined'?window:globalThis));
 </script>
+<script id="zelozinha-lanca174">'use strict';
+/* Story 6.124 (03/nov/2026, Adriana): «Na própria página dela, devo lançar tudo de uma vez... indo para prevenção — deixando em dia
+   quando o tutor faz na loja ou diz já ter feito e já nos manda os dados. E indo também para o Lançamento do dia. Não precisa de mais
+   confirmações.» As funções PURAS do toque único: quais cuidados a tela deixa em dia, o dia de hoje em São Paulo, a validação irmã da 138
+   para «Autorizou pegar na loja» e «Trouxe na bolsa» (as mesmas checagens: ficha única, sessão, dia, resposta e ciclo) e a frase da vitória.
+   Nada aqui lê ou grava: quem grava a ficha é o mesmo prevLancar do «Salvar» do formulário, chamado pela tela da Zelozinha. */
+(function(root){
+  /* Os cuidados que a tela deixa em dia (vacina fica de fora: só com a Veterinária presente). */
+  var ITENS={verm_p:1,verm_dose2_p:1,ecto_p:1,col_p:1,escova_p:1};
+  /* Onde a ficha guarda a data de cada um (a mesma de PREV_ITENS: `base`, e o campo antigo `altBase`). */
+  var BASES={verm_p:['verm_t','vermifugo_t'],verm_dose2_p:['verm_dose2_t'],ecto_p:['ecto_t','carrapaticida_t'],col_p:['col_t'],escova_p:['escova_t']};
+  /* O nome na frase da vitória (o mesmo do cartão, VENC_ROTULO) e a concordância do «feito/feita». */
+  var FRASES={verm_p:['Vermífugo','feito'],verm_dose2_p:['Vermífugo — 2ª dose','feita'],ecto_p:['Carrapaticida','feito'],col_p:['Coleira repelente','feita'],escova_p:['Troca de escova de dentes','feita']};
+  function txt(v){return typeof v==='string'?v.trim():'';}
+  function obj(v){return !!v&&typeof v==='object'&&!Array.isArray(v);}
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);});}
+  function iso(v){var s=txt(v);if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return '';var p=s.split('-').map(Number),d=new Date(Date.UTC(p[0],p[1]-1,p[2]));return d.getUTCFullYear()===p[0]&&d.getUTCMonth()===p[1]-1&&d.getUTCDate()===p[2]?s:'';}
+  function br(v){var s=iso(v);return s?s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4):'';}
+  function daFicha(itemK){return ITENS[txt(itemK)]===1;}
+  function origemDe(valor){return valor==='autorizar_loja'?'loja':valor==='autorizar_bolsa'?'bolsa':'';}
+  /* O dia de hoje no fuso de São Paulo (o do app), qualquer que seja o fuso do aparelho. */
+  function hojeSP(ms){try{var p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(ms)),x={};p.forEach(function(a){x[a.type]=a.value;});return iso(x.year+'-'+x.month+'-'+x.day);}catch(_){return '';}}
+  /* «Quem fez» na ficha para loja e bolsa (o «Quem deu» fica «Day Care», como no painel de Prevenção). */
+  function quemDeu(nome){var n=txt(nome);return n?'Day Care — registrado por '+n:'';}
+  /* A ficha já tem a data deste cuidado? */
+  function fichaTemData(ex,itemK,dataISO){var d=iso(dataISO),b=BASES[txt(itemK)];if(!d||!b)return false;ex=obj(ex)?ex:{};return txt(ex[b[0]])===d||(!!b[1]&&!txt(ex[b[0]])&&txt(ex[b[1]])===d);}
+  /* O próximo vencimento que a ficha guarda (a 2ª dose leva ao próximo vermífugo). */
+  function proximoDe(ex,itemK){ex=obj(ex)?ex:{};var k=txt(itemK);if(k==='verm_dose2_p')return iso(ex.verm_p);if(k==='ecto_p')return iso(ex.ecto_p)||iso(ex.carrapaticida_p);if(k==='verm_p')return iso(ex.verm_p)||iso(ex.vermifugo_p);return iso(ex[k]);}
+  /* A irmã de ZeluzResposta88.validarAtualizacaoFicha138 para loja e bolsa: a data é a de hoje, a resposta é a da mesma loja ou bolsa,
+     com a mesma identidade e revisão, ainda não realizada nem em revisão da coordenação; ficha única, sessão e ciclo como na 138. */
+  function validarAtualizacaoFicha174(s,f){
+    s=s||{};f=f||{};
+    if(s.versao!==174||(s.origem!=='loja'&&s.origem!=='bolsa')||!iso(s.dia)||s.dataAplicacao!==s.dia||!txt(s.dcKey)||!txt(s.pelKey)||!txt(s.petId)||!txt(s.tutorId)||!txt(s.cycleKey)||!daFicha(s.itemK)||!txt(s.respostaId)||!Number.isInteger(s.revisao)||!obj(s.ator))return{ok:false,motivo:'contexto da atualização inválido'};
+    if(f.dia!==s.dia||f.fichaUnica!==true||!obj(f.cadastro)||f.cadastro.excluido===true||txt(f.cadastro.movido_para)||txt(f.cadastro._renomeado_de))return{ok:false,motivo:'a ficha atual mudou'};
+    var a=f.ator||{};if(txt(a.id)!==txt(s.ator.id)||txt(a.nome)!==txt(s.ator.nome)||txt(a.papel)!==txt(s.ator.papel))return{ok:false,motivo:'a sessão humana mudou'};
+    var r=f.resposta||{};
+    if(r.cycleKey!==s.cycleKey||r.itemK!==s.itemK||txt(r.respostaId)!==s.respostaId||Number(r.revisao)!==s.revisao||r.decisao!=='autorizar'||r.origem!==s.origem||r.estado==='realizado'||!!r.revisaoOperacional)return{ok:false,motivo:'a resposta mudou'};
+    var cs=Array.isArray(f.ciclos)?f.ciclos.filter(function(c){return c&&c.cycleKey===s.cycleKey&&c.itemK===s.itemK;}):[];if(cs.length!==1)return{ok:false,motivo:'o ciclo preventivo mudou'};
+    return{ok:true};
+  }
+  /* A vitória concreta, no cartão: «Ficha em dia: {cuidado} feito em {data}; próximo em {data}» (sem mensagem ao tutor). */
+  function vitoriaTexto(itemK,dataISO,proximoISO){var f=FRASES[txt(itemK)],d=br(dataISO),p=br(proximoISO);if(!f||!d)return '';return 'Ficha em dia: '+f[0]+' '+f[1]+' em '+d+(p?'; próximo em '+p:'')+'.';}
+  function vitoriaHTML(o){
+    o=obj(o)?o:{};var t=vitoriaTexto(o.itemK,o.data,o.proximo),p=br(o.proximo);if(!t)return '';
+    return '<div class="zt694-ficha171" data-zt694-ficha174-ok="'+esc(String(o.indice||0))+'"><p class="zt694-ficha171-ok" role="status">'+esc(t)+'</p>'+(p?'<span class="zt694-ficha171-selo">EM DIA ATÉ '+esc(p)+'</span>':'')+'</div>';
+  }
+  root.ZelozinhaLanca174={ITENS:ITENS,BASES:BASES,FRASES:FRASES,daFicha:daFicha,origemDe:origemDe,hojeSP:hojeSP,quemDeu:quemDeu,fichaTemData:fichaTemData,proximoDe:proximoDe,
+    validarAtualizacaoFicha174:validarAtualizacaoFicha174,vitoriaTexto:vitoriaTexto,vitoriaHTML:vitoriaHTML,dataBR:br};
+}(typeof window!=='undefined'?window:globalThis));
+</script>
 <script id="zelozinha-contatos89-ui">'use strict';
 /* «Contatos e respostas de hoje» — a tela da Zelozinha (Story 6.94: as quatro respostas em um toque, o que cada uma faz à vista, sem salto de tela).
    Só grava pelas portas que já existem: ZeluzRespostaApp88.registrar (a resposta), estado.api.marcar/marcarRetorno (o contato humano), o `det` da linha do Day Care
@@ -103554,6 +103627,12 @@ renderAtual=function(){
       '.zt694-ficha171-selo{display:inline-block;margin-top:6px;padding:3px 12px;border-radius:999px;background:#1E8449;color:#fff;font-size:12px;font-weight:800;letter-spacing:.03em}',
       '.zt694-ficha171-corrigir{border:0;background:none;color:var(--z-blue);font-size:14px;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer;min-height:44px;padding:0 4px}',
       '.zt694-ficha171-erro{color:var(--crm-critico-text);font-weight:700}',
+      /* Story 6.124: o que a ficha precisa (produto, regime e data) no próprio cuidado, antes do toque na resposta */
+      '.zt694-ficha174{margin:8px 0 0;padding:12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--z-white)}',
+      '.zt694-ficha174-tit{margin:0;font-size:14px;font-weight:800;line-height:1.45;color:var(--z-blue)}',
+      '.zt694-ficha174 .cad-lb{display:block;margin:8px 0 4px;font-size:13px;font-weight:700}',
+      '.zt694-ficha174 .cad-in{display:block;box-sizing:border-box;width:100%;max-width:100%;min-height:44px;margin:0;font-size:16px}',
+      '.zt694-ficha174 .zt694-acao{min-height:44px}',
       '.zt694-texto{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.5;padding:12px;border-radius:10px;background:var(--z-white);border:1px solid var(--line);user-select:text}',
       '.zt694-copia-bt{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}',
       '.zt694-snoopy{margin:0;padding:12px 0;font-size:14px;line-height:1.5;border-bottom:1px solid var(--line)}',
@@ -103777,7 +103856,7 @@ renderAtual=function(){
     if(ZA&&v.agendado)agHtml=ZA.infoHTML(v.agendado,c.dia,i);
     else if(ZA&&!v.valor&&!travado&&!pendenciaFicha&&c.dia===diaAtual()){var ra=estado.agenda&&estado.agenda[c.dcKey+'|'+i];botoes+='<button type="button" class="btn zt694-btn" data-zt694-acao="agendar-abrir" data-zt694-ciclo="'+i+'" aria-pressed="'+(ra&&ra.aberto?'true':'false')+'" aria-label="'+esc('Agendou para, '+cuidadoNome(cy))+'">Agendou para</button>';if(ra&&ra.aberto)agHtml=ZA.formHTML(cy.itemK,c.dia,i,ra);}
     if(agFuturo)return '<div class="zt694-care" role="group" data-z89-resposta data-z104-care="'+ck+'" data-zt694-care="'+i+'" aria-label="'+esc(cuidadoNome(cy))+'">'+legenda+agHtml+aviso+'</div>';
-    return '<div class="zt694-care" role="group" data-z89-resposta data-z104-care="'+ck+'" data-zt694-care="'+i+'" aria-label="'+esc(cuidadoNome(cy))+'">'+legenda+'<div class="zt694-btns">'+botoes+'</div>'+agHtml+fez+aviso+bloq+vet+posHTML(c,v,i)+'</div>';
+    return '<div class="zt694-care" role="group" data-z89-resposta data-z104-care="'+ck+'" data-zt694-care="'+i+'" aria-label="'+esc(cuidadoNome(cy))+'">'+legenda+'<div class="zt694-btns">'+botoes+'</div>'+agHtml+ficha174HTML(c,v,i,travado)+fez+aviso+bloq+vet+posHTML(c,v,i)+'</div>';
   }
   function todosHTML(c,vms){
     var sem=vms.filter(function(v){return !v.valor;});
@@ -103983,7 +104062,7 @@ renderAtual=function(){
   function invalidarSessao89(){
     estado.seq+=1;if(estado.timer)clearTimeout(estado.timer);estado.timer=null;if(estado.presencaTimer)clearTimeout(estado.presencaTimer);estado.presencaTimer=null;
     try{if(estado.api&&typeof estado.api.invalidate==='function')estado.api.invalidate();}catch(_){}
-    estado.api=null;estado.inFlight=null;estado.projecao=null;estado.resultado=null;estado.dia='';estado.vet=null;estado.sujo=true;estado.projEm='';estado.fonteSig='';estado.lidoEm=0;estado.atualizacaoFalhou=false;estado.itens={};estado.grupos=[];estado.presenca={};confirmando={};estado.historico143=null;cacheHistorico144={dia:'',indice:null};estado.registros139={};estado.linhas={};estado.diaCarregado='';estado.diaLendo=null;estado.snoopyEstado='novo';estado.recarregarDia=true;estado.salvando={};estado.avisos={};estado.msgs={};estado.copiaSt={};estado.fixosResolver={};estado.datasTutor137={};estado.rascunhoFicha138=null;estado.abertos={};estado.vista=null;estado.scrollY=null;window.Z94_CONTATOS_HUMANOS={dia:'',itens:[]};window.Z138_FICHA_SELECAO=null;
+    estado.api=null;estado.inFlight=null;estado.projecao=null;estado.resultado=null;estado.dia='';estado.vet=null;estado.sujo=true;estado.projEm='';estado.fonteSig='';estado.lidoEm=0;estado.atualizacaoFalhou=false;estado.itens={};estado.grupos=[];estado.presenca={};confirmando={};estado.historico143=null;cacheHistorico144={dia:'',indice:null};estado.registros139={};estado.linhas={};estado.diaCarregado='';estado.diaLendo=null;estado.snoopyEstado='novo';estado.recarregarDia=true;estado.salvando={};estado.avisos={};estado.msgs={};estado.copiaSt={};estado.fixosResolver={};estado.datasTutor137={};estado.campos174={};estado.ficha174={};estado.mostrar174={};estado.feitos174={};estado.rascunhoFicha138=null;estado.abertos={};estado.vista=null;estado.scrollY=null;window.Z94_CONTATOS_HUMANOS={dia:'',itens:[]};window.Z138_FICHA_SELECAO=null;
     alvosAtuais().forEach(function(el){el.innerHTML=montarMarkup();el.removeAttribute('data-zt694-ok');});return true;
   }
   function conferirContexto89(){var contexto=assinaturaSessao89(),banco=null,permitida=permissao89(),dia=diaAtual();try{banco=typeof DB!=='undefined'?DB:window.DB;}catch(_){banco=window.DB||null;}if((estado.contextoSessao&&estado.contextoSessao!==contexto)||(estado.bancoSessao&&estado.bancoSessao!==banco)||(estado.permissaoSessao===true&&!permitida)||(estado.dia&&estado.dia!==dia))invalidarSessao89();estado.contextoSessao=contexto;estado.bancoSessao=banco;estado.permissaoSessao=permitida;return permitida;}
@@ -103996,7 +104075,7 @@ renderAtual=function(){
     window.Z94_CONTATOS_HUMANOS={dia:r&&r.dia||'',itens:(r&&r.itens||[]).map(function(x){var c=estado.itens[x.dcKey]||x;return{dcKey:c.dcKey||'',pelKey:c.pelKey||'',petId:c.petId||'',tutorId:c.tutorId||'',estado:c.estado||'',groupKey:c.groupKey||'',contatoId:c.contatoId||'',cycleKeys:Array.isArray(c.cycleKeys)?c.cycleKeys.slice():[],itemKs:Array.isArray(c.itemKs)?c.itemKs.slice():[],escopoSha:c.escopoSha||'',humanoNome:c.existente&&c.existente.humano&&c.existente.humano.nome||'',motivoContato:c.motivoContato||''};})};
   }
   /* as linhas sem vínculo (`revisao_identidade`, `envios_indisponiveis`) chegam do núcleo só com a presença: a chave e o dia vêm dela */
-  function normalizar(c){if(c&&typeof c==='object'){if(!txt(c.dcKey))c.dcKey=txt(c.row&&c.row.chave);if(!txt(c.dia))c.dia=estado.dia||diaAtual();if('registroRespostas139' in c&&txt(c.dcKey)&&txt(c.dia))estado.registros139[c.dcKey]={dia:c.dia,registro:JSON.parse(JSON.stringify(c.registroRespostas139||{}))};}return c;}
+  function normalizar(c){if(c&&typeof c==='object'){if(!txt(c.dcKey))c.dcKey=txt(c.row&&c.row.chave);if(!txt(c.dia))c.dia=estado.dia||diaAtual();if('registroRespostas139' in c&&txt(c.dcKey)&&txt(c.dia))estado.registros139[c.dcKey]={dia:c.dia,registro:JSON.parse(JSON.stringify(c.registroRespostas139||{}))};manterFeitos174(c);}return c;}
   function indexar(result){
     (result&&result.itens||[]).forEach(normalizar);estado.itens={};(result&&result.itens||[]).forEach(function(c){estado.itens[c.dcKey]=c;});
     var pets=(result&&result.itens||[]).map(function(c){var d=descPet(c);d.grupo=T.grupoDoPet(d);return d;});
@@ -104155,6 +104234,7 @@ renderAtual=function(){
       if(!pet||!cad||cad.excluido===true||txt(cad.movido_para)||txt(cad._renomeado_de)||!atual||atual.identidadeAmbigua||ciclos.length!==1||!confAtual||confAtual.dataAplicacao!==conf.dataAplicacao||!atorIgual138(inicio,atorAgora))throw Error('A ficha, o cuidado, a resposta ou a sessão mudou. Atualize e tente novamente.');
       var selecao={versao:138,dia:c.dia,dcKey:dc,pelKey:pk,petId:txt(c.petId),tutorId:txt(c.tutorId),cycleKey:cy.cycleKey,itemK:cy.itemK,dataAplicacao:conf.dataAplicacao,respostaId:txt(rv.respostaId),revisao:Number(rv.revisao),ator:inicio};
       try{if(typeof dashCuidado36Limpar==='function')dashCuidado36Limpar();}catch(_){/* esta atualização foi feita fora; nunca herda uma execução da Zêluz */}
+      slot=slotAtual174(dc,i)||slot;/* 6.124: o cartão pode ter sido redesenhado durante as leituras; o formulário vai para o cartão que está na tela */
       slot.innerHTML='';var editor=prevEdicaoItemHTML138(pet,cy.itemK,cuidadoNome(cy));if(!editor||editor.ok!==true)throw Error(editor&&editor.motivo||'Não consegui montar o formulário nativo deste cuidado.');slot.innerHTML=editor.html;
       var campo=document.getElementById('prevT_'+pk+'_'+cy.itemK),quem=document.getElementById('prevQ_'+pk+'_'+cy.itemK);if(!campo||!quem)throw Error('O formulário nativo deste cuidado ficou incompleto. Nada foi salvo.');
       campo.value=conf.dataAplicacao;campo.readOnly=true;quem.value='Tutor — informado por '+inicio.nome;quem.readOnly=true;window.Z138_FICHA_SELECAO=selecao;estado.rascunhoFicha138=null;prevRecalcular(pk,cy.itemK);
@@ -104177,7 +104257,7 @@ renderAtual=function(){
     out.ok=true;out.html=Z.resultadoHTML({indice:i,cuidado:itemNome(cy),data:confTutor.dataAplicacao,proximo:prox,texto:texto,temTelefone:!!telDe(c),copiaMsg:copiaMsg(c,'f171-'+i,texto)});
     return out;
   }
-  async function fichaDepoisTutorFez171(dc,cycleKey,itemK,data){
+  async function fichaDepoisTutorFez171(dc,cycleKey,itemK,data,dados174){
     estado.ficha171=estado.ficha171||{};
     var k=chave171(dc,cycleKey,itemK),c=estado.itens[dc];if(!c)return false;
     var i=(c.ciclos||[]).findIndex(function(x){return x&&x.cycleKey===cycleKey&&x.itemK===itemK;});if(i<0)return false;
@@ -104193,8 +104273,12 @@ renderAtual=function(){
     var abriu=false;try{abriu=await abrirFichaTutor138(c,v,i,care);}catch(_){abriu=false;}
     if(!abriu)return falhou('Resposta registrada, mas a ficha não foi atualizada. Use «Atualizar ficha».');
     var sf=window.Z138_FICHA_SELECAO;if(!sf||sf.dcKey!==dc||sf.cycleKey!==cycleKey||sf.itemK!==itemK)return falhou('Resposta registrada, mas a ficha mudou. Use «Atualizar ficha».');
+    /* 6.124: o produto e o regime que o tutor mandou, escolhidos no cuidado, vão para o formulário antes do mesmo «Salvar» */
+    if(dados174){if(!aplicarCampos174(sf.pelKey,itemK,dados174))return falhou('Resposta registrada, mas o produto escolhido não entrou no formulário. Confira abaixo e toque em Salvar.');prevRecalcular(sf.pelKey,itemK);}
+    lembrarFeito174(c,cy);
     var r=null;try{r=await Promise.resolve(prevLancar(sf.pelKey,sf.itemK));}catch(e){r={ok:false,erro:txt(e&&e.message)};}
     if(r&&r.ok===true){delete estado.ficha171[k];redesenharLinha(dc);return true;}
+    esquecerFeito174(dc,cycleKey,itemK);
     if(r&&r.ok===false)return falhou('A ficha não foi atualizada'+(txt(r.erro)?': '+txt(r.erro):'')+'. Confira o formulário abaixo e toque em Salvar, ou use «Atualizar ficha».');
     return falhou('A ficha ainda não foi atualizada: confira o formulário abaixo e toque em Salvar.');
   }
@@ -104207,15 +104291,238 @@ renderAtual=function(){
   }
   window.zTutor138ValidarAntes=async function(s,p,k){
     try{
-      if(!s||s.versao!==138||diaAtual()!==s.dia||txt(k)!==s.itemK||txt(pelKey(p))!==s.pelKey||txt(dcKey(p.n,p.tutor))!==s.dcKey||!atorIgual138(s.ator,atorFicha138()))return{ok:false,motivo:'A ficha, o cuidado ou a sessão mudou.'};
+      if(!s||(s.versao!==138&&s.versao!==174)||diaAtual()!==s.dia||txt(k)!==s.itemK||txt(pelKey(p))!==s.pelKey||txt(dcKey(p.n,p.tutor))!==s.dcKey||!atorIgual138(s.ator,atorFicha138()))return{ok:false,motivo:'A ficha, o cuidado ou a sessão mudou.'};
       var pet=fichaUnica138(s.pelKey,s.dcKey);if(!pet||pet!==p)return{ok:false,motivo:'A ficha atual não é única.'};
       var snaps=await Promise.all([DB.ref('daycare/cadastro/'+s.pelKey).once('value'),DB.ref('daycare/vencimentos/'+s.dia+'/'+s.dcKey).once('value')]),cad=snaps[0]&&snaps[0].val?snaps[0].val():null,reg=snaps[1]&&snaps[1].val?snaps[1].val():null;if(!cad||cad.excluido===true||txt(cad.movido_para)||txt(cad._renomeado_de))return{ok:false,motivo:'O cadastro atual mudou.'};
       var cy={cycleKey:s.cycleKey,itemK:s.itemK},rv=respostaFicha138(reg,cy);
       var extra=Object.assign({},pelExtra(p)||{},cad),itens=vencItensDe(extra,amanha138(s.dia),0,s.dia,{}),achados=[];(Array.isArray(itens)?itens:[]).forEach(function(x){var item=txt(x&&x.k),vence=txt(x&&x.vence),care='';try{care=txt(window.ZeluzPrevencaoFontes&&window.ZeluzPrevencaoFontes.tipoCuidado(x));}catch(_){care='';}if(!care&&item==='escova_p')care='escova';if(item&&vence&&JSON.stringify([s.petId,s.tutorId,care,vence,item])===s.cycleKey&&item===s.itemK)achados.push(x);});
-      var validar=window.ZeluzResposta88&&window.ZeluzResposta88.validarAtualizacaoFicha138;if(typeof validar!=='function')return{ok:false,motivo:'Não consegui validar a atualização da ficha.'};
+      /* 6.124: loja e bolsa (versão 174) passam pela validação irmã, com as mesmas checagens de ficha única, sessão, dia, resposta e ciclo */
+      var validar=s.versao===174?(window.ZelozinhaLanca174&&window.ZelozinhaLanca174.validarAtualizacaoFicha174):(window.ZeluzResposta88&&window.ZeluzResposta88.validarAtualizacaoFicha138);if(typeof validar!=='function')return{ok:false,motivo:'Não consegui validar a atualização da ficha.'};
       return validar(s,{dia:diaAtual(),fichaUnica:pet===p,cadastro:cad,ator:atorFicha138(),resposta:rv,ciclos:achados.map(function(){return{cycleKey:s.cycleKey,itemK:s.itemK};}),agora:new Date(agora()).toISOString()});
     }catch(_){return{ok:false,motivo:'Não consegui reler as fontes da ficha. Nada foi salvo.'};}
   };
+  /* ===== Story 6.124 — «lançar tudo de uma vez» (Adriana, 03/nov/2026) =====
+     No próprio cuidado, antes do toque, ficam à vista o produto (e o regime, quando o item pede) e a data. Um toque em «Autorizou pegar
+     na loja», «Trouxe na bolsa» ou «Tutor já fez»: confere ANTES o que a ficha exige (sem gravar meia coisa), registra a resposta, a linha
+     vai para o Lançamento do dia (loja e bolsa) e a ficha fica em dia pelo MESMO prevLancar do «Salvar» do formulário (o rastro em
+     daycare/prevencao-correcoes). Loja e bolsa usam a validação irmã da 138 (ZelozinhaLanca174, versão 174), com a data de hoje e
+     «Quem deu: Day Care». «Atualizar ficha» fica só como plano B. Vacina fica de fora (só com a Veterinária presente). */
+  function Z174(){return window.ZelozinhaLanca174||null;}
+  function fichaDo174(c){try{return typeof pelExtra==='function'&&c&&c.row&&c.row.p?(pelExtra(c.row.p)||{}):{};}catch(_){return {};}}
+  function ectoLista174(){try{return typeof ectoProdutosLista==='function'?ectoProdutosLista():[];}catch(_){return[];}}
+  function ectoRotulo174(pr){try{return typeof ectoRotulo==='function'?ectoRotulo(pr):String(pr||'');}catch(_){return String(pr||'');}}
+  /* A duração do produto, pela MESMA conta do «Qual produto?» do formulário (prevCorrigeEctoDaTela). */
+  function ectoDias174(pr,ex){
+    pr=txt(pr);ex=ex||{};if(!pr)return 0;
+    try{if(pr==='Outro')return parseInt(ex.ecto_outro_dias,10)||0;if(pr==='?')return typeof ectoMaisCurto==='function'?ectoMaisCurto():0;return parseInt((typeof ECTO_DUR!=='undefined'&&ECTO_DUR||{})[pr],10)||0;}catch(_){return 0;}
+  }
+  /* O que vem pré-preenchido: o último da ficha. «Nome do produto» é o `ecto_nome` (ou o `verm_nome`); «Qual produto?» é o `ecto_prod`,
+     que dá a duração. Ficha antiga com o nome no `ecto_prod` e «Pipeta» no `ecto_tipo`: o nome vai para «Nome do produto» e o regime fica «Pipeta». */
+  function campos174Padrao(itemK,ex){
+    ex=ex||{};var o={nome:'',regime:''};
+    if(itemK==='ecto_p'){
+      var prod=txt(ex.ecto_prod),conhecido=!!prod&&prod!=='?'&&ectoDias174(prod,ex)>0;
+      o.regime=conhecido?prod:(txt(ex.ecto_tipo)==='Pipeta'?'Pipeta':'');
+      o.nome=txt(ex.ecto_nome)||txt(ex.ecto_outro_nome)||(prod&&!conhecido&&prod!=='?'&&prod!=='Outro'?prod:'');
+    }else if(itemK==='verm_p')o.nome=txt(ex.verm_nome);
+    return o;
+  }
+  function campos174De(c,cy){
+    estado.campos174=estado.campos174||{};
+    var e=estado.campos174[chave171(c.dcKey,cy.cycleKey,cy.itemK)]||null,p=campos174Padrao(cy.itemK,fichaDo174(c));
+    return{nome:e&&Object.prototype.hasOwnProperty.call(e,'nome')?e.nome:p.nome,regime:e&&Object.prototype.hasOwnProperty.call(e,'regime')?e.regime:p.regime};
+  }
+  /* O regime que a ficha já diz, para os cuidados em que ele não se escolhe aqui. */
+  function regimeTexto174(itemK,ex){
+    ex=ex||{};
+    try{
+      if(itemK==='verm_p')return 'Como está na ficha: '+(ex.verm_doses==='2 doses'?('2 doses, a 2ª '+(typeof vermIntervalo==='function'?vermIntervalo(ex):21)+' dias depois da 1ª'):'dose única')+'.';
+      if(itemK==='verm_dose2_p')return 'Ao salvar a 2ª dose, o próximo vermífugo passa a contar 4 meses a partir dela.';
+      if(itemK==='col_p'){var d=typeof prevDiasDoItem==='function'?prevDiasDoItem({coleira:true},ex):0,m=txt(ex.col_nome);return 'Validade: '+d+' dias'+(m?' ('+m+')':' (sem marca na ficha: vale a da Seresto)')+'.';}
+      if(itemK==='escova_p'){var it=(typeof PREV_ITENS!=='undefined'?PREV_ITENS:[]).filter(function(x){return x&&x.k==='escova_p';})[0];return 'Troca a cada '+((it&&it.dias)||90)+' dias.';}
+    }catch(_){return '';}
+    return '';
+  }
+  /* O que falta para a ficha aceitar, conferido ANTES de gravar qualquer coisa (resposta, linha ou ficha). '' = nada falta. */
+  function falta174(c,cy,d,dt){
+    var k=cy&&cy.itemK,ex=fichaDo174(c),nome=String(d&&d.nome||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(dt||'')))return 'Falta a data em que foi feito.';
+    if(nome.length>80||/[\u0000-\u001F\u007F]/.test(nome))return 'O nome do produto pode ter até 80 letras.';
+    if(k==='ecto_p'){
+      var r=txt(d&&d.regime);if(!r)return 'Falta o produto do carrapaticida: escolha em «Qual produto?».';
+      if(!(ectoDias174(r,ex)>0))return 'O produto escolhido está sem duração: escolha outro em «Qual produto?».';
+    }
+    if(k==='verm_dose2_p'){
+      var sem='';try{sem=typeof prevVermSem2a==='function'?prevVermSem2a(ex):'';}catch(_){sem='';}if(sem)return sem;
+      var t1=txt(ex.verm_t);if(/^\d{4}-\d{2}-\d{2}$/.test(t1)&&dt<t1)return 'A 2ª dose ficou antes da 1ª ('+dataBR(t1)+'): confira a data.';
+      try{if(typeof vermSerieVenceu==='function'&&vermSerieVenceu(ex,dt))return 'A data já não pertence à 2ª dose desta série: confira o esquema na ficha.';}catch(_){/* sem a conta, o formulário confere ao salvar */}
+    }
+    if(k==='escova_p'){try{if(typeof escovaNaoEscova==='function'&&escovaNaoEscova(ex))return 'A ficha diz que não escova no Day Care: a troca de escova não é lançada aqui.';}catch(_){/* sem a regra, o formulário confere ao salvar */}}
+    return '';
+  }
+  /* A ficha já tem estes dados (a data e o produto escolhidos)? Então o toque não grava de novo. */
+  function mesmoNaFicha174(ex,itemK,dt,d){
+    var Z=Z174();if(!Z||!Z.fichaTemData(ex,itemK,dt))return false;ex=ex||{};d=d||{};
+    if(itemK==='ecto_p'){var r=txt(d.regime);if(r==='?'?txt(ex.ecto_prod)!=='':txt(ex.ecto_prod)!==r)return false;if(txt(d.nome)&&txt(ex.ecto_nome)!==txt(d.nome))return false;}
+    if(itemK==='verm_p'&&txt(d.nome)&&txt(ex.verm_nome)!==txt(d.nome))return false;
+    return true;
+  }
+  function opcoesEcto174(ex,atual){
+    var lista=ectoLista174().slice(),prod=txt((ex||{}).ecto_prod),h='<option value="">Escolha o produto…</option>';
+    if(prod&&prod!=='Outro'&&prod!=='?'&&lista.indexOf(prod)<0&&ectoDias174(prod,ex)>0)lista.push(prod);
+    lista.forEach(function(pr){h+='<option value="'+esc(pr)+'"'+(pr===atual?' selected':'')+'>'+esc(ectoRotulo174(pr))+'</option>';});
+    var dOutro=parseInt((ex||{}).ecto_outro_dias,10)||0;
+    if(prod==='Outro'&&dOutro>0)h+='<option value="Outro"'+(atual==='Outro'?' selected':'')+'>Outro · '+dOutro+' dia'+(dOutro>1?'s':'')+'</option>';
+    var curto=0;try{curto=typeof ectoMaisCurto==='function'?ectoMaisCurto():0;}catch(_){curto=0;}
+    if(curto)h+='<option value="?"'+(atual==='?'?' selected':'')+'>Não sei qual foi (conta '+curto+' dias, o mais curto)</option>';
+    return h;
+  }
+  function fraseEcto174(pr,ex){try{return typeof ectoFraseDias==='function'?ectoFraseDias(txt(pr),pr==='Outro'?(parseInt((ex||{}).ecto_outro_dias,10)||0):0):'';}catch(_){return '';}}
+  /* O bloco do cuidado: o que a ficha precisa (antes do toque) ou a vitória (depois). Nada aqui grava. */
+  function ficha174HTML(c,v,i,travado){
+    try{
+      var Z=Z174(),cy=v&&v.cy;if(!Z||!cy||!Z.daFicha(cy.itemK)||v.bloqueado||c.dia!==diaAtual())return '';
+      estado.ficha174=estado.ficha174||{};estado.mostrar174=estado.mostrar174||{};
+      var k=chave171(c.dcKey,cy.cycleKey,cy.itemK),st=estado.ficha174[k]||null,ex=fichaDo174(c),origem=Z.origemDe(v.valor);
+      if(origem&&Z.fichaTemData(ex,cy.itemK,c.dia))return Z.vitoriaHTML({indice:i,itemK:cy.itemK,data:c.dia,proximo:Z.proximoDe(ex,cy.itemK)});
+      /* «Vai fazer em casa», «Não respondeu» e «Agendou para» não ganham os campos (só quando o «Tutor já fez» pede o que falta) */
+      var pendenciaFicha=!!(v.retorno143&&v.retorno143.tipo==='atualizar_ficha'),ra=estado.agenda&&estado.agenda[c.dcKey+'|'+i],agenda=!!v.agendado||!!(ra&&ra.aberto);
+      if(!(estado.mostrar174[k]===true||(!agenda&&(!v.valor||origem||pendenciaFicha))))return '';
+      var d=campos174De(c,cy),base=encodeURIComponent(T.chaveRascunho137(c.dcKey,cy.cycleKey,cy.itemK)),attrs=' data-zt694-cycle-key="'+esc(encodeURIComponent(cy.cycleKey))+'" data-zt694-item-k="'+esc(encodeURIComponent(cy.itemK))+'"'+(travado?' disabled':'');
+      var h='<div class="zt694-ficha174" data-zt694-ficha174="'+i+'"><p class="zt694-ficha174-tit">Para deixar a Prevenção em dia</p>'
+        +'<p class="zt694-sub">«Autorizou pegar na loja» e «Trouxe na bolsa»: feito hoje, '+esc(dataBR(c.dia))+'. «Tutor já fez»: a data informada abaixo.</p>';
+      if(cy.itemK==='ecto_p'||cy.itemK==='verm_p'){var idN='zt174-nome-'+base;h+='<label class="cad-lb" for="'+esc(idN)+'">Nome do produto</label><input class="cad-in" type="text" maxlength="80" id="'+esc(idN)+'" data-zt174-campo="nome"'+attrs+' value="'+esc(d.nome)+'" placeholder="Ex.: o nome que está na caixa">';}
+      if(cy.itemK==='ecto_p'){var idR='zt174-regime-'+base;h+='<label class="cad-lb" for="'+esc(idR)+'">Qual produto?</label><select class="cad-in" id="'+esc(idR)+'" data-zt174-campo="regime"'+attrs+'>'+opcoesEcto174(ex,txt(d.regime))+'</select><p class="zt694-sub" data-zt174-frase>'+esc(txt(d.regime)?fraseEcto174(d.regime,ex):'Escolha o produto: a duração depende dele.')+'</p>';}
+      else{var rt=regimeTexto174(cy.itemK,ex);if(rt)h+='<p class="zt694-sub">'+esc(rt)+'</p>';}
+      if(origem&&!(st&&st.estado==='gravando'))h+='<p class="zt694-aviso">Resposta salva. A ficha ainda não está em dia.</p><button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="ficha174" data-zt694-ciclo="'+i+'"'+(travado?' disabled':'')+'>Atualizar ficha</button>';
+      if(st&&st.msg)h+='<p class="zt694-sub'+(st.estado==='falhou'?' zt694-ficha171-erro':'')+'" role="status" data-zt694-ficha174-st>'+esc(st.msg)+'</p>';
+      return h+'</div>';
+    }catch(_){return '';}
+  }
+  /* O cuidado que esta tela acabou de deixar em dia sai da lista na releitura (a ficha não vence mais). No mesmo dia e nesta sessão, ele
+     continua no cartão, no mesmo lugar, com a vitória e a linha do Lançamento do dia, como antes, quando a ficha só mudava no «Conferir cuidado». */
+  function lembrarFeito174(c,cy){
+    try{
+      estado.feitos174=estado.feitos174||{};var dc=txt(c&&c.dcKey),f=estado.feitos174[dc];if(!dc||!cy)return;
+      if(!f||f.dia!==c.dia)f=estado.feitos174[dc]={dia:c.dia,ciclos:[],ordem:[]};
+      f.ordem=(c.ciclos||[]).map(function(x){return x.cycleKey+'|'+x.itemK;});
+      if(!f.ciclos.some(function(x){return x.cycleKey===cy.cycleKey&&x.itemK===cy.itemK;}))f.ciclos.push(JSON.parse(JSON.stringify(cy)));
+    }catch(_){/* só a vista do cartão: sem a lembrança, o cuidado sai na próxima leitura */}
+  }
+  function esquecerFeito174(dc,cycleKey,itemK){var f=estado.feitos174&&estado.feitos174[dc];if(f)f.ciclos=f.ciclos.filter(function(x){return !(x.cycleKey===cycleKey&&x.itemK===itemK);});}
+  function manterFeitos174(c){
+    try{
+      var f=estado.feitos174&&estado.feitos174[txt(c.dcKey)];if(!f||f.dia!==txt(c.dia)||!Array.isArray(c.ciclos)||!f.ciclos.length)return;
+      var mudou=false;f.ciclos.forEach(function(cy){if(!c.ciclos.some(function(x){return x&&x.cycleKey===cy.cycleKey&&x.itemK===cy.itemK;})){c.ciclos.push(JSON.parse(JSON.stringify(cy)));mudou=true;}});
+      if(!mudou)return;
+      var pos=function(x){var i=f.ordem.indexOf(x.cycleKey+'|'+x.itemK);return i<0?1e6:i;};
+      c.ciclos=c.ciclos.map(function(x,i){return{x:x,i:i};}).sort(function(a,b){return (pos(a.x)-pos(b.x))||(a.i-b.i);}).map(function(o){return o.x;});
+    }catch(_){/* só a vista do cartão */}
+  }
+  /* O que a pessoa escolheu no bloco fica guardado no estado da tela (o app refaz o cartão sozinho de tempos em tempos). */
+  function aoMudarCampo174(ev){
+    var el=ev.target&&ev.target.closest?ev.target.closest('[data-zt174-campo]'):null;if(!el)return;
+    var art=el.closest('[data-zt694-pet]'),dc='',cycleKey='',itemK='',campo=el.getAttribute('data-zt174-campo');if(!art||(campo!=='nome'&&campo!=='regime'))return;
+    try{dc=decodeURIComponent(art.getAttribute('data-zt694-pet')||'');cycleKey=decodeURIComponent(el.getAttribute('data-zt694-cycle-key')||'');itemK=decodeURIComponent(el.getAttribute('data-zt694-item-k')||'');}catch(_){return;}
+    if(!dc||!cycleKey||!itemK)return;
+    estado.campos174=estado.campos174||{};var k=chave171(dc,cycleKey,itemK);estado.campos174[k]=estado.campos174[k]||{};estado.campos174[k][campo]=String(el.value||'');
+    if(campo==='regime'){var box=el.closest('[data-zt694-ficha174]'),fr=box&&box.querySelector('[data-zt174-frase]'),c=estado.itens[dc];if(fr)fr.textContent=txt(el.value)?fraseEcto174(el.value,c?fichaDo174(c):{}):'Escolha o produto: a duração depende dele.';}
+  }
+  /* Leva o produto e o regime escolhidos para o formulário nativo já aberto (o mesmo que o «Salvar» lê). false = o formulário não aceitou. */
+  function aplicarCampos174(pk,itemK,d){
+    d=d||{};
+    try{
+      var n=document.getElementById('prevN_'+pk+'_'+itemK);if(n&&txt(d.nome))n.value=txt(d.nome);
+      if(itemK==='ecto_p'){var s=document.getElementById('prevCorrP_ed_'+pk+'_ecto_p'),r=txt(d.regime);if(!s||!r)return false;s.value=r;if(String(s.value)!==r)return false;}
+      return true;
+    }catch(_){return false;}
+  }
+  function slotAtual174(dc,i){try{return document.querySelector('[data-zt694-pet="'+encodeURIComponent(dc)+'"] [data-zt694-care="'+i+'"] [data-z138-editor-slot]');}catch(_){return null;}}
+  /* Abre o formulário nativo do cuidado no próprio cartão (o mesmo da 138), com a data de hoje travada, «Quem fez: Day Care — registrado
+     por …» e o produto escolhido; a seleção 174 faz o «Salvar» passar pela validação irmã e gravar «Quem deu: Day Care». */
+  async function abrirFichaLoja174(c,v,i,care,origem,dados){
+    var Z=Z174(),inicio=atorFicha138(),pk=txt(c&&c.pelKey),dc=txt(c&&c.dcKey),cy=v&&v.cy,rv0=v&&v.atual,slot=care&&care.querySelector('[data-z138-editor-slot]');
+    if(c&&(c.saiuHoje===true||c.saidaNaoConfirmada===true)){avisoLinha(dc,i,'A presença não permite alterar a ficha por este cartão.');return false;}
+    if(!Z||!rv0||rv0.decisao!=='autorizar'||rv0.origem!==origem||!pk||!dc||!cy||!slot||!atorIgual138(inicio,inicio)){avisoLinha(dc,i,'Não consegui confirmar a resposta e a sessão. A ficha não foi mexida.');return false;}
+    var aberta=window.Z138_FICHA_SELECAO;
+    if(aberta){if(prevLanceNaoSalvo(aberta.pelKey)){avisoLinha(dc,i,'Há dados de outro cuidado ainda não salvos. Salve ou feche aquele editor antes de continuar.');return false;}var outro=document.querySelector('[data-z138-editor-native]'),outroSlot=outro&&outro.closest('[data-z138-editor-slot]');if(outroSlot)outroSlot.innerHTML='';window.Z138_FICHA_SELECAO=null;estado.rascunhoFicha138=null;}
+    dizerNaLinha(dc,'Conferindo a ficha antes de gravar…');
+    try{
+      var atual=await estado.api.atualizarUm(dc,estado.projecao),pet=fichaUnica138(pk,dc),snaps=await Promise.all([DB.ref('daycare/cadastro/'+pk).once('value'),DB.ref('daycare/vencimentos/'+c.dia+'/'+dc).once('value')]),cad=snaps[0]&&snaps[0].val?snaps[0].val():null,reg=snaps[1]&&snaps[1].val?snaps[1].val():null,atorAgora=atorFicha138();
+      var ciclos=(atual&&atual.ciclos||[]).filter(function(x){return x&&x.cycleKey===cy.cycleKey&&x.itemK===cy.itemK;}),rv=respostaFicha138(reg,cy);
+      if(!pet||!cad||cad.excluido===true||txt(cad.movido_para)||txt(cad._renomeado_de)||!atual||atual.identidadeAmbigua||atual.saiuHoje===true||atual.saidaNaoConfirmada===true||ciclos.length!==1||!rv||rv.decisao!=='autorizar'||rv.origem!==origem||txt(rv.respostaId)!==txt(rv0.respostaId)||Number(rv.revisao)!==Number(rv0.revisao)||!atorIgual138(inicio,atorAgora))throw Error('A ficha, o cuidado, a resposta ou a sessão mudou. Atualize e tente novamente.');
+      var selecao={versao:174,origem:origem,dia:c.dia,dcKey:dc,pelKey:pk,petId:txt(c.petId),tutorId:txt(c.tutorId),cycleKey:cy.cycleKey,itemK:cy.itemK,dataAplicacao:c.dia,respostaId:txt(rv.respostaId),revisao:Number(rv.revisao),ator:inicio};
+      try{if(typeof dashCuidado36Limpar==='function')dashCuidado36Limpar();}catch(_){/* esta atualização é da Zelozinha; nunca herda uma execução do Encãotador */}
+      slot=slotAtual174(dc,i)||slot;/* o cartão pode ter sido redesenhado durante as leituras (o Snoopy, o Lançamento do dia): o lugar do formulário é o do cartão na tela */
+      slot.innerHTML='';var editor=prevEdicaoItemHTML138(pet,cy.itemK,cuidadoNome(cy));if(!editor||editor.ok!==true)throw Error(editor&&editor.motivo||'Não consegui montar o formulário nativo deste cuidado.');slot.innerHTML=editor.html;
+      var campo=document.getElementById('prevT_'+pk+'_'+cy.itemK),quem=document.getElementById('prevQ_'+pk+'_'+cy.itemK);if(!campo||!quem)throw Error('O formulário nativo deste cuidado ficou incompleto. Nada foi salvo.');
+      campo.value=c.dia;campo.readOnly=true;quem.value=Z.quemDeu(inicio.nome);quem.readOnly=true;window.Z138_FICHA_SELECAO=selecao;estado.rascunhoFicha138=null;
+      if(!aplicarCampos174(pk,cy.itemK,dados))throw Error('O produto escolhido não entrou no formulário da ficha. Nada foi salvo.');
+      prevRecalcular(pk,cy.itemK);dizerNaLinha(dc,'');return true;
+    }catch(e){window.Z138_FICHA_SELECAO=null;if(slot)slot.innerHTML='';avisoLinha(dc,i,txt(e&&e.message)||'Não consegui conferir a ficha. Nada foi salvo.');dizerNaLinha(dc,'');return false;}
+  }
+  /* Depois da resposta loja/bolsa salva e da linha confirmada no Lançamento do dia: a ficha fica em dia pelo mesmo prevLancar. */
+  async function fichaDepoisLoja174(dc,cycleKey,itemK,valor,dados){
+    var Z=Z174();estado.ficha174=estado.ficha174||{};
+    var k=chave171(dc,cycleKey,itemK),c=estado.itens[dc];if(!Z||!c||estado.salvando[dc])return false;
+    var i=(c.ciclos||[]).findIndex(function(x){return x&&x.cycleKey===cycleKey&&x.itemK===itemK;});if(i<0)return false;
+    var cy=c.ciclos[i],v=vmCuidado(c,cy),origem=Z.origemDe(valor);
+    if(!origem||v.valor!==valor)return false;/* a resposta não ficou salva assim: a linha já diz por quê */
+    function falhou(msg){estado.ficha174[k]={estado:'falhou',msg:msg};redesenharLinha(dc);return false;}
+    if(c.saiuHoje===true||c.saidaNaoConfirmada===true)return falhou('A presença não permite alterar a ficha por este cartão.');
+    var l=v.tarefa&&v.tarefa.linha,linha=l&&l.id&&l.item?linhaDoDia(c,l.item,l.id):null;
+    if(!(l&&T.linhaDoLancamentoConfirmada({contato:c,ciclo:cy,tarefa:v.tarefa,resposta:v.atual,linha:linha,item:l.item,id:l.id,groupKey:v.grupo})))return falhou('Resposta salva, mas a linha do Lançamento do dia ainda não foi confirmada. A ficha não foi mexida: toque em «Atualizar ficha» quando a linha aparecer.');
+    var ex=fichaDo174(c);if(mesmoNaFicha174(ex,itemK,c.dia,dados)){delete estado.ficha174[k];redesenharLinha(dc);return true;}
+    var falta=falta174(c,cy,dados,c.dia);if(falta)return falhou(falta);
+    if(typeof prevLancar!=='function')return falhou('Resposta salva, mas não consegui atualizar a ficha daqui. Use «Atualizar ficha».');
+    var guarda={};estado.salvando[dc]=guarda;
+    try{
+      estado.ficha174[k]={estado:'gravando',msg:'Deixando a ficha em dia…'};redesenharLinha(dc,true);
+      var care=document.querySelector('[data-zt694-pet="'+encodeURIComponent(dc)+'"] [data-zt694-care="'+i+'"]');
+      if(!care)return falhou('Resposta salva, mas não consegui atualizar a ficha daqui. Use «Atualizar ficha».');
+      var abriu=false;try{abriu=await abrirFichaLoja174(c,v,i,care,origem,dados);}catch(_){abriu=false;}
+      if(!abriu)return falhou('Resposta salva, mas a ficha não foi atualizada. Confira o aviso acima e use «Atualizar ficha».');
+      var sf=window.Z138_FICHA_SELECAO;if(!sf||sf.versao!==174||sf.dcKey!==dc||sf.cycleKey!==cycleKey||sf.itemK!==itemK)return falhou('Resposta salva, mas a ficha mudou. Use «Atualizar ficha».');
+      lembrarFeito174(c,cy);
+      var r=null;try{r=await Promise.resolve(prevLancar(sf.pelKey,sf.itemK));}catch(e){r={ok:false,erro:txt(e&&e.message)};}
+      if(r&&r.ok===true){delete estado.ficha174[k];return true;}
+      esquecerFeito174(dc,cycleKey,itemK);
+      if(r&&r.ok===false)return falhou('A ficha não foi atualizada'+(txt(r.erro)?': '+txt(r.erro):'')+'. Confira o formulário abaixo e toque em Salvar, ou use «Atualizar ficha».');
+      return falhou('A ficha ainda não foi atualizada: confira o formulário abaixo e toque em Salvar.');
+    }finally{if(estado.salvando[dc]===guarda)delete estado.salvando[dc];redesenharLinha(dc);}
+  }
+  /* A linha do Lançamento do dia do carrapaticida leva o produto em det.prod (o campo que a linha já aceita, o mesmo do chip «Qual produto?»). */
+  async function produtoNaLinha174(dc,cycleKey,itemK,dados){
+    if(itemK!=='ecto_p')return false;
+    var c=estado.itens[dc];if(!c)return false;
+    var cy=(c.ciclos||[]).filter(function(x){return x&&x.cycleKey===cycleKey&&x.itemK===itemK;})[0];if(!cy)return false;
+    var v=vmCuidado(c,cy),l=v.tarefa&&v.tarefa.linha,linha=l&&l.id&&l.item?linhaDoDia(c,l.item,l.id):null;
+    if(!linha||txt(linha.det&&linha.det.prod))return false;/* sem linha, ou o produto já foi escolhido nela: não mexe */
+    var rot=String(ectoRotulo174(txt(dados&&dados.regime))).toUpperCase(),op=(listaProd()||[]).filter(function(o){return o&&o.v===rot;})[0];
+    if(!op)return false;
+    try{return await gravarEscolha(c,cy,'prod',op.v,{silencioso:true});}catch(_){return false;}
+  }
+  /* O toque em «Autorizou pegar na loja» ou «Trouxe na bolsa» (um cuidado, «Todos» ou «Tentar de novo»): confere antes, registra,
+     e então deixa a ficha de cada cuidado da Prevenção em dia. */
+  function responderLoja174(c,idxs,valor,el){
+    var Z=Z174(),dc=c&&c.dcKey;if(!c||estado.salvando[dc])return Promise.resolve();
+    var alvos=Z?idxs.filter(function(i){var cy=c.ciclos&&c.ciclos[i];return !!cy&&Z.daFicha(cy.itemK);}):[];
+    if(!alvos.length||c.saiuHoje===true||c.saidaNaoConfirmada===true)return Promise.resolve(responder(c,idxs,valor,el));
+    /* loja e bolsa valem «feito hoje»: o hoje de São Paulo tem de ser o dia da lista (perto da meia-noite, a lista pode ser a de ontem) */
+    if(Z.hojeSP(agora())!==c.dia){dizerNaLinha(dc,'O dia virou. Toque em «Atualizar envios» antes de registrar; nada foi gravado.');return Promise.resolve();}
+    var dados={},faltou=false;
+    estado.mostrar174=estado.mostrar174||{};
+    alvos.forEach(function(i){var cy=c.ciclos[i],d=campos174De(c,cy),falta=falta174(c,cy,d,c.dia);if(falta){faltou=true;estado.mostrar174[chave171(dc,cy.cycleKey,cy.itemK)]=true;avisoLinha(dc,i,falta);}else{avisoLinha(dc,i,'');dados[i]=d;}});
+    if(faltou){dizerNaLinha(dc,'Nada foi gravado. Complete o que falta no cuidado e toque de novo.');redesenharLinha(dc);return Promise.resolve();}
+    var lista=alvos.map(function(i){var cy=c.ciclos[i];return{cycleKey:cy.cycleKey,itemK:cy.itemK,dados:dados[i]};});
+    return Promise.resolve(responder(c,idxs,valor,el)).then(async function(){
+      for(var n=0;n<lista.length;n++){
+        var x=lista[n],ok=false;
+        try{ok=await fichaDepoisLoja174(dc,x.cycleKey,x.itemK,valor,x.dados);}catch(_){ok=false;}
+        if(ok)try{await produtoNaLinha174(dc,x.cycleKey,x.itemK,x.dados);}catch(_){/* o produto na linha é ajuda; a ficha já está em dia */}
+      }
+    });
+  }
   async function registrarGrupo(c,lista,valor,mapa,confirmacaoTutor137){
     var bridge=window.ZeluzRespostaApp88;if(!bridge||typeof bridge.registrar!=='function')throw Error('a resposta não está disponível agora');
     var enviada=lista[0].st.enviada&&!lista[0].st.zs,gk=lista[0].grupo,fonteContato=c,pedido={cycleKeys:lista.map(function(v){return v.cy.cycleKey;}),itemKs:lista.map(function(v){return v.cy.itemK;})};
@@ -104234,7 +104541,7 @@ renderAtual=function(){
   function marcarSalvando(c,idxs,btn){
     estado.salvando[c.dcKey]=estado.salvando[c.dcKey]||true;
     var art=document.querySelector('[data-zt694-pet="'+encodeURIComponent(c.dcKey)+'"]');
-    if(art)Array.prototype.forEach.call(art.querySelectorAll('[data-zt694-acao="resp"],[data-zt694-acao="todos"],[data-zt694-acao="esc"],[data-zt694-acao="tutor-fez"],[data-zt694-acao="atualizar-ficha"],[data-zt694-data-fez]'),function(b){b.disabled=true;});
+    if(art)Array.prototype.forEach.call(art.querySelectorAll('[data-zt694-acao="resp"],[data-zt694-acao="todos"],[data-zt694-acao="esc"],[data-zt694-acao="tutor-fez"],[data-zt694-acao="atualizar-ficha"],[data-zt694-data-fez],[data-zt694-acao="ficha174"],[data-zt174-campo]'),function(b){b.disabled=true;});
     if(btn)btn.textContent='Salvando…';
     dizerNaLinha(c.dcKey,'Salvando a resposta…');
   }
@@ -104576,7 +104883,7 @@ renderAtual=function(){
   }
   function aoClicar(ev){
     var t=ev.target&&ev.target.closest?ev.target:null;if(!t)return;
-    var reler=t.closest('[data-z44-reler]');if(reler){estado.fixosResolver={};estado.datasTutor137={};estado.rascunhoFicha138=null;window.Z138_FICHA_SELECAO=null;estado.sujo=true;estado.recarregarDia=true;estado.historicoManual144=true;estado.snoopyEstado='novo';return;}
+    var reler=t.closest('[data-z44-reler]');if(reler){estado.fixosResolver={};estado.datasTutor137={};estado.campos174={};estado.ficha174={};estado.mostrar174={};estado.rascunhoFicha138=null;window.Z138_FICHA_SELECAO=null;estado.sujo=true;estado.recarregarDia=true;estado.historicoManual144=true;estado.snoopyEstado='novo';return;}
     if(t.closest('[data-zt694-snoopy-check]'))return;
     var sn=t.closest('.zt694 [data-snoopy-item]');if(sn){ev.preventDefault();ev.stopPropagation();tratarSnoopy(sn);return;}
     var el=t.closest('[data-zt694-acao]');if(!el)return;
@@ -104586,8 +104893,10 @@ renderAtual=function(){
     var d=itemDoClique(el);if(!d)return;ev.preventDefault();
     var c=d.c,i=Number(el.getAttribute('data-zt694-ciclo')||0),cy=c.ciclos&&c.ciclos[i],valor=el.getAttribute('data-zt694-valor')||'';
     if(el.disabled)return;
-    if(acao==='resp'){if(cy)responder(c,[i],valor,el);return;}
-    if(acao==='todos'){var vms=vmsDe(c),idxs=[];vms.forEach(function(v,k){if(!v.valor)idxs.push(k);});if(idxs.length>=2)responder(c,idxs,valor,el);return;}
+    /* 6.124: loja e bolsa deixam a Prevenção em dia no mesmo toque (responderLoja174 confere antes e chama o responder de sempre).
+       Com a ficha já em dia por loja/bolsa hoje, o cuidado não vence mais: o toque repetido não regrava, e trocar a resposta começa por desfazer a ficha. */
+    if(acao==='resp'){if(cy){var vr=vmCuidado(c,cy),Zr=Z174();if(Zr&&Zr.daFicha(cy.itemK)&&Zr.origemDe(vr.valor)&&Zr.fichaTemData(fichaDo174(c),cy.itemK,c.dia)){dizerNaLinha(c.dcKey,valor===vr.valor?'Já está salvo: a ficha está em dia e o cuidado está no Lançamento do dia.':'A ficha deste cuidado já está em dia (feito hoje). Para trocar a resposta, desfaça antes em Prevenção › «Atualizados hoje».');return;}if(daLinha(valor))responderLoja174(c,[i],valor,el);else responder(c,[i],valor,el);}return;}
+    if(acao==='todos'){var vms=vmsDe(c),idxs=[];vms.forEach(function(v,k){if(!v.valor)idxs.push(k);});if(idxs.length>=2){if(daLinha(valor))responderLoja174(c,idxs,valor,el);else responder(c,idxs,valor,el);}return;}
     var care=el.closest('[data-zt694-care]');var ic=care?Number(care.getAttribute('data-zt694-care')):i;cy=c.ciclos&&c.ciclos[ic];
     if(acao==='agendar-abrir'||acao==='agendar-esc'||acao==='agendar-salvar'||acao==='agendar-desfazer'){if(cy)agendaAcao(acao,c,cy,ic,el,care);return;}
     if(acao==='tutor-fez'){
@@ -104595,16 +104904,21 @@ renderAtual=function(){
       var vf=cy&&vmCuidado(c,cy);if(vf&&vf.retorno143&&vf.retorno143.tipo==='atualizar_ficha'&&(!estado.historico143||!estado.presenca[c.dcKey]||estado.presenca[c.dcKey].presente!==true)){avisoLinha(c.dcKey,ic,'Não consegui confirmar a presença e a resposta anterior. Atualize e confira.');redesenharLinha(c.dcKey);return;}
       try{if(!cy||!window.ZeluzResposta88||typeof window.ZeluzResposta88.normalizarConfirmacaoTutor137!=='function')throw Error('registro indisponível');window.ZeluzResposta88.normalizarConfirmacaoTutor137(meta,{decisao:'autorizar',origem:'externo'},new Date(agora()).toISOString());}
       catch(_){avisoLinha(c.dcKey,ic,'Informe a data real em que o tutor fez o cuidado. A data não pode estar no futuro.');redesenharLinha(c.dcKey);return;}
+      /* 6.124: o produto e o regime que a ficha exige são conferidos ANTES de registrar (nada de meia coisa); faltando, o bloco aparece no cuidado */
+      var Z174t=Z174(),dados174=null;
+      if(Z174t&&Z174t.daFicha(cy.itemK)&&!estado.salvando[c.dcKey]){dados174=campos174De(c,cy);var falta174t=falta174(c,cy,dados174,data);if(falta174t){estado.mostrar174=estado.mostrar174||{};estado.mostrar174[chave171(c.dcKey,cy.cycleKey,cy.itemK)]=true;avisoLinha(c.dcKey,ic,falta174t);dizerNaLinha(c.dcKey,'Nada foi gravado. Complete o que falta no cuidado e toque de novo.');redesenharLinha(c.dcKey);return;}}
       estado.corrigir171=estado.corrigir171||{};delete estado.corrigir171[c.dcKey+'|'+cy.cycleKey+'|'+cy.itemK];
       var dc171=c.dcKey,ck171=cy.cycleKey,ik171=cy.itemK;
-      Promise.resolve(responder(c,[ic],'autorizar_externo',el,{confirmacaoTutor137:meta})).then(function(){return fichaDepoisTutorFez171(dc171,ck171,ik171,data);}).catch(function(){/* o aviso já está na linha; «Atualizar ficha» continua como plano B */});return;
+      Promise.resolve(responder(c,[ic],'autorizar_externo',el,{confirmacaoTutor137:meta})).then(function(){return fichaDepoisTutorFez171(dc171,ck171,ik171,data,dados174);}).then(function(ok){if(ok&&estado.mostrar174)delete estado.mostrar174[chave171(dc171,ck171,ik171)];}).catch(function(){/* o aviso já está na linha; «Atualizar ficha» continua como plano B */});return;
     }
     if(acao==='corrigir-data171'){if(cy){estado.corrigir171=estado.corrigir171||{};estado.corrigir171[c.dcKey+'|'+cy.cycleKey+'|'+cy.itemK]=true;redesenharLinha(c.dcKey);var campo171=document.querySelector('[data-zt694-pet="'+encodeURIComponent(c.dcKey)+'"] [data-zt694-care="'+ic+'"] [data-zt694-data-fez]');if(campo171&&campo171.focus)campo171.focus();}return;}
     if(acao==='atualizar-ficha'){if(cy)abrirFichaTutor138(c,vmCuidado(c,cy),ic,care);return;}
     if(acao==='salvar-ficha'){var sf=window.Z138_FICHA_SELECAO;if(!cy||!sf||sf.dcKey!==c.dcKey||sf.cycleKey!==cy.cycleKey||sf.itemK!==cy.itemK){avisoLinha(c.dcKey,ic,'A resposta ou o cuidado mudou. Feche e confira novamente.');redesenharLinha(c.dcKey);return;}Promise.resolve(prevLancar(sf.pelKey,sf.itemK)).then(function(r){if(r&&r.ok===false)window.zTutor138DepoisFalhar(sf,r);});return;}
     if(acao==='fechar-ficha'){if(cy)fecharFichaTutor138(c,cy,care);return;}
     if(acao==='esc'){if(cy)gravarEscolha(c,cy,el.getAttribute('data-zt694-campo')||'',valor,{});return;}
-    if(acao==='tarefa-tentar'){if(cy){var v=vmCuidado(c,cy);responder(c,[ic],v.valor,el);}return;}
+    if(acao==='tarefa-tentar'){if(cy){var v=vmCuidado(c,cy);if(daLinha(v.valor))responderLoja174(c,[ic],v.valor,el);else responder(c,[ic],v.valor,el);}return;}
+    /* 6.124, plano B: a resposta loja/bolsa já está salva e a ficha ainda não ficou em dia */
+    if(acao==='ficha174'){if(cy){var v174=vmCuidado(c,cy),Zb=Z174(),d174=campos174De(c,cy);if(!daLinha(v174.valor)||!Zb||!Zb.daFicha(cy.itemK))return;var f174=falta174(c,cy,d174,c.dia);if(f174){avisoLinha(c.dcKey,ic,f174);redesenharLinha(c.dcKey);return;}avisoLinha(c.dcKey,ic,'');var dcb=c.dcKey,ckb=cy.cycleKey,ikb=cy.itemK;Promise.resolve(fichaDepoisLoja174(dcb,ckb,ikb,v174.valor,d174)).then(function(ok){if(ok)return produtoNaLinha174(dcb,ckb,ikb,d174);}).catch(function(){/* o aviso já está na linha */});}return;}
     if(acao==='completar'){if(cy){var v2=vmCuidado(c,cy);trocarComAnulacao(c,v2,ic,v2.valor,{soCompletar:true});}return;}
     if(acao==='copiar'||acao==='whats-texto'){
       var cx=el.closest('[data-zt694-copia]'),tn=cx&&cx.querySelector('[data-zt694-texto]'),textoCaixa=tn?tn.textContent:'';
@@ -104636,6 +104950,7 @@ renderAtual=function(){
   document.addEventListener('toggle',function(ev){var d=ev.target;if(d&&d.matches&&d.matches('details[data-zt694-aberto]'))estado.abertos[d.getAttribute('data-zt694-aberto')]=d.open;},true);
   document.addEventListener('click',aoClicar,true);
   document.addEventListener('input',aoDigitarData137,true);
+  document.addEventListener('input',aoMudarCampo174,true);document.addEventListener('change',aoMudarCampo174,true);
   document.addEventListener('change',function(ev){var el=ev.target&&ev.target.closest?ev.target.closest('[data-zt694-snoopy-check]'):null;if(el)tratarSnoopyCheck(el);},true);
   window.addEventListener('scroll',function(){
     if(!document.querySelector('[data-zt694-ok]'))return;
