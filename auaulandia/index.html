@@ -1380,7 +1380,9 @@
   #hosp-ficha .rel-tag{font-size:14px}
   #hosp-ficha .alert-pill,#hosp-ficha .alert-pill .alergia-selo{font-size:16px}
   #hosp-ficha .hf-naopode{font-size:17px;font-weight:800;color:var(--crm-critico);background:rgba(192,57,43,.07);border-left:5px solid var(--crm-critico);border-radius:10px;padding:10px 12px;margin:0 0 10px;line-height:1.35}
-  #hosp-ficha #hf-alim-topo .alert-pills{margin:0 0 12px}
+  #hosp-ficha #hf-alim-topo .alert-pills,#hosp-ficha #hf-dados-tarjas .alert-pills{margin:0 0 12px}
+  #hosp-ficha #hf-pills .alert-pill.tp-no-topico{display:none}
+  #hosp-ficha .btn-foto-mini{font-size:14px;min-height:44px}
   #hosp-ficha .janta-box{font-size:17px}
   #hosp-ficha .janta-box div{font-size:16px}
   #hosp-ficha #hf-obsgeral>div,#hosp-ficha #hf-med-como>div,#hosp-ficha #hf-alim-info .hf-alim-obs{font-size:16px !important}
@@ -3585,7 +3587,6 @@
           <div class="hf-chipline" id="hf-chipline">Microchip: --</div>
           <div class="hf-meta" id="hf-meta"></div>
           <div class="hf-estadia" id="hf-estadia"></div>
-          <button type="button" onclick="reemitirFichaAtual()" style="margin-top:8px;background:var(--z-gold);color:var(--z-blue);border:none;border-radius:10px;padding:8px 14px;font-weight:800;font-size:12.5px;cursor:pointer">🖨️ Reemitir ficha de check-in (PDF)</button>
           <span id="hf-mcr"></span>
           <div id="hf-pills"></div>
           <!-- 6.122: tarjas a mais, em contêiner próprio (setHospAlergia reescreve o #hf-pills inteiro): a restrição do almoço
@@ -3595,37 +3596,9 @@
           <!-- Status da gravação da alergia/restrição. Fica FORA do hf-alergia-block de propósito:
                renderHospAlergiaBlock() reescreve aquele bloco e apagaria o aviso na hora. -->
           <div id="hf-alergia-st" style="font-size:12.5px;font-weight:700;margin-top:6px"></div>
-          <div class="so-gestao" style="margin-top:10px">
-            <button class="btn-foto-mini" style="background:var(--z-gold);color:var(--z-blue)" onclick="toggleCadastro()">✏️ Editar cadastro</button>
-          </div>
-          <div class="so-foto" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
-            <button class="btn-foto-mini" onclick="document.getElementById('hfPhotoFile').click()">📷 Trocar foto</button>
-            <button class="btn-foto-mini" style="background:var(--z-blue);color:var(--z-cream)" onclick="salvarFoto()">💾 Salvar foto</button>
-          </div>
-          <div id="hf-fotostatus" style="font-size:11.5px;font-weight:700;margin-top:5px"></div>
-          <div class="so-gestao" style="margin-top:10px">
-            <label style="display:block;font-size:11px;font-weight:700;color:var(--z-blue);margin-bottom:4px">Brincadeiras e brinquedos preferidos</label>
-            <input id="hf-brinq" class="cad-in" placeholder="Ex: bolinha, pelúcia do pato, cabo de guerra" oninput="onBrinq()" style="font-size:13px">
-          </div>
         </div>
       </div>
 
-      <div class="card" id="card-cadastro" style="display:none">
-        <h2 style="font-size:20px;margin-bottom:10px">Dados de cadastro</h2>
-        <div class="cad-grid">
-          <div class="field" style="grid-column:1/-1"><label>Nome do peludinho <span style="font-weight:600;color:var(--muted)">(Gestão / Supervisão)</span></label><input type="text" id="hf-nome-edit" class="cad-in" autocomplete="off" placeholder="Nome do FILHOt" oninput="onCadNome()"></div>
-          <div class="field"><label>Data de nascimento</label><input type="text" id="hf-nasc" class="cad-in" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off" oninput="onCad()" onblur="normalizarNasc()"></div>
-          <div class="field"><label>Idade</label><input type="text" id="hf-idade" class="cad-in" readonly placeholder="—"></div>
-          <div class="field" style="grid-column:1/-1"><label>Idade aproximada <span style="font-weight:600;color:var(--muted)">(quando não se sabe a data — adotado, resgatado)</span></label><input type="text" id="hf-idadeaprox" class="cad-in" placeholder="Ex: aprox. 3 anos · ~5 anos (desde que a família encontrou)" autocomplete="off" oninput="onCad()"></div>
-          <div class="field"><label>Raça</label><input id="hfRaca" class="cad-in" list="racasList" autocomplete="off" placeholder="wes → West Terrier" oninput="onRaca(this.value);onCad()"></div>
-          <div class="field"><label>Cor da pelagem</label><input id="hf-corpelo" class="cad-in" placeholder="Ex: caramelo · preto e branco · tricolor" autocomplete="off" oninput="onCad()"></div>
-          <div class="field"><label>Sexo</label><div class="seg" id="hf-sexo" data-single><button onclick="pick(this);onCad()">Macho</button><button onclick="pick(this);onCad()">Fêmea</button></div></div>
-          <div class="field"><label>Castrado?</label><div class="seg gold" id="hf-cast" data-single><button onclick="pick(this);onCad()">Sim</button><button onclick="pick(this);onCad()">Não</button></div></div>
-          <div class="field"><label>Nome do tutor</label><input type="text" id="hf-tutor" class="cad-in" oninput="onCad()" placeholder="Nome do tutor"></div>
-          <div class="field"><label>Microchip · número completo do visor</label><input type="text" id="hf-chip" class="cad-in" maxlength="15" inputmode="numeric" placeholder="todos os números — 11 a 15 dígitos" oninput="onChip(this.value)"></div>
-        </div>
-        <div class="actions" style="margin-top:8px"><button class="btn btn-primary" onclick="this.textContent=cadTextoSalvar(cadGravarAgora());setTimeout(()=>this.textContent='Salvar cadastro',3500)">Salvar cadastro</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="toggleCadastro()">Fechar</button></div>
-      </div>
       <datalist id="racasList"></datalist>
 
       <!-- A FICHA EM TÓPICOS — Adriana, 27/out/2026: «Clicou no nome do peludinho, aparecem as
@@ -3700,9 +3673,13 @@
       </div>
 
       <div class="card rel-card collapsed tp-card" id="tp-obs">
-        <div class="rel-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleRel('tp-obs')"><h2>Observações <span class="tp-n" id="tpn-obs">0</span></h2><span class="tp-est" id="tpe-obs"></span><span class="rel-caret">▾</span></div>
+        <div class="rel-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleRel('tp-obs')"><h2>Dados gerais <span class="tp-n" id="tpn-obs">0</span></h2><span class="tp-est" id="tpe-obs"></span><span class="rel-caret">▾</span></div>
         <div class="tp-sub" id="tps-obs"></div>
         <div class="rel-body">
+          <!-- 6.122, segunda rodada: «Dados gerais — condições gerais do peludinho» (Adriana, 22/10). As tarjas amarelas MANIAS e ANSIOSO
+               moram aqui, e não mais na faixa do alto; as vermelhas (alergia, restrição, saúde) e a MEDICAÇÃO do cadastro continuam lá
+               (a MEDICAÇÃO pode existir sem agenda: no Medicamento fechado, o resumo diria «Nenhum remédio hoje»). Pinta: fichaTarjasTopicosPintar(). -->
+          <div id="hf-dados-tarjas"></div>
           <div id="hf-obsgeral"></div>
           <div id="hf-vet-instr"></div>
         </div>
@@ -3843,13 +3820,52 @@
       </div>
       <div class="checklist-note">📋 Antes de assinar — o Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
 
-      <div class="card" id="card-texto">
+
+      <!-- 6.122 (03/11/2026), segunda rodada — MAIS INFORMAÇÕES (resposta 76: «o resto da ficha — fotos, brinquedos, cadastro, histórico —
+           vai para um último tópico «Mais informações», fechado»). Os blocos são os mesmos de antes, com os mesmos ids; quem vê cada um
+           continua decidido pelas classes de sempre (.so-gestao, .so-foto, #card-cadastro, #card-texto). Resumo: fichaMaisResumo(). -->
+      <div class="card rel-card collapsed tp-card" id="tp-mais">
+        <div class="rel-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleRel('tp-mais')"><h2>Mais informações</h2><span class="tp-est" id="tpe-mais"></span><span class="rel-caret">▾</span></div>
+        <div class="tp-sub" id="tps-mais"></div>
+        <div class="rel-body">
+        <button type="button" onclick="reemitirFichaAtual()" style="margin-top:8px;background:var(--z-gold);color:var(--z-blue);border:none;border-radius:10px;padding:8px 14px;font-weight:800;font-size:12.5px;cursor:pointer">🖨️ Reemitir ficha de check-in (PDF)</button>
+        <div class="so-gestao" style="margin-top:10px">
+          <button class="btn-foto-mini" style="background:var(--z-gold);color:var(--z-blue)" onclick="toggleCadastro()">✏️ Editar cadastro</button>
+        </div>
+        <div class="so-foto" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <button class="btn-foto-mini" onclick="document.getElementById('hfPhotoFile').click()">📷 Trocar foto</button>
+          <button class="btn-foto-mini" style="background:var(--z-blue);color:var(--z-cream)" onclick="salvarFoto()">💾 Salvar foto</button>
+        </div>
+        <div id="hf-fotostatus" style="font-size:11.5px;font-weight:700;margin-top:5px"></div>
+        <div class="so-gestao" style="margin-top:10px">
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--z-blue);margin-bottom:4px">Brincadeiras e brinquedos preferidos</label>
+          <input id="hf-brinq" class="cad-in" placeholder="Ex: bolinha, pelúcia do pato, cabo de guerra" oninput="onBrinq()" style="font-size:13px">
+        </div>
+        <div class="card" id="card-cadastro" style="display:none">
+        <h2 style="font-size:20px;margin-bottom:10px">Dados de cadastro</h2>
+        <div class="cad-grid">
+          <div class="field" style="grid-column:1/-1"><label>Nome do peludinho <span style="font-weight:600;color:var(--muted)">(Gestão / Supervisão)</span></label><input type="text" id="hf-nome-edit" class="cad-in" autocomplete="off" placeholder="Nome do FILHOt" oninput="onCadNome()"></div>
+          <div class="field"><label>Data de nascimento</label><input type="text" id="hf-nasc" class="cad-in" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off" oninput="onCad()" onblur="normalizarNasc()"></div>
+          <div class="field"><label>Idade</label><input type="text" id="hf-idade" class="cad-in" readonly placeholder="—"></div>
+          <div class="field" style="grid-column:1/-1"><label>Idade aproximada <span style="font-weight:600;color:var(--muted)">(quando não se sabe a data — adotado, resgatado)</span></label><input type="text" id="hf-idadeaprox" class="cad-in" placeholder="Ex: aprox. 3 anos · ~5 anos (desde que a família encontrou)" autocomplete="off" oninput="onCad()"></div>
+          <div class="field"><label>Raça</label><input id="hfRaca" class="cad-in" list="racasList" autocomplete="off" placeholder="wes → West Terrier" oninput="onRaca(this.value);onCad()"></div>
+          <div class="field"><label>Cor da pelagem</label><input id="hf-corpelo" class="cad-in" placeholder="Ex: caramelo · preto e branco · tricolor" autocomplete="off" oninput="onCad()"></div>
+          <div class="field"><label>Sexo</label><div class="seg" id="hf-sexo" data-single><button onclick="pick(this);onCad()">Macho</button><button onclick="pick(this);onCad()">Fêmea</button></div></div>
+          <div class="field"><label>Castrado?</label><div class="seg gold" id="hf-cast" data-single><button onclick="pick(this);onCad()">Sim</button><button onclick="pick(this);onCad()">Não</button></div></div>
+          <div class="field"><label>Nome do tutor</label><input type="text" id="hf-tutor" class="cad-in" oninput="onCad()" placeholder="Nome do tutor"></div>
+          <div class="field"><label>Microchip · número completo do visor</label><input type="text" id="hf-chip" class="cad-in" maxlength="15" inputmode="numeric" placeholder="todos os números — 11 a 15 dígitos" oninput="onChip(this.value)"></div>
+        </div>
+        <div class="actions" style="margin-top:8px"><button class="btn btn-primary" onclick="this.textContent=cadTextoSalvar(cadGravarAgora());setTimeout(()=>this.textContent='Salvar cadastro',3500)">Salvar cadastro</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="toggleCadastro()">Fechar</button></div>
+      </div>
+        <div class="card" id="card-texto">
         <h2>📱 Texto para o tutor</h2>
         <div class="hint">A Gestora gera o texto pronto a partir do que foi marcado e envia ao tutor.</div>
         <textarea id="hf-txt" style="width:100%;font-family:var(--font-ui);font-size:14.5px;line-height:1.5;padding:13px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:90px" placeholder="Clique em Gerar texto"></textarea>
         <div class="actions">
           <button class="btn btn-gold" onclick="gerarTexto()">Gerar texto</button>
           <button class="btn" style="flex:0 0 auto;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="copiarTexto()">Copiar</button>
+        </div>
+      </div>
         </div>
       </div>
 
@@ -18377,7 +18393,7 @@ return { criar };
       var _nota=function(rot,txt){ return txt?('<div style="background:rgba(222,180,40,.14);border-left:4px solid var(--z-gold);border-radius:8px;padding:9px 12px;margin-top:8px;font-size:13.5px;color:var(--z-blue);font-weight:600"><strong>'+rot+':</strong> '+esc(txt)+'</div>'):''; };
       // 6.122 (P4): cada instrução no tópico em que ela é usada. A do remédio vai para o alto do Medicamento; a da comida já
       // está na caixa do jantar da Alimentação (fichaAlimPintar). As Observações ficam com o que sobra: a observação da estadia.
-      var _html=_nota('Observação',_fc.obsGeral||'');
+      var _html=_nota('Observação da estadia',_fc.obsGeral||'');
       var _oe=document.getElementById('hf-obsgeral'); if(_oe) _oe.innerHTML=_html;
       var _mc=document.getElementById('hf-med-como'); if(_mc) _mc.innerHTML=_nota('Observação da medicação',_fc.medObs||'');
     }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
@@ -18388,7 +18404,7 @@ return { criar };
     document.getElementById('hosp-lista').style.display='none';
     document.getElementById('hosp-ficha').style.display='block';
     // 6.122: a classe que tira o cabeçalho da página no celular (CSS «Plantão: a ficha»); a Medicação decide de novo se abre sozinha.
-    try{ document.getElementById('hosp-ficha').classList.add('aberta'); fichaMedAutoZerar(); fichaTarjasExtraPintar(); fichaOntemFaixaPintar(); }catch(e){} /* silencioso de propósito: sem isto, a ficha abre como antes */
+    try{ document.getElementById('hosp-ficha').classList.add('aberta'); fichaMedAutoZerar(); fichaTarjasExtraPintar(); fichaOntemFaixaPintar(); var _tm=document.getElementById('tp-mais'); if(_tm) _tm.classList.add('collapsed'); }catch(e){} /* silencioso de propósito: sem isto, a ficha abre como antes */
     const _hs=document.getElementById('hf-status'); if(_hs) _hs.textContent='';
     const cc=document.getElementById('card-cadastro'); if(cc) cc.style.display='none'; // cadastro começa fechado
     // Zona de risco (deletar pernoite do dia): só aparece para lançamento manual de hoje (tem manualKey);
@@ -18447,9 +18463,10 @@ return { criar };
     fichaTopicoPintar('tp-med', fichaMedResumo());
     // ALIMENTAÇÃO — 6.122 (P2): o NÃO PODE e a comida (a refeição mais perto primeiro); o «Como comeu?», que a Gestão precisa, depois.
     fichaTopicoPintar('tp-alim', fichaAlimResumo(hoje, hora));
-    // OBSERVAÇÕES
-    var ob=0; try{ var og=document.getElementById('hf-obsgeral'); if(og) ob+=og.children.length; var vi=document.getElementById('hf-vet-instr'); if(vi) ob+=vi.querySelectorAll('.vet-instr-box').length; }catch(e){} /* silencioso de propósito: contagem de tela */
-    fichaTopicoPintar('tp-obs', ob ? {estado:'', n:ob, est:'', sub:ob+(ob>1?' recados':' recado')} : {estado:'zero', n:0, est:'', sub:'Nenhum recado'});
+    // DADOS GERAIS (6.122, segunda rodada; era OBSERVAÇÕES) — as condições gerais do peludinho, e MAIS INFORMAÇÕES, o resto da ficha.
+    try{ fichaTarjasTopicosPintar(); }catch(e){} /* silencioso de propósito: redesenho de tela — os cabeçalhos abaixo continuam */
+    fichaTopicoPintar('tp-obs', fichaDadosResumo());
+    fichaTopicoPintar('tp-mais', fichaMaisResumo());
     // OS TRÊS RELATÓRIOS — o Dia pisca até a plantonista ler e confirmar; o Jantar a partir das 18h;
     // a Noite de manhã (é preenchida às 7h, sobre a noite que passou).
     var R=(typeof RELSTATE!=='undefined'&&RELSTATE)||{};
@@ -18638,6 +18655,44 @@ return { criar };
   function fichaTarjasExtraPintar(){
     var el=document.getElementById('hf-pills-extra'); if(!el) return;
     fichaPor(el, currentHosp?fichaTarjasExtraHTML(currentHosp):'');
+  }
+  // ---- DADOS GERAIS E MAIS INFORMAÇÕES (6.122, segunda rodada) ----
+  // As tarjas amarelas MANIAS e ANSIOSO saem da faixa do alto (alertPills não muda: a faixa recebe uma classe que o CSS esconde) e
+  // entram em Dados gerais (o ANSIOSO também na Alimentação). As vermelhas e a MEDICAÇÃO do cadastro continuam na faixa: a MEDICAÇÃO
+  // pode estar no cadastro sem estar na agenda, e o Medicamento fechado diria «Nenhum remédio hoje».
+  function fichaTarjaAmarela(nome, txt){ return '<span class="alert-pill warn">'+escAttr(nome)+': '+escAttr(txt)+'</span>'; }
+  function fichaTarjasTopicosPintar(){
+    var h=currentHosp; if(!h) return;
+    try{ Array.prototype.forEach.call(document.querySelectorAll('#hf-pills .alert-pill.warn'), function(p){
+      var t=String(p.textContent||'').trim(); if(/^(MANIAS|ANSIOSO):/.test(t)) p.classList.add('tp-no-topico');
+    }); }catch(e){} /* silencioso de propósito: sem a marca, a tarja continua também no alto (nada some) */
+    var ex=extraDoHosp(h)||{}, D=[];
+    if(String(ex.manias||'').trim()) D.push(fichaTarjaAmarela('MANIAS', String(ex.manias).trim()));
+    if(ex.ansioso==='Sim') D.push(fichaTarjaAmarela('ANSIOSO', 'come em caixa própria — servir logo após quem tem banho'));
+    fichaPor(document.getElementById('hf-dados-tarjas'), D.length?('<div class="alert-pills">'+D.join('')+'</div>'):'');
+  }
+  // O resumo de Dados gerais: os cuidados e a instrução da veterinária, a observação da estadia, as manias e o ANSIOSO, nesta ordem.
+  function fichaDadosResumo(){
+    var h=currentHosp, P=[];
+    try{ var r=(typeof recomAtivaDe==='function')?recomAtivaDe(h):null;
+      if(r){ (r.cuidados||[]).forEach(function(c){ if(String(c||'').trim()) P.push(String(c).trim()); }); if(String(r.texto||'').trim()) P.push(String(r.texto).trim()); }
+    }catch(e){} /* silencioso de propósito: sem a instrução da veterinária em memória, o resumo segue com o resto */
+    try{ var k=medAgendaKey(h), reg=(k && typeof CF_ESTADIAS!=='undefined' && CF_ESTADIAS)?CF_ESTADIAS[k]:null, og=(reg&&reg.e&&reg.e.ficha&&reg.e.ficha.obsGeral)||'';
+      if(String(og).trim()) P.push(String(og).trim());
+    }catch(e){} /* silencioso de propósito: sem a estadia em memória, não há observação dela */
+    var ex={}; try{ ex=extraDoHosp(h)||{}; }catch(e){ ex={}; } /* silencioso de propósito: sem o cadastro, sem as tarjas */
+    if(String(ex.manias||'').trim()) P.push('Manias: '+String(ex.manias).trim());
+    if(ex.ansioso==='Sim') P.push('Ansioso: come em caixa própria');
+    return P.length ? {estado:'', n:P.length, est:'', sub:P.join(' · ')} : {estado:'zero', n:0, est:'', sub:'Nada especial anotado'};
+  }
+  // O resumo de Mais informações: o que a pessoa da vez vê lá dentro (quem vê cada bloco continua decidido pelo CSS de sempre).
+  function fichaMaisResumo(){
+    var L=['Ficha de check-in (PDF)'];
+    var ve=function(sel){ try{ var el=document.querySelector(sel); return !!(el && getComputedStyle(el).display!=='none'); }catch(e){ return false; } }; /* silencioso de propósito: sem a medida, não promete o bloco */
+    if(ve('#tp-mais .so-foto')) L.push('foto');
+    if(ve('#tp-mais .so-gestao')) { L.push('cadastro'); L.push('brinquedos'); }
+    if(ve('#card-texto')) L.push('texto para o tutor');
+    return {estado:'', est:'', sub:fichaListaTxt(L)};
   }
   // ---- A ALIMENTAÇÃO COM A COMIDA (P2, P3) ----
   // A refeição mais perto da hora de agora (antes ou depois) vem primeiro: às 19h40, o jantar; às 7h10, o café.

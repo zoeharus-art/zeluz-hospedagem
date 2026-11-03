@@ -96,7 +96,7 @@ function cenario(dia, o) {
   const P = [
     { n: 'Biscoito Teste', tutor: 'Rita Teste', raca: 'Spitz Alemão', cad: { alergia: 'frango', restricao: 'sem grãos', ansioso: 'Sim' } },
     { n: 'Mel Teste', tutor: 'Joana Teste', raca: 'SRD', cad: { alergia: 'peixe', restricao: 'sem grãos', manias: 'rouba o brinquedo dos outros' } },
-    { n: 'Thor Teste', tutor: 'Carlos Teste', raca: 'SRD', cad: o.thorCad || { restricao: 'lactose' } },
+    { n: 'Thor Teste', tutor: 'Carlos Teste', raca: 'SRD', cad: o.thorCad || { restricao: 'lactose', medicacao: 'Vermífugo Teste no sábado' } },
   ];
   const est = (p, f) => ({ nome: p.n, tutor: p.tutor, refKey: (p.n + '__' + p.tutor).toLowerCase(), status: 'ativa', entrada: ontem, saida: '2026-11-08', ficha: f });
   const estadias = {
@@ -216,7 +216,8 @@ prova('L2', 'a área protegida do check-in do corpo (ck*, ckt*, pt*, pendAvisarC
 prova('L3', 'as funções novas da ficha não leem nem gravam no banco, não guardam nada no aparelho e não usam os prefixos protegidos', () => {
   const novas = ['fichaPor', 'fichaHoraTxt', 'fichaListaTxt', 'fichaDiaCurto', 'fichaMedPendentes', 'fichaMedResumo', 'fichaMedAutoZerar', 'fichaMedAutoAbrir', 'relAriaSinc', 'fichaAriaSincTodos',
     'fichaTextoContido', 'fichaRestrAlmoco', 'fichaNaoPodeLista', 'fichaTarjasExtraHTML', 'fichaTarjasExtraPintar', 'fichaCafePrimeiro', 'fichaPratoTxt', 'fichaCafeTxt', 'fichaComidaResumo',
-    'fichaAlimResumo', 'fichaAlimPintar', 'fichaOntemFaixaPintar', 'fichaMagDesatualizada', 'fichaMagOcupada', 'fichaRedesenharMag', 'fichaRelogioTick'];
+    'fichaAlimResumo', 'fichaAlimPintar', 'fichaOntemFaixaPintar', 'fichaMagDesatualizada', 'fichaMagOcupada', 'fichaRedesenharMag', 'fichaRelogioTick',
+    'fichaTarjaAmarela', 'fichaTarjasTopicosPintar', 'fichaDadosResumo', 'fichaMaisResumo'];
   novas.forEach((nm) => {
     const f = funcao(nm);
     assert.ok(!/DB\s*\.\s*ref|\.once\(|\.on\(|\.set\(|\.update\(|\.transaction\(|localStorage|sessionStorage|carregar[A-Z]/.test(f), nm + ' não lê nem grava');
@@ -481,7 +482,7 @@ prova('C6', 'Alimentação: resumo «NÃO PODE · Jantar: 80 gramas de ração �
 });
 
 // C7 (AC-V6): a instrução do remédio no alto do Medicamento; a da comida só na Alimentação.
-prova('C7', 'a instrução do remédio fica no alto do Medicamento; as Observações ficam só com a observação da estadia (1 recado)', async () => {
+prova('C7', 'a instrução do remédio fica no alto do Medicamento; Dados gerais (antes Observações) fica com a observação da estadia, sem as instruções do remédio e da comida', async () => {
   const { ctx, page, erros } = await abrir('2026-11-03T19:40:00-03:00', cenario('2026-11-03'));
   try {
     await tocarHospede(page, 'Biscoito Teste');
@@ -494,7 +495,7 @@ prova('C7', 'a instrução do remédio fica no alto do Medicamento; as Observaç
     assert.strictEqual(r.como, 'Observação da medicação: Dar o comprimido escondido no petisco');
     assert.ok(r.acima, 'acima das doses, dentro do Medicamento');
     assert.ok(!/petisco|Servir morno/.test(r.obs), 'as Observações sem as instruções do remédio e da comida: ' + r.obs);
-    assert.ok(r.n === '1' && r.sub === '1 recado', 'Observações: ' + r.n + ' / ' + r.sub);
+    assert.ok(r.n === '2' && r.sub === 'Tutora pediu para olhar se ele manca à noite · Ansioso: come em caixa própria', 'Dados gerais: ' + r.n + ' / ' + r.sub);
     assert.strictEqual((r.alim.match(/Servir morno/g) || []).length, 1, 'a instrução da comida uma vez, na Alimentação');
     assert.deepStrictEqual(erros, [], 'sem erro de página');
   } finally { await ctx.close(); }
@@ -521,11 +522,11 @@ prova('C8', 'primeira tela: sem o cabeçalho da página (gruda 50 px ou menos), 
       assert.ok(!m.headVisivel && m.gruda <= 50, nome + ': cabeçalho — ' + JSON.stringify(m));
       assert.ok(m.foto <= 72 && m.aoLado && !m.chip, nome + ': foto — ' + JSON.stringify(m));
       assert.ok(m.crit.length >= 2 && Math.max.apply(null, m.crit) <= 667, nome + ': tarjas vermelhas na primeira tela — ' + JSON.stringify(m.crit));
-      // AC-V7.3 pede o ALERTA e o MEDICAMENTO (título e resumo) dentro dos 667 px. Com 16 px nas tarjas (AC-V8.1) e os alertas da
-      // estadia como tarja (AC-V2.1), não cabe: a Mel fica com o ALERTA inteiro na tela e o MEDICAMENTO a ~50 px; o Biscoito (5 tarjas)
-      // com o título do ALERTA na tela. A prova segura o que foi possível; o número medido vai para a story.
-      if (nome === 'Mel Teste') assert.ok(m.alerta <= 667 && m.med <= 760, nome + ': ALERTA na primeira tela e MEDICAMENTO logo abaixo — ' + JSON.stringify(m));
-      else assert.ok(m.alertaTit <= 720 && m.med <= 960, nome + ': o título do ALERTA na primeira tela — ' + JSON.stringify(m));
+      // AC-V7.3: o ALERTA e o MEDICAMENTO (título e resumo) dentro dos 667 px. A Mel (2 tarjas vermelhas) cabe; o Biscoito tem 4 tarjas
+      // vermelhas (alergia, restrição e os dois alertas da estadia, que o AC-V2.1 manda deixar à vista) e fica com o ALERTA inteiro na
+      // tela e o MEDICAMENTO logo abaixo. O número medido vai para a story.
+      if (nome === 'Mel Teste') assert.ok(m.alerta <= 667 && m.med <= 667, nome + ': ALERTA e MEDICAMENTO na primeira tela — ' + JSON.stringify(m));
+      else assert.ok(m.alerta <= 667 && m.med <= 800, nome + ': ALERTA na primeira tela e o MEDICAMENTO logo abaixo — ' + JSON.stringify(m));
       console.log('      ' + nome + ': ALERTA termina em ' + m.alerta + ' px, MEDICAMENTO em ' + m.med + ' px, ALIMENTAÇÃO em ' + m.alim + ' px (tela de 667)');
       await voltar(page);
       const lista = await page.evaluate(() => getComputedStyle(document.querySelector('.main > .head')).display);
@@ -546,7 +547,7 @@ prova('C9', 'tudo aberto: nenhum texto com menos de 14 px; tarjas, comida, obser
   const { ctx, page, erros } = await abrir('2026-11-03T19:40:00-03:00', cenario('2026-11-03'));
   try {
     await tocarHospede(page, 'Biscoito Teste');
-    await page.evaluate(() => ['tp-alerta', 'tp-med', 'tp-alim', 'tp-obs', 'card-dia', 'card-inicio', 'card-noite'].forEach((id) => { const c = document.getElementById(id); if (c.classList.contains('collapsed')) toggleRel(id); }));
+    await page.evaluate(() => ['tp-alerta', 'tp-med', 'tp-alim', 'tp-obs', 'card-dia', 'card-inicio', 'card-noite', 'tp-mais'].forEach((id) => { const c = document.getElementById(id); if (c && c.classList.contains('collapsed')) toggleRel(id); }));
     await esperar(400);
     const r = await page.evaluate(() => {
       const vis = (el) => !!(el && el.offsetParent !== null && el.getBoundingClientRect().height > 0);
@@ -637,6 +638,58 @@ prova('C11', 'abrir e fechar os tópicos: 0 leituras e 0 gravações; «Dei agor
     assert.ok(av.length === 1 && av[0].nome === 'Pomada Teste', 'a dose avulsa: ' + JSON.stringify(av));
     assert.deepStrictEqual(erros, [], 'sem erro de página');
   } finally { await ctx.close(); }
+});
+
+// C12 (segunda rodada da 6.122: «Dados gerais» do pedido de 22/10 e «Mais informações» da resposta 76; a ordem do ar fica).
+prova('C12', '«Dados gerais» com as tarjas amarelas MANIAS e ANSIOSO e a observação da estadia; a MEDICAÇÃO do cadastro continua no alto; «Mais informações», fechado, por último, com o PDF, a foto, o cadastro, os brinquedos e o texto ao tutor', async () => {
+  const { ctx, page, erros } = await abrir('2026-11-03T18:40:00-03:00', cenario('2026-11-03'));
+  try {
+    const ler = () => page.evaluate(() => {
+      const vis = (el) => !!(el && el.offsetParent !== null);
+      const ordem = ['tp-alerta', 'tp-med', 'tp-alim', 'tp-obs', 'card-dia', 'tp-mais'].map((id) => { const e = document.getElementById(id); return e ? Math.round(e.getBoundingClientRect().top + scrollY) : -1; });
+      return { titulo: document.querySelector('#tp-obs .rel-head h2').textContent.replace(/\s+\d+\s*$/, '').trim(), maisTitulo: ((document.querySelector('#tp-mais .rel-head h2') || {}).textContent || '').trim(),
+        maisFechado: document.getElementById('tp-mais').classList.contains('collapsed'), maisSub: document.getElementById('tps-mais').innerText,
+        noAlto: Array.from(document.querySelectorAll('#hf-pills .alert-pill')).filter(vis).map((p) => p.innerText.replace(/\s+/g, ' ')),
+        dados: Array.from(document.querySelectorAll('#hf-dados-tarjas .alert-pill')).map((p) => p.innerText), medSub: document.getElementById('tps-med').innerText,
+        obs: document.getElementById('hf-obsgeral').innerText.replace(/\s+/g, ' '), reemitirNoMais: !!document.querySelector('#tp-mais button[onclick="reemitirFichaAtual()"]'),
+        reemitirFora: document.querySelectorAll('button[onclick="reemitirFichaAtual()"]').length, ordem, aria: document.querySelector('#tp-mais .rel-head').getAttribute('aria-expanded') };
+    });
+    await tocarHospede(page, 'Mel Teste');
+    let r = await ler();
+    assert.strictEqual(r.titulo, 'Dados gerais', 'o título');
+    assert.deepStrictEqual(r.dados, ['MANIAS: rouba o brinquedo dos outros'], 'MANIAS dentro de Dados gerais');
+    assert.ok(r.noAlto.every((t) => !/^MANIAS|^ANSIOSO/.test(t)) && r.noAlto.some((t) => /ALERGIA A PEIXE/.test(t)) && r.noAlto.some((t) => /RESTRIÇÃO: sem grãos/.test(t)), 'no alto, sem MANIAS e ANSIOSO, com as vermelhas: ' + r.noAlto.join(' | '));
+    assert.strictEqual(r.maisTitulo, 'Mais informações', 'o tópico Mais informações');
+    assert.ok(r.maisFechado && r.aria === 'false' && r.reemitirNoMais && r.reemitirFora === 1, 'fechado, com o PDF dentro (e só lá): ' + JSON.stringify(r));
+    assert.strictEqual(r.maisSub, 'Ficha de check-in (PDF)', 'o resumo para a plantonista');
+    const ord = r.ordem; assert.ok(ord.every((x, i) => i === 0 || x > ord[i - 1]), 'a ordem do ar, com Mais informações por último: ' + ord.join(' < '));
+    await voltar(page); await tocarHospede(page, 'Biscoito Teste');
+    r = await ler();
+    assert.deepStrictEqual(r.dados, ['ANSIOSO: come em caixa própria — servir logo após quem tem banho'], 'ANSIOSO dentro de Dados gerais');
+    assert.strictEqual(r.obs, 'Observação da estadia: Tutora pediu para olhar se ele manca à noite');
+    // a MEDICAÇÃO do cadastro sem agenda (Thor): continua à vista no alto, porque o Medicamento diz «Nenhum remédio hoje»
+    await voltar(page); await tocarHospede(page, 'Thor Teste');
+    r = await ler();
+    assert.ok(r.noAlto.some((t) => t === 'MEDICAÇÃO: Vermífugo Teste no sábado') && /Nenhum remédio hoje/.test(r.medSub), 'a MEDICAÇÃO no alto: ' + r.noAlto.join(' | ') + ' / ' + r.medSub);
+    await voltar(page); await tocarHospede(page, 'Biscoito Teste');
+    // abre, troca de hóspede, volta fechado
+    await page.tap('#tp-mais .rel-head'); await esperar(200);
+    assert.ok(!(await ler()).maisFechado, 'abriu com o toque');
+    await voltar(page); await tocarHospede(page, 'Biscoito Teste');
+    assert.ok((await ler()).maisFechado, 'abrir a ficha de novo: fechado');
+    assert.deepStrictEqual(erros, [], 'sem erro de página');
+  } finally { await ctx.close(); }
+  // a Gestão vê mais coisas lá dentro: o resumo diz o que ela vai achar
+  const g = await abrir('2026-11-03T18:40:00-03:00', cenario('2026-11-03', { papel: 'gestao' }));
+  try {
+    await g.page.evaluate(() => irParaView('hospedagem')); await esperar(800);   // a Gestão entra pelo Início; a plantonista, direto no Plantão
+    await tocarHospede(g.page, 'Biscoito Teste');
+    const sub = await g.page.evaluate(() => document.getElementById('tps-mais').innerText);
+    assert.strictEqual(sub, 'Ficha de check-in (PDF), foto, cadastro, brinquedos e texto para o tutor', 'o resumo para a Gestão');
+    await g.page.evaluate(() => { toggleRel('tp-mais'); toggleCadastro(); }); await esperar(300);
+    const cad = await g.page.evaluate(() => { const c = document.getElementById('card-cadastro'); return { aberto: c.style.display === 'block', dentro: !!c.closest('#tp-mais') }; });
+    assert.ok(cad.aberto && cad.dentro, '«Editar cadastro» abre o cadastro dentro de Mais informações: ' + JSON.stringify(cad));
+  } finally { await g.ctx.close(); }
 });
 
 // ================================================================== a rodada
