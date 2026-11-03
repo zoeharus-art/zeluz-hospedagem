@@ -46139,10 +46139,14 @@ return { criar };
     });
     return mudou;
   }
+  // 6.124 (QA, rodada 1): o recibo do Encãotador no «Conferir cuidado», depois que a Zelozinha já deixou a ficha em dia, grava
+  // antes = depois (nada mudou). Ele fica no banco como rastro da execução, mas não é uma atualização: não entra no «Atualizados
+  // hoje» (nem o «Desfazer» dele, que não desfaria nada). A linha da Zelozinha, que mudou a data, continua lá, com o «Desfazer».
+  function prevCorrSemMudanca(L){ return prevCorrCampos(L).length>0 && !prevCorrMudouDepois(L, (L&&L.antes)||{}); }
   function prevCorrLinhas(){
     var dia=dcDataKey(); if(PREV_CORR_DIA!==dia) return [];
     return Object.keys(PREV_CORR||{}).map(function(id){ return Object.assign({id:id}, PREV_CORR[id]||{}); })
-      .filter(function(L){ return L.k; }).sort(function(a, b){ return (Number(b.ts)||0)-(Number(a.ts)||0); });
+      .filter(function(L){ return L.k && !prevCorrSemMudanca(L); }).sort(function(a, b){ return (Number(b.ts)||0)-(Number(a.ts)||0); });
   }
   // ---- o quadro (AC5.3): no lugar do aviso verde de 10 minutos, nas três telas ----
   function prevCorrQuadroHTML(tela){
@@ -46404,7 +46408,8 @@ return { criar };
           :('<div><label class="cad-lb">Vale até</label><input type="date" class="cad-in" id="prevP_'+chId+'_'+it.k+'" value="'+escAttr(prox)+'" placeholder="calculo sozinho" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)"></div>'))
         // Quem deu: em casa o tutor às vezes antecipa por ordem do veterinário — o registro
         // precisa dizer QUEM deu, senão a conta da próxima dose fica sem responsável (Adriana, 22/ago).
-        +(embutido138?'<div style="grid-column:1/-1"><label class="cad-lb">Local informado</label><p class="hint">Tutor em casa</p></div>':('<div style="grid-column:1/-1"><label class="cad-lb">Quem deu</label>'
+        // 6.124: no formulário da Zelozinha em loja/bolsa (seleção 174), o local é o que o Salvar grava: «Day Care»
+        +(embutido138?'<div style="grid-column:1/-1"><label class="cad-lb">Local informado</label><p class="hint">'+(o.local138==='Day Care'?'Day Care':'Tutor em casa')+'</p></div>':('<div style="grid-column:1/-1"><label class="cad-lb">Quem deu</label>'
         +['Day Care','Tutor em casa'].map(function(op){
             var ondeAtual=String(ex[it.k.replace(/_p$/,'')+'_ondefoi']||'');
             if(typeof cuidado57OndeValor==='function')ondeAtual=cuidado57OndeValor(chave,it.k,ondeAtual);
@@ -46439,11 +46444,11 @@ return { criar };
       +itens.map(linha).join('')
       +'</div>';
   }
-  function prevEdicaoItemHTML138(p,k,nome){
+  function prevEdicaoItemHTML138(p,k,nome,local){
     var chave=String(p&&pelKey(p)||''),itens=PREV_ITENS.filter(function(x){return x.k===k;});if(!chave||itens.length!==1)return{ok:false,motivo:'Não encontrei o formulário deste cuidado.'};
     if(PREV_ABERTO){var pendente=prevLanceNaoSalvo(PREV_ABERTO);if(pendente)return{ok:false,motivo:'Há uma edição não salva em Prevenção. Salve ou descarte antes de abrir este cuidado.'};PREV_ABERTO='';renderPrevencao();}
     if(document.getElementById('prevT_'+chave+'_'+k))return{ok:false,motivo:'Este cuidado já está aberto em outro editor.'};
-    return{ok:true,html:prevEdicaoHTML({p:p,nome:nome||pelNome(p)||p.n||'Atualizar ficha',embutido138:true},[k])};
+    return{ok:true,html:prevEdicaoHTML({p:p,nome:nome||pelNome(p)||p.n||'Atualizar ficha',embutido138:true,local138:local==='Day Care'?'Day Care':''},[k])};
   }
   // 6.63 (AC7.1): a pergunta da escova aberta no «Lance aqui mesmo» (a chave do FILHOt), uma por vez.
   var PREV_ED_ESCOVA='';
@@ -103846,6 +103851,7 @@ renderAtual=function(){
     var f171=ficha171De(c,cy,confTutor,i),st171=!f171.ok&&f171.msg?'<p class="zt694-sub'+(f171.estado==='falhou'?' zt694-ficha171-erro':'')+'" role="status" data-zt694-ficha171-st>'+esc(f171.msg)+'</p>':'';
     var dataKey=T.chaveRascunho137(c.dcKey,cy.cycleKey,cy.itemK),dataId='zt694-tutor-fez-'+encodeURIComponent(dataKey),dataFez=Object.prototype.hasOwnProperty.call(estado.datasTutor137,dataKey)?estado.datasTutor137[dataKey]:(confTutor&&confTutor.dataAplicacao||pendenciaFicha&&v.retorno143.confirmacaoTutor137.dataAplicacao||''),atualizarFicha=confTutor?'<button type="button" class="btn zt694-acao" data-zt694-acao="atualizar-ficha" data-zt694-ciclo="'+i+'"'+(travado?' disabled':'')+'>Atualizar ficha</button>':'',fez='<div class="zt694-tutor-fez" data-zt694-tutor-fez><label class="cad-lb" for="'+esc(dataId)+'">Data real em que o tutor fez</label><div class="zt694-btns"><input class="cad-in" type="date" id="'+esc(dataId)+'" data-zt694-data-fez data-zt694-cycle-key="'+esc(encodeURIComponent(cy.cycleKey))+'" data-zt694-item-k="'+esc(encodeURIComponent(cy.itemK))+'" value="'+esc(dataFez)+'" max="'+esc(hojeSP137())+'"'+(travado?' disabled':'')+'><button type="button" class="btn btn-gold zt694-acao" data-zt694-acao="tutor-fez" data-zt694-ciclo="'+i+'"'+(travado?' disabled':'')+'>'+(pendenciaFicha?'Conferir data e registrar':'Tutor já fez')+'</button>'+atualizarFicha+'</div><p class="zt694-sub">'+(confTutor?'Resposta registrada. Data informada: '+esc(dataBR(confTutor.dataAplicacao))+' · Atualizar ficha — pendente. A ficha ainda não foi atualizada.':pendenciaFicha?'Data informada antes: '+esc(dataBR(v.retorno143.confirmacaoTutor137.dataAplicacao))+'. Confira e registre hoje para abrir a atualização da ficha.':'Informe a data: a resposta fica registrada e a ficha é atualizada com essa data.')+'</p>'+st171+'<div data-z138-editor-slot></div></div>';
     if(f171.ok)fez=f171.html;
+    else if(!confTutor&&emDia174(c,v))fez='';/* 6.124 (QA, rodada 1): loja/bolsa já deixou a ficha em dia hoje: o «Tutor já fez» sai do cuidado (tocar nele não gravaria nada) */
     var aviso=estado.avisos[c.dcKey+'|'+i]?'<p class="zt694-aviso" data-zt694-aviso>'+esc(estado.avisos[c.dcKey+'|'+i])+'</p>':'';
     if(v.retorno143){var h=v.retorno143;aviso+='<p class="zt694-aviso" data-zt694-retorno143>Resposta de '+esc(dataBR(h.dia))+' · '+esc(h.humanoNome)+'. '+esc(h.tipo==='atualizar_ficha'?'Tutor já fez em '+dataBR(h.confirmacaoTutor137.dataAplicacao)+'. Atualizar ficha internamente; não cobrar o tutor de novo.':h.tipo==='acompanhar_fora'?'Cuidado fora da Zêluz: acompanhar com o tutor nesta presença.':'Equipe precisa retomar a resposta do tutor nesta presença.')+'</p>';}
     var bloq=v.bloqueado?'<p class="zt694-sub">'+(c.identidadeAmbigua?'Há mais de uma ficha possível para este peludinho. Confirme o cadastro; nenhuma resposta será salva até o alvo ficar único.':'Atualize para confirmar o vínculo deste cuidado antes de registrar.')+'</p>':'';
@@ -104003,7 +104009,7 @@ renderAtual=function(){
   function restaurarFicha138(r){
     var s=r&&r.selecao,c=s&&estado.itens[s.dcKey],pet=s&&fichaUnica138(s.pelKey,s.dcKey);if(!s||window.Z138_FICHA_SELECAO!==s||estado.dia!==s.dia||!c||!pet)return;
     var i=(c.ciclos||[]).findIndex(function(x){return x&&x.cycleKey===s.cycleKey&&x.itemK===s.itemK;}),art=document.querySelector('[data-zt694-pet="'+encodeURIComponent(s.dcKey)+'"]'),care=art&&art.querySelector('[data-zt694-care="'+i+'"]'),slot=care&&care.querySelector('[data-z138-editor-slot]');if(i<0||!slot)return;
-    var ed=prevEdicaoItemHTML138(pet,s.itemK,cuidadoNome(c.ciclos[i]));if(!ed||ed.ok!==true)return;slot.innerHTML=ed.html;Object.keys(r.valores||{}).forEach(function(id){var x=document.getElementById(id);if(x)x.value=r.valores[id];});
+    var ed=prevEdicaoItemHTML138(pet,s.itemK,cuidadoNome(c.ciclos[i]),s.versao===174?'Day Care':'');if(!ed||ed.ok!==true)return;slot.innerHTML=ed.html;Object.keys(r.valores||{}).forEach(function(id){var x=document.getElementById(id);if(x)x.value=r.valores[id];});
     var dt=document.getElementById('prevT_'+s.pelKey+'_'+s.itemK),q=document.getElementById('prevQ_'+s.pelKey+'_'+s.itemK);if(dt)dt.readOnly=true;if(q)q.readOnly=true;slot.insertAdjacentHTML('afterbegin','<p role="status" class="hint" style="margin:8px 0;color:var(--z-blue)">Resposta registrada. Confira produto, regime e vencimento; a ficha só muda depois de tocar em Salvar e receber a confirmação.</p>');
   }
   function pintar(alvos,preservar){
@@ -104222,11 +104228,16 @@ renderAtual=function(){
   function amanha138(d){var p=txt(d).split('-').map(Number),x=new Date(Date.UTC(p[0],p[1]-1,p[2]+1));return x.toISOString().slice(0,10);}
   function respostaFicha138(reg,cy){var rv=null;try{rv=reg&&reg.respostasEscopo49&&reg.respostasEscopo49.porCiclo&&reg.respostasEscopo49.porCiclo[codificar(cy)];}catch(_){rv=null;}return rv&&rv.cycleKey===cy.cycleKey&&rv.itemK===cy.itemK?rv:null;}
   function fichaUnica138(pk,dc){var a=[];try{a=(PELUDINHOS||[]).filter(function(p){return p&&txt(pelKey(p))===pk&&txt(dcKey(p.n,p.tutor))===dc;});}catch(_){a=[];}return a.length===1?a[0]:null;}
+  /* 6.124 (QA, rodada 1): o formulário que ficou aberto (a seleção) é deste MESMO cuidado? Mesma ficha, mesmo FILHOt do dia, mesmo ciclo e mesmo item. */
+  function mesmoCuidado138(s,pk,dc,cy){return !!s&&!!cy&&s.pelKey===pk&&s.dcKey===dc&&s.cycleKey===cy.cycleKey&&s.itemK===cy.itemK;}
+  /* Fecha o formulário nativo aberto no cartão e esquece a seleção dele (nada é gravado). */
+  function largarFicha138(){var ed=document.querySelector('[data-z138-editor-native]'),sl=ed&&ed.closest('[data-z138-editor-slot]');if(sl)sl.innerHTML='';window.Z138_FICHA_SELECAO=null;estado.rascunhoFicha138=null;}
   async function abrirFichaTutor138(c,v,i,care){
     if(c&&(c.saiuHoje===true||c.saidaNaoConfirmada===true)){avisoLinha(c.dcKey,i,'A presença não permite alterar a ficha por este cartão.');redesenharLinha(c.dcKey);return false;}
     var conf=confirmacaoTutorDe137(v&&v.atual),inicio=atorFicha138(),pk=txt(c&&c.pelKey),dc=txt(c&&c.dcKey),cy=v&&v.cy,slot=care&&care.querySelector('[data-z138-editor-slot]');if(!conf||!pk||!dc||!cy||!slot||!atorIgual138(inicio,inicio)){avisoLinha(dc,i,'Não consegui confirmar a resposta e a sessão. Nada foi aberto.');redesenharLinha(dc);return false;}
-    var aberta=window.Z138_FICHA_SELECAO;if(aberta&&aberta.dcKey===dc&&aberta.cycleKey===cy.cycleKey&&aberta.itemK===cy.itemK&&slot.querySelector('[data-z138-editor-native]'))return true;
-    if(aberta){if(prevLanceNaoSalvo(aberta.pelKey)){avisoLinha(dc,i,'Há dados de outro cuidado ainda não salvos. Salve ou feche aquele editor antes de continuar.');redesenharLinha(dc);return false;}var outro=document.querySelector('[data-z138-editor-native]'),outroSlot=outro&&outro.closest('[data-z138-editor-slot]');if(outroSlot)outroSlot.innerHTML='';window.Z138_FICHA_SELECAO=null;estado.rascunhoFicha138=null;}
+    var aberta=window.Z138_FICHA_SELECAO,mesmo=mesmoCuidado138(aberta,pk,dc,cy);if(mesmo&&aberta.versao===138&&aberta.dataAplicacao===conf.dataAplicacao&&slot.querySelector('[data-z138-editor-native]'))return true;
+    /* 6.124 (QA, rodada 1): o formulário aberto deste MESMO cuidado (de outra data ou de outra resposta, ou fora do cartão) é refeito com a releitura abaixo; só o de OUTRO cuidado, com dados não salvos, barra */
+    if(aberta){if(!mesmo&&prevLanceNaoSalvo(aberta.pelKey)){avisoLinha(dc,i,'Há dados de outro cuidado ainda não salvos. Salve ou feche aquele editor antes de continuar.');redesenharLinha(dc);return false;}largarFicha138();}
     dizerNaLinha(dc,'Conferindo a ficha antes de abrir…');
     try{
       var atual=await estado.api.atualizarUm(dc,estado.projecao),pet=fichaUnica138(pk,dc),snaps=await Promise.all([DB.ref('daycare/cadastro/'+pk).once('value'),DB.ref('daycare/vencimentos/'+c.dia+'/'+dc).once('value')]),cad=snaps[0]&&snaps[0].val?snaps[0].val():null,reg=snaps[1]&&snaps[1].val?snaps[1].val():null,atorAgora=atorFicha138();
@@ -104282,7 +104293,12 @@ renderAtual=function(){
     if(r&&r.ok===false)return falhou('A ficha não foi atualizada'+(txt(r.erro)?': '+txt(r.erro):'')+'. Confira o formulário abaixo e toque em Salvar, ou use «Atualizar ficha».');
     return falhou('A ficha ainda não foi atualizada: confira o formulário abaixo e toque em Salvar.');
   }
-  window.zTutor138DepoisSalvar=function(s){estado.rascunhoFicha138=null;Promise.resolve(atualizarLinha(s.dcKey)).then(function(){redesenharLinha(s.dcKey);});};
+  window.zTutor138DepoisSalvar=function(s){
+    estado.rascunhoFicha138=null;
+    /* 6.124 (QA, rodada 1): o «Salvar» do formulário (o plano B depois de uma falha) termina como o toque: o cuidado que acabou de ficar em dia continua no cartão, com a vitória */
+    try{var c=estado.itens[s.dcKey],cy=c&&c.dia===s.dia?(c.ciclos||[]).filter(function(x){return x&&x.cycleKey===s.cycleKey&&x.itemK===s.itemK;})[0]:null;if(cy)lembrarFeito174(c,cy);if(estado.ficha174)delete estado.ficha174[chave171(s.dcKey,s.cycleKey,s.itemK)];}catch(_){/* só a vista do cartão */}
+    Promise.resolve(atualizarLinha(s.dcKey)).then(function(){redesenharLinha(s.dcKey);});
+  };
   window.zTutor138DepoisFalhar=function(s,r){if(r&&r.fichaSalva===true){dizerNaLinha(s.dcKey,'A ficha foi atualizada, mas falta confirmar o recibo. Use “Tentar confirmar de novo” neste cartão; não é preciso lançar o cuidado novamente.');return;}dizerNaLinha(s.dcKey,'A ficha não foi salva: '+(txt(r&&r.erro)||'confira os campos e tente novamente')+'. O que foi digitado continua no cartão.');};
   function fecharFichaTutor138(c,cy,care){
     var s=window.Z138_FICHA_SELECAO,slot=care&&care.querySelector('[data-z138-editor-slot]'),pk=txt(c&&c.pelKey);if(!slot)return;
@@ -104347,7 +104363,8 @@ renderAtual=function(){
   function falta174(c,cy,d,dt){
     var k=cy&&cy.itemK,ex=fichaDo174(c),nome=String(d&&d.nome||'');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(String(dt||'')))return 'Falta a data em que foi feito.';
-    if(nome.length>80||/[\u0000-\u001F\u007F]/.test(nome))return 'O nome do produto pode ter até 80 letras.';
+    if(nome.length>80)return 'O nome do produto pode ter até 80 letras.';
+    if(/[\u0000-\u001F\u007F]/.test(nome))return 'O nome do produto tem um caractere invisível (por exemplo, uma tabulação): apague e digite o nome de novo.';
     if(k==='ecto_p'){
       var r=txt(d&&d.regime);if(!r)return 'Falta o produto do carrapaticida: escolha em «Qual produto?».';
       if(!(ectoDias174(r,ex)>0))return 'O produto escolhido está sem duração: escolha outro em «Qual produto?».';
@@ -104378,6 +104395,10 @@ renderAtual=function(){
     return h;
   }
   function fraseEcto174(pr,ex){try{return typeof ectoFraseDias==='function'?ectoFraseDias(txt(pr),pr==='Outro'?(parseInt((ex||{}).ecto_outro_dias,10)||0):0):'';}catch(_){return '';}}
+  /* Loja ou bolsa e a ficha deste cuidado já em dia com a data de hoje (é quando o bloco mostra a vitória). */
+  function emDia174(c,v){
+    try{var Z=Z174(),cy=v&&v.cy;return !!(Z&&cy&&Z.daFicha(cy.itemK)&&!v.bloqueado&&c.dia===diaAtual()&&Z.origemDe(v.valor)&&Z.fichaTemData(fichaDo174(c),cy.itemK,c.dia));}catch(_){return false;}
+  }
   /* O bloco do cuidado: o que a ficha precisa (antes do toque) ou a vitória (depois). Nada aqui grava. */
   function ficha174HTML(c,v,i,travado){
     try{
@@ -104445,7 +104466,10 @@ renderAtual=function(){
     if(c&&(c.saiuHoje===true||c.saidaNaoConfirmada===true)){avisoLinha(dc,i,'A presença não permite alterar a ficha por este cartão.');return false;}
     if(!Z||!rv0||rv0.decisao!=='autorizar'||rv0.origem!==origem||!pk||!dc||!cy||!slot||!atorIgual138(inicio,inicio)){avisoLinha(dc,i,'Não consegui confirmar a resposta e a sessão. A ficha não foi mexida.');return false;}
     var aberta=window.Z138_FICHA_SELECAO;
-    if(aberta){if(prevLanceNaoSalvo(aberta.pelKey)){avisoLinha(dc,i,'Há dados de outro cuidado ainda não salvos. Salve ou feche aquele editor antes de continuar.');return false;}var outro=document.querySelector('[data-z138-editor-native]'),outroSlot=outro&&outro.closest('[data-z138-editor-slot]');if(outroSlot)outroSlot.innerHTML='';window.Z138_FICHA_SELECAO=null;estado.rascunhoFicha138=null;}
+    /* 6.124 (QA, rodada 1): depois de uma falha do prevLancar (a rede cai no meio), o formulário DESTE cuidado fica aberto com a data de hoje,
+       e o «Atualizar ficha» o via como «outro cuidado não salvo» e não andava. O mesmo cuidado é refeito aqui (relendo a ficha, a resposta,
+       a presença e a sessão abaixo) com o que está no bloco do cuidado; só o formulário de OUTRO cuidado, com dados não salvos, barra. */
+    if(aberta){if(!mesmoCuidado138(aberta,pk,dc,cy)&&prevLanceNaoSalvo(aberta.pelKey)){avisoLinha(dc,i,'Há dados de outro cuidado ainda não salvos. Salve ou feche aquele editor antes de continuar.');return false;}largarFicha138();}
     dizerNaLinha(dc,'Conferindo a ficha antes de gravar…');
     try{
       var atual=await estado.api.atualizarUm(dc,estado.projecao),pet=fichaUnica138(pk,dc),snaps=await Promise.all([DB.ref('daycare/cadastro/'+pk).once('value'),DB.ref('daycare/vencimentos/'+c.dia+'/'+dc).once('value')]),cad=snaps[0]&&snaps[0].val?snaps[0].val():null,reg=snaps[1]&&snaps[1].val?snaps[1].val():null,atorAgora=atorFicha138();
@@ -104454,7 +104478,7 @@ renderAtual=function(){
       var selecao={versao:174,origem:origem,dia:c.dia,dcKey:dc,pelKey:pk,petId:txt(c.petId),tutorId:txt(c.tutorId),cycleKey:cy.cycleKey,itemK:cy.itemK,dataAplicacao:c.dia,respostaId:txt(rv.respostaId),revisao:Number(rv.revisao),ator:inicio};
       try{if(typeof dashCuidado36Limpar==='function')dashCuidado36Limpar();}catch(_){/* esta atualização é da Zelozinha; nunca herda uma execução do Encãotador */}
       slot=slotAtual174(dc,i)||slot;/* o cartão pode ter sido redesenhado durante as leituras (o Snoopy, o Lançamento do dia): o lugar do formulário é o do cartão na tela */
-      slot.innerHTML='';var editor=prevEdicaoItemHTML138(pet,cy.itemK,cuidadoNome(cy));if(!editor||editor.ok!==true)throw Error(editor&&editor.motivo||'Não consegui montar o formulário nativo deste cuidado.');slot.innerHTML=editor.html;
+      slot.innerHTML='';var editor=prevEdicaoItemHTML138(pet,cy.itemK,cuidadoNome(cy),'Day Care');if(!editor||editor.ok!==true)throw Error(editor&&editor.motivo||'Não consegui montar o formulário nativo deste cuidado.');slot.innerHTML=editor.html;
       var campo=document.getElementById('prevT_'+pk+'_'+cy.itemK),quem=document.getElementById('prevQ_'+pk+'_'+cy.itemK);if(!campo||!quem)throw Error('O formulário nativo deste cuidado ficou incompleto. Nada foi salvo.');
       campo.value=c.dia;campo.readOnly=true;quem.value=Z.quemDeu(inicio.nome);quem.readOnly=true;window.Z138_FICHA_SELECAO=selecao;estado.rascunhoFicha138=null;
       if(!aplicarCampos174(pk,cy.itemK,dados))throw Error('O produto escolhido não entrou no formulário da ficha. Nada foi salvo.');

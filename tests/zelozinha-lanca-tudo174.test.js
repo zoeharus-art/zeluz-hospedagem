@@ -11,6 +11,9 @@
  *   L — Node (vm): as funções puras novas (ZelozinhaLanca174), a validação irmã da 138, o dia de São Paulo perto da meia-noite e o código;
  *   C — Chromium a 375 px (Playwright): o APP REAL (file://) com o banco de mentira por baixo; os toques são cliques de verdade nos botões.
  *       Sem o Playwright/Chromium as provas C dizem PULADO (e não contam como passadas).
+ * C11 a C13 (e o fim da C7) vêm da rodada 1 do QA: a rede caindo no meio do toque (o «Atualizar ficha» e o «Salvar» do formulário concluem,
+ * em loja, bolsa e «Tutor já fez»), o «Local informado» do formulário, o «Tutor já fez» depois da ficha em dia, o aviso do caractere
+ * invisível e o «Atualizados hoje» sem o recibo que não muda nada.
  *
  * Uso:  node tests/zelozinha-lanca-tudo174.test.js
  *       TZ=America/Sao_Paulo node tests/zelozinha-lanca-tudo174.test.js
@@ -614,6 +617,9 @@ prova('C7', 'depois do toque na Zelozinha (loja e bolsa), o «Conferir cuidado»
       assert.strictEqual(mudaram.length, 1, 'uma atualização só da data na Prevenção: ' + JSON.stringify(rs));
       const recibo = rs.filter((x) => x.execucaoPrevencao);
       assert.strictEqual(recibo.length, 1, 'o recibo da execução do Encãotador'); assert.strictEqual(recibo[0].depois.ecto_t, recibo[0].antes.ecto_t, 'o recibo não muda a ficha');
+      // QA (rodada 1): o recibo que não muda nada fica no banco, mas não vira uma segunda entrada no «Atualizados hoje» (nem um «Desfazer» que não desfaria nada)
+      const hoje = await m.ev(async () => { PREV_CORR_ERRO = ''; await prevCorrCarregar(true); return { linhas: prevCorrLinhas().map((x) => [x.k, x.antes && x.antes.ecto_t, x.depois && x.depois.ecto_t]), quadro: (prevCorrQuadroHTML('hoje').match(/>Desfazer<\/button>/g) || []).length }; });
+      igual(hoje, { linhas: [['ecto_p', '2026-10-01', DIA]], quadro: 1 }, valor + ': «Atualizados hoje» com uma entrada só, a que mudou a data (o banco tem ' + rs.length + ' registros)');
       assert.ok(!/a ficha mudou|CUIDADO A CONFERIR|NÃO CONSEGUI/i.test(modal), 'nenhum cartaz de erro: ' + modal);
       assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
     } finally { await m.fechar(); }
@@ -656,6 +662,125 @@ prova('C9', 'perto da meia-noite (23h50 de São Paulo), em aparelho em UTC ou em
     const t = await m.ev((s) => { const b = document.querySelector(s + ' [data-zt694-ficha174]'); return b ? b.innerText : ''; }, m.cuidado('Teste Theo', 'ecto_p'));
     assert.match(t, /«Autorizou pegar na loja» e «Trouxe na bolsa»: feito hoje, 03\/11\/2026\./, 'o fuso do navegador é ' + FUSO_NAVEGADOR + ': ' + t);
     assert.strictEqual(await m.ev(() => window.ZelozinhaLanca174.hojeSP(Date.now())), DIA);
+  } finally { await m.fechar(); }
+}, 'C');
+
+/* QA (rodada 1, bloqueio 1): a rede cai no meio do toque. A resposta e a linha do Lançamento do dia ficam salvas e a ficha não; o formulário
+   do cuidado fica aberto (o plano B). O «Atualizar ficha» do cuidado precisa concluir num toque, sem «outro cuidado», sem duplicar nada. */
+const falharPrevLancar = (m) => m.ev(() => { window.__prevLancarReal = window.__prevLancarReal || prevLancar; window.__falhasPrev = 0; window.prevLancar = function () { window.__falhasPrev++; return Promise.resolve({ ok: false, erro: 'sem rede (teste)' }); }; });
+const voltarPrevLancar = (m) => m.ev(() => { window.prevLancar = window.__prevLancarReal; });
+const editorTexto = (m, n, k) => m.ev((s) => { const e = document.querySelector(s + ' [data-z138-editor-native]'); return e ? e.innerText : ''; }, m.cuidado(n, k));
+const SEM_OUTRO = /Há dados de outro cuidado/;
+const fichaEmDiaLoja = async (m, n) => {
+  const f = await m.ficha(n);
+  igual([f.ecto_t, f.ecto_p, f.ecto_prod, f.ecto_tipo, f.ecto_nome, f.ecto_ondefoi, f.ecto_por], [DIA, '2026-12-03', 'Pipeta', 'Pipeta', 'Confront pet', 'Day Care', 'Day Care — registrado por Amanda'], n + ': a ficha em dia');
+};
+
+prova('C11', 'a rede cai no meio do toque (loja e bolsa): a resposta e a linha ficam salvas, a ficha não, e o cartão avisa; o formulário que ficou aberto diz «Local informado: Day Care»; o «Atualizar ficha» conclui num toque (ficha em dia, um rastro, uma linha), sem «outro cuidado»; o mesmo com o banco recusando a ficha, e com o «Salvar» do formulário (item B; QA rodada 1) [F]', async () => {
+  const m = await mundo({ filhots: [THEO('Teste Rede'), THEO('Teste Rede Banco'), THEO('Teste Rede Salvar')] });
+  try {
+    // 1) o prevLancar falha (a rede cai): depois, «Atualizar ficha»
+    await falharPrevLancar(m);
+    await m.tocar('Teste Rede', 'ecto_p', 'autorizar_loja');
+    assert.ok((await m.ev(() => window.__falhasPrev)) >= 1, 'o prevLancar foi chamado e falhou');
+    let t = await m.texto('Teste Rede', 'ecto_p');
+    assert.match(t, /A ficha não foi atualizada: sem rede \(teste\)\. Confira o formulário abaixo e toque em Salvar, ou use «Atualizar ficha»\./, t);
+    igual([(await respostaDe(m, 'Teste Rede', 'ecto_p')).resposta.origem, Object.keys(await linhasDe(m, 'carrapaticida')).length, (await m.ficha('Teste Rede')).ecto_t], ['loja', 1, '2026-10-01'], 'a resposta e a linha salvas; a ficha ainda não');
+    const ed = await editorTexto(m, 'Teste Rede', 'ecto_p');
+    assert.match(ed, /Local informado\s*Day Care/, 'o formulário aberto diz o que o Salvar grava: ' + ed);
+    assert.ok(!/Tutor em casa/.test(ed), 'e não «Tutor em casa»');
+    await voltarPrevLancar(m);
+    /* o laço do QA: cada toque no «Atualizar ficha» repetia «Há dados de outro cuidado…» e nada gravava; agora UM toque conclui */
+    await m.abrirTodos(); await m.page.click(m.cuidado('Teste Rede', 'ecto_p') + ' [data-zt694-acao="ficha174"]'); await m.quieto(); await m.abrirTodos();
+    await ate(async () => (await m.ficha('Teste Rede')).ecto_t === DIA, 15000);
+    t = await m.texto('Teste Rede', 'ecto_p');
+    assert.strictEqual((await m.ficha('Teste Rede')).ecto_t, DIA, 'um toque no «Atualizar ficha» deixa a ficha em dia; o cartão: ' + t);
+    await fichaEmDiaLoja(m, 'Teste Rede');
+    assert.ok(!SEM_OUTRO.test(t), 'sem «outro cuidado»: ' + t);
+    assert.match(t, /Ficha em dia: Carrapaticida feito em 03\/11\/2026; próximo em 03\/12\/2026\./, t);
+    assert.strictEqual(await m.ev((s) => !!document.querySelector(s + ' [data-z138-editor-native]') || !!document.querySelector(s + ' [data-zt694-acao="ficha174"]'), m.cuidado('Teste Rede', 'ecto_p')), false, 'o formulário e o «Atualizar ficha» saem do cuidado');
+    // 2) a gravação da ficha no banco cai (bolsa), pelo prevLancar de verdade: depois, «Atualizar ficha»
+    await m.ev(() => { const b = window.__banco, real = b.ref; window.__refReal = real; b.ref = function (p) { const r = real(p); if (/^daycare\/cadastro\//.test(String(p))) r.update = function () { return Promise.reject(new Error('sem rede (teste)')); }; return r; }; });
+    await m.tocar('Teste Rede Banco', 'ecto_p', 'autorizar_bolsa');
+    t = await m.texto('Teste Rede Banco', 'ecto_p');
+    assert.match(t, /A ficha não foi atualizada/, t);
+    igual([(await respostaDe(m, 'Teste Rede Banco', 'ecto_p')).resposta.origem, (await m.ficha('Teste Rede Banco')).ecto_t], ['bolsa', '2026-10-01']);
+    await m.ev(() => { window.__banco.ref = window.__refReal; });
+    await m.abrirTodos(); await m.page.click(m.cuidado('Teste Rede Banco', 'ecto_p') + ' [data-zt694-acao="ficha174"]'); await m.quieto(); await m.abrirTodos();
+    await ate(async () => (await m.ficha('Teste Rede Banco')).ecto_t === DIA, 15000);
+    await fichaEmDiaLoja(m, 'Teste Rede Banco');
+    assert.ok(!SEM_OUTRO.test(await m.texto('Teste Rede Banco', 'ecto_p')), 'sem «outro cuidado»');
+    // 3) o plano B pelo «Salvar» do formulário que ficou aberto: conclui e o cuidado mostra a vitória
+    await falharPrevLancar(m);
+    await m.tocar('Teste Rede Salvar', 'ecto_p', 'autorizar_loja');
+    assert.strictEqual((await m.ficha('Teste Rede Salvar')).ecto_t, '2026-10-01');
+    await voltarPrevLancar(m);
+    await m.abrirTodos(); await m.page.click(m.cuidado('Teste Rede Salvar', 'ecto_p') + ' [data-z138-editor-native] [data-zt694-acao="salvar-ficha"]'); await m.quieto(); await m.abrirTodos();
+    await ate(async () => (await m.ficha('Teste Rede Salvar')).ecto_t === DIA, 15000);
+    await fichaEmDiaLoja(m, 'Teste Rede Salvar');
+    await ate(async () => /Ficha em dia: Carrapaticida/.test(await m.texto('Teste Rede Salvar', 'ecto_p') || ''), 8000);
+    assert.match(await m.texto('Teste Rede Salvar', 'ecto_p') || '(o cuidado saiu do cartão)', /Ficha em dia: Carrapaticida feito em 03\/11\/2026; próximo em 03\/12\/2026\./);
+    // um rastro e uma linha por FILHOt, nada em dobro
+    const rs = await rastros(m), por = (n) => rs.filter((x) => x.dcKey === m.dcDe(n) || x.chave === m.pkDe(n)).length;
+    igual([rs.length, por('Teste Rede'), por('Teste Rede Banco'), por('Teste Rede Salvar')], [3, 1, 1, 1], 'um rastro para cada: ' + JSON.stringify(rs.map((x) => [x.pet, x.chave, x.dcKey])));
+    const ls = await linhasDe(m, 'carrapaticida'), porLinha = (n) => Object.keys(ls).filter((id) => ls[id].chave === m.dcDe(n)).length;
+    igual([porLinha('Teste Rede'), porLinha('Teste Rede Banco'), porLinha('Teste Rede Salvar')], [1, 1, 1], 'uma linha no Lançamento do dia para cada');
+    assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
+  } finally { await m.fechar(); }
+}, 'C');
+
+prova('C12', '«Tutor já fez» com a rede caindo no meio: tocar de novo (com a mesma data, ou com a data corrigida) conclui num toque (a ficha com a data certa, «Tutor em casa», um rastro), sem «outro cuidado» (o mesmo conserto no abrirFichaTutor138; QA rodada 1) [F]', async () => {
+  const m = await mundo({ filhots: [THEO('Teste Tutor Mesma'), THEO('Teste Tutor Rede')] });
+  try {
+    /* um FILHOt de cada vez: o formulário aberto de um cuidado, com dados não salvos, barra o de OUTRO cuidado (o aviso «outro cuidado», que vale) */
+    for (const [n, dt, prox] of [['Teste Tutor Mesma', '2026-10-28', '2026-11-27'], ['Teste Tutor Rede', '2026-10-29', '2026-11-28']]) {
+      await falharPrevLancar(m);
+      await tutorFez(m, n, 'ecto_p', '2026-10-28');
+      let t = await m.texto(n, 'ecto_p');
+      assert.match(t, /A ficha não foi atualizada: sem rede \(teste\)/, t);
+      igual([(await respostaDe(m, n, 'ecto_p')).resposta.confirmacaoTutor137.dataAplicacao, (await m.ficha(n)).ecto_t], ['2026-10-28', '2026-10-01']);
+      assert.match(await editorTexto(m, n, 'ecto_p'), /Local informado\s*Tutor em casa/, 'o formulário do tutor continua dizendo «Tutor em casa»');
+      await voltarPrevLancar(m);
+      /* a rede voltou: a equipe toca de novo com a mesma data (Mesma) ou com a data que o tutor corrigiu (Rede); o formulário que ficou
+         aberto é deste mesmo cuidado e é reaproveitado (mesma data) ou refeito (data nova) */
+      await tutorFez(m, n, 'ecto_p', dt);
+      await ate(async () => (await m.ficha(n)).ecto_t === dt, 15000);
+      const f = await m.ficha(n);
+      igual([f.ecto_t, f.ecto_p, f.ecto_ondefoi, f.ecto_por], [dt, prox, 'Tutor em casa', 'Tutor — informado por Amanda'], n + ': o cartão: ' + (await m.texto(n, 'ecto_p')));
+      igual((await respostaDe(m, n, 'ecto_p')).resposta.confirmacaoTutor137.dataAplicacao, dt, n + ': a resposta com a data');
+      t = await m.texto(n, 'ecto_p');
+      assert.ok(!SEM_OUTRO.test(t), n + ': sem «outro cuidado»: ' + t);
+      assert.strictEqual(await m.ev((s) => !!document.querySelector(s + ' [data-z138-editor-native]'), m.sel(n)), false, n + ': o formulário fecha');
+    }
+    const rs = await rastros(m), por = (n) => rs.filter((x) => x.dcKey === m.dcDe(n) || x.chave === m.pkDe(n)).length;
+    igual([rs.length, por('Teste Tutor Mesma'), por('Teste Tutor Rede')], [2, 1, 1], 'um rastro para cada');
+    assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
+  } finally { await m.fechar(); }
+}, 'C');
+
+prova('C13', 'ajustes do QA (rodada 1): depois da loja com a ficha em dia, o «Tutor já fez» sai do cuidado; o nome do produto com caractere invisível tem aviso próprio, e o de 81 letras o de sempre, sem gravar nada', async () => {
+  const m = await mundo({ filhots: [THEO('Teste Sem Fez'), THEO('Teste Nome')] });
+  try {
+    assert.strictEqual(await m.ev((s) => !!document.querySelector(s + ' [data-zt694-tutor-fez]'), m.cuidado('Teste Sem Fez', 'ecto_p')), true, 'antes do toque, o «Tutor já fez» está lá');
+    await m.tocar('Teste Sem Fez', 'ecto_p', 'autorizar_loja');
+    await ate(async () => (await m.ficha('Teste Sem Fez')).ecto_t === DIA, 15000); await m.quieto(200); await m.abrirTodos();
+    const depois = await m.ev((s) => ({ fez: !!document.querySelector(s + ' [data-zt694-tutor-fez]') || !!document.querySelector(s + ' [data-zt694-acao="tutor-fez"]'), texto: (document.querySelector(s) || {}).innerText || '' }), m.cuidado('Teste Sem Fez', 'ecto_p'));
+    assert.strictEqual(depois.fez, false, 'com a ficha em dia, o «Tutor já fez» sai: ' + depois.texto);
+    assert.match(depois.texto, /Ficha em dia: Carrapaticida/);
+    /* o campo tem maxlength=80; o valor vem por programa (como num colar de outro aplicativo) para chegar ao conferir de antes de gravar */
+    const porNome = (valor) => m.ev(([s, v]) => { const x = document.querySelector(s + ' [data-zt174-campo="nome"]'); x.value = v; x.dispatchEvent(new Event('input', { bubbles: true })); }, [m.cuidado('Teste Nome', 'ecto_p'), valor]);
+    const recusado = async (valor) => {
+      await porNome(valor); await m.zerarLog(); await m.tocar('Teste Nome', 'ecto_p', 'autorizar_loja');
+      igual(gravouAlgo(await m.log()), [], 'nada gravado com o nome ' + JSON.stringify(valor));
+      return m.texto('Teste Nome', 'ecto_p');
+    };
+    assert.match(await recusado('Confront\tpet'), /O nome do produto tem um caractere invisível \(por exemplo, uma tabulação\): apague e digite o nome de novo\./);
+    assert.match(await recusado('C'.repeat(81)), /O nome do produto pode ter até 80 letras\./);
+    SEM_PALAVRA_PROIBIDA(await m.texto('Teste Nome'));
+    await porNome('Confront pet'); await m.tocar('Teste Nome', 'ecto_p', 'autorizar_loja');   /* com o nome certo, o mesmo toque grava */
+    await ate(async () => (await m.ficha('Teste Nome')).ecto_t === DIA, 15000);
+    await fichaEmDiaLoja(m, 'Teste Nome');
+    assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
   } finally { await m.fechar(); }
 }, 'C');
 
