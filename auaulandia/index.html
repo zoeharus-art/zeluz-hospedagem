@@ -1402,6 +1402,10 @@
   #hosp-ficha #magHoje .mag-dose-info{flex:1 1 180px !important}
   #hosp-ficha #magHoje .mag-dose.feito .mag-dose-ok{flex-basis:100%}
   #hosp-ficha .hf-ontem-faixa{width:100%;min-height:48px;margin:0 0 12px;padding:10px 14px;border:none;border-radius:12px;background:var(--crm-critico);color:var(--z-white);font-family:var(--font-ui);font-size:16px;font-weight:800;line-height:1.3;text-align:left;cursor:pointer}
+  /* QA da 6.122, rodada 2: na hora de uma dose de hoje, com a ficha segurada em ontem por um relatório não salvo ou pelo teclado
+     aberto, a faixa gruda no alto, logo abaixo da barra azul (o «top» vem de fichaOntemFaixaPintar), onde quer que ela esteja na
+     ficha. Fica abaixo do alarme de remédio (z-index 190) e do menu. */
+  #hosp-ficha .hf-ontem-faixa.hf-espera{position:sticky;z-index:39;box-shadow:0 4px 14px rgba(0,0,0,.25)}
   /* A primeira tela no celular: sem o cabeçalho da página (a ficha tem o «Voltar» e o navegador de data), foto pequena ao lado do
      nome e as tarjas vermelhas logo abaixo dele. Sem :has() (celular antigo), o cabeçalho continua como hoje. */
   @media(max-width:560px){
@@ -3570,8 +3574,9 @@
     <!-- FICHA de passagem de plantão -->
     <div id="hosp-ficha" style="display:none">
       <!-- 6.122 (03/11/2026): a ficha aberta na virada do dia fica em ontem (zDiaTelaAvancar espera por ela). A faixa diz isso
-           e leva para a de hoje com um toque; fichaOntemFaixaPintar() mostra e esconde, pelo relógio da ficha. -->
-      <button type="button" id="hf-ontem-faixa" class="hf-ontem-faixa" style="display:none" onclick="fichaHoje()">Esta ficha é de ontem: toque para ver a de hoje</button>
+           e leva para a de hoje com um toque; fichaOntemFaixaPintar() mostra e esconde, pelo relógio da ficha. Com relatório não
+           salvo, o toque pergunta antes (fichaOntemFaixaToque): ir para hoje perde o que não foi salvo (QA da 6.122, rodada 2). -->
+      <button type="button" id="hf-ontem-faixa" class="hf-ontem-faixa" style="display:none" onclick="fichaOntemFaixaToque()">Esta ficha é de ontem: toque para ver a de hoje</button>
       <button class="back-btn" onclick="fecharPlantao()">← Voltar à hospedagem</button>
 
       <div class="ficha-datenav">
@@ -18805,16 +18810,64 @@ return { criar };
   // ---- A FICHA ABERTA NA VIRADA DO DIA (S1) ----
   // zDiaTelaAvancar segura a tela em ontem enquanto a ficha está aberta (para não trocar o dia debaixo de quem preenche).
   // A faixa no alto diz isso e leva para a de hoje; o rótulo da data deixa de dizer «Hoje».
+  // Na hora de uma dose de hoje, com a ficha segurada em ontem por um relatório não salvo ou pelo teclado aberto (QA da 6.122,
+  // rodada 2), o relógio da ficha marca FICHA_DOSE_ESPERA: a faixa gruda no alto, logo abaixo da barra azul, diz a dose e o que
+  // fazer para o alarme tocar, e o bip de sempre (bipDespertador, que não muda) toca a cada batida — a pessoa pode estar rolada no
+  // fim do relatório que está preenchendo. checarDespertadorMed não muda: o alarme toca quando a ficha passa para hoje.
+  var FICHA_DOSE_ESPERA='';
   function fichaOntemFaixaPintar(){
     var b=document.getElementById('hf-ontem-faixa'); if(!b) return '';
-    var mostra=false, P=[];
+    var mostra=false, P=[], espera=false;
     try{ mostra=!!(fichaAberta() && !fichaEhHoje() && medDiaVelhoAuto()); }catch(e){ mostra=false; } /* silencioso de propósito: na dúvida, sem a faixa */
     // Com remédio de HOJE na próxima hora, ou já na hora (AC-V1.4), a faixa diz isso.
     if(mostra){ try{ P=fichaMedHojeProximas(); }catch(e){ P=[]; } } /* silencioso de propósito: sem a agenda, a faixa de sempre */
+    // A espera vale enquanto o relatório ou o teclado ainda seguram a ficha (salvo ou fechado, a faixa volta ao normal na hora).
+    if(mostra && FICHA_DOSE_ESPERA){ try{ espera=!!fichaEmUso(); }catch(e){ espera=false; } } /* silencioso de propósito: na dúvida, a faixa de sempre */
     var txt=P.length?('Esta ficha é de ontem. Remédio de hoje às '+fichaHoraTxt(P[0].h)+': toque para ver a de hoje'):'Esta ficha é de ontem: toque para ver a de hoje';
+    if(espera){
+      var d='', rasc=false;
+      try{ d=fichaDosesHojeTxt(); }catch(e){ d=''; } /* silencioso de propósito: sem a lista, o aviso vai sem o nome */
+      try{ rasc=fichaRelRascunho().length>0; }catch(e){ rasc=false; } /* silencioso de propósito: sem a conta, vale o teclado */
+      txt=(d||'Remédio de hoje na hora')+'. Para o alarme tocar, '+(rasc?'salve o relatório ou toque aqui':'feche o teclado ou toque aqui');
+    }
     if(b.textContent!==txt) b.textContent=txt;
     b.style.display=mostra?'block':'none';
-    return mostra?(P.length?'mostra: remédio de hoje':'mostra'):'';
+    if(b.classList.contains('hf-espera')!==espera) b.classList.toggle('hf-espera', espera);
+    var topo=espera?(fichaTopoGrudado()+'px'):'';
+    if(b.style.top!==topo) b.style.top=topo;
+    return mostra?(espera?'mostra: espera':(P.length?'mostra: remédio de hoje':'mostra')):'';
+  }
+  // Até onde vai o que já gruda no alto da página: a faixa «O dia virou», a barra azul do celular e o cabeçalho da página. Todos
+  // ficam presos a partir do topo; vale o mais alto.
+  function fichaTopoGrudado(){
+    var t=0;
+    [document.getElementById('faixaVersaoTopo'), document.querySelector('.mobtop'), document.querySelector('.main > .head')].forEach(function(el){
+      try{ if(el && getComputedStyle(el).display!=='none') t=Math.max(t, el.offsetHeight||0); }catch(e){} /* silencioso de propósito: sem a medida, a faixa gruda mais alto */
+    });
+    return t;
+  }
+  // O toque na faixa (QA da 6.122, rodada 2). Sem relatório por salvar, leva para a ficha de hoje, como sempre. Com relatório por
+  // salvar, pergunta antes: na ficha de hoje o alarme toca, mas o que não foi salvo se perde; ou volta ao relatório, para salvar.
+  function fichaOntemFaixaToque(){
+    var R=[]; try{ R=fichaRelRascunho(); }catch(e){ R=[]; } /* silencioso de propósito: sem a conta, vale o toque de sempre */
+    if(!R.length || typeof zEscolha!=='function'){ fichaHoje(); return 'hoje'; }
+    var chegou='', prox='';
+    try{ chegou=fichaDosesHojeTxt(); }catch(e){ chegou=''; } /* silencioso de propósito: a pergunta vai sem a dose */
+    try{ prox=chegou?'':fichaMedHojeTxt(); }catch(e){ prox=''; } /* silencioso de propósito: idem */
+    var nomes=R.map(function(t){ var h=document.querySelector('#card-'+t+' .rel-head h2'); return h?String(h.textContent||'').trim():''; }).filter(Boolean);
+    var linhas=[];
+    if(chegou || prox) linhas.push((chegou||prox)+'.');
+    linhas.push((nomes.length ? ('«'+nomes.join('» e «')+'»'+(nomes.length>1?' ainda não foram salvos.':' ainda não foi salvo.')) : 'O relatório ainda não foi salvo.')
+      +' Indo agora para a ficha de hoje, o que não foi salvo se perde.');
+    zEscolha(chegou?'REMÉDIO DE HOJE NA HORA':'RELATÓRIO NÃO SALVO', linhas, [
+      {t:'Ir para a ficha de hoje', cor:'var(--crm-critico)', fn:function(){ fichaHoje(); }},
+      {t:'Continuar o relatório', cor:'var(--z-blue)', fn:function(){
+        var c=document.getElementById('card-'+R[0]); if(!c) return;
+        var alvo=(!c.classList.contains('collapsed') && c.querySelector('.actions button')) || c;
+        try{ alvo.scrollIntoView({block:'center'}); }catch(e){} /* silencioso de propósito: rolagem de tela */
+      }}
+    ]);
+    return 'pergunta';
   }
   // ---- A DOSE DE HOJE COM A FICHA SEGURADA EM ONTEM (AC-V1.4; QA da 6.122, rodada 1, bloqueio 1) ----
   // zDiaTelaAvancar (não muda) segura a tela em ontem enquanto a ficha está aberta, e o alarme (checarDespertadorMed, não muda),
@@ -18825,7 +18878,8 @@ return { criar };
   // Não passa: para quem não recebe o alarme; com a dose de ontem ainda na janela (o alarme de ontem vem primeiro, como em
   // zDiaTelaAvancar); com alarme na tela, check-in ou almoço aberto (zDiaTrabalhoAberto); e com a ficha em uso (um campo com o
   // cursor, «Dei agora» armado ou registrando, ou um relatório com o que foi marcado ou escrito e ainda não salvo — o texto nunca
-  // se perde: passa quando ele é salvo ou desfeito).
+  // se perde: passa quando ele é salvo ou desfeito). Enquanto o relatório ou o teclado seguram a ficha com a dose de hoje já na hora,
+  // a faixa gruda no alto e o bip toca a cada batida (QA da 6.122, rodada 2; fichaOntemFaixaPintar e fichaRelogioTick).
   // As doses de HOJE deste FILHOt até 60 minutos à frente, ou já na hora, pela agenda dele em memória (MED_AGENDA_ITENS) e pelo dia
   // de hoje (suspenso, anulado e fora do período de hoje não contam). O registro de hoje não está em memória (a ficha é de ontem):
   // o texto manda ver a ficha de hoje e não afirma que ninguém deu.
@@ -18844,9 +18898,18 @@ return { criar };
   }
   // Chegou a hora de alguma dose de hoje, de qualquer FILHOt da lista (o alarme é de todos)? A agenda em memória é a do dia da tela
   // (ontem); quem tinha saída marcada para ontem já foi para casa. Errar para mais só leva a ficha para hoje, que é o dia certo.
-  function fichaDoseHojeChegou(){
+  function fichaDosesHojeNaHora(){
     var L=(typeof MED_AGENDA_TODOS!=='undefined' && MED_AGENDA_TODOS)||[];
-    return L.some(function(it){ if(!it || it.saidaHoje) return false; var x=minutosAte(it.horario); return x!==null && x<=DESP_ANTES_MIN; });
+    return L.filter(function(it){ if(!it || it.saidaHoje) return false; var x=minutosAte(it.horario); return x!==null && x<=DESP_ANTES_MIN; })
+      .sort(function(a,b){ return String(a.horario||'').localeCompare(String(b.horario||'')) || String(a.hospNome||'').localeCompare(String(b.hospNome||'')); });
+  }
+  function fichaDoseHojeChegou(){ return fichaDosesHojeNaHora().length>0; }
+  // A dose de hoje que já chegou, no jeito do alarme («Biscoito Teste toma Colírio Teste»): a do horário mais cedo, e quantas mais.
+  function fichaDosesHojeTxt(){
+    var L=fichaDosesHojeNaHora(); if(!L.length) return '';
+    var h=L[0].horario, ja=L.filter(function(it){ return it.horario===h; }), resto=L.length-ja.length;
+    return 'Remédio de hoje às '+fichaHoraTxt(h)+': '+ja.map(function(it){ return String(it.hospNome||'')+' toma '+String(it.nome||''); }).join('; ')
+      +(resto?(' (e mais '+resto+(resto>1?' doses':' dose')+')'):'');
   }
   // O que a pessoa escreveu e marcou em cada relatório: os campos de texto pela ordem, e só as respostas marcadas, pela pergunta (as
   // linhas «Foi dado?» da medicação são redesenhadas pelo relógio, com outras linhas; a resposta marcada continua a mesma). A foto é
@@ -18883,7 +18946,8 @@ return { criar };
     if(!medDiaVelhoAuto()) return '';
     if(!papelRecebeAlarmeMed()) return 'espera: não recebe o alarme';
     if(!fichaDoseHojeChegou()) return '';
-    if(despMedNaTela) return 'espera: alarme na tela';
+    // O alarme na tela (de remédio ou de banho), o check-in e o almoço: uma conta só, a de zDiaTrabalhoAberto (QA da 6.122, rodada 2:
+    // a linha própria do alarme repetia esta e por isso nenhuma prova a mordia; a C13 morde esta).
     var ab=zDiaTrabalhoAberto(); if(ab && ab!=='sem internet') return 'espera: '+ab;
     if(zDiaOntemPendente(agora)) return 'espera: dose de ontem';
     var uso=fichaEmUso(); if(uso) return 'espera: '+uso;
@@ -18934,14 +18998,20 @@ return { criar };
   // (ATRASADA e PRÓXIMA DOSE) e os resumos acompanham a hora — sem ler o banco. A única exceção é a ficha segurada em ontem na hora
   // de uma dose de hoje (AC-V1.4): ela passa para hoje pelo «Hoje» de sempre (fichaVirarParaHoje), uma vez por virada.
   function fichaRelogioTick(){
-    if(typeof fichaAberta!=='function' || !fichaAberta() || !currentHosp) return '';
+    if(typeof fichaAberta!=='function' || !fichaAberta() || !currentHosp){ FICHA_DOSE_ESPERA=''; return ''; }
     try{ fichaRelRascunho(); }catch(e){} /* silencioso de propósito: a foto dos relatórios se acerta na próxima batida */
-    try{ if(fichaVirarParaHoje(Date.now())==='virou') return 'virou'; }catch(e){} /* silencioso de propósito: tenta de novo na próxima batida; a faixa avisa */
+    var vira='';
+    try{ vira=fichaVirarParaHoje(Date.now()); }catch(e){ vira=''; } /* silencioso de propósito: tenta de novo na próxima batida; a faixa avisa */
+    // A dose de hoje chegou e a ficha espera por um relatório não salvo ou pelo teclado (QA da 6.122, rodada 2): a faixa gruda no
+    // alto e o bip toca a cada batida, até a ficha poder passar para hoje.
+    FICHA_DOSE_ESPERA=(vira==='espera: relatório não salvo' || vira==='espera: campo com o cursor')?vira:'';
+    if(vira==='virou') return 'virou';
     try{ var fl=document.getElementById('hf-datelabel'); if(fl && fl.innerHTML!==dateLabelHTML()) updateDateLabel(); }catch(e){} /* silencioso de propósito: o rótulo se acerta na próxima batida */
     try{ fichaOntemFaixaPintar(); }catch(e){} /* silencioso de propósito: a faixa se acerta na próxima batida */
     var feito='pintou';
     try{ if(fichaMagDesatualizada() && !fichaMagOcupada()){ fichaRedesenharMag(); feito='redesenhou'; } }catch(e){} /* silencioso de propósito: tenta de novo na próxima batida */
     try{ fichaTopicosPintar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    if(FICHA_DOSE_ESPERA){ try{ bipDespertador(); }catch(e){} /* silencioso de propósito: o som é reforço; a faixa no alto é o aviso */ }
     return feito;
   }
   try{ setInterval(function(){ try{ if(!document.hidden) fichaRelogioTick(); }catch(e){} /* silencioso de propósito: tenta de novo em 30 s */ }, 30000); }

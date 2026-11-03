@@ -11,9 +11,11 @@
 //   PROVAS=C1,C5 node tests/plantao-lacunas175.test.js    (só algumas)
 //   APP175=/outro/index.html node tests/…                 (a mesma prova em outra cópia — a base, por exemplo)
 //
-// No master d3a9e25 falham L3, L4, L5 (as funções e o CSS da 6.122 ainda não existem), C1 a C10, C12, C13 e C14 (cada uma é uma lacuna
-// confirmada); L1, L2 e C11 são controles e passam nos dois. C13 e C14 e as partes novas de C2, C3, C6, C8, C10 e L3 vêm da rodada 1
+// No master d3a9e25 falham L3, L4, L5 (as funções e o CSS da 6.122 ainda não existem), C1 a C10, C12, C13, C14 e C15 (cada uma é uma
+// lacuna confirmada); L1, L2 e C11 são controles e passam nos dois. C13 e C14 e as partes novas de C2, C3, C6, C8, C10 e L3 vêm da rodada 1
 // do QA (03/11/2026) e falham também no 42bc54e; a parte nova da C5 (o toque antes de a agenda chegar) pega o defeito plantado pelo QA.
+// A C15, as três guardas da C13 e as partes novas de L1 e L3 vêm da rodada 2 do QA (o relatório pela metade com a dose de hoje na
+// hora): a C15, a C13 e a L3 falham também no c6444d8.
 
 const assert = require('assert');
 const crypto = require('crypto');
@@ -198,6 +200,9 @@ const NAO_MUDAM = {
   renderHospAlergiaBlock: 'acee67a04ea0b5e3', renderPlacarMedDia: '839ff1d530a3db81', statusDoseMed: '37525f9cfd86c6fe',
   medVigenteEm: 'bfe6edd4f4c1f914', renderMedAgenda: '7d81e769260edad4', fichaAlertasRender: '962632d580440d6f',
   alertasAtivosDe: 'f1dfcc0133bc03a2', faixaChipsDaFicha: 'bced01d9e208702f',
+  // rodada 2 do QA (03/11/2026): o bip, o que segura a virada e a pergunta do «Hoje» também não mudam
+  bipDespertador: '5b00c48f7cf0c145', zDiaTrabalhoAberto: 'c4943cd37850f19e', zDiaOntemEstado: 'dc76ec2e4070c451',
+  zDiaOntemPendente: '4791c77206d9f5d8', zDiaHojePergunta: 'f520f373cd947aac', zEscolha: '13faab7feace613f',
 };
 const PROTEGIDA = { n: 157, funcoes: '93f5be639ef4de2f', daycare: '4c438983ed2b9c0a' };
 prova('L1', 'as funções que a 6.122 não pode mudar (a Medicação, o alarme, os relatórios, a trava de leitura, a faixa e a comida) têm o mesmo texto do master d3a9e25', () => {
@@ -221,7 +226,9 @@ prova('L3', 'as funções novas da ficha não leem nem gravam no banco, não gua
     'fichaAlimResumo', 'fichaAlimPintar', 'fichaOntemFaixaPintar', 'fichaMagDesatualizada', 'fichaMagOcupada', 'fichaRedesenharMag', 'fichaRelogioTick',
     'fichaTarjaAmarela', 'fichaTarjasTopicosPintar', 'fichaDadosResumo', 'fichaMaisResumo',
     // rodada 1 do QA (03/11/2026): o remédio de hoje com a ficha em ontem e a foto dos relatórios
-    'fichaMedHojeProximas', 'fichaMedHojeTxt', 'fichaDoseHojeChegou', 'fichaRelValor', 'fichaRelFotoAcertar', 'fichaRelRascunho', 'fichaEmUso', 'fichaVirarParaHoje'];
+    'fichaMedHojeProximas', 'fichaMedHojeTxt', 'fichaDoseHojeChegou', 'fichaRelValor', 'fichaRelFotoAcertar', 'fichaRelRascunho', 'fichaEmUso', 'fichaVirarParaHoje',
+    // rodada 2 do QA (03/11/2026): a dose de hoje com o relatório pela metade — a faixa que gruda, o bip e o toque que pergunta
+    'fichaDosesHojeNaHora', 'fichaDosesHojeTxt', 'fichaTopoGrudado', 'fichaOntemFaixaToque'];
   novas.forEach((nm) => {
     const f = funcao(nm);
     assert.ok(!/DB\s*\.\s*ref|\.once\(|\.on\(|\.set\(|\.update\(|\.transaction\(|localStorage|sessionStorage|carregar[A-Z]/.test(f), nm + ' não lê nem grava');
@@ -231,8 +238,17 @@ prova('L3', 'as funções novas da ficha não leem nem gravam no banco, não gua
   // A ficha segurada em ontem na hora da dose de hoje (AC-V1.4) passa para hoje SÓ pelo «Hoje» de sempre (fichaHoje: as leituras de
   // tocar em «Hoje», que a C13 mede) e não grava nada; nenhuma outra função nova chama fichaHoje.
   assert.ok(/\n    fichaHoje\(\);\n/.test(funcao('fichaVirarParaHoje')), 'fichaVirarParaHoje passa para hoje pelo fichaHoje()');
-  assert.deepStrictEqual(novas.filter((nm) => nm !== 'fichaVirarParaHoje' && /fichaHoje\(|fichaMudaDia\(|goToToday\(|changeDate\(/.test(funcao(nm))), [], 'nenhuma outra função nova troca o dia');
+  // A exceção é o toque da pessoa na faixa (fichaOntemFaixaToque): sem relatório por salvar, vai para hoje como sempre; com relatório
+  // por salvar, só pela pergunta (zEscolha), nunca direto (rodada 2 do QA: a faixa que gruda no alto não pode apagar o texto num toque).
+  assert.deepStrictEqual(novas.filter((nm) => nm !== 'fichaVirarParaHoje' && nm !== 'fichaOntemFaixaToque' && /fichaHoje\(|fichaMudaDia\(|goToToday\(|changeDate\(/.test(funcao(nm))), [], 'nenhuma outra função nova troca o dia');
+  const toque = funcao('fichaOntemFaixaToque');
+  assert.ok(/if\(!R\.length \|\| typeof zEscolha!=='function'\)\{ fichaHoje\(\); return 'hoje'; \}/.test(toque) && (toque.match(/fichaHoje\(/g) || []).length === 2 && /zEscolha\(/.test(toque),
+    'com relatório por salvar, o toque na faixa pergunta antes de ir para hoje');
+  assert.ok(/id="hf-ontem-faixa"[^>]*onclick="fichaOntemFaixaToque\(\)"/.test(html), 'a faixa chama fichaOntemFaixaToque');
   assert.ok(!/audit\(/.test(funcao('fichaVirarParaHoje')), 'sem rastro novo gravado');
+  // O alarme na tela segura a virada pela conta única de zDiaTrabalhoAberto (que não muda), e o bip é o de sempre, só no relógio da ficha.
+  assert.ok(/var ab=zDiaTrabalhoAberto\(\); if\(ab && ab!=='sem internet'\) return 'espera: '\+ab;/.test(funcao('fichaVirarParaHoje')), 'o alarme, o check-in e o almoço seguram a virada');
+  assert.deepStrictEqual(novas.filter((nm) => /bipDespertador\(|AudioContext/.test(funcao(nm))), ['fichaRelogioTick'], 'o bip só no relógio da ficha');
   // o relógio da ficha não chama nada que lê o banco (além da passagem para hoje, acima)
   const ini = html.indexOf('setInterval(function(){ try{ if(!document.hidden) fichaRelogioTick();');
   assert.ok(ini > 0, 'o relógio da ficha existe');
@@ -753,7 +769,7 @@ const estadoVirada = (page) => page.evaluate(() => ({ ficha: document.getElement
 // o caminho com a data trocada por DIA e a chave do FILHOt por K (o tipo de leitura, não o nome: depois da meia-noite, a lista do dia
 // novo lê o relatório de cada hóspede dela, como no toque em «Hoje»)
 const caminhos = (L, desde) => Array.from(new Set(L.slice(desde || 0).map((x) => x.op + ' ' + x.path.replace(/\d{4}-\d{2}-\d{2}/g, 'DIA').replace(/[^/]*__[^/]*/g, 'K')))).sort();
-prova('C13', 'ficha aberta às 23h55, tudo de 03/11 dado e o Colírio às 0h15: às 0h05 a faixa e o resumo avisam do remédio de hoje; às 0h16 a ficha passou para hoje e o alarme toca por cima dela, sem leitura nem gravação nova; com texto não salvo no relatório ou o cursor num campo, espera sem perder o texto', async () => {
+prova('C13', 'ficha aberta às 23h55, tudo de 03/11 dado e o Colírio às 0h15: às 0h05 a faixa e o resumo avisam do remédio de hoje; às 0h16 a ficha passou para hoje e o alarme toca por cima dela, sem leitura nem gravação nova; com texto não salvo no relatório ou o cursor num campo, espera sem perder o texto, com a faixa no alto dizendo o que fazer; e as três guardas: a Gestão (não recebe o alarme), o alarme de ontem na tela e a dose de ontem ainda conferindo seguram a ficha em ontem, sem pergunta na tela', async () => {
   const { ctx, page, erros } = await abrir('2026-11-03T23:55:00-03:00', cenario('2026-11-03', { colirio: '00:15', logHoje: LOG_0311_TUDO_DADO }));
   try {
     await planilhaTresDias(page); await esperar(800);
@@ -800,11 +816,14 @@ prova('C13', 'ficha aberta às 23h55, tudo de 03/11 dado e o Colírio às 0h15: 
     let r = await estadoVirada(pg);
     const texto = await pg.evaluate(() => document.querySelector('#card-inicio textarea').value);
     assert.ok(r.dia === '2026-11-03' && texto === 'Plantonista Teste escrevendo o jantar', '0h16 com texto não salvo: a ficha espera e o texto fica — ' + JSON.stringify(r) + ' / ' + texto);
-    assert.strictEqual(r.faixa, 'Esta ficha é de ontem. Remédio de hoje às 0h15: toque para ver a de hoje', 'a faixa avisa');
+    // rodada 2 do QA: a faixa diz a dose (no jeito do alarme) e o que fazer para o alarme tocar, e gruda no alto
+    assert.strictEqual(r.faixa, 'Remédio de hoje às 0h15: Biscoito Teste toma Colírio Teste. Para o alarme tocar, salve o relatório ou toque aqui', 'a faixa avisa');
     assert.strictEqual(await pg.evaluate(() => fichaVirarParaHoje()), 'espera: relatório não salvo');
-    // o texto desfeito, mas o cursor no campo: ainda espera
+    // o texto desfeito, mas o cursor no campo: ainda espera, e a faixa diz para fechar o teclado
     await pg.fill('#card-inicio textarea', '');
     assert.strictEqual(await pg.evaluate(() => fichaVirarParaHoje()), 'espera: campo com o cursor');
+    const fx = await pg.evaluate(() => { fichaRelogioTick(); const f = document.getElementById('hf-ontem-faixa'); return { t: f.innerText, pos: getComputedStyle(f).position, cursor: (document.activeElement || {}).tagName }; });
+    assert.ok(fx.t === 'Remédio de hoje às 0h15: Biscoito Teste toma Colírio Teste. Para o alarme tocar, feche o teclado ou toque aqui' && fx.pos === 'sticky' && fx.cursor === 'TEXTAREA', 'com o cursor no campo, a faixa no alto diz para fechar o teclado — ' + JSON.stringify(fx));
     await pg.evaluate(() => document.activeElement && document.activeElement.blur());
     await andar(pg, 1000);
     await andar(pg, 1000);
@@ -812,6 +831,46 @@ prova('C13', 'ficha aberta às 23h55, tudo de 03/11 dado e o Colírio às 0h15: 
     assert.ok(r.dia === '2026-11-04' && /Biscoito Teste toma Colírio Teste/.test(r.alarme), 'sem rascunho e fora do campo: passou para hoje e o alarme toca — ' + JSON.stringify(r));
     assert.deepStrictEqual(b.erros, [], 'sem erro de página');
   } finally { await b.ctx.close(); }
+  // AS TRÊS GUARDAS (rodada 2 do QA: podiam ser apagadas sem a prova notar).
+  // (1) Quem não recebe o alarme (a Gestão): a ficha fica em ontem, sem alarme — o alarme não é dela, e a virada não a tira do dia que ela lê.
+  const g = await abrir('2026-11-03T23:55:00-03:00', cenario('2026-11-03', { colirio: '00:15', logHoje: LOG_0311_TUDO_DADO, papel: 'gestao' }));
+  try {
+    const pg = g.page;
+    await planilhaTresDias(pg); await esperar(800);
+    await pg.evaluate(() => irParaView('hospedagem')); await esperar(800);   // a Gestão entra pelo Início
+    await tocarHospede(pg, 'Biscoito Teste');
+    await andar(pg, 21 * 60 * 1000);   // 0h16
+    const r = await estadoVirada(pg);
+    const v = await pg.evaluate(() => fichaVirarParaHoje());
+    assert.ok(v === 'espera: não recebe o alarme' && r.ficha === 'block' && r.dia === '2026-11-03' && r.alarme === '', 'Gestão às 0h16: a ficha fica em ontem — ' + v + ' / ' + JSON.stringify(r));
+    assert.deepStrictEqual(g.erros, [], 'sem erro de página');
+  } finally { await g.ctx.close(); }
+  // (2) e (3): o Colírio de 03/11 às 22h sem registro e a Vitamina de hoje às 0h15. Às 23h55, o alarme das 22h abre por cima da ficha;
+  // às 0h11 ele ainda está na tela: a ficha espera por ele («alarme na tela»). Depois do «Dei o remédio», com a conferência do registro
+  // de ontem ainda sem voltar (como com a internet lenta: o estado «conferindo» é posto na mesma batida, para não depender do banco de
+  // mentira), a ficha espera a dose de ontem («dose de ontem»), sem abrir a pergunta do «Hoje» por conta própria.
+  const S6 = cenario('2026-11-03', { colirio: '22:00', logHoje: { 'a1_08-00': { quem: 'Plantonista Teste', ts: 1 }, 'a1_20-00': { quem: 'Plantonista Teste', ts: 2 } }, itens: { v1: { nome: 'Vitamina Teste', q: '1', u: 'comprimido', horarios: ['00:15'], tipo: 'suplemento', continuo: true, dataInicio: '2026-10-01' } } });
+  S6.banco['auaulandia/medicacao-log/2026-11-03/' + K.bis]['v1_00-15'] = { quem: 'Plantonista Teste', ts: 6 };
+  const h = await abrir('2026-11-03T23:55:00-03:00', S6);
+  try {
+    const pg = h.page;
+    const caixa = () => pg.evaluate(() => { const x = document.getElementById('zAlertaoBox'); return x ? x.innerText.replace(/\s+/g, ' ').slice(0, 120) : ''; });
+    await planilhaTresDias(pg); await esperar(800);
+    await pg.evaluate(() => { const i = hospedes.findIndex((x) => /Biscoito/.test(x.nome)); abrirPlantao(i); }); await esperar(1500);
+    await andar(pg, 15 * 60 * 1000);   // 0h10 e meia: a Vitamina das 0h15 já chegou à régua do alarme
+    const r = await estadoVirada(pg);
+    const v = await pg.evaluate(() => fichaVirarParaHoje());
+    assert.ok(v === 'espera: alarme na tela' && r.dia === '2026-11-03' && /Colírio Teste/.test(r.alarme) && (await caixa()) === '', '0h11 com o alarme de ontem na tela: a ficha espera — ' + v + ' / ' + JSON.stringify(r));
+    const bt = await pg.$('#despMed button:has-text("Dei o remédio")');
+    assert.ok(bt, 'o alarme de ontem tem o «Dei o remédio»');
+    await bt.tap(); await esperar(400);
+    const c = await pg.evaluate(() => { __medOntemConf = null; __medOntemPedido = { dia: DIA_TELA_AUTO, ts: Date.now() };
+      const est = zDiaOntemEstado(Date.now()), vira = fichaVirarParaHoje(), tick = fichaRelogioTick();
+      return { est, vira, tick, dia: dataKeyAtual(), alarme: !!despMedNaTela }; });
+    assert.ok(c.est === 'conferindo' && c.vira === 'espera: dose de ontem' && c.dia === '2026-11-03' && !c.alarme && (await caixa()) === '', '0h11, a dose de ontem conferindo: a ficha espera, sem pergunta na tela — ' + JSON.stringify(c) + ' / ' + (await caixa()));
+    // (o que vem depois da conferência é da 6.47 e depende do registro de ontem, que o banco de mentira não devolve à conferência: fica fora)
+    assert.deepStrictEqual(h.erros, [], 'sem erro de página');
+  } finally { await h.ctx.close(); }
 });
 
 // C14 (bloqueio 2 da rodada 1 do QA): no hóspede SEM RAÇÃO com check-in, a instrução da comida não vira «NÃO PODE».
@@ -827,6 +886,83 @@ prova('C14', 'SEM RAÇÃO com check-in: a instrução da comida aparece como «O
     assert.deepStrictEqual(r.obs, ['Observação da alimentação: Servir morno, em pote raso'], 'a instrução com o rótulo certo');
     assert.strictEqual(r.naoPode, 'NÃO PODE: frango · sem grãos', 'o NÃO PODE verdadeiro continua no alto');
     assert.ok(/SEM RAÇÃO — Biscoito Teste come a comida úmida da casa hoje/.test(r.alim) && /SEM RAÇÃO: comida úmida da casa/.test(r.resumo), 'o aviso SEM RAÇÃO continua: ' + r.resumo);
+    assert.deepStrictEqual(erros, [], 'sem erro de página');
+  } finally { await ctx.close(); }
+});
+
+// C15 (bloqueio da rodada 2 do QA, segurança do FILHOt): o Relatório da noite pela metade (marcou «Como passou a noite?» e escreveu uma
+// linha; ele não salva incompleto) segura a ficha em ontem a noite inteira. A dose de hoje não pode ficar muda: na hora dela (0h10 para a
+// das 0h15, 6h55 para a das 7h), a faixa gruda no alto, logo abaixo da barra azul, onde ela estiver rolada, diz a dose e o que fazer, e o
+// bip de sempre toca a cada batida; o texto fica. O toque na faixa pergunta antes de perder o texto; «Ir para a ficha de hoje» leva para
+// hoje e o alarme toca por cima. Som = osciladores criados pelo AudioContext da página (o bipDespertador cria três por bip).
+const contarSom = (page) => page.evaluate(() => {
+  const AC0 = window.AudioContext || window.webkitAudioContext; if (!AC0) return false;
+  window.__som = 0;
+  window.AudioContext = function () { const ac = new AC0(); const co = ac.createOscillator.bind(ac); ac.createOscillator = function () { window.__som += 1; return co(); }; return ac; };
+  return true;
+});
+const TEXTO_NOITE = 'Plantonista Teste: dormiu bem até agora';
+const ondeEla = (page) => page.evaluate(() => {
+  const f = document.getElementById('hf-ontem-faixa'), b = f.getBoundingClientRect(), azul = document.querySelector('.mobtop').getBoundingClientRect();
+  const cx = Math.round(b.left + b.width / 2), cy = Math.round(b.top + b.height / 2), el = (cy > 0 && cy < innerHeight) ? document.elementFromPoint(cx, cy) : null;
+  const ta = document.querySelector('#card-noite textarea'), tb = ta.getBoundingClientRect(), on = document.querySelector('#card-noite .obsline button.on');
+  return { hora: new Date().toTimeString().slice(0, 5), dia: dataKeyAtual(), faixa: getComputedStyle(f).display !== 'none' ? f.innerText : '', pos: getComputedStyle(f).position,
+    topo: Math.round(b.top), fim: Math.round(b.bottom), azulFim: Math.round(azul.bottom), porCima: !!(el && (el === f || f.contains(el))), rolagem: Math.round(scrollY),
+    relNaTela: tb.bottom > 0 && tb.top < innerHeight, texto: ta.value, marca: on ? on.textContent : '', som: window.__som || 0,
+    alarme: (() => { const d = document.getElementById('despMed'); return d && getComputedStyle(d).display !== 'none' ? d.innerText.replace(/\s+/g, ' ') : ''; })(),
+    caixa: (() => { const x = document.getElementById('zAlertaoBox'); return x ? x.innerText.replace(/\s+/g, ' ') : ''; })() };
+});
+async function irAte(page, iso) { const agora = await page.evaluate(() => Date.now()); await page.mouse.move(12, 300); await andar(page, Math.max(0, Date.parse(iso) - agora - 31000)); }
+prova('C15', 'Relatório da noite pela metade das 23h50 às 7h10: na hora da dose de hoje (0h10 e 6h55) a faixa gruda no alto, onde ela está, diz a dose e o que fazer, e o bip toca a cada batida; o texto fica; o toque na faixa pergunta antes de perder o texto', async () => {
+  const S = cenario('2026-11-03', { colirio: '00:15', logHoje: LOG_0311_TUDO_DADO, itens: { v1: { nome: 'Vitamina Teste', q: '1', u: 'comprimido', horarios: ['07:00'], tipo: 'suplemento', continuo: true, dataInicio: '2026-10-01' } } });
+  S.banco['auaulandia/medicacao-log/2026-11-03/' + K.bis]['v1_07-00'] = { quem: 'Plantonista Teste', ts: 5 };
+  const { ctx, page, erros } = await abrir('2026-11-03T23:50:00-03:00', S);
+  try {
+    assert.ok(await contarSom(page), 'o navegador da prova tem AudioContext');
+    await planilhaTresDias(page); await esperar(800);
+    await tocarHospede(page, 'Biscoito Teste');
+    await page.evaluate(() => toggleRel('card-noite')); await esperar(300);
+    const marcou = await page.evaluate(() => { const b = document.querySelector('#card-noite .obsline .seg button'); b.click(); return b.textContent; });
+    await page.fill('#card-noite textarea', TEXTO_NOITE);
+    await page.evaluate(() => { document.activeElement && document.activeElement.blur(); document.querySelector('#card-noite textarea').scrollIntoView({ block: 'center' }); });
+    await esperar(300);
+    const intacto = (r) => r.texto === TEXTO_NOITE && r.marca === marcou && r.dia === '2026-11-03';
+    // 0h05: a dose das 0h15 ainda não chegou à régua do alarme (5 minutos antes): sem som, a faixa no lugar de sempre (lá em cima)
+    await irAte(page, '2026-11-04T00:05:00-03:00');
+    let r = await ondeEla(page);
+    assert.ok(intacto(r) && r.som === 0 && r.pos === 'static' && !r.porCima, '0h05: sem som e sem faixa grudada — ' + JSON.stringify(r));
+    // 0h10: a faixa gruda logo abaixo da barra azul, por cima do relatório onde ela está, e o bip toca a cada batida
+    for (const [quando, txt] of [['2026-11-04T00:10:20-03:00', 'Remédio de hoje às 0h15: Biscoito Teste toma Colírio Teste. Para o alarme tocar, salve o relatório ou toque aqui'],
+      ['2026-11-04T06:55:20-03:00', 'Remédio de hoje às 0h15: Biscoito Teste toma Colírio Teste (e mais 1 dose). Para o alarme tocar, salve o relatório ou toque aqui']]) {
+      await irAte(page, quando);
+      r = await ondeEla(page);
+      assert.ok(intacto(r) && r.faixa === txt, quando.slice(11, 16) + ': a faixa diz a dose e o texto fica — ' + JSON.stringify(r));
+      assert.ok(r.pos === 'sticky' && r.porCima && r.relNaTela && r.rolagem > 1000 && r.topo >= r.azulFim - 1 && r.topo <= r.azulFim + 2 && r.fim <= 667, quando.slice(11, 16) + ': a faixa à vista, abaixo da barra azul, com ela rolada no relatório — ' + JSON.stringify(r));
+      assert.ok(r.som > 0, quando.slice(11, 16) + ': o bip tocou — ' + JSON.stringify(r));
+      const antes = r.som;
+      await andar(page, 0);
+      r = await ondeEla(page);
+      assert.ok(r.som > antes && intacto(r), quando.slice(11, 16) + ': o bip toca de novo na batida seguinte — ' + antes + ' → ' + r.som);
+    }
+    // 7h10: ainda espera, e o texto continua
+    await irAte(page, '2026-11-04T07:10:00-03:00');
+    r = await ondeEla(page);
+    assert.ok(intacto(r) && r.pos === 'sticky' && r.porCima && r.alarme === '', '7h10: o texto fica — ' + JSON.stringify(r));
+    // o toque na faixa: pergunta antes; «Continuar o relatório» fica em ontem, com o texto, e mostra o botão de salvar
+    await page.tap('#hf-ontem-faixa'); await esperar(300);
+    r = await ondeEla(page);
+    assert.ok(/^REMÉDIO DE HOJE NA HORA Remédio de hoje às 0h15: Biscoito Teste toma Colírio Teste \(e mais 1 dose\)\. «Relatório da Noite» ainda não foi salvo\. Indo agora para a ficha de hoje, o que não foi salvo se perde\. Ir para a ficha de hoje Continuar o relatório$/.test(r.caixa) && intacto(r),
+      'o toque na faixa pergunta — ' + JSON.stringify(r));
+    await page.tap('#zAlertaoBox button:has-text("Continuar o relatório")'); await esperar(400);
+    r = await ondeEla(page);
+    const salvarNaTela = await page.evaluate(() => { const b = document.querySelector('#card-noite .actions button').getBoundingClientRect(); return b.top >= 0 && b.bottom <= innerHeight; });
+    assert.ok(r.caixa === '' && intacto(r) && salvarNaTela, '«Continuar o relatório»: o texto fica e o «Passar plantão (salvar)» à vista — ' + JSON.stringify(r));
+    // «Ir para a ficha de hoje»: a ficha passa para hoje e o alarme do Colírio toca por cima dela
+    await page.tap('#hf-ontem-faixa'); await esperar(300);
+    await page.tap('#zAlertaoBox button:has-text("Ir para a ficha de hoje")'); await esperar(1200);
+    await andar(page, 0);
+    r = await estadoVirada(page);
+    assert.ok(r.ficha === 'block' && r.dia === '2026-11-04' && /Biscoito Teste toma Colírio Teste/.test(r.alarme) && r.faixa === '', '«Ir para a ficha de hoje»: hoje, com o alarme por cima — ' + JSON.stringify(r));
     assert.deepStrictEqual(erros, [], 'sem erro de página');
   } finally { await ctx.close(); }
 });
