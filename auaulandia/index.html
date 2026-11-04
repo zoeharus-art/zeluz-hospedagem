@@ -18822,7 +18822,8 @@ return { criar };
     // Com remédio de HOJE na próxima hora, ou já na hora (AC-V1.4), a faixa diz isso.
     if(mostra){ try{ P=fichaMedHojeProximas(); }catch(e){ P=[]; } } /* silencioso de propósito: sem a agenda, a faixa de sempre */
     // A espera vale enquanto o relatório ou o teclado ainda seguram a ficha (salvo ou fechado, a faixa volta ao normal na hora).
-    if(mostra && FICHA_DOSE_ESPERA){ try{ espera=!!fichaEmUso(); }catch(e){ espera=false; } } /* silencioso de propósito: na dúvida, a faixa de sempre */
+    // E enquanto a dose de hoje ainda falta: registrada (aqui ou em outro aparelho), a faixa solta na hora (QA da 6.122, rodada 3).
+    if(mostra && FICHA_DOSE_ESPERA){ try{ espera=!!fichaEmUso() && fichaDoseHojeChegou(); }catch(e){ espera=false; } } /* silencioso de propósito: na dúvida, a faixa de sempre */
     var txt=P.length?('Esta ficha é de ontem. Remédio de hoje às '+fichaHoraTxt(P[0].h)+': toque para ver a de hoje'):'Esta ficha é de ontem: toque para ver a de hoje';
     if(espera){
       var d='', rasc=false;
@@ -18895,36 +18896,55 @@ return { criar };
     if(currentHosp && key===medAgendaKey(currentHosp)) return MED_AGENDA_ITENS||{};
     return null;
   }
-  // As doses de hoje de um FILHOt (itens = a agenda dele) até `dentro` minutos à frente, sem limite de atraso (a régua do alarme).
-  function fichaDosesHojeDe(h, key, itens, dentro, hoje){
-    var out=[];
+  // As doses de hoje de um FILHOt (itens = a agenda dele) até `dentro` minutos à frente, sem limite de atraso (a régua do alarme). Com o
+  // registro de hoje (log), a dose já registrada — aqui ou em outro aparelho; a anulada não conta — sai.
+  function fichaDosesHojeDe(h, key, itens, log, dentro, hoje){
+    var out=[], L=(log && key && log[key])||{};
     Object.keys(itens||{}).forEach(function(id){
       var it=itens[id]||{};
       if(it.suspenso || medItemAnulado(it) || !medVigenteEm(it, hoje)) return;
       (it.horarios||[]).forEach(function(hh){
         var x=minutosAte(hh); if(x===null || x>dentro) return;
+        if(L[magDoseId(id, hh)]) return;
         out.push({h:String(hh), horario:String(hh), nome:String(it.nome||''), hospNome:String((h&&h.nome)||''), key:key, itemId:id});
       });
     });
     return out;
   }
   // As doses de hoje de todos os FILHOts da lista (o alarme é de todos), a mais cedo primeiro.
-  function fichaDosesHoje(dentro){
+  function fichaDosesHoje(dentro, log){
     var hoje=zHojeISO(), out=[], vistos={};
     ((typeof hospedes!=='undefined' && hospedes)||[]).forEach(function(h){
       if(!h || h.saidaHoje) return;
       var key=medAgendaKey(h); if(!key || vistos[key]) return; vistos[key]=1;
       var itens=fichaItensHojeDe(key); if(!itens) return;
-      out=out.concat(fichaDosesHojeDe(h, key, itens, dentro, hoje));
+      out=out.concat(fichaDosesHojeDe(h, key, itens, log, dentro, hoje));
     });
     return out.sort(function(a,b){ return a.horario.localeCompare(b.horario) || a.hospNome.localeCompare(b.hospNome); });
   }
-  // As doses de HOJE deste FILHOt até 60 minutos à frente, ou já na hora (a mesma conta da faixa e do bip). O registro de hoje não está
-  // em memória (a ficha é de ontem): o texto manda ver a ficha de hoje e não afirma que ninguém deu.
+  // O REGISTRO DAS DOSES DE HOJE (QA da 6.122, rodada 3: a dose dada em outro aparelho não calava a faixa nem o bip — risco de dose
+  // dupla). É o mesmo retrato vivo que o alarme lê com a tela em hoje (medLogHoje: auaulandia/medicacao-log/<dia>, por zMapaVivo):
+  // quando a ficha passa para hoje, o alarme usa este mesmo retrato, sem baixar de novo. Só o relógio da ficha o liga, com a ficha
+  // segurada em ontem e remédio de hoje até 60 minutos à frente ou já na hora. Antes de ele chegar, nenhuma dose conta como dada
+  // (errar para mais: a faixa avisa, e o texto dela nunca afirma que ninguém deu).
+  function fichaLogHoje(){
+    var m=null; try{ m=(typeof Z_MAPAS!=='undefined' && Z_MAPAS)?Z_MAPAS['auaulandia/medicacao-log/'+zHojeISO()]:null; }catch(e){ m=null; } /* silencioso de propósito: sem o retrato, nada conta como dado */
+    if(!m || !m.pronto) return null;
+    return medLogSemAnuladas(m.mapa);
+  }
+  function fichaLogHojeLigar(){
+    var p='auaulandia/medicacao-log/'+zHojeISO(), m=(typeof Z_MAPAS!=='undefined' && Z_MAPAS)?Z_MAPAS[p]:null;
+    if(m && m.slots && m.slots._fichaDoseHoje) return 'ligado';
+    if(typeof zMapaVivo!=='function') return '';
+    // Chegou uma dose registrada (aqui ou em outro aparelho): a faixa e o resumo se acertam na hora; o bip para na batida seguinte.
+    zMapaVivo(p, '_fichaDoseHoje', function(){ try{ if(fichaAberta() && !fichaEhHoje()) fichaTopicosPintar(); }catch(e){} /* silencioso de propósito: o relógio da ficha acerta em 30 s */ });
+    return 'ligou';
+  }
+  // As doses de HOJE deste FILHOt até 60 minutos à frente, ou já na hora, sem as já registradas hoje (a mesma conta da faixa e do bip).
   function fichaMedHojeProximas(){
     var h=currentHosp; if(!h || h.saidaHoje) return [];
     var key=medAgendaKey(h), itens=fichaItensHojeDe(key); if(!itens) return [];
-    return fichaDosesHojeDe(h, key, itens, 60, zHojeISO()).map(function(r){ return {h:r.h, nome:r.nome}; })
+    return fichaDosesHojeDe(h, key, itens, fichaLogHoje(), 60, zHojeISO()).map(function(r){ return {h:r.h, nome:r.nome}; })
       .sort(function(a,b){ return a.h.localeCompare(b.h); });
   }
   function fichaMedHojeTxt(){
@@ -18932,7 +18952,7 @@ return { criar };
     return 'Remédio de hoje às '+fichaHoraTxt(P[0].h)+': '+fichaListaTxt(P.filter(function(r){ return r.h===P[0].h; }).map(function(r){ return r.nome; }));
   }
   // Chegou a hora de alguma dose de hoje, de qualquer FILHOt da lista (a régua do alarme: DESP_ANTES_MIN antes, sem limite de atraso)?
-  function fichaDosesHojeNaHora(){ return fichaDosesHoje(DESP_ANTES_MIN); }
+  function fichaDosesHojeNaHora(){ return fichaDosesHoje(DESP_ANTES_MIN, fichaLogHoje()); }
   function fichaDoseHojeChegou(){ return fichaDosesHojeNaHora().length>0; }
   // A dose de hoje que já chegou, no jeito do alarme («Biscoito Teste toma Colírio Teste»): a do horário mais cedo, e quantas mais.
   function fichaDosesHojeTxt(){
@@ -19030,6 +19050,9 @@ return { criar };
   function fichaRelogioTick(){
     if(typeof fichaAberta!=='function' || !fichaAberta() || !currentHosp){ FICHA_DOSE_ESPERA=''; return ''; }
     try{ fichaRelRascunho(); }catch(e){} /* silencioso de propósito: a foto dos relatórios se acerta na próxima batida */
+    // A ficha segurada em ontem com remédio de hoje até 60 minutos à frente ou já na hora: liga o registro das doses de hoje, para a
+    // dose dada em outro aparelho calar a faixa e o bip (QA da 6.122, rodada 3; fichaLogHojeLigar).
+    try{ if(medDiaVelhoAuto() && !fichaEhHoje() && fichaDosesHoje(60, null).length) fichaLogHojeLigar(); }catch(e){} /* silencioso de propósito: sem o registro, nenhuma dose conta como dada e a faixa avisa */
     var vira='';
     try{ vira=fichaVirarParaHoje(Date.now()); }catch(e){ vira=''; } /* silencioso de propósito: tenta de novo na próxima batida; a faixa avisa */
     // A dose de hoje chegou e a ficha espera por um relatório não salvo ou pelo teclado (QA da 6.122, rodada 2): a faixa gruda no

@@ -15,8 +15,9 @@
 // lacuna confirmada); L1, L2 e C11 são controles e passam nos dois. C13 e C14 e as partes novas de C2, C3, C6, C8, C10 e L3 vêm da rodada 1
 // do QA (03/11/2026) e falham também no 42bc54e; a parte nova da C5 (o toque antes de a agenda chegar) pega o defeito plantado pelo QA.
 // A C15, as três guardas da C13 e as partes novas de L1 e L3 vêm da rodada 2 do QA (o relatório pela metade com a dose de hoje na
-// hora): a C15, a C13 e a L3 falham também no c6444d8. A C16 e as partes novas de L1, L3 e C14 vêm da rodada 3 do QA (04/11/2026: a
-// dose de hoje pela agenda de ontem e o «NÃO PODE: Servir morno» dentro do Relatório do Jantar) e falham também no 831eae8.
+// hora): a C15, a C13 e a L3 falham também no c6444d8. A C16, a C17 e as partes novas de L1, L3 e C14 vêm da rodada 3 do QA
+// (04/11/2026: a dose de hoje pela agenda de ontem, a dose registrada em outro aparelho e o «NÃO PODE: Servir morno» dentro do
+// Relatório do Jantar) e falham também no 831eae8.
 
 const assert = require('assert');
 const crypto = require('crypto');
@@ -238,8 +239,8 @@ prova('L3', 'as funções novas da ficha não leem nem gravam no banco, não gua
     'fichaMedHojeProximas', 'fichaMedHojeTxt', 'fichaDoseHojeChegou', 'fichaRelValor', 'fichaRelFotoAcertar', 'fichaRelRascunho', 'fichaEmUso', 'fichaVirarParaHoje',
     // rodada 2 do QA (03/11/2026): a dose de hoje com o relatório pela metade — a faixa que gruda, o bip e o toque que pergunta
     'fichaDosesHojeNaHora', 'fichaDosesHojeTxt', 'fichaTopoGrudado', 'fichaOntemFaixaToque',
-    // rodada 3 do QA (04/11/2026): as doses de hoje pela agenda de HOJE
-    'fichaItensHojeDe', 'fichaDosesHojeDe', 'fichaDosesHoje'];
+    // rodada 3 do QA (04/11/2026): as doses de hoje pela agenda e pelo registro de HOJE
+    'fichaItensHojeDe', 'fichaDosesHojeDe', 'fichaDosesHoje', 'fichaLogHoje', 'fichaLogHojeLigar'];
   novas.forEach((nm) => {
     const f = funcao(nm);
     assert.ok(!/DB\s*\.\s*ref|\.once\(|\.on\(|\.set\(|\.update\(|\.transaction\(|localStorage|sessionStorage|carregar[A-Z]/.test(f), nm + ' não lê nem grava');
@@ -263,10 +264,18 @@ prova('L3', 'as funções novas da ficha não leem nem gravam no banco, não gua
   // As doses de hoje (rodada 3 do QA): uma regra só, a do alarme no dia de hoje — sem suspenso nem anulado e valendo HOJE —, para a
   // faixa, o bip, a passagem para hoje e o resumo; nenhuma lê a fila do alarme montada para o dia da tela (MED_AGENDA_TODOS).
   assert.ok(/if\(it\.suspenso \|\| medItemAnulado\(it\) \|\| !medVigenteEm\(it, hoje\)\) return;/.test(funcao('fichaDosesHojeDe')), 'a vigência de HOJE (início, fim e frequência)');
-  assert.ok(/fichaDosesHojeDe\(/.test(funcao('fichaMedHojeProximas')) && /fichaDosesHoje\(DESP_ANTES_MIN\)/.test(funcao('fichaDosesHojeNaHora')) && /fichaDosesHojeDe\(/.test(funcao('fichaDosesHoje')), 'o resumo e a faixa pela mesma conta');
+  assert.ok(/if\(L\[magDoseId\(id, hh\)\]\) return;/.test(funcao('fichaDosesHojeDe')), 'a dose registrada hoje sai');
+  assert.ok(/fichaDosesHojeDe\(/.test(funcao('fichaMedHojeProximas')) && /fichaDosesHoje\(DESP_ANTES_MIN, fichaLogHoje\(\)\)/.test(funcao('fichaDosesHojeNaHora')) && /fichaDosesHojeDe\(/.test(funcao('fichaDosesHoje')), 'o resumo e a faixa pela mesma conta');
   assert.ok(/h\.saidaHoje/.test(funcao('fichaDosesHoje')) && /h\.saidaHoje/.test(funcao('fichaMedHojeProximas')), 'quem saiu ontem não conta');
   assert.deepStrictEqual(novas.filter((nm) => /MED_AGENDA_TODOS/.test(funcao(nm))), [], 'nenhuma usa a fila do dia da tela');
-  // o relógio da ficha não chama nada que lê o banco (além da passagem para hoje, acima)
+  // A única leitura nova é o retrato vivo do registro de HOJE (o mesmo que o alarme lê com a tela em hoje, medLogHoje), ligado só pelo
+  // relógio da ficha; nenhuma outra função nova abre retrato.
+  assert.deepStrictEqual(novas.filter((nm) => /zMapaVivo\(|zMapaUma\(/.test(funcao(nm))), ['fichaLogHojeLigar'], 'só fichaLogHojeLigar abre o retrato');
+  assert.ok(/var p='auaulandia\/medicacao-log\/'\+zHojeISO\(\)/.test(funcao('fichaLogHojeLigar')) && (funcao('fichaLogHojeLigar').match(/zMapaVivo\(/g) || []).length === 1, 'o registro de hoje, e só ele');
+  assert.ok(/'auaulandia\/medicacao-log\/'\+dataKeyAtual\(\)/.test(trecho('medLogHoje')) && /zMapaUma\(p\)/.test(trecho('medLogHoje')), 'o mesmo caminho e o mesmo retrato do alarme (medLogHoje)');
+  assert.deepStrictEqual(novas.filter((nm) => nm !== 'fichaLogHojeLigar' && /fichaLogHojeLigar\(/.test(funcao(nm))), ['fichaRelogioTick'], 'só o relógio da ficha liga o registro');
+  assert.ok(/medDiaVelhoAuto\(\) && !fichaEhHoje\(\) && fichaDosesHoje\(60, null\)\.length\) fichaLogHojeLigar\(\)/.test(funcao('fichaRelogioTick')), 'só com a ficha segurada em ontem e remédio de hoje na próxima hora');
+  // o relógio da ficha não chama nada que lê o banco (além da passagem para hoje e do registro de hoje, acima)
   const ini = html.indexOf('setInterval(function(){ try{ if(!document.hidden) fichaRelogioTick();');
   assert.ok(ini > 0, 'o relógio da ficha existe');
   assert.ok(/30000\)/.test(html.slice(ini, ini + 220)), 'de 30 em 30 segundos');
@@ -1079,6 +1088,59 @@ prova('C16', 'ficha segurada em ontem: o remédio que terminou ontem, o de terç
       assert.deepStrictEqual(c.erros, [], modo + 'sem erro de página');
     } finally { await c.ctx.close(); }
   }
+});
+
+// C17 (observação da rodada 3 do QA: risco de dose dupla): com o Relatório da noite pela metade e a faixa grudada pela dose das 0h15,
+// a outra plantonista registra a dose no aparelho dela às 0h12. O registro chega ao retrato vivo do dia de hoje (o mesmo que o alarme
+// lê com a tela em hoje, auaulandia/medicacao-log/<hoje>): a faixa solta na hora, o resumo deixa de pedir o remédio e o bip para; este
+// aparelho não grava nada, e a leitura a mais é só esse retrato (o banco de mentira não entrega child_* com a chave do filho: a prova
+// entrega o registro ao retrato como o Firebase faria).
+prova('C17', 'a dose de hoje registrada em outro aparelho cala a faixa e o bip da ficha segurada em ontem: a faixa solta na hora, o resumo para de pedir o remédio, sem gravação e sem leitura além do registro de hoje', async () => {
+  const { ctx, page, erros } = await abrir('2026-11-03T23:50:00-03:00', cenario('2026-11-03', { colirio: '00:15', logHoje: LOG_0311_TUDO_DADO }));
+  try {
+    assert.ok(await contarSom(page), 'o navegador da prova tem AudioContext');
+    await planilhaTresDias(page); await esperar(800);
+    await tocarHospede(page, 'Biscoito Teste');
+    const marcou = await rascunhoNoite(page);
+    const L0 = await page.evaluate(() => ({ l: __banco.log.leituras.length, g: __banco.log.gravacoes.length, lidas: __banco.log.leituras.map((x) => ({ op: x.op, path: x.path })) }));
+    await irAte(page, '2026-11-04T00:10:20-03:00');
+    let r = await ondeEla(page);
+    assert.ok(r.pos === 'sticky' && /toma Colírio Teste/.test(r.faixa) && r.som > 0, '0h10: a faixa grudada e o bip — ' + JSON.stringify(r));
+    await irAte(page, '2026-11-04T00:12:00-03:00');
+    const entregue = await page.evaluate((k) => {
+      const P = 'auaulandia/medicacao-log/2026-11-04';
+      window.__banco.poe(P + '/' + k + '/c1_00-15', { quem: 'Outra Plantonista Teste', ts: Date.now() });
+      const m = Z_MAPAS[P]; if (!m || !m.pronto) return 'sem o retrato vivo de hoje';
+      m.mapa[k] = window.__banco.ler(P + '/' + k); Object.keys(m.slots).forEach((x) => m.slots[x](m.mapa));
+      return Object.keys(m.slots).join(',');
+    }, K.bis);
+    assert.ok(/_fichaDoseHoje/.test(entregue), 'a ficha escuta o registro de hoje: ' + entregue);
+    await esperar(300);
+    r = await ondeEla(page);
+    let n = await naHora(page);
+    const som0 = r.som;
+    assert.ok(r.faixa === FAIXA_ONTEM && r.pos === 'static' && r.texto === TEXTO_NOITE && r.marca === marcou && r.dia === '2026-11-03', '0h12, logo depois do registro (sem esperar a batida): a faixa solta — ' + JSON.stringify(r));
+    assert.ok(n.med === 'Todas as doses de 03/11 registradas' && n.critico === '' && n.vira === '', '0h12: o resumo para de pedir o Colírio — ' + JSON.stringify(n));
+    for (const quando of ['2026-11-04T00:30:00-03:00', '2026-11-04T02:00:00-03:00']) {
+      await irAte(page, quando);
+      r = await ondeEla(page); n = await naHora(page);
+      assert.ok(r.som === som0 && r.pos === 'static' && r.alarme === '' && n.vira === '' && r.texto === TEXTO_NOITE, quando.slice(11, 16) + ': nenhum bip a mais — ' + som0 + ' → ' + JSON.stringify(r));
+    }
+    // a anulada não conta: anulado o registro da outra plantonista, a faixa volta a grudar e o bip volta
+    await page.evaluate((k) => { const P = 'auaulandia/medicacao-log/2026-11-04', m = Z_MAPAS[P];
+      m.mapa[k] = { 'c1_00-15': { quem: 'Outra Plantonista Teste', ts: Date.now(), anulada: { quem: 'Gestão Teste', ts: Date.now() } } }; Object.keys(m.slots).forEach((x) => m.slots[x](m.mapa)); }, K.bis);
+    await andar(page, 0);
+    r = await ondeEla(page);
+    assert.ok(r.pos === 'sticky' && /toma Colírio Teste/.test(r.faixa) && r.som > som0, 'a dose anulada volta a pedir o remédio — ' + JSON.stringify(r));
+    const D = await page.evaluate(() => ({ lidas: __banco.log.leituras.map((x) => ({ op: x.op, path: x.path })), grav: __banco.log.gravacoes.map((x) => ({ op: x.op, path: x.path })) }));
+    // as leituras do registro de doses depois de a ficha abrir: só o retrato do dia de hoje (o resto do app tem relógios próprios
+    // nessas duas horas, que não são da ficha)
+    const antesL = L0.lidas.map((x) => x.op + ' ' + x.path);
+    const novasLog = Array.from(new Set(D.lidas.slice(L0.l).filter((x) => /medicacao-log/.test(x.path) && antesL.indexOf(x.op + ' ' + x.path) < 0).map((x) => x.path)));
+    assert.deepStrictEqual(novasLog, ['auaulandia/medicacao-log/2026-11-04'], 'só o registro de hoje, o dia inteiro, o mesmo retrato do alarme: ' + novasLog.join(', '));
+    assert.deepStrictEqual(D.grav.slice(L0.g).filter((x) => /medicacao/.test(x.path)), [], 'este aparelho não grava nenhuma dose');
+    assert.deepStrictEqual(erros, [], 'sem erro de página');
+  } finally { await ctx.close(); }
 });
 
 // ================================================================== a rodada
