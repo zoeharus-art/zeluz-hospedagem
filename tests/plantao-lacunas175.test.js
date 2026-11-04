@@ -15,8 +15,8 @@
 // lacuna confirmada); L1, L2 e C11 são controles e passam nos dois. C13 e C14 e as partes novas de C2, C3, C6, C8, C10 e L3 vêm da rodada 1
 // do QA (03/11/2026) e falham também no 42bc54e; a parte nova da C5 (o toque antes de a agenda chegar) pega o defeito plantado pelo QA.
 // A C15, as três guardas da C13 e as partes novas de L1 e L3 vêm da rodada 2 do QA (o relatório pela metade com a dose de hoje na
-// hora): a C15, a C13 e a L3 falham também no c6444d8. As partes novas de L1 e C14 vêm da rodada 3 do QA (04/11/2026: o «NÃO PODE:
-// Servir morno» dentro do Relatório do Jantar) e falham também no 831eae8.
+// hora): a C15, a C13 e a L3 falham também no c6444d8. A C16 e as partes novas de L1, L3 e C14 vêm da rodada 3 do QA (04/11/2026: a
+// dose de hoje pela agenda de ontem e o «NÃO PODE: Servir morno» dentro do Relatório do Jantar) e falham também no 831eae8.
 
 const assert = require('assert');
 const crypto = require('crypto');
@@ -237,7 +237,9 @@ prova('L3', 'as funções novas da ficha não leem nem gravam no banco, não gua
     // rodada 1 do QA (03/11/2026): o remédio de hoje com a ficha em ontem e a foto dos relatórios
     'fichaMedHojeProximas', 'fichaMedHojeTxt', 'fichaDoseHojeChegou', 'fichaRelValor', 'fichaRelFotoAcertar', 'fichaRelRascunho', 'fichaEmUso', 'fichaVirarParaHoje',
     // rodada 2 do QA (03/11/2026): a dose de hoje com o relatório pela metade — a faixa que gruda, o bip e o toque que pergunta
-    'fichaDosesHojeNaHora', 'fichaDosesHojeTxt', 'fichaTopoGrudado', 'fichaOntemFaixaToque'];
+    'fichaDosesHojeNaHora', 'fichaDosesHojeTxt', 'fichaTopoGrudado', 'fichaOntemFaixaToque',
+    // rodada 3 do QA (04/11/2026): as doses de hoje pela agenda de HOJE
+    'fichaItensHojeDe', 'fichaDosesHojeDe', 'fichaDosesHoje'];
   novas.forEach((nm) => {
     const f = funcao(nm);
     assert.ok(!/DB\s*\.\s*ref|\.once\(|\.on\(|\.set\(|\.update\(|\.transaction\(|localStorage|sessionStorage|carregar[A-Z]/.test(f), nm + ' não lê nem grava');
@@ -258,6 +260,12 @@ prova('L3', 'as funções novas da ficha não leem nem gravam no banco, não gua
   // O alarme na tela segura a virada pela conta única de zDiaTrabalhoAberto (que não muda), e o bip é o de sempre, só no relógio da ficha.
   assert.ok(/var ab=zDiaTrabalhoAberto\(\); if\(ab && ab!=='sem internet'\) return 'espera: '\+ab;/.test(funcao('fichaVirarParaHoje')), 'o alarme, o check-in e o almoço seguram a virada');
   assert.deepStrictEqual(novas.filter((nm) => /bipDespertador\(|AudioContext/.test(funcao(nm))), ['fichaRelogioTick'], 'o bip só no relógio da ficha');
+  // As doses de hoje (rodada 3 do QA): uma regra só, a do alarme no dia de hoje — sem suspenso nem anulado e valendo HOJE —, para a
+  // faixa, o bip, a passagem para hoje e o resumo; nenhuma lê a fila do alarme montada para o dia da tela (MED_AGENDA_TODOS).
+  assert.ok(/if\(it\.suspenso \|\| medItemAnulado\(it\) \|\| !medVigenteEm\(it, hoje\)\) return;/.test(funcao('fichaDosesHojeDe')), 'a vigência de HOJE (início, fim e frequência)');
+  assert.ok(/fichaDosesHojeDe\(/.test(funcao('fichaMedHojeProximas')) && /fichaDosesHoje\(DESP_ANTES_MIN\)/.test(funcao('fichaDosesHojeNaHora')) && /fichaDosesHojeDe\(/.test(funcao('fichaDosesHoje')), 'o resumo e a faixa pela mesma conta');
+  assert.ok(/h\.saidaHoje/.test(funcao('fichaDosesHoje')) && /h\.saidaHoje/.test(funcao('fichaMedHojeProximas')), 'quem saiu ontem não conta');
+  assert.deepStrictEqual(novas.filter((nm) => /MED_AGENDA_TODOS/.test(funcao(nm))), [], 'nenhuma usa a fila do dia da tela');
   // o relógio da ficha não chama nada que lê o banco (além da passagem para hoje, acima)
   const ini = html.indexOf('setInterval(function(){ try{ if(!document.hidden) fichaRelogioTick();');
   assert.ok(ini > 0, 'o relógio da ficha existe');
@@ -979,6 +987,98 @@ prova('C15', 'Relatório da noite pela metade das 23h50 às 7h10: na hora da dos
     assert.ok(r.ficha === 'block' && r.dia === '2026-11-04' && /Biscoito Teste toma Colírio Teste/.test(r.alarme) && r.faixa === '', '«Ir para a ficha de hoje»: hoje, com o alarme por cima — ' + JSON.stringify(r));
     assert.deepStrictEqual(erros, [], 'sem erro de página');
   } finally { await ctx.close(); }
+});
+
+// ================================================================== rodada 3 do QA (04/11/2026)
+// O Relatório da noite pela metade: marca «Como passou a noite?», escreve uma linha e rola até ela (ele não salva incompleto).
+async function rascunhoNoite(page) {
+  await page.evaluate(() => toggleRel('card-noite')); await esperar(300);
+  const marcou = await page.evaluate(() => { const b = document.querySelector('#card-noite .obsline .seg button'); b.click(); return b.textContent; });
+  await page.fill('#card-noite textarea', TEXTO_NOITE);
+  await page.evaluate(() => { document.activeElement && document.activeElement.blur(); document.querySelector('#card-noite textarea').scrollIntoView({ block: 'center' }); });
+  await esperar(300);
+  return marcou;
+}
+const FAIXA_ONTEM = 'Esta ficha é de ontem: toque para ver a de hoje';
+const naHora = (page) => page.evaluate(() => ({ vira: fichaVirarParaHoje(), med: document.getElementById('tps-med').innerText,
+  critico: Array.from(document.querySelectorAll('#tps-med .tp-sub-critico')).map((x) => x.innerText).join(' | ') }));
+
+// C16 (bloqueio da rodada 3 do QA, segurança do FILHOt): com a ficha segurada em ontem, a dose «de hoje» é a da agenda que vale HOJE
+// (a regra do alarme: início, fim e frequência). O remédio que terminou ontem, o de dia da semana que não é hoje e o de dia sim, dia não
+// que foi ontem não grudam a faixa nem tocam o bip (nem o suspenso pela veterinária, nem o anulado); o que começa hoje leva a ficha para
+// hoje com o alarme por cima e, com o relatório pela metade, gruda a faixa e toca o bip. A faixa e o resumo do Medicamento dizem o mesmo
+// remédio. Hoje (04/11/2026) é quarta; ontem, terça. Cada cena roda duas vezes: com a agenda da casa em memória, como no aparelho de
+// verdade (o ouvinte de auaulandia/medicacao-agenda que o login liga, MED_AGENDA_GERAL; o mundo de teste não o liga), e só com a agenda
+// do FILHOt da ficha (MED_AGENDA_ITENS), a que vale se a da casa não chegou.
+const NAO_VALEM_HOJE = { c1: { nome: 'Colírio Teste', q: '1', u: 'gota', horarios: ['00:15'], tipo: 'medicamento', continuo: false, dataInicio: '2026-10-25', dataFim: '2026-11-03' },
+  f1: { nome: 'Vermífugo Teste', q: '1', u: 'comprimido', horarios: ['00:15'], tipo: 'medicamento', continuo: true, dataInicio: '2026-10-01', freq: { tipo: 'dias', dias: ['ter'] } },
+  p1: { nome: 'Probiótico Teste', q: '1', u: 'sachê', horarios: ['00:15'], tipo: 'suplemento', continuo: true, dataInicio: '2026-11-03', freq: { tipo: 'alternado' } },
+  s1: { nome: 'Gotas Suspensas Teste', q: '2', u: 'gota', horarios: ['00:15'], tipo: 'medicamento', continuo: true, dataInicio: '2026-10-01', suspenso: true },
+  x1: { nome: 'Xarope Anulado Teste', q: '5', u: 'ml', horarios: ['00:15'], tipo: 'medicamento', continuo: true, dataInicio: '2026-10-01', anulado: { quem: 'Gestão Teste', ts: 1 } } };
+const COMECA_HOJE = { n1: { nome: 'Antibiótico Teste', q: '1', u: 'comprimido', horarios: ['00:15'], tipo: 'medicamento', continuo: true, dataInicio: '2026-11-04' } };
+const LOG_0311_COM_VERMIFUGO = Object.assign({}, LOG_0311_TUDO_DADO, { 'f1_00-15': { quem: 'Plantonista Teste', ts: 4 }, 'p1_00-15': { quem: 'Plantonista Teste', ts: 5 } });
+// A agenda da casa em memória, como no login (wireFirebaseListeners): o mesmo ouvinte, no banco de mentira; devolve as chaves que chegaram.
+const agendaDaCasa = (page) => page.evaluate(() => new Promise((ok) => {
+  DB.ref('auaulandia/medicacao-agenda').on('value', (s) => { MED_AGENDA_GERAL = s.val() || {}; MED_AGENDA_GERAL_CARREGADA = true; ok(Object.keys(MED_AGENDA_GERAL)); });
+}));
+prova('C16', 'ficha segurada em ontem: o remédio que terminou ontem, o de terça (hoje é quarta), o de dia sim, dia não, o suspenso e o anulado não grudam a faixa nem tocam o bip; o que começa hoje leva a ficha para hoje com o alarme por cima e, com o relatório pela metade, gruda a faixa com o nome dele, igual ao resumo (com a agenda da casa em memória e sem ela)', async () => {
+  for (const casa of [true, false]) {
+    const modo = casa ? '[agenda da casa] ' : '[só a do FILHOt] ';
+    const preparar = async (page) => {
+      if (!casa) return;
+      const ks = await agendaDaCasa(page);
+      assert.ok(ks.indexOf(K.bis) >= 0, modo + 'a agenda da casa chegou: ' + ks.join(', '));
+    };
+    // (1) o caso do QA: o Colírio terminou ontem, o Vermífugo é só às terças, o Probiótico foi ontem (dia sim, dia não), as Gotas estão
+    // suspensas e o Xarope anulado; tudo de 03/11 dado; o Relatório da noite pela metade
+    const a = await abrir('2026-11-03T23:50:00-03:00', cenario('2026-11-03', { logHoje: LOG_0311_COM_VERMIFUGO, itens: NAO_VALEM_HOJE }));
+    try {
+      const page = a.page;
+      assert.ok(await contarSom(page), 'o navegador da prova tem AudioContext');
+      await planilhaTresDias(page); await esperar(800); await preparar(page);
+      await tocarHospede(page, 'Biscoito Teste');
+      const marcou = await rascunhoNoite(page);
+      for (const quando of ['2026-11-04T00:10:20-03:00', '2026-11-04T00:40:00-03:00']) {
+        await irAte(page, quando);
+        const r = await ondeEla(page), n = await naHora(page);
+        assert.ok(r.dia === '2026-11-03' && r.texto === TEXTO_NOITE && r.marca === marcou, modo + quando.slice(11, 16) + ': a ficha em ontem, o texto intacto — ' + JSON.stringify(r));
+        assert.ok(r.faixa === FAIXA_ONTEM && r.pos === 'static' && r.som === 0 && r.alarme === '' && n.vira === '', modo + quando.slice(11, 16) + ': nenhum remédio de hoje, sem faixa grudada e sem bip — ' + JSON.stringify(r) + ' / ' + JSON.stringify(n));
+        assert.ok(n.med === 'Todas as doses de 03/11 registradas' && n.critico === '', modo + quando.slice(11, 16) + ': o resumo diz o mesmo — ' + JSON.stringify(n));
+      }
+      assert.deepStrictEqual(a.erros, [], modo + 'sem erro de página');
+    } finally { await a.ctx.close(); }
+    // (2) o Antibiótico começa hoje às 0h15, sem relatório pela metade: a faixa e o resumo avisam antes; na hora, a ficha passa para hoje e o alarme toca
+    const b = await abrir('2026-11-03T23:50:00-03:00', cenario('2026-11-03', { logHoje: { 'a1_08-00': LOG_0311_TUDO_DADO['a1_08-00'], 'a1_20-00': LOG_0311_TUDO_DADO['a1_20-00'] }, itens: COMECA_HOJE }));
+    try {
+      const page = b.page;
+      await planilhaTresDias(page); await esperar(800); await preparar(page);
+      await tocarHospede(page, 'Biscoito Teste');
+      await irAte(page, '2026-11-04T00:05:00-03:00');
+      let r = await estadoVirada(page);
+      assert.ok(r.dia === '2026-11-03' && r.faixa === 'Esta ficha é de ontem. Remédio de hoje às 0h15: toque para ver a de hoje' && r.critico === 'Remédio de hoje às 0h15: Antibiótico Teste', modo + '0h05: a faixa e o resumo avisam do que começa hoje — ' + JSON.stringify(r));
+      await page.mouse.move(20, 20);
+      await irAte(page, '2026-11-04T00:16:00-03:00');
+      r = await estadoVirada(page);
+      assert.ok(r.ficha === 'block' && r.dia === '2026-11-04' && /^Hoje · 04\/11\/2026/.test(r.rotulo) && /Biscoito Teste toma Antibiótico Teste/.test(r.alarme), modo + '0h16: a ficha passou para hoje e o alarme do Antibiótico toca por cima dela — ' + JSON.stringify(r));
+      assert.deepStrictEqual(b.erros, [], modo + 'sem erro de página');
+    } finally { await b.ctx.close(); }
+    // (3) todos às 0h15 e o Relatório da noite pela metade: a faixa gruda e toca só pelo Antibiótico; o resumo diz o mesmo remédio
+    const c = await abrir('2026-11-03T23:50:00-03:00', cenario('2026-11-03', { logHoje: LOG_0311_COM_VERMIFUGO, itens: Object.assign({}, NAO_VALEM_HOJE, COMECA_HOJE) }));
+    try {
+      const page = c.page;
+      assert.ok(await contarSom(page), 'o navegador da prova tem AudioContext');
+      await planilhaTresDias(page); await esperar(800); await preparar(page);
+      await tocarHospede(page, 'Biscoito Teste');
+      const marcou = await rascunhoNoite(page);
+      await irAte(page, '2026-11-04T00:10:20-03:00');
+      const r = await ondeEla(page), n = await naHora(page);
+      assert.ok(r.dia === '2026-11-03' && r.texto === TEXTO_NOITE && r.marca === marcou, modo + '0h10: o texto intacto — ' + JSON.stringify(r));
+      assert.ok(r.faixa === 'Remédio de hoje às 0h15: Biscoito Teste toma Antibiótico Teste. Para o alarme tocar, salve o relatório ou toque aqui' && r.pos === 'sticky' && r.porCima && r.som > 0,
+        modo + '0h10: a faixa grudada e o bip, só pelo remédio que vale hoje — ' + JSON.stringify(r));
+      assert.ok(n.vira === 'espera: relatório não salvo' && n.critico === 'Remédio de hoje às 0h15: Antibiótico Teste' && !/Colírio|Vermífugo|Probiótico|Suspensas|Anulado/.test(n.med + ' ' + r.faixa), modo + '0h10: o resumo diz o mesmo remédio da faixa — ' + JSON.stringify(n));
+      assert.deepStrictEqual(c.erros, [], modo + 'sem erro de página');
+    } finally { await c.ctx.close(); }
+  }
 });
 
 // ================================================================== a rodada

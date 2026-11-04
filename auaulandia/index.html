@@ -18880,29 +18880,59 @@ return { criar };
   // cursor, «Dei agora» armado ou registrando, ou um relatório com o que foi marcado ou escrito e ainda não salvo — o texto nunca
   // se perde: passa quando ele é salvo ou desfeito). Enquanto o relatório ou o teclado seguram a ficha com a dose de hoje já na hora,
   // a faixa gruda no alto e o bip toca a cada batida (QA da 6.122, rodada 2; fichaOntemFaixaPintar e fichaRelogioTick).
-  // As doses de HOJE deste FILHOt até 60 minutos à frente, ou já na hora, pela agenda dele em memória (MED_AGENDA_ITENS) e pelo dia
-  // de hoje (suspenso, anulado e fora do período de hoje não contam). O registro de hoje não está em memória (a ficha é de ontem):
-  // o texto manda ver a ficha de hoje e não afirma que ninguém deu.
-  function fichaMedHojeProximas(){
-    var hoje=zHojeISO(), out=[];
-    Object.keys(MED_AGENDA_ITENS||{}).forEach(function(id){
-      var it=MED_AGENDA_ITENS[id]||{};
+  // AS DOSES DE HOJE COM A FICHA SEGURADA EM ONTEM — uma conta só para a faixa, o bip, a passagem para hoje e o resumo do Medicamento
+  // (QA da 6.122, rodada 3: a faixa e o bip usavam a fila do alarme montada para o dia da tela, ontem, e mandavam dar um remédio que
+  // terminou ontem; e o remédio que começa hoje não levava a ficha para hoje). A regra é a do alarme no dia de hoje
+  // (carregarAgendaMedTodos, que não muda): sem suspenso nem anulado, e valendo HOJE (medVigenteEm(it, hoje): início, fim e frequência).
+  // A agenda: a da casa inteira em memória (MED_AGENDA_GERAL, viva desde o login, o mesmo nó que o alarme lê) e, sem ela, a do FILHOt
+  // da ficha (MED_AGENDA_ITENS). Sem agenda em memória, o FILHOt não entra: não se afirma um remédio que não dá para conferir.
+  // Ficam de fora quem tinha saída marcada para ontem (já foi para casa) e o Day Care (dc__: a fila dele é a do dia em que foi lida;
+  // o alarme a lê de novo quando a tela passa para hoje).
+  function fichaItensHojeDe(key){
+    if(!key) return null;
+    try{ if(typeof MED_AGENDA_GERAL!=='undefined' && MED_AGENDA_GERAL_CARREGADA===true && MED_AGENDA_GERAL) return ((MED_AGENDA_GERAL[key]||{}).itens)||{}; }
+    catch(e){} /* silencioso de propósito: sem a agenda viva, vale a do FILHOt da ficha */
+    if(currentHosp && key===medAgendaKey(currentHosp)) return MED_AGENDA_ITENS||{};
+    return null;
+  }
+  // As doses de hoje de um FILHOt (itens = a agenda dele) até `dentro` minutos à frente, sem limite de atraso (a régua do alarme).
+  function fichaDosesHojeDe(h, key, itens, dentro, hoje){
+    var out=[];
+    Object.keys(itens||{}).forEach(function(id){
+      var it=itens[id]||{};
       if(it.suspenso || medItemAnulado(it) || !medVigenteEm(it, hoje)) return;
-      (it.horarios||[]).forEach(function(hh){ var x=minutosAte(hh); if(x!==null && x<=60) out.push({h:String(hh), nome:String(it.nome||'')}); });
+      (it.horarios||[]).forEach(function(hh){
+        var x=minutosAte(hh); if(x===null || x>dentro) return;
+        out.push({h:String(hh), horario:String(hh), nome:String(it.nome||''), hospNome:String((h&&h.nome)||''), key:key, itemId:id});
+      });
     });
-    return out.sort(function(a,b){ return a.h.localeCompare(b.h); });
+    return out;
+  }
+  // As doses de hoje de todos os FILHOts da lista (o alarme é de todos), a mais cedo primeiro.
+  function fichaDosesHoje(dentro){
+    var hoje=zHojeISO(), out=[], vistos={};
+    ((typeof hospedes!=='undefined' && hospedes)||[]).forEach(function(h){
+      if(!h || h.saidaHoje) return;
+      var key=medAgendaKey(h); if(!key || vistos[key]) return; vistos[key]=1;
+      var itens=fichaItensHojeDe(key); if(!itens) return;
+      out=out.concat(fichaDosesHojeDe(h, key, itens, dentro, hoje));
+    });
+    return out.sort(function(a,b){ return a.horario.localeCompare(b.horario) || a.hospNome.localeCompare(b.hospNome); });
+  }
+  // As doses de HOJE deste FILHOt até 60 minutos à frente, ou já na hora (a mesma conta da faixa e do bip). O registro de hoje não está
+  // em memória (a ficha é de ontem): o texto manda ver a ficha de hoje e não afirma que ninguém deu.
+  function fichaMedHojeProximas(){
+    var h=currentHosp; if(!h || h.saidaHoje) return [];
+    var key=medAgendaKey(h), itens=fichaItensHojeDe(key); if(!itens) return [];
+    return fichaDosesHojeDe(h, key, itens, 60, zHojeISO()).map(function(r){ return {h:r.h, nome:r.nome}; })
+      .sort(function(a,b){ return a.h.localeCompare(b.h); });
   }
   function fichaMedHojeTxt(){
     var P=fichaMedHojeProximas(); if(!P.length) return '';
     return 'Remédio de hoje às '+fichaHoraTxt(P[0].h)+': '+fichaListaTxt(P.filter(function(r){ return r.h===P[0].h; }).map(function(r){ return r.nome; }));
   }
-  // Chegou a hora de alguma dose de hoje, de qualquer FILHOt da lista (o alarme é de todos)? A agenda em memória é a do dia da tela
-  // (ontem); quem tinha saída marcada para ontem já foi para casa. Errar para mais só leva a ficha para hoje, que é o dia certo.
-  function fichaDosesHojeNaHora(){
-    var L=(typeof MED_AGENDA_TODOS!=='undefined' && MED_AGENDA_TODOS)||[];
-    return L.filter(function(it){ if(!it || it.saidaHoje) return false; var x=minutosAte(it.horario); return x!==null && x<=DESP_ANTES_MIN; })
-      .sort(function(a,b){ return String(a.horario||'').localeCompare(String(b.horario||'')) || String(a.hospNome||'').localeCompare(String(b.hospNome||'')); });
-  }
+  // Chegou a hora de alguma dose de hoje, de qualquer FILHOt da lista (a régua do alarme: DESP_ANTES_MIN antes, sem limite de atraso)?
+  function fichaDosesHojeNaHora(){ return fichaDosesHoje(DESP_ANTES_MIN); }
   function fichaDoseHojeChegou(){ return fichaDosesHojeNaHora().length>0; }
   // A dose de hoje que já chegou, no jeito do alarme («Biscoito Teste toma Colírio Teste»): a do horário mais cedo, e quantas mais.
   function fichaDosesHojeTxt(){
