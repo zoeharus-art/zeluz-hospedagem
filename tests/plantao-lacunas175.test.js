@@ -15,7 +15,8 @@
 // lacuna confirmada); L1, L2 e C11 são controles e passam nos dois. C13 e C14 e as partes novas de C2, C3, C6, C8, C10 e L3 vêm da rodada 1
 // do QA (03/11/2026) e falham também no 42bc54e; a parte nova da C5 (o toque antes de a agenda chegar) pega o defeito plantado pelo QA.
 // A C15, as três guardas da C13 e as partes novas de L1 e L3 vêm da rodada 2 do QA (o relatório pela metade com a dose de hoje na
-// hora): a C15, a C13 e a L3 falham também no c6444d8.
+// hora): a C15, a C13 e a L3 falham também no c6444d8. As partes novas de L1 e C14 vêm da rodada 3 do QA (04/11/2026: o «NÃO PODE:
+// Servir morno» dentro do Relatório do Jantar) e falham também no 831eae8.
 
 const assert = require('assert');
 const crypto = require('crypto');
@@ -192,7 +193,7 @@ const NAO_MUDAM = {
   minutosAte: 'a07e011ea2576faf', salvarRelatorioCard: '0fb647956f070e13', confirmarRecebimento: 'bcaca36d15935b95',
   aplicarCard: '960a9382b43ee4c5', coletarCard: 'e124faa234f3213b', observarFimLeitura: 'c6dd6c2d9d9cc8da',
   sincTravaLeitura: '78836ae85158f706', sincRecebVis: '03d4a534ee5193f9', carregarFicha: '09486fb98aa7d42a',
-  carregarMedAgenda: 'cc3983e265e95494', jantaSlotRender: 'd390200095fa1afd', alimDoHospede: '93626518e6759a43',
+  carregarMedAgenda: 'cc3983e265e95494', alimDoHospede: '93626518e6759a43',
   alimMarcaDoCard: '0af5dff971e8f881', renderRelMedConfirm: '2438a42ec24a3a2c', dateLabelHTML: 'e9ff298af0d1a0a5',
   updateDateLabel: 'c9eb1523c00a7bd5', fichaHoje: '20d60914122a444a', fichaMudaDia: 'cb7e758871fc475e',
   registrarDoseAgendada: 'dadea85e19f3459d', registrarDoseAgendadaGlobal: 'af517efea2d89e0d', registrarDoseAvulsa: '3b44c1402d940071',
@@ -205,9 +206,17 @@ const NAO_MUDAM = {
   zDiaOntemPendente: '4791c77206d9f5d8', zDiaHojePergunta: 'f520f373cd947aac', zEscolha: '13faab7feace613f',
 };
 const PROTEGIDA = { n: 157, funcoes: '93f5be639ef4de2f', daycare: '4c438983ed2b9c0a' };
-prova('L1', 'as funções que a 6.122 não pode mudar (a Medicação, o alarme, os relatórios, a trava de leitura, a faixa e a comida) têm o mesmo texto do master d3a9e25', () => {
+// jantaSlotRender (a caixa do jantar dentro do Relatório do Jantar) muda numa linha só, de propósito (rodada 3 do QA, ponto 4 da
+// rodada 4): no SEM RAÇÃO com check-in, a observação da comida é instrução («Observação da alimentação: …»), não «NÃO PODE: …». Com
+// essa linha e o comentário dela trocados de volta pelo texto do master, a função tem o hash do master: nada mais mudou nela.
+const JANTA_NOVA = "+(a.obs?('<div>'+(a.fonte==='checkin'?'Observação da alimentação: ':'NÃO PODE: ')+escAttr(a.obs)+'</div>'):'')";
+const JANTA_VELHA = "+(a.obs?('<div>NÃO PODE: '+escAttr(a.obs)+'</div>'):'')";
+prova('L1', 'as funções que a 6.122 não pode mudar (a Medicação, o alarme, os relatórios, a trava de leitura, a faixa e a comida) têm o mesmo texto do master d3a9e25; jantaSlotRender só com a linha da observação do SEM RAÇÃO', () => {
   const diferentes = Object.keys(NAO_MUDAM).filter((nm) => sha(trecho(nm)) !== NAO_MUDAM[nm]);
   assert.deepStrictEqual(diferentes, [], 'mudaram: ' + diferentes.join(', '));
+  const j = trecho('jantaSlotRender');
+  assert.strictEqual(j.split(JANTA_NOVA).length - 1, 1, 'a linha nova do SEM RAÇÃO, uma vez só (o ramo «sem jantar lançado» continua com NÃO PODE)');
+  assert.strictEqual(sha(j.replace(/\n {6}\/\/ 6\.122 \(QA, rodada 3\):[^\n]*\n {6}\/\/[^\n]*/, '').replace(JANTA_NOVA, JANTA_VELHA)), 'd390200095fa1afd', 'o resto de jantaSlotRender igual ao master');
 });
 
 prova('L2', 'a área protegida do check-in do corpo (ck*, ckt*, pt*, pendAvisarChegada) e o #v-daycare, iguais aos do master', () => {
@@ -886,6 +895,11 @@ prova('C14', 'SEM RAÇÃO com check-in: a instrução da comida aparece como «O
     assert.deepStrictEqual(r.obs, ['Observação da alimentação: Servir morno, em pote raso'], 'a instrução com o rótulo certo');
     assert.strictEqual(r.naoPode, 'NÃO PODE: frango · sem grãos', 'o NÃO PODE verdadeiro continua no alto');
     assert.ok(/SEM RAÇÃO — Biscoito Teste come a comida úmida da casa hoje/.test(r.alim) && /SEM RAÇÃO: comida úmida da casa/.test(r.resumo), 'o aviso SEM RAÇÃO continua: ' + r.resumo);
+    assert.strictEqual((r.alim.match(/Servir morno/g) || []).length, 1, 'na Alimentação, a instrução uma vez só');
+    // rodada 3 do QA: dentro do Relatório do Jantar (a caixa de jantaSlotRender), a mesma instrução, com o mesmo rótulo, e nunca «NÃO PODE»
+    const jantar = await page.evaluate(() => { toggleRel('card-inicio'); const el = document.getElementById('janta-slot-inicio'); return { txt: el.innerText, linhas: Array.from(el.querySelectorAll('.janta-box > div')).map((d) => d.innerText.trim()) }; });
+    assert.ok(!/NÃO PODE/.test(jantar.txt), 'o Relatório do Jantar sem «NÃO PODE: Servir morno»: ' + jantar.txt);
+    assert.ok(jantar.linhas.indexOf('Observação da alimentação: Servir morno, em pote raso') >= 0 && /^SEM RAÇÃO — Biscoito Teste come a comida úmida da casa hoje\./.test(jantar.txt), 'a instrução de como servir, no Relatório do Jantar: ' + JSON.stringify(jantar));
     assert.deepStrictEqual(erros, [], 'sem erro de página');
   } finally { await ctx.close(); }
 });

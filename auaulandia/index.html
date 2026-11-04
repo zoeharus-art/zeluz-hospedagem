@@ -18785,13 +18785,13 @@ return { criar };
     try{ jantaSlotRender(); }catch(e){} /* silencioso de propósito: guarda defensiva — vale a caixa que já estava */
     var js=document.getElementById('janta-slot-inicio'), jHtml=(js&&js.innerHTML)||'';
     var a=null; try{ a=alimDoHospede(h); }catch(e){ a=null; } /* silencioso de propósito: sem a comida, só a caixa do jantar */
-    // SEM RAÇÃO com check-in (QA da 6.122, rodada 1): a caixa do jantar (jantaSlotRender, que não muda) escreve a observação da
-    // comida do check-in como «NÃO PODE: …», com o sentido invertido («NÃO PODE: Servir morno, em pote raso»). Na cópia da
-    // Alimentação, essa linha sai, e a observação aparece logo abaixo, com o rótulo certo («Observação da alimentação»).
+    // SEM RAÇÃO com check-in (QA da 6.122, rodadas 1 e 3): a caixa do jantar (jantaSlotRender) escreve a observação da comida do
+    // check-in como «Observação da alimentação: …» (até a rodada 3, «NÃO PODE: …», com o sentido invertido). Na cópia da Alimentação,
+    // essa linha sai da caixa, e a observação aparece logo abaixo, na faixa amarela de sempre (uma vez só).
     var semRacaoCk=!!(a && a.semRacao && a.fonte==='checkin' && String(a.obs||'').trim());
     if(semRacaoCk && jHtml){
       try{
-        var _tmp=document.createElement('div'), _alvo=('NÃO PODE: '+String(a.obs)).replace(/\s+/g,' ').trim(); _tmp.innerHTML=jHtml;
+        var _tmp=document.createElement('div'), _alvo=('Observação da alimentação: '+String(a.obs)).replace(/\s+/g,' ').trim(); _tmp.innerHTML=jHtml;
         Array.prototype.forEach.call(_tmp.querySelectorAll('.janta-box > div'), function(d){ if(String(d.textContent||'').replace(/\s+/g,' ').trim()===_alvo && d.parentNode) d.parentNode.removeChild(d); });
         jHtml=_tmp.innerHTML;
       }catch(e){} /* silencioso de propósito: sem o recorte, fica a caixa de sempre */
@@ -24314,9 +24314,11 @@ return { criar };
     var a=(typeof alimDoHospede==='function')?alimDoHospede(h):null;
     if(!a){ el.innerHTML=''; return; }
     if(a.semRacao){
+      // 6.122 (QA, rodada 3): a observação da comida do check-in é a instrução de como servir («Servir morno, em pote raso»), não o que
+      // ele não pode comer; vai com o rótulo que a Alimentação da ficha usa. Vinda do almoço do Day Care, a.obs é a restrição: «NÃO PODE».
       el.innerHTML='<div class="janta-box janta-box-falta">'
         +'<strong>SEM RAÇÃO — '+escAttr(h.nome||'ele')+' come a comida úmida da casa hoje.</strong>'
-        +(a.obs?('<div>NÃO PODE: '+escAttr(a.obs)+'</div>'):'')
+        +(a.obs?('<div>'+(a.fonte==='checkin'?'Observação da alimentação: ':'NÃO PODE: ')+escAttr(a.obs)+'</div>'):'')
         +'<div>O tutor não trouxe a ração e a recepção registrou isso no check-in. Sirva a comida úmida e <strong>escreva abaixo o que deu</strong>.</div></div>';
       return;
     }
