@@ -1310,20 +1310,23 @@ prova('C19', 'lista da plantonista às 19h40: os números, o Café, a faixa e lo
     L = await lerLista(page);
     assert.ok(L.blocos.slice(-2).every((b) => b.open === true), 'um toque abre');
     assert.deepStrictEqual(L.guardado, { 'plantao-turno': true, 'plantao-protocolo': true }, 'o aparelho lembra o que a pessoa abriu');
-    await tocarTitulo(page, 'prevSec_plantao-turno');
-    L = await lerLista(page);
-    assert.ok(L.blocos.find((b) => b.id === 'prevSec_plantao-turno').open === false && L.guardado['plantao-turno'] === undefined, 'outro toque fecha, e o aparelho esquece');
-    const depois = await page.evaluate(() => ({ l: __banco.log.leituras.length, g: __banco.log.gravacoes.length }));
-    assert.deepStrictEqual({ l: depois.l - antes.l, g: depois.g - antes.g }, { l: 0, g: 0 }, 'abrir e fechar: zero leituras e zero gravações');
-    // recarregada a página no mesmo aparelho: o Protocolo que ela deixou aberto continua aberto, no fim; o primeiro cartão não se mexe
+    let depois = await page.evaluate(() => ({ l: __banco.log.leituras.length, g: __banco.log.gravacoes.length }));
+    assert.deepStrictEqual({ l: depois.l - antes.l, g: depois.g - antes.g }, { l: 0, g: 0 }, 'abrir: zero leituras e zero gravações');
+    // recarregada a página no mesmo aparelho: os dois que ela deixou abertos continuam abertos, no fim; o primeiro cartão não se mexe
     await remontar(page, S);
     L = await lerLista(page);
-    assert.deepStrictEqual(L.blocos.slice(-2).map((b) => b.open), [false, true], 'o aparelho lembrou: «Terminou o seu turno?» fechado, Protocolo aberto');
-    assert.ok(L.card.top === topo1 && ordemDe(L).slice(-3).join() === 'hospGrid,prevSec_plantao-turno,prevSec_plantao-protocolo', 'o Protocolo aberto fica no fim, abaixo dos cartões, e o primeiro cartão não se mexe: ' + JSON.stringify({ topo1, card: L.card, ordem: ordemDe(L) }));
-    await tocarTitulo(page, 'prevSec_plantao-protocolo');
+    assert.deepStrictEqual(L.blocos.slice(-2).map((b) => b.open), [true, true], 'o aparelho lembrou os dois abertos');
+    assert.ok(L.card.top === topo1 && ordemDe(L).slice(-3).join() === 'hospGrid,prevSec_plantao-turno,prevSec_plantao-protocolo', 'abertos, ficam no fim, abaixo dos cartões, e o primeiro cartão não se mexe: ' + JSON.stringify({ topo1, card: L.card, ordem: ordemDe(L) }));
+    // um toque fecha, o aparelho esquece, e recarregada a página continuam fechados
+    const antes2 = await page.evaluate(() => ({ l: __banco.log.leituras.length, g: __banco.log.gravacoes.length }));
+    await tocarTitulo(page, 'prevSec_plantao-turno'); await tocarTitulo(page, 'prevSec_plantao-protocolo');
+    L = await lerLista(page);
+    assert.ok(L.blocos.slice(-2).every((b) => b.open === false) && L.guardado['plantao-turno'] === undefined && L.guardado['plantao-protocolo'] === undefined, 'outro toque fecha, e o aparelho esquece: ' + JSON.stringify(L.guardado));
+    depois = await page.evaluate(() => ({ l: __banco.log.leituras.length, g: __banco.log.gravacoes.length }));
+    assert.deepStrictEqual({ l: depois.l - antes2.l, g: depois.g - antes2.g }, { l: 0, g: 0 }, 'fechar: zero leituras e zero gravações');
     await remontar(page, S);
     L = await lerLista(page);
-    assert.deepStrictEqual(L.blocos.slice(-2).map((b) => b.open), [false, false], 'fechado de novo, continua fechado');
+    assert.deepStrictEqual(L.blocos.slice(-2).map((b) => b.open), [false, false], 'fechados de novo, continuam fechados');
     // o toque no cartão abre a ficha, como sempre; de volta à lista, os dois do fim continuam como estavam
     await tocarHospede(page, 'Biscoito Teste');
     assert.ok(await page.evaluate(() => document.getElementById('hosp-ficha').style.display === 'block' && getComputedStyle(document.querySelector('.main > .head')).display === 'none'), 'a ficha abre, sem o cabeçalho (Fatia 1)');
@@ -1351,6 +1354,8 @@ prova('C20', 'dentro dos tópicos do fim, os mesmos botões: «Fechar o turno e 
     await tocarTitulo(page, 'prevSec_plantao-turno');
     const bt = await page.$('#btnFecharTurno');
     assert.ok(await bt.isVisible() && (await bt.innerText()) === 'Fechar o turno e avisar a Gestão', 'o botão de sempre, à vista com o tópico aberto');
+    // o título não se repete dentro (o h2 do cartão de antes fica escondido pela casca, como no Protocolo e no Café)
+    assert.deepStrictEqual(await page.evaluate(() => ['prevSec_plantao-turno', 'prevSec_plantao-protocolo'].map((id) => getComputedStyle(document.querySelector('#' + id + ' .prev-sec-corpo h2')).display)), ['none', 'none'], 'sem título repetido dentro');
     await bt.tap();
     await page.waitForFunction(() => { const b = document.getElementById('zAlertaoBox'); return b && /Vai para o grupo da Gestão/.test(b.innerText); }, null, { timeout: 10000 });
     const resumo = await page.evaluate(() => document.getElementById('zAlertaoBox').innerText);
