@@ -19,6 +19,9 @@
 // hora): a C15, a C13 e a L3 falham também no c6444d8. A C16, a C17 e a C18, as partes novas de L1, L3, C13 e C14 vêm da rodada 3 do
 // QA (04/11/2026: a dose de hoje pela agenda de ontem, a dose registrada em outro aparelho, as três guardas sem prova e o «NÃO PODE:
 // Servir morno» dentro do Relatório do Jantar) e falham também no 831eae8.
+// Fatia 2 (a lista do Plantão, 04/11/2026; Adriana, 03/11: «na lista, os hóspedes vêm logo abaixo dos números. O «Protocolo do
+// Plantão» e o «Terminou o seu turno?» passam para o fim, como tópicos fechados»): a L6 é controle (dentro dos tópicos do fim, no
+// Café e nas funções que gravam, nada muda; passa no master e depois); a L7, a C19 e a C20 falham no master e no 69fefaf.
 
 const assert = require('assert');
 const crypto = require('crypto');
@@ -1204,6 +1207,193 @@ prova('C18', 'quem saiu ontem não gruda a faixa nem toca o bip pela dose de hoj
     assert.ok(r.dia === '2026-11-04' && /Biscoito Teste toma Colírio Teste/.test(r.alarme), 'na batida seguinte, a ficha passa para hoje e o alarme toca — ' + JSON.stringify(r));
     assert.deepStrictEqual(b.erros, [], 'sem erro de página');
   } finally { await b.ctx.close(); }
+});
+
+// ================================================================== Fatia 2 — a lista do Plantão (P7, AC-V10, lacuna L-lista-rolagem)
+// Adriana aprovou (03/11/2026, «Pode fazer o Plantão junto, já», depois desta descrição): «na lista, os hóspedes vêm logo abaixo dos
+// números. O «Protocolo do Plantão» e o «Terminou o seu turno?» passam para o fim, como tópicos fechados.» No master, a plantonista
+// rolava 2.600 px (o «Terminou o seu turno?» e o Protocolo aberto, 1.710 px) até ver o primeiro cartão inteiro. L6 é controle (passa no
+// master e depois: dentro dos dois tópicos, no Café e nas funções que gravam, nada muda); L7, C19 e C20 falham no master.
+const NAO_MUDAM_F2 = {   // o mesmo recorte de trecho(), com os hashes do master d3a9e25 (renderHosp está na L1)
+  renderCheckoutPlantao: 'ac676fd24f3a406c', salvarCheckoutPlantao: '01b7032ca087cfae', toggleCheckoutPlantao: '17ce62afe8ff28c1',
+  carregarCheckoutPlantao: '85e6a899f3239db9', fecharTurnoEAvisar: '791c536dbfd47f3a', resumoDoTurno: '448f7afaeb492565',
+  textoResumoTurno: 'aaf84f972351323d', renderCafe: '55fe6c1c228b3061', relFaixaFaltando: '72d9ac1d5d6159bb',
+  prevSecAberta: 'c3066a98d8888a92', prevSecVirar: '663320834b38fee4', prevSecHTML: 'ad5e4debadd0cf83', prevSecContaPend: 'a015eb023752c931',
+};
+function blocoHtml(ini, fim) { const i = html.indexOf(ini); assert.ok(i >= 0, 'ausente: ' + ini.trim().slice(0, 60)); const j = html.indexOf(fim, i); assert.ok(j > i, 'sem fim: ' + fim); return html.slice(i, j + fim.length); }
+const F2_BLOCOS = {   // o conteúdo de dentro, igual ao do master (sha256 do trecho, do começo indicado até o fim indicado)
+  protocolo: ['      <div class="card" id="card-checkout-plantao">', '\n      </div></details>', 'a42d4cbbf8615383'],
+  turno: ['        <h2 style="font-size:18px">Terminou o seu turno?</h2>', 'Fechar o turno e avisar a Gestão</button>', '228f5894078c92d2'],
+  cafe: ['      <details class="prev-sec" id="prevSec_plantao-cafe"', '</details>', 'dfca1d441aa69944'],
+};
+prova('L6', 'Fatia 2 (controle): dentro do «Terminou o seu turno?», do Protocolo e do Café nada muda; renderCheckoutPlantao, salvarCheckoutPlantao, fecharTurnoEAvisar, renderCafe e a faixa com o texto do master', () => {
+  const diferentes = Object.keys(NAO_MUDAM_F2).filter((nm) => sha(trecho(nm)) !== NAO_MUDAM_F2[nm]);
+  assert.deepStrictEqual(diferentes, [], 'mudaram: ' + diferentes.join(', '));
+  Object.keys(F2_BLOCOS).forEach((k) => { const [a, b, h] = F2_BLOCOS[k]; assert.strictEqual(sha(blocoHtml(a, b)), h, 'o conteúdo de dentro: ' + k); });
+  // só a plantonista vê o Protocolo: a regra que já escondia o cartão e a sanfona dos outros papéis é a mesma (sem tópico vazio)
+  assert.strictEqual((html.match(/body:not\(\[data-role="plantonista"\]\) #card-checkout-plantao, body:not\(\[data-role="plantonista"\]\) #prevSec_plantao-protocolo\{display:none !important\}/g) || []).length, 1);
+});
+
+prova('L7', 'Fatia 2: a lista termina com «Terminou o seu turno?» e o Protocolo, fechados; prevSecSincronizar muda numa linha só, e só as duas do fim nascem fechadas', () => {
+  const lista = blocoHtml('<div id="hosp-lista">', '<!-- FICHA de passagem de plantão -->');
+  const pos = ['class="kpis"', 'class="role-note"', 'id="prevSec_plantao-cafe"', 'id="hospGrid"', 'id="prevSec_plantao-turno"', 'id="prevSec_plantao-protocolo"'].map((x) => lista.indexOf(x));
+  assert.ok(pos.every((p, i) => p > 0 && (i === 0 || p > pos[i - 1])), 'a ordem no HTML: os números, a frase, o Café, os cartões, e no fim o «Terminou o seu turno?» e o Protocolo — ' + pos.join(', '));
+  const cab = (id) => { const t = blocoHtml('<details class="prev-sec" id="prevSec_' + id + '"', '</summary>'); return t; };
+  assert.ok(!/ open[ >]/.test(cab('plantao-turno').slice(0, cab('plantao-turno').indexOf('<summary'))) && !/ open[ >]/.test(cab('plantao-protocolo').slice(0, cab('plantao-protocolo').indexOf('<summary'))), 'os dois do fim, fechados no HTML');
+  assert.ok(/<span class="prev-sec-nome">Protocolo do Plantão<\/span><span class="prev-sec-resumo">5 regras e o check-list antes de sair<\/span><span class="prev-sec-contas" id="prevConta_plantao-protocolo"><\/span>/.test(cab('plantao-protocolo')), 'o resumo do Protocolo no título');
+  // prevSecSincronizar: o texto do master mais uma linha (as duas do fim nascem fechadas); nada mais
+  assert.strictEqual(sha(funcao('prevSecSincronizar').replace('\n      if(prevSecNasceFechada(id)) padraoAberta=false;', '')), '7fbd97a234e42d60', 'o resto de prevSecSincronizar igual ao master');
+  assert.strictEqual(funcao('prevSecNasceFechada').trim(), "function prevSecNasceFechada(id){ return id==='plantao-protocolo' || id==='plantao-turno'; }");
+  assert.strictEqual((html.match(/\n  prevSecSincronizar\('plantao-turno', null, false\);\n/g) || []).length, 1, 'o aparelho lembra o «Terminou o seu turno?» ao carregar');
+  // o CSS novo da lista: só com escopo na lista ou no cabeçalho do Plantão, sem cor escrita à mão e só com variáveis que existem
+  const ini = html.indexOf('/* ===== 6.122, Fatia 2 (03/11/2026) — A LISTA DO PLANTÃO');
+  assert.ok(ini > 0, 'o bloco de CSS da Fatia 2');
+  const bloco = html.slice(ini, html.indexOf('\n  .prev-sec-sub{', ini)).replace(/\/\*[\s\S]*?\*\//g, '').replace(/@media[^{]*\{/g, '');
+  const regras = []; const re = /([^{}]+)\{[^{}]*\}/g; let m;
+  while ((m = re.exec(bloco)) !== null) regras.push(m[1].trim());
+  assert.ok(regras.length >= 4, 'regras: ' + regras.length);
+  regras.forEach((sel) => sel.split(',').forEach((s) => assert.ok(/#prevSec_plantao-|#hosp-lista|\.main:has\(> #v-hospedagem\.active\)/.test(s), 'sem escopo: ' + s.trim())));
+  assert.deepStrictEqual(bloco.match(/#[0-9a-fA-F]{3,6}(?![-\w])/g) || [], [], 'cor escrita à mão');
+  (bloco.match(/var\(--[a-z0-9-]+\)/g) || []).map((v) => v.slice(4, -1)).forEach((v) => assert.ok(new RegExp('[{;\\s]' + v + '\\s*:').test(html), 'variável que não existe: ' + v));
+});
+
+// As medidas da lista (na página): os blocos visíveis de #hosp-lista em ordem, o primeiro cartão de hóspede e o cabeçalho da página.
+const lerLista = (page) => page.evaluate(() => {
+  const sy = window.scrollY, H = window.innerHeight;
+  const abs = (el) => { const r = el.getBoundingClientRect(); return { top: Math.round(r.top + sy), bottom: Math.round(r.bottom + sy), h: Math.round(r.height) }; };
+  const vis = (el) => !!el && !!el.offsetParent && el.getBoundingClientRect().height > 0;
+  const blocos = Array.from(document.getElementById('hosp-lista').children).filter(vis).map((c) => Object.assign(abs(c), { id: c.id || String(c.className).split(' ')[0], open: c.tagName === 'DETAILS' ? c.open : null }));
+  const card = Array.from(document.querySelectorAll('#hospGrid .pet:not(.add)')).filter(vis)[0];
+  const head = document.querySelector('.main > .head'), h1 = document.getElementById('head-title');
+  const linhas = (no) => { if (!no) return 0; const r = document.createRange(); r.selectNodeContents(no); return new Set(Array.from(r.getClientRects()).map((x) => Math.round(x.top))).size; };
+  const hs = getComputedStyle(head);
+  const resumo = (id) => { const s = document.querySelector('#' + id + ' > summary'); return s ? s.innerText.replace(/\s+/g, ' ').replace(/ ⌄$/, '').trim() : ''; };
+  return { blocos, card: card ? Object.assign(abs(card), { nome: card.querySelector('.nm').innerText }) : null, H,
+    head: { h: Math.round(head.getBoundingClientRect().height), larguraUtil: Math.round(head.clientWidth - parseFloat(hs.paddingLeft) - parseFloat(hs.paddingRight)), h1: Math.round(h1.getBoundingClientRect().width),
+      titulo: linhas(h1.childNodes[0]), frase: linhas(document.getElementById('head-sub')) },
+    turno: resumo('prevSec_plantao-turno'), protocolo: resumo('prevSec_plantao-protocolo'),
+    guardado: (() => { try { return JSON.parse(localStorage.getItem('zeluz_prev_secoes_v1') || '{}'); } catch (e) { return null; } })() };
+});
+const ordemDe = (L) => L.blocos.map((b) => b.id);
+async function remontar(page, S) {   // recarrega a página no mesmo aparelho (o que ele guardou fica) e monta o mesmo mundo de teste
+  await page.reload();
+  await page.waitForFunction(() => document.readyState === 'complete' && typeof aplicarLogin === 'function' && typeof PELUDINHOS !== 'undefined', null, { timeout: 30000 });
+  await page.evaluate('(' + montarPlantao.toString() + ')(' + JSON.stringify(S) + ')');
+  await page.waitForFunction(() => document.querySelectorAll('#hospGrid .pet:not(.add)').length >= 3, null, { timeout: 20000 });
+  await esperar(800); await semAlarme(page); await page.evaluate(() => window.scrollTo(0, 0)); await esperar(200);
+}
+const tocarTitulo = async (page, id) => { const s = await page.$('#' + id + ' > summary'); await s.scrollIntoViewIfNeeded(); await s.tap(); await esperar(300); };
+
+// C19 (AC-V10.1, AC-V10.2 o cabeçalho, AC-V11.1): a plantonista às 19h40, a 375 × 667.
+prova('C19', 'lista da plantonista às 19h40: os números, o Café, a faixa e logo os cartões; no fim «Terminou o seu turno?» e «Protocolo do Plantão» fechados; o primeiro cartão a 544 px (era 2.600); título da página em 2 linhas; abrir e fechar não lê nem grava; o aparelho lembra', async () => {
+  const S = cenario('2026-11-03');
+  const { ctx, page, erros } = await abrir('2026-11-03T19:40:00-03:00', S);
+  try {
+    await semAlarme(page); await page.evaluate(() => window.scrollTo(0, 0)); await esperar(200);
+    let L = await lerLista(page);
+    assert.deepStrictEqual(ordemDe(L), ['kpis', 'role-note', 'prevSec_plantao-cafe', 'relFaixaFalta', 'hospGrid', 'prevSec_plantao-turno', 'prevSec_plantao-protocolo'], 'a ordem na tela, de cima para baixo');
+    const fim = L.blocos.slice(-2);
+    assert.ok(fim.every((b) => b.open === false && b.h <= 120), 'os dois do fim, fechados e baixos: ' + JSON.stringify(fim));
+    assert.strictEqual(L.turno, 'Terminou o seu turno?');
+    assert.strictEqual(L.protocolo, 'Protocolo do Plantão 5 regras e o check-list antes de sair 0 de 7', 'o título do Protocolo diz o que tem dentro e quanto do check-list falta');
+    // o primeiro cartão vem logo depois da faixa (nada entre eles) e começa a 52 px do fim da primeira tela
+    const faixa = L.blocos.find((b) => b.id === 'relFaixaFalta');
+    assert.ok(L.card && L.card.nome.indexOf('Biscoito Teste') === 0 && L.card.top - faixa.bottom <= 20, 'o primeiro cartão logo abaixo da faixa: ' + JSON.stringify({ faixa, card: L.card }));
+    assert.ok(L.card.bottom - L.H <= 560, 'rolagem até ver o primeiro cartão inteiro: ' + (L.card.bottom - L.H) + ' px (master: 2.600)');
+    assert.ok(L.card.top - L.H <= 60, 'rolagem até o primeiro cartão começar: ' + (L.card.top - L.H) + ' px (master: 2.108)');
+    const topo1 = L.card.top;
+    // AC-V10.2: o título da página com a largura inteira, em no máximo 2 linhas (era 3, espremido ao lado do navegador de data)
+    assert.ok(L.head.h1 >= L.head.larguraUtil - 2 && L.head.titulo <= 2 && L.head.frase <= 2 && L.head.h <= 140, 'cabeçalho: ' + JSON.stringify(L.head));
+    // abrir e fechar os dois do fim: zero leituras e zero gravações; o aparelho guarda o que a pessoa abriu
+    const antes = await page.evaluate(() => ({ l: __banco.log.leituras.length, g: __banco.log.gravacoes.length }));
+    await tocarTitulo(page, 'prevSec_plantao-turno'); await tocarTitulo(page, 'prevSec_plantao-protocolo');
+    L = await lerLista(page);
+    assert.ok(L.blocos.slice(-2).every((b) => b.open === true), 'um toque abre');
+    assert.deepStrictEqual(L.guardado, { 'plantao-turno': true, 'plantao-protocolo': true }, 'o aparelho lembra o que a pessoa abriu');
+    await tocarTitulo(page, 'prevSec_plantao-turno');
+    L = await lerLista(page);
+    assert.ok(L.blocos.find((b) => b.id === 'prevSec_plantao-turno').open === false && L.guardado['plantao-turno'] === undefined, 'outro toque fecha, e o aparelho esquece');
+    const depois = await page.evaluate(() => ({ l: __banco.log.leituras.length, g: __banco.log.gravacoes.length }));
+    assert.deepStrictEqual({ l: depois.l - antes.l, g: depois.g - antes.g }, { l: 0, g: 0 }, 'abrir e fechar: zero leituras e zero gravações');
+    // recarregada a página no mesmo aparelho: o Protocolo que ela deixou aberto continua aberto, no fim; o primeiro cartão não se mexe
+    await remontar(page, S);
+    L = await lerLista(page);
+    assert.deepStrictEqual(L.blocos.slice(-2).map((b) => b.open), [false, true], 'o aparelho lembrou: «Terminou o seu turno?» fechado, Protocolo aberto');
+    assert.ok(L.card.top === topo1 && ordemDe(L).slice(-3).join() === 'hospGrid,prevSec_plantao-turno,prevSec_plantao-protocolo', 'o Protocolo aberto fica no fim, abaixo dos cartões, e o primeiro cartão não se mexe: ' + JSON.stringify({ topo1, card: L.card, ordem: ordemDe(L) }));
+    await tocarTitulo(page, 'prevSec_plantao-protocolo');
+    await remontar(page, S);
+    L = await lerLista(page);
+    assert.deepStrictEqual(L.blocos.slice(-2).map((b) => b.open), [false, false], 'fechado de novo, continua fechado');
+    // o toque no cartão abre a ficha, como sempre; de volta à lista, os dois do fim continuam como estavam
+    await tocarHospede(page, 'Biscoito Teste');
+    assert.ok(await page.evaluate(() => document.getElementById('hosp-ficha').style.display === 'block' && getComputedStyle(document.querySelector('.main > .head')).display === 'none'), 'a ficha abre, sem o cabeçalho (Fatia 1)');
+    await voltar(page);
+    L = await lerLista(page);
+    assert.deepStrictEqual(L.blocos.slice(-2).map((b) => b.open), [false, false], 'de volta à lista, fechados');
+    assert.deepStrictEqual(erros, [], 'sem erro de página');
+  } finally { await ctx.close(); }
+  // a 1.280 px (computador), o cabeçalho é o de sempre: o título ao lado do navegador de data
+  const g = await abrir('2026-11-03T19:40:00-03:00', S, 1280);
+  try {
+    const L = await lerLista(g.page);
+    assert.ok(L.head.h1 < L.head.larguraUtil - 200, 'no computador, o título não ocupa a largura inteira: ' + JSON.stringify(L.head));
+    assert.deepStrictEqual(ordemDe(L).slice(-3), ['hospGrid', 'prevSec_plantao-turno', 'prevSec_plantao-protocolo']);
+  } finally { await g.ctx.close(); }
+});
+
+// C20 (AC-V10.3, AC-V11.3): os botões de dentro funcionam como antes; quem não vê o Protocolo fica sem tópico vazio.
+prova('C20', 'dentro dos tópicos do fim, os mesmos botões: «Fechar o turno e avisar a Gestão» mostra o resumo antes de mandar; o check-list grava cada item e «Salvar» só com tudo marcado; Encãotador(a) e Gestão sem o Protocolo e sem tópico vazio', async () => {
+  const S = cenario('2026-11-03');
+  const { ctx, page, erros } = await abrir('2026-11-03T19:40:00-03:00', S);
+  try {
+    await semAlarme(page);
+    const g0 = await page.evaluate(() => __banco.log.gravacoes.length);
+    await tocarTitulo(page, 'prevSec_plantao-turno');
+    const bt = await page.$('#btnFecharTurno');
+    assert.ok(await bt.isVisible() && (await bt.innerText()) === 'Fechar o turno e avisar a Gestão', 'o botão de sempre, à vista com o tópico aberto');
+    await bt.tap();
+    await page.waitForFunction(() => { const b = document.getElementById('zAlertaoBox'); return b && /Vai para o grupo da Gestão/.test(b.innerText); }, null, { timeout: 10000 });
+    const resumo = await page.evaluate(() => document.getElementById('zAlertaoBox').innerText);
+    assert.ok(/PLANTÃO DA NOITE/.test(resumo) && /Relatórios passados: 0 de 3/.test(resumo) && /Mandar\?/.test(resumo), 'o resumo do turno para conferir antes de mandar: ' + resumo.replace(/\s+/g, ' ').slice(0, 300));
+    await page.evaluate(() => Array.from(document.querySelectorAll('#zEscolhaBts button')).find((b) => b.textContent === 'Não mandar').click());
+    await esperar(300);
+    assert.ok(!(await page.$('#zAlertaoBox')) && (await bt.innerText()) === 'Fechar o turno e avisar a Gestão' && !(await bt.isDisabled()), '«Não mandar»: nada sai, o botão volta');
+    // o check-list do Protocolo: cada item grava quem e a hora; «Salvar» só com tudo marcado
+    await tocarTitulo(page, 'prevSec_plantao-protocolo');
+    const itens = await page.$$('#checkoutPlantaoList .todo-item');
+    assert.strictEqual(itens.length, 7, 'os 7 itens de sempre');
+    await itens[0].scrollIntoViewIfNeeded(); await itens[0].tap(); await esperar(300);
+    let G = await page.evaluate(() => __banco.log.gravacoes.map((x) => ({ op: x.op, path: x.path, valor: x.valor })));
+    const item0 = G.slice(g0).filter((x) => /^auaulandia\/checkout\//.test(x.path));
+    assert.ok(item0.length === 1 && item0[0].op === 'set' && item0[0].path === 'auaulandia/checkout/2026-11-03/0' && item0[0].valor && item0[0].valor.feito === true && String(item0[0].valor.quem || '').length > 0,
+      'o 1º item grava quem e a hora, no mesmo lugar de sempre: ' + JSON.stringify(item0));
+    assert.ok(await page.evaluate(() => document.getElementById('prevSec_plantao-protocolo').open && /1 de 7/.test(document.getElementById('prevConta_plantao-protocolo').innerText)), 'o tópico continua aberto e a conta diz 1 de 7');
+    const salvar = await page.$('#card-checkout-plantao button.btn-primary');
+    await salvar.scrollIntoViewIfNeeded(); await salvar.tap(); await esperar(300);
+    assert.ok(/Faltam 6 item\(ns\) do check-list/.test(await page.evaluate(() => document.getElementById('status-checkout').innerText)), 'faltando item, não salva');
+    for (let i = 1; i < 7; i += 1) { const it = (await page.$$('#checkoutPlantaoList .todo-item'))[i]; await it.scrollIntoViewIfNeeded(); await it.tap(); await esperar(150); }
+    await salvar.scrollIntoViewIfNeeded(); await salvar.tap(); await esperar(300);
+    G = await page.evaluate(() => __banco.log.gravacoes.map((x) => ({ op: x.op, path: x.path })));
+    const caminhos = G.slice(g0).map((x) => x.op + ' ' + x.path).filter((x) => !/auditoria|audit/.test(x));
+    assert.deepStrictEqual(caminhos, ['0', '1', '2', '3', '4', '5', '6', '_salvo'].map((k) => 'set auaulandia/checkout/2026-11-03/' + k), 'só as gravações do check-list, como sempre: ' + caminhos.join(' | '));
+    assert.ok(/Check-list do plantão salvo! Bom descanso\./.test(await page.evaluate(() => document.getElementById('status-checkout').innerText)) && /7 de 7/.test(await page.evaluate(() => document.getElementById('prevConta_plantao-protocolo').innerText)), 'salvo, 7 de 7');
+    assert.deepStrictEqual(erros, [], 'sem erro de página');
+  } finally { await ctx.close(); }
+  // Encãotador(a) (monitor) e Gestão: o Protocolo escondido (só a plantonista o vê) e o «Terminou o seu turno?» fechado no fim
+  for (const papel of ['monitor', 'gestao']) {
+    const b = await abrir('2026-11-03T19:40:00-03:00', cenario('2026-11-03', { papel }));
+    try {
+      await b.page.evaluate(() => { if (!document.getElementById('v-hospedagem').classList.contains('active')) irParaView('hospedagem'); });
+      await esperar(600); await semAlarme(b.page); await b.page.evaluate(() => window.scrollTo(0, 0)); await esperar(200);
+      const L = await lerLista(b.page);
+      const o = ordemDe(L);
+      assert.ok(o.indexOf('prevSec_plantao-protocolo') < 0 && o[o.length - 1] === 'prevSec_plantao-turno' && o[o.length - 2] === 'hospGrid', papel + ': sem o Protocolo, o «Terminou o seu turno?» no fim — ' + o.join(', '));
+      assert.strictEqual(L.blocos[L.blocos.length - 1].open, false, papel + ': fechado');
+      await tocarTitulo(b.page, 'prevSec_plantao-turno');
+      assert.ok(await (await b.page.$('#btnFecharTurno')).isVisible(), papel + ': aberto, o botão de sempre (tópico com conteúdo)');
+      assert.deepStrictEqual(b.erros, [], papel + ': sem erro de página');
+    } finally { await b.ctx.close(); }
+  }
 });
 
 // ================================================================== a rodada

@@ -1084,6 +1084,19 @@
      nos grids de cartões (Conferência, Check-out) a sanfona ocupa a linha inteira. */
   h2.prev-sec-nome{margin:0;font:inherit;color:inherit;letter-spacing:inherit}
   .vet-grid>details.prev-sec{grid-column:1/-1}
+  /* ===== 6.122, Fatia 2 (03/11/2026) — A LISTA DO PLANTÃO =====
+     O «Protocolo do Plantão», agora fechado no fim da lista, diz no título o que tem dentro, numa linha («5 regras e o check-list
+     antes de sair»), entre o nome e a conta do check-list. E, no celular, o título da página do Plantão usa a largura inteira, em duas
+     linhas (o nome e a frase); o navegador de data desce para a linha de baixo. Antes, o título se espremia ao lado do navegador de
+     data, em três linhas, e a frase em cinco. Com a ficha aberta, o cabeçalho continua escondido (regra da Fatia 1). Sem :has()
+     (celular antigo), o cabeçalho fica como antes. */
+  #hosp-lista>#prevSec_plantao-turno{margin-top:18px}
+  #prevSec_plantao-protocolo>summary{grid-template-areas:'nome seta' 'resumo seta' 'contas seta'}
+  @media (min-width:720px){ #prevSec_plantao-protocolo>summary{grid-template-areas:'nome contas seta' 'resumo resumo seta'} }
+  #prevSec_plantao-protocolo .prev-sec-resumo{grid-area:resumo;min-width:0;font-size:15px;font-weight:600;line-height:1.35;color:var(--z-blue-soft)}
+  @media(max-width:560px){
+    .main:has(> #v-hospedagem.active) > .head h1{flex:1 0 100%}
+  }
   .prev-sec-sub{font-size:12.5px;color:var(--muted);font-weight:600;margin:6px 0 10px}
   .prev-linha{border-top:1px solid var(--line);padding:11px 0}
   .prev-linha:first-child{border-top:none}
@@ -3531,14 +3544,33 @@
         <div class="kpi"><img class="kpi-st" src="assets/stickers/auau.png" alt=""><div><div class="v coral" id="kpiMorada">0</div><div class="l">Moradora · Repolho</div></div></div>
       </div>
       <div class="role-note"><span data-icon="moon"></span><span>Selecione o peludinho hospedado para registrar a <strong>passagem de plantão</strong>. Turnos: Diurno 07h–19h · Noturno 19h–07h.</span></div>
+      <!-- ===== CAFE DA MANHA (Adriana, 13/ago/2026) ==============================
+           Mora na AuAulandia, nao no Day Care: "so pega hospedes e e focada na
+           AuAulandia". Mesmo protocolo do almoco — cada um come o que e dele. -->
+      <details class="prev-sec" id="prevSec_plantao-cafe" open ontoggle="prevSecVirar('plantao-cafe',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Café da manhã</span><span class="prev-sec-contas" id="prevConta_plantao-cafe"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
+      <div class="card" id="card-cafe">
+        <h2 style="font-size:19px">Café da manhã</h2>
+        <div class="hint">Só quem dormiu aqui. Cada um come <strong>o que está na ficha dele</strong> — nenhuma alimentação pode ser trocada. Marque conforme for servindo.</div>
+        <div id="cafeBarraTempo"></div>
+        <div id="cafeResumo"></div>
+        <div class="pets-grid" id="cafeGrid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))"></div>
+      </div>
+      </div></details>
+      <div class="pets-grid" id="hospGrid"></div>
+      <!-- 6.122, Fatia 2 (03/11/2026): na lista, os cartões dos hóspedes vêm logo abaixo dos números (e do Café e da faixa
+           «Falta o relatório…», onde estavam); o «Terminou o seu turno?» e o «Protocolo do Plantão» passam para o fim, como tópicos
+           de abrir e fechar, fechados (Adriana: «Pode fazer o Plantão junto, já»). Dentro deles, nada muda: os mesmos botões, as
+           mesmas listas e a mesma gravação. Nascem fechados (prevSecNasceFechada) e o aparelho lembra quando a pessoa abre. -->
       <!-- Fecha o turno INTEIRO e manda o resumo à Gestão. A passagem de plantão continua
            sendo por FILHOt; isto é o fecho de tudo, no fim (Adriana, 15/ago/2026). -->
-      <div class="card" style="margin-bottom:18px;border-left:4px solid var(--z-gold)">
+      <details class="prev-sec" id="prevSec_plantao-turno" ontoggle="prevSecVirar('plantao-turno',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Terminou o seu turno?</span><span class="prev-sec-contas" id="prevConta_plantao-turno"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
+      <div class="card">
         <h2 style="font-size:18px">Terminou o seu turno?</h2>
         <div class="hint">Passe o plantão de cada peludinho primeiro. Depois toque aqui: eu monto o resumo do turno, mostro para você conferir e mando ao grupo da Gestão.</div>
         <button id="btnFecharTurno" class="btn btn-primary" style="width:100%;margin-top:12px" onclick="fecharTurnoEAvisar()">Fechar o turno e avisar a Gestão</button>
       </div>
-      <details class="prev-sec" id="prevSec_plantao-protocolo" open ontoggle="prevSecVirar('plantao-protocolo',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Protocolo do Plantão</span><span class="prev-sec-contas" id="prevConta_plantao-protocolo"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
+      </div></details>
+      <details class="prev-sec" id="prevSec_plantao-protocolo" ontoggle="prevSecVirar('plantao-protocolo',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Protocolo do Plantão</span><span class="prev-sec-resumo">5 regras e o check-list antes de sair</span><span class="prev-sec-contas" id="prevConta_plantao-protocolo"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
       <div class="card" id="card-checkout-plantao">
         <h2 style="font-size:19px">Protocolo do Plantão</h2>
         <div class="hint">Regras imprescindíveis — valem durante todo o plantão.</div>
@@ -3556,19 +3588,6 @@
         <div id="status-checkout" class="rel-status"></div>
       </div>
       </div></details>
-      <!-- ===== CAFE DA MANHA (Adriana, 13/ago/2026) ==============================
-           Mora na AuAulandia, nao no Day Care: "so pega hospedes e e focada na
-           AuAulandia". Mesmo protocolo do almoco — cada um come o que e dele. -->
-      <details class="prev-sec" id="prevSec_plantao-cafe" open ontoggle="prevSecVirar('plantao-cafe',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Café da manhã</span><span class="prev-sec-contas" id="prevConta_plantao-cafe"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
-      <div class="card" id="card-cafe">
-        <h2 style="font-size:19px">Café da manhã</h2>
-        <div class="hint">Só quem dormiu aqui. Cada um come <strong>o que está na ficha dele</strong> — nenhuma alimentação pode ser trocada. Marque conforme for servindo.</div>
-        <div id="cafeBarraTempo"></div>
-        <div id="cafeResumo"></div>
-        <div class="pets-grid" id="cafeGrid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))"></div>
-      </div>
-      </div></details>
-      <div class="pets-grid" id="hospGrid"></div>
     </div>
 
     <!-- FICHA de passagem de plantão -->
@@ -45016,11 +45035,20 @@ return { criar };
     try{
       var sec=document.getElementById('prevSec_'+id); if(!sec) return;
       var ct=document.getElementById('prevConta_'+id); if(ct && contaHTML!=null) ct.innerHTML=contaHTML;
+      if(prevSecNasceFechada(id)) padraoAberta=false;
       sec.dataset.padrao=padraoAberta?'1':'0';
       var ab=prevSecAberta(id, !!padraoAberta);
       if(sec.open!==ab) sec.open=ab;
     }catch(e){} /* silencioso de propósito: enfeite de tela (selo e aberto/fechado) — falhar não muda dado nenhum */
   }
+  // 6.122, Fatia 2 (03/11/2026; Adriana: «O «Protocolo do Plantão» e o «Terminou o seu turno?» passam para o fim, como tópicos
+  // fechados»): no fim da lista do Plantão, essas duas nascem fechadas, falte item do check-list ou não (o padrão «aberta enquanto
+  // falta item», que renderCheckoutPlantao manda, deixa de valer só para elas); a conta continua no título, e o aparelho lembra quando
+  // a pessoa abre (prevSecVirar, como nas outras). É função, e não tabela em «var», porque renderCafe chama a sincronização antes de
+  // este trecho do script rodar.
+  function prevSecNasceFechada(id){ return id==='plantao-protocolo' || id==='plantao-turno'; }
+  // 6.122, Fatia 2: o «Terminou o seu turno?», no fim da lista do Plantão, nasce fechado; se a pessoa o deixou aberto, o aparelho lembra.
+  prevSecSincronizar('plantao-turno', null, false);
   // O selo da conta de uma sanfona de pendência: vermelho quando há o que fazer, discreto no zero.
   function prevSecContaPend(n, rotulo){
     n=Number(n)||0;

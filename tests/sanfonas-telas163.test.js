@@ -104,7 +104,7 @@ const aberta = (s) => / open[ >]/.test(s.slice(0, s.indexOf('<summary')));
 prova('a casca estática (sanfona escrita no HTML) é a mesma de prevSecHTML, com o padrão de nascença lido por ontoggle', () => {
   const dinamica = run("prevSecHTML('rcp-x','Titulo','<span id=\"prevConta_rcp-x\"></span>','CORPO',false,true)");
   const cabeca = dinamica.slice(0, dinamica.indexOf('<div class="prev-sec-corpo">'));
-  ['rcp-chamados', 'rcp-estoque', 'rcp-racao', 'rcp-ocorr-hosp', 'rcp-ocorr-dc', 'plantao-protocolo', 'plantao-cafe'].forEach((id) => {
+  ['rcp-chamados', 'rcp-estoque', 'rcp-racao', 'rcp-ocorr-hosp', 'rcp-ocorr-dc', 'plantao-protocolo', 'plantao-cafe', 'plantao-turno'].forEach((id) => {
     const est = sanfonaEstatica(id);
     const cab = est.slice(0, est.indexOf('<div class="prev-sec-corpo">'));
     // mesma estrutura: details.prev-sec, summary com nome, contas (com id da conta), seta; o ontoggle lê data-padrao
@@ -264,10 +264,19 @@ prova('Pendências com o tutor: nenhuma função de lista mudou o que escreve na
 // ------------------------------------------------------------------------- 2. Plantão da noite: Protocolo e Café
 prova('Plantão da noite: «Protocolo do Plantão» e «Café da manhã» são sanfonas, com tudo de antes dentro (ids, botões, listas)', () => {
   const tela = telaHtml('v-hospedagem');
-  assert.deepStrictEqual(idsDe(tela).filter((i) => /^plantao-/.test(i)), ['plantao-protocolo', 'plantao-cafe']);
-  const p = sanfonaEstatica('plantao-protocolo'), c = sanfonaEstatica('plantao-cafe');
+  // Story 6.122, Fatia 2 (03/11/2026; Adriana: «na lista, os hóspedes vêm logo abaixo dos números. O «Protocolo do Plantão» e o
+  // «Terminou o seu turno?» passam para o fim, como tópicos fechados»). Antes: ['plantao-protocolo', 'plantao-cafe'], o Protocolo antes
+  // do Café e dos cartões, e as duas nascendo abertas no HTML. Depois: o Café onde estava, os cartões, e no fim o «Terminou o seu
+  // turno?» (sanfona nova, mesma casca) e o Protocolo, os dois fechados no HTML. O conteúdo de dentro continua o mesmo (abaixo).
+  assert.deepStrictEqual(idsDe(tela).filter((i) => /^plantao-/.test(i)), ['plantao-cafe', 'plantao-turno', 'plantao-protocolo']);
+  const p = sanfonaEstatica('plantao-protocolo'), c = sanfonaEstatica('plantao-cafe'), t = sanfonaEstatica('plantao-turno');
   assert.ok(/<span class="prev-sec-nome">Protocolo do Plantão<\/span>/.test(p) && /<span class="prev-sec-nome">Café da manhã<\/span>/.test(c));
-  assert.ok(aberta(p) && aberta(c), 'no HTML nascem abertas (a conta e o aparelho decidem em seguida)');
+  assert.ok(/<span class="prev-sec-nome">Terminou o seu turno\?<\/span>/.test(t));
+  assert.ok(aberta(c), 'o Café nasce aberto no HTML, como antes (a conta e o aparelho decidem em seguida)');
+  assert.ok(!aberta(p) && !aberta(t), 'no fim da lista, o Protocolo e o «Terminou o seu turno?» nascem fechados (6.122, Fatia 2)');
+  ['onclick="fecharTurnoEAvisar()">Fechar o turno e avisar a Gestão</button>', 'id="btnFecharTurno"', 'Passe o plantão de cada peludinho primeiro.'].forEach((x) => assert.ok(t.indexOf(x) > t.indexOf('<div class="prev-sec-corpo">'), x));
+  assert.ok(tela.indexOf('id="prevSec_plantao-cafe"') < tela.indexOf('id="hospGrid"') && tela.indexOf('id="hospGrid"') < tela.indexOf('id="prevSec_plantao-turno"') && tela.indexOf('id="prevSec_plantao-turno"') < tela.indexOf('id="prevSec_plantao-protocolo"'),
+    'o Café, os cartões, e no fim o «Terminou o seu turno?» e o Protocolo');
   // o cartão de antes está inteiro dentro do corpo
   ['id="card-checkout-plantao"', 'class="protocolo-regras"', 'Ler com atenção o <strong>Check-in de hospedagem</strong>', 'NENHUMA ALIMENTAÇÃO PODE SER TROCADA', 'Antes de sair — Plantão Noturno',
     'id="checkoutPlantaoList"', 'onclick="salvarCheckoutPlantao()">Salvar check-list do plantão</button>', 'id="status-checkout"'].forEach((t) => assert.ok(p.indexOf(t) > p.indexOf('<div class="prev-sec-corpo">'), t));
@@ -280,14 +289,18 @@ prova('Plantão da noite: «Protocolo do Plantão» e «Café da manhã» são s
   assert.ok(/body:not\(\[data-role="plantonista"\]\) #card-checkout-plantao, body:not\(\[data-role="plantonista"\]\) #prevSec_plantao-protocolo\{display:none !important\}/.test(html));
 });
 
-prova('Plantão da noite: o Protocolo diz «X de N» e nasce aberto enquanto falta item; o Café diz quantos faltam e abre o Café quando se vem atrás dele', () => {
+prova('Plantão da noite: o Protocolo diz «X de N» e nasce fechado, falte item ou não (6.122, Fatia 2); o Café diz quantos faltam e abre o Café quando se vem atrás dele', () => {
   limparAparelho();
   els['prevSec_plantao-protocolo'] = elemento('prevSec_plantao-protocolo'); els['prevConta_plantao-protocolo'] = elemento('prevConta_plantao-protocolo');
   const total = run('CHECKOUT_PLANTAO.length');
   defina('coPlantao', { 0: { feito: true, quem: 'Zeloso Exemplo', hora: '06:40' } });
   run('renderCheckoutPlantao()');
   assert.strictEqual(els['prevConta_plantao-protocolo'].innerHTML, '<span class="prev-sec-conta prev-sec-venc">1 de ' + total + '</span>');
-  assert.strictEqual(els['prevSec_plantao-protocolo'].open, true);
+  // Antes (28/out/2026): nascia aberto enquanto faltava item. Depois (6.122, Fatia 2): no fim da lista, nasce fechado; a conta em
+  // vermelho no título continua dizendo o que falta. E fechar o que nasce fechado não grava nada no aparelho.
+  assert.strictEqual(els['prevSec_plantao-protocolo'].open, false, 'faltando item, nasce fechado');
+  assert.strictEqual(els['prevSec_plantao-protocolo'].dataset.padrao, '0');
+  assert.deepStrictEqual(json(local._m), {}, 'nada guardado: foi o padrão, não uma escolha');
   assert.ok(/toggleCheckoutPlantao\(0\)/.test(els.checkoutPlantaoList.innerHTML) && /todo-item on/.test(els.checkoutPlantaoList.innerHTML), 'os itens de antes continuam');
   const todos = {}; for (let i = 0; i < total; i += 1) todos[i] = { feito: true };
   defina('coPlantao', todos);
@@ -487,7 +500,7 @@ prova('ids das sanfonas: cada tela tem o seu prefixo, nenhum se repete e nenhum 
   assert.strictEqual(new Set(todos).size, todos.length, 'nenhum id repetido entre as telas: ' + todos.filter((x, i) => todos.indexOf(x) !== i).join(', '));
   ['conf-sem-checkin', 'venc-pend'].forEach((id) => assert.ok(dinamicos.indexOf(id) >= 0, id));
   // prefixos por tela
-  assert.ok(estaticos.filter((i) => /^rcp-/.test(i)).length === 5 && estaticos.filter((i) => /^plantao-/.test(i)).length === 2);
+  assert.ok(estaticos.filter((i) => /^rcp-/.test(i)).length === 5 && estaticos.filter((i) => /^plantao-/.test(i)).length === 3);   // 6.122, Fatia 2: + plantao-turno
   // os de antes continuam existindo
   ['resumo'].forEach((id) => assert.ok(estaticos.indexOf(id) >= 0, id));
   ['checkup', 'atualizados', 'coleira', 'escova-treino', 'escova-kit', 'hospedes', 'tabela', 'hosp-pares'].forEach((id) => assert.ok(dinamicos.indexOf(id) >= 0, id));
@@ -503,7 +516,7 @@ prova('regras da casa: sem alert/confirm/prompt novos, sem vocabulário proibido
   assert.ok(!/\balert\s*\(|\bconfirm\s*\(|\bprompt\s*\(/.test(texto), 'confirmação dentro da página, nunca janela nativa');
   // os trechos que mudaram nas funções de antes (o que a mudança escreveu de novo)
   const NOVOS_TRECHOS = html.split('\n').filter((l) => /prevSecHTML\('(conf-sem-checkin|venc-g-)|coSanfonaHTML\(|rcpSanfona\(|prevSecSincronizar\(|_cafeSan/.test(l)).join('\n')
-    + '\n' + ['rcp-chamados', 'rcp-estoque', 'rcp-racao', 'rcp-ocorr-hosp', 'rcp-ocorr-dc', 'plantao-protocolo', 'plantao-cafe'].map(sanfonaEstatica).map((s) => s.slice(0, s.indexOf('<div class="prev-sec-corpo">'))).join('\n');
+    + '\n' + ['rcp-chamados', 'rcp-estoque', 'rcp-racao', 'rcp-ocorr-hosp', 'rcp-ocorr-dc', 'plantao-protocolo', 'plantao-cafe', 'plantao-turno'].map(sanfonaEstatica).map((s) => s.slice(0, s.indexOf('<div class="prev-sec-corpo">'))).join('\n');
   assert.ok(!/\balert\s*\(|\bconfirm\s*\(|\bprompt\s*\(/.test(NOVOS_TRECHOS));
   const so = (texto + '\n' + NOVOS_TRECHOS).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
   assert.ok(!/\b(c[ãa]o|c[ãa]es|cachorro|cachorros|baia|baias|soltar|solto|solta)\b/i.test(so), 'vocabulário da casa');
