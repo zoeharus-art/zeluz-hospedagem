@@ -1084,6 +1084,19 @@
      nos grids de cartões (Conferência, Check-out) a sanfona ocupa a linha inteira. */
   h2.prev-sec-nome{margin:0;font:inherit;color:inherit;letter-spacing:inherit}
   .vet-grid>details.prev-sec{grid-column:1/-1}
+  /* ===== 6.122, Fatia 2 (03/11/2026) — A LISTA DO PLANTÃO =====
+     O «Protocolo do Plantão», agora fechado no fim da lista, diz no título o que tem dentro, numa linha («5 regras e o check-list
+     antes de sair»), entre o nome e a conta do check-list. E, no celular, o título da página do Plantão usa a largura inteira, em duas
+     linhas (o nome e a frase); o navegador de data desce para a linha de baixo. Antes, o título se espremia ao lado do navegador de
+     data, em três linhas, e a frase em cinco. Com a ficha aberta, o cabeçalho continua escondido (regra da Fatia 1). Sem :has()
+     (celular antigo), o cabeçalho fica como antes. */
+  #hosp-lista>#prevSec_plantao-turno{margin-top:18px}
+  #prevSec_plantao-protocolo>summary{grid-template-areas:'nome seta' 'resumo seta' 'contas seta'}
+  @media (min-width:720px){ #prevSec_plantao-protocolo>summary{grid-template-areas:'nome contas seta' 'resumo resumo seta'} }
+  #prevSec_plantao-protocolo .prev-sec-resumo{grid-area:resumo;min-width:0;font-size:15px;font-weight:600;line-height:1.35;color:var(--z-blue-soft)}
+  @media(max-width:560px){
+    .main:has(> #v-hospedagem.active) > .head h1{flex:1 0 100%}
+  }
   .prev-sec-sub{font-size:12.5px;color:var(--muted);font-weight:600;margin:6px 0 10px}
   .prev-linha{border-top:1px solid var(--line);padding:11px 0}
   .prev-linha:first-child{border-top:none}
@@ -1367,6 +1380,70 @@
   .tp-comeu .seg button{font-size:15px;min-height:44px}
   body[data-role="plantonista"] #tp-cad{display:none !important}
   @media (prefers-reduced-motion:reduce){ .tp-pisca{animation:none;border-width:5px !important} }
+  /* ===== 6.122 (03/11/2026) — A FICHA DO PLANTÃO: letra maior, toque de 44 px, o que ele não pode e a primeira tela =====
+     Adriana, 22/10: «Todos com letras maiores, o título e a informação dentro. [...] fica rolando a tela e não acha a informação.»
+     Tudo com #hosp-ficha na frente: a Ficha do peludinho, o Day Care, a Conferência e a Cuidado Vet não mudam. Só variáveis de
+     cor do app; !important só onde o tamanho vem escrito na própria linha (style="font-size:…"). */
+  #hosp-ficha .tp-card .rel-head h2,#hosp-ficha #card-dia .rel-head h2,#hosp-ficha #card-inicio .rel-head h2,#hosp-ficha #card-noite .rel-head h2{font-size:20px;letter-spacing:0;line-height:1.2}
+  #hosp-ficha #card-dia .rel-head h2,#hosp-ficha #card-inicio .rel-head h2,#hosp-ficha #card-noite .rel-head h2{flex:1 1 100%}
+  #hosp-ficha .rel-head:focus-visible{outline:3px solid var(--z-gold);outline-offset:3px;border-radius:8px}
+  #hosp-ficha .tp-sub{font-size:16px;line-height:1.35}
+  #hosp-ficha .tp-sub-critico{color:var(--crm-critico);font-weight:800}
+  #hosp-ficha .tp-sub:empty{display:none}
+  #hosp-ficha .tp-est{font-size:15px}
+  #hosp-ficha .rel-tag{font-size:14px}
+  #hosp-ficha .alert-pill,#hosp-ficha .alert-pill .alergia-selo{font-size:16px}
+  #hosp-ficha .hf-naopode{font-size:17px;font-weight:800;color:var(--crm-critico);background:rgba(192,57,43,.07);border-left:5px solid var(--crm-critico);border-radius:10px;padding:10px 12px;margin:0 0 10px;line-height:1.35}
+  #hosp-ficha #hf-alim-topo .alert-pills,#hosp-ficha #hf-dados-tarjas .alert-pills{margin:0 0 12px}
+  #hosp-ficha #hf-pills .alert-pill.tp-no-topico{display:none}
+  #hosp-ficha .btn-foto-mini{font-size:14px;min-height:44px}
+  #hosp-ficha .janta-box{font-size:17px}
+  #hosp-ficha .janta-box div{font-size:16px}
+  #hosp-ficha #hf-obsgeral>div,#hosp-ficha #hf-med-como>div,#hosp-ficha #hf-alim-info .hf-alim-obs{font-size:16px !important}
+  #hosp-ficha #hf-med-como>div{margin:0 0 12px !important}
+  #hosp-ficha .card .hint,#hosp-ficha .field>label,#hosp-ficha .mf-lab,#hosp-ficha .mu-lab,#hosp-ficha .cad-sub,#hosp-ficha .mag-hora-tag,#hosp-ficha .mag-dose-ok,
+  #hosp-ficha .hf-meta,#hosp-ficha .hf-estadia,#hosp-ficha .hf-chipline,#hosp-ficha .rel-status,#hosp-ficha .alerta-por,#hosp-ficha .faixa-lbl,#hosp-ficha .ficha-datenav #hf-datelabel{font-size:14px}
+  #hosp-ficha [style*="font-size:9"],#hosp-ficha [style*="font-size:10"],#hosp-ficha [style*="font-size:11"],#hosp-ficha [style*="font-size:12"],#hosp-ficha [style*="font-size:13"]{font-size:14px !important}
+  #hosp-ficha .seg button{font-size:15px;min-height:44px}
+  #hosp-ficha .ficha-datenav .hoje,#hosp-ficha .mag-placar-linha,#hosp-ficha .medunits button{font-size:14px}
+  #hosp-ficha .back-btn{font-size:15px;min-height:44px}
+  #hosp-ficha .ficha-datenav button{min-height:44px;min-width:44px}
+  #hosp-ficha .btn,#hosp-ficha .medunits button,#hosp-ficha .hosp-head button{min-height:44px}
+  /* «Reemitir ficha de check-in (PDF)», dentro de «Mais informações» (QA da 6.122, rodada 1: tinha 33 px) */
+  #hosp-ficha #tp-mais .rel-body>button{min-height:44px}
+  /* a dose já dada, aberta para conferir: o nome e a quantidade não encolhem; o «Dado por» desce para a linha de baixo */
+  #hosp-ficha #magHoje .mag-dose-info{flex:1 1 180px !important}
+  #hosp-ficha #magHoje .mag-dose.feito .mag-dose-ok{flex-basis:100%}
+  #hosp-ficha .hf-ontem-faixa{width:100%;min-height:48px;margin:0 0 12px;padding:10px 14px;border:none;border-radius:12px;background:var(--crm-critico);color:var(--z-white);font-family:var(--font-ui);font-size:16px;font-weight:800;line-height:1.3;text-align:left;cursor:pointer}
+  /* QA da 6.122, rodada 2: na hora de uma dose de hoje, com a ficha segurada em ontem por um relatório não salvo ou pelo teclado
+     aberto, a faixa gruda no alto, logo abaixo da barra azul (o «top» vem de fichaOntemFaixaPintar), onde quer que ela esteja na
+     ficha. Fica abaixo do alarme de remédio (z-index 190) e do menu. */
+  #hosp-ficha .hf-ontem-faixa.hf-espera{position:sticky;z-index:39;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+  /* A primeira tela no celular: sem o cabeçalho da página (a ficha tem o «Voltar» e o navegador de data), foto pequena ao lado do
+     nome e as tarjas vermelhas logo abaixo dele. Sem :has() (celular antigo), o cabeçalho continua como hoje. */
+  @media(max-width:560px){
+    .main:has(> #v-hospedagem.active #hosp-ficha.aberta) > .head{display:none}
+    /* QA da 6.122, rodada 1 (bloqueio 5): a foto de 48 px fica ao lado do nome e do microchip, e a linha da raça e do tutor usa a
+       largura inteira (era 64 px ao lado das três linhas, e a do tutor quebrava em duas). */
+    #hosp-ficha .hosp-head{display:grid;grid-template-columns:48px minmax(0,1fr);column-gap:12px;row-gap:0;align-items:start}
+    #hosp-ficha .hosp-head>div[style*="flex:1"]{display:contents}
+    #hosp-ficha .hosp-head .hf-photo-wrap{grid-column:1;grid-row:1 / span 2}
+    #hosp-ficha .hosp-head .ph{width:48px;height:48px;font-size:22px;border-radius:10px}
+    #hosp-ficha .hosp-head .chip-on-photo{display:none}
+    #hosp-ficha .hosp-head .hf-nome,#hosp-ficha .hosp-head .hf-chipline{grid-column:2;min-width:0}
+    #hosp-ficha .hosp-head .hf-meta{grid-column:1 / -1;min-width:0}
+    #hosp-ficha .hosp-head>div[style*="flex:1"]>*:not(.hf-nome):not(.hf-chipline):not(.hf-meta){grid-column:1 / -1;order:2;min-width:0}
+    #hosp-ficha #hf-pills,#hosp-ficha #hf-pills-extra{order:1}
+    #hosp-ficha #hf-pills .alert-pills,#hosp-ficha #hf-pills-extra .alert-pills{margin:8px 0 0}
+    /* menos moldura em volta (a tela é estreita): a margem da página, os cartões e as tarjas mais justos */
+    .main:has(> #v-hospedagem.active #hosp-ficha.aberta) > #v-hospedagem{padding:10px 14px 26px}
+    #hosp-ficha .back-btn{margin-bottom:4px}
+    #hosp-ficha .ficha-datenav{margin-bottom:8px}
+    #hosp-ficha .card{padding:14px;margin-bottom:10px}
+    #hosp-ficha .alert-pills{gap:6px}
+    #hosp-ficha .alert-pill{padding:5px 10px;line-height:1.25}
+    #hosp-ficha .alert-pill .alergia-selo{padding:0;border:0;background:none;line-height:1.25}
+  }
   /* A medicação de hoje por horário: a hora manda, o nome e a quantidade vêm grandes. */
   .mag-hora{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:24px;font-weight:800;color:var(--z-blue);margin:16px 0 6px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
   .mag-hora.atrasada{color:var(--crm-critico)}
@@ -2862,8 +2939,8 @@
 .z-painel44{--p44-blue:#234d67;--p44-soft:#3a6a85;--p44-cream:#fffdf6;--p44-warm:#faf5e9;--p44-gold:#deb428;--p44-line:#e7e0d2;--p44-muted:#7c8a93;box-sizing:border-box;max-width:1160px;padding:24px 38px 52px;background:var(--p44-cream);color:var(--p44-blue);font-family:Inter,Poppins,system-ui,sans-serif}.z-painel44 *{box-sizing:border-box}.z-painel44 [hidden]{display:none!important}.z-painel44 button{font:inherit}.z-painel44 button:focus-visible{outline:3px solid rgba(222,180,40,.55);outline-offset:3px}.z-painel44__topo{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.z-painel44__saudacao .pm-saud1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.12;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2{margin:8px 0 0;font-size:16px;font-weight:600;line-height:1.45;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2 b{font-size:21px;font-weight:800;color:#a57a00}.z-painel44__saudacao .pm-saud3{max-width:54ch;margin:5px 0 0;color:var(--p44-soft);font-size:15px;font-weight:500;font-style:italic;line-height:1.5}.z-painel44__saudacao .pm-traco{display:block;width:40px;height:3px;margin-top:13px;border-radius:2px;background:linear-gradient(90deg,var(--p44-gold),#a57a00)}.z-painel44__saudacao .pm-data{margin-top:14px;color:var(--p44-muted);font-size:12px;font-weight:600}.z-painel44__selo{flex:0 0 auto;padding:8px 11px;border:1px solid var(--p44-line);border-radius:999px;background:#fff;color:var(--p44-blue);font-size:12px;font-weight:700}.z-painel44__selo:before{content:'•';margin-right:5px;color:var(--p44-gold);font-size:18px}.z-painel44__sticker{display:block;width:62px;max-width:90px;height:68px;max-height:80px;object-fit:contain;margin:4px auto 0}.z-painel44__bem-estar{display:block;width:100%;margin-bottom:18px}.z-painel44__bem-estar>*{width:100%}.z-painel44__abas{display:flex;gap:7px;margin:0 0 16px}.z-painel44__abas button{padding:10px 14px;border:1px solid var(--p44-line);border-radius:10px;background:#fff;color:var(--p44-blue);font-size:14px;font-weight:700;cursor:pointer}.z-painel44__abas button[aria-selected=true]{border-color:var(--p44-blue);background:var(--p44-blue);color:var(--p44-cream)}.z-painel44__intro{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:12px 0}.z-painel44__intro h2,.z-painel44__equipe h2{margin:0;font-size:20px}.z-painel44__intro p,.z-painel44__equipe>p{margin:5px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__contagem{color:var(--p44-muted);font-size:12px;font-weight:700}.z-painel44__temas{display:grid;gap:9px}.z-painel44__tema{overflow:hidden;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__tema-cabeca{display:grid;grid-template-columns:36px 1fr auto 20px;align-items:center;gap:10px;width:100%;padding:14px 15px;border:0;background:transparent;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__tema-icone{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--p44-warm);font-size:17px}.z-painel44__tema-titulo,.z-painel44__tema-passo{display:block}.z-painel44__tema-titulo{font-size:15px;font-weight:800}.z-painel44__tema-passo{margin-top:3px;color:var(--p44-muted);font-size:12px}.z-painel44__pill{padding:4px 8px;border-radius:999px;background:#e9f5f7;color:#226477;font-size:11px;font-weight:800}.z-painel44__seta{color:var(--p44-soft);font-size:18px;transition:transform .16s}.z-painel44__tema.aberto .z-painel44__seta{transform:rotate(90deg)}.z-painel44__tema-corpo{margin:0 12px 12px;padding:14px 15px;border-top:1px solid var(--p44-line);background:var(--p44-warm)}.z-painel44__equipe{padding:18px;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__pessoas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}.z-painel44__pessoa{display:flex;align-items:center;gap:11px;width:100%;padding:13px;border:1px solid var(--p44-line);border-radius:12px;background:#fff;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__avatar{display:grid;place-items:center;width:39px;height:39px;flex:0 0 auto;border-radius:50%;background:var(--p44-blue);color:var(--p44-cream);font-size:12px;font-weight:800}.z-painel44__pessoa-info{min-width:0}.z-painel44__pessoa strong,.z-painel44__pessoa small{display:block}.z-painel44__pessoa strong{font-size:14px}.z-painel44__pessoa small{overflow:hidden;margin-top:3px;color:var(--p44-muted);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.z-painel44__pessoa-seta{margin-left:auto;color:#a57a00;font-size:18px}.z-painel44__pessoa-detalhe{margin-top:15px}.z-painel44__pessoa-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__pessoa-secao h3{margin:0;font-size:14px}.z-painel44__pessoa-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}.z-painel44__vazio{margin:15px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__zelozinha{display:block;width:100%;margin-top:16px;padding:12px;border:1px dashed var(--p44-gold);border-radius:11px;background:var(--p44-warm);color:#805d00;text-align:left;cursor:pointer}.z-painel44__zelozinha-titulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.z-painel44__canal{padding:3px 7px;border-radius:999px;background:#fff;color:var(--p44-muted);font-size:11px}.z-painel44__zelozinha-aviso{display:block;margin-top:7px;font-size:12px;line-height:1.45}.z-painel44__perfil{margin-top:15px}.z-painel44__voltar{margin-bottom:12px;padding:8px 11px;border:1px solid var(--p44-line);border-radius:9px;background:#fff;color:var(--p44-blue);font-size:13px;font-weight:700;cursor:pointer}.z-painel44__perfil-subtitulo{margin:4px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__perfil-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__perfil-secao h3{margin:0;font-size:14px}.z-painel44__perfil-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}@media(max-width:760px){.z-painel44{padding:18px}.z-painel44__topo,.z-painel44__intro{display:block}.z-painel44__selo{display:inline-block;margin-top:13px}.z-painel44__contagem{display:block;margin-top:8px}.z-painel44__tema-cabeca{grid-template-columns:32px 1fr auto 16px;padding:12px}.z-painel44__tema-corpo{margin:0 8px 8px;padding:12px}.z-painel44__pessoas,.z-painel44__perfil-conteudo,.z-painel44__pessoa-conteudo{grid-template-columns:1fr}}
 
 </style>
-<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-03-01">
-<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-03-01">
+<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-04-01">
+<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-04-01">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -3467,14 +3544,33 @@
         <div class="kpi"><img class="kpi-st" src="assets/stickers/auau.png" alt=""><div><div class="v coral" id="kpiMorada">0</div><div class="l">Moradora · Repolho</div></div></div>
       </div>
       <div class="role-note"><span data-icon="moon"></span><span>Selecione o peludinho hospedado para registrar a <strong>passagem de plantão</strong>. Turnos: Diurno 07h–19h · Noturno 19h–07h.</span></div>
+      <!-- ===== CAFE DA MANHA (Adriana, 13/ago/2026) ==============================
+           Mora na AuAulandia, nao no Day Care: "so pega hospedes e e focada na
+           AuAulandia". Mesmo protocolo do almoco — cada um come o que e dele. -->
+      <details class="prev-sec" id="prevSec_plantao-cafe" open ontoggle="prevSecVirar('plantao-cafe',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Café da manhã</span><span class="prev-sec-contas" id="prevConta_plantao-cafe"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
+      <div class="card" id="card-cafe">
+        <h2 style="font-size:19px">Café da manhã</h2>
+        <div class="hint">Só quem dormiu aqui. Cada um come <strong>o que está na ficha dele</strong> — nenhuma alimentação pode ser trocada. Marque conforme for servindo.</div>
+        <div id="cafeBarraTempo"></div>
+        <div id="cafeResumo"></div>
+        <div class="pets-grid" id="cafeGrid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))"></div>
+      </div>
+      </div></details>
+      <div class="pets-grid" id="hospGrid"></div>
+      <!-- 6.122, Fatia 2 (03/11/2026): na lista, os cartões dos hóspedes vêm logo abaixo dos números (e do Café e da faixa
+           «Falta o relatório…», onde estavam); o «Terminou o seu turno?» e o «Protocolo do Plantão» passam para o fim, como tópicos
+           de abrir e fechar, fechados (Adriana: «Pode fazer o Plantão junto, já»). Dentro deles, nada muda: os mesmos botões, as
+           mesmas listas e a mesma gravação. Nascem fechados (prevSecNasceFechada) e o aparelho lembra quando a pessoa abre. -->
       <!-- Fecha o turno INTEIRO e manda o resumo à Gestão. A passagem de plantão continua
            sendo por FILHOt; isto é o fecho de tudo, no fim (Adriana, 15/ago/2026). -->
-      <div class="card" style="margin-bottom:18px;border-left:4px solid var(--z-gold)">
+      <details class="prev-sec" id="prevSec_plantao-turno" ontoggle="prevSecVirar('plantao-turno',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Terminou o seu turno?</span><span class="prev-sec-contas" id="prevConta_plantao-turno"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
+      <div class="card">
         <h2 style="font-size:18px">Terminou o seu turno?</h2>
         <div class="hint">Passe o plantão de cada peludinho primeiro. Depois toque aqui: eu monto o resumo do turno, mostro para você conferir e mando ao grupo da Gestão.</div>
         <button id="btnFecharTurno" class="btn btn-primary" style="width:100%;margin-top:12px" onclick="fecharTurnoEAvisar()">Fechar o turno e avisar a Gestão</button>
       </div>
-      <details class="prev-sec" id="prevSec_plantao-protocolo" open ontoggle="prevSecVirar('plantao-protocolo',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Protocolo do Plantão</span><span class="prev-sec-contas" id="prevConta_plantao-protocolo"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
+      </div></details>
+      <details class="prev-sec" id="prevSec_plantao-protocolo" ontoggle="prevSecVirar('plantao-protocolo',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Protocolo do Plantão</span><span class="prev-sec-resumo">5 regras e o check-list antes de sair</span><span class="prev-sec-contas" id="prevConta_plantao-protocolo"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
       <div class="card" id="card-checkout-plantao">
         <h2 style="font-size:19px">Protocolo do Plantão</h2>
         <div class="hint">Regras imprescindíveis — valem durante todo o plantão.</div>
@@ -3492,23 +3588,14 @@
         <div id="status-checkout" class="rel-status"></div>
       </div>
       </div></details>
-      <!-- ===== CAFE DA MANHA (Adriana, 13/ago/2026) ==============================
-           Mora na AuAulandia, nao no Day Care: "so pega hospedes e e focada na
-           AuAulandia". Mesmo protocolo do almoco — cada um come o que e dele. -->
-      <details class="prev-sec" id="prevSec_plantao-cafe" open ontoggle="prevSecVirar('plantao-cafe',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Café da manhã</span><span class="prev-sec-contas" id="prevConta_plantao-cafe"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
-      <div class="card" id="card-cafe">
-        <h2 style="font-size:19px">Café da manhã</h2>
-        <div class="hint">Só quem dormiu aqui. Cada um come <strong>o que está na ficha dele</strong> — nenhuma alimentação pode ser trocada. Marque conforme for servindo.</div>
-        <div id="cafeBarraTempo"></div>
-        <div id="cafeResumo"></div>
-        <div class="pets-grid" id="cafeGrid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))"></div>
-      </div>
-      </div></details>
-      <div class="pets-grid" id="hospGrid"></div>
     </div>
 
     <!-- FICHA de passagem de plantão -->
     <div id="hosp-ficha" style="display:none">
+      <!-- 6.122 (03/11/2026): a ficha aberta na virada do dia fica em ontem (zDiaTelaAvancar espera por ela). A faixa diz isso
+           e leva para a de hoje com um toque; fichaOntemFaixaPintar() mostra e esconde, pelo relógio da ficha. Com relatório não
+           salvo, o toque pergunta antes (fichaOntemFaixaToque): ir para hoje perde o que não foi salvo (QA da 6.122, rodada 2). -->
+      <button type="button" id="hf-ontem-faixa" class="hf-ontem-faixa" style="display:none" onclick="fichaOntemFaixaToque()">Esta ficha é de ontem: toque para ver a de hoje</button>
       <button class="back-btn" onclick="fecharPlantao()">← Voltar à hospedagem</button>
 
       <div class="ficha-datenav">
@@ -3530,44 +3617,18 @@
           <div class="hf-chipline" id="hf-chipline">Microchip: --</div>
           <div class="hf-meta" id="hf-meta"></div>
           <div class="hf-estadia" id="hf-estadia"></div>
-          <button type="button" onclick="reemitirFichaAtual()" style="margin-top:8px;background:var(--z-gold);color:var(--z-blue);border:none;border-radius:10px;padding:8px 14px;font-weight:800;font-size:12.5px;cursor:pointer">🖨️ Reemitir ficha de check-in (PDF)</button>
           <span id="hf-mcr"></span>
           <div id="hf-pills"></div>
+          <!-- 6.122: tarjas a mais, em contêiner próprio (setHospAlergia reescreve o #hf-pills inteiro): a restrição do almoço
+               do Day Care quando é outra que a do cadastro, e os alertas só desta estadia. Pinta: fichaTarjasExtraPintar(). -->
+          <div id="hf-pills-extra"></div>
           <div id="hf-alergia-block"></div>
           <!-- Status da gravação da alergia/restrição. Fica FORA do hf-alergia-block de propósito:
                renderHospAlergiaBlock() reescreve aquele bloco e apagaria o aviso na hora. -->
           <div id="hf-alergia-st" style="font-size:12.5px;font-weight:700;margin-top:6px"></div>
-          <div class="so-gestao" style="margin-top:10px">
-            <button class="btn-foto-mini" style="background:var(--z-gold);color:var(--z-blue)" onclick="toggleCadastro()">✏️ Editar cadastro</button>
-          </div>
-          <div class="so-foto" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
-            <button class="btn-foto-mini" onclick="document.getElementById('hfPhotoFile').click()">📷 Trocar foto</button>
-            <button class="btn-foto-mini" style="background:var(--z-blue);color:var(--z-cream)" onclick="salvarFoto()">💾 Salvar foto</button>
-          </div>
-          <div id="hf-fotostatus" style="font-size:11.5px;font-weight:700;margin-top:5px"></div>
-          <div class="so-gestao" style="margin-top:10px">
-            <label style="display:block;font-size:11px;font-weight:700;color:var(--z-blue);margin-bottom:4px">Brincadeiras e brinquedos preferidos</label>
-            <input id="hf-brinq" class="cad-in" placeholder="Ex: bolinha, pelúcia do pato, cabo de guerra" oninput="onBrinq()" style="font-size:13px">
-          </div>
         </div>
       </div>
 
-      <div class="card" id="card-cadastro" style="display:none">
-        <h2 style="font-size:20px;margin-bottom:10px">Dados de cadastro</h2>
-        <div class="cad-grid">
-          <div class="field" style="grid-column:1/-1"><label>Nome do peludinho <span style="font-weight:600;color:var(--muted)">(Gestão / Supervisão)</span></label><input type="text" id="hf-nome-edit" class="cad-in" autocomplete="off" placeholder="Nome do FILHOt" oninput="onCadNome()"></div>
-          <div class="field"><label>Data de nascimento</label><input type="text" id="hf-nasc" class="cad-in" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off" oninput="onCad()" onblur="normalizarNasc()"></div>
-          <div class="field"><label>Idade</label><input type="text" id="hf-idade" class="cad-in" readonly placeholder="—"></div>
-          <div class="field" style="grid-column:1/-1"><label>Idade aproximada <span style="font-weight:600;color:var(--muted)">(quando não se sabe a data — adotado, resgatado)</span></label><input type="text" id="hf-idadeaprox" class="cad-in" placeholder="Ex: aprox. 3 anos · ~5 anos (desde que a família encontrou)" autocomplete="off" oninput="onCad()"></div>
-          <div class="field"><label>Raça</label><input id="hfRaca" class="cad-in" list="racasList" autocomplete="off" placeholder="wes → West Terrier" oninput="onRaca(this.value);onCad()"></div>
-          <div class="field"><label>Cor da pelagem</label><input id="hf-corpelo" class="cad-in" placeholder="Ex: caramelo · preto e branco · tricolor" autocomplete="off" oninput="onCad()"></div>
-          <div class="field"><label>Sexo</label><div class="seg" id="hf-sexo" data-single><button onclick="pick(this);onCad()">Macho</button><button onclick="pick(this);onCad()">Fêmea</button></div></div>
-          <div class="field"><label>Castrado?</label><div class="seg gold" id="hf-cast" data-single><button onclick="pick(this);onCad()">Sim</button><button onclick="pick(this);onCad()">Não</button></div></div>
-          <div class="field"><label>Nome do tutor</label><input type="text" id="hf-tutor" class="cad-in" oninput="onCad()" placeholder="Nome do tutor"></div>
-          <div class="field"><label>Microchip · número completo do visor</label><input type="text" id="hf-chip" class="cad-in" maxlength="15" inputmode="numeric" placeholder="todos os números — 11 a 15 dígitos" oninput="onChip(this.value)"></div>
-        </div>
-        <div class="actions" style="margin-top:8px"><button class="btn btn-primary" onclick="this.textContent=cadTextoSalvar(cadGravarAgora());setTimeout(()=>this.textContent='Salvar cadastro',3500)">Salvar cadastro</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="toggleCadastro()">Fechar</button></div>
-      </div>
       <datalist id="racasList"></datalist>
 
       <!-- A FICHA EM TÓPICOS — Adriana, 27/out/2026: «Clicou no nome do peludinho, aparecem as
@@ -3577,15 +3638,16 @@
            Cada tópico é o mesmo cartão que abre e fecha dos relatórios (.rel-card); o número, o
            pisca e o resumo do cabeçalho vêm de fichaTopicosPintar(). Os ids de dentro não mudaram. -->
       <div class="card rel-card collapsed tp-card" id="tp-alerta">
-        <div class="rel-head" onclick="toggleRel('tp-alerta')"><h2>Alerta <span class="tp-n" id="tpn-alerta">0</span></h2><span class="tp-est" id="tpe-alerta"></span><span class="rel-caret">▾</span></div>
+        <div class="rel-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleRel('tp-alerta')"><h2>Alerta <span class="tp-n" id="tpn-alerta">0</span></h2><span class="tp-est" id="tpe-alerta"></span><span class="rel-caret">▾</span></div>
         <div class="tp-sub" id="tps-alerta"></div>
         <div class="rel-body"><div id="hf-alertas"></div></div>
       </div>
 
       <div class="card rel-card collapsed tp-card" id="tp-med">
-        <div class="rel-head" onclick="toggleRel('tp-med')"><h2>Medicamento <span class="tp-n" id="tpn-med">0</span></h2><span class="tp-est" id="tpe-med"></span><span class="rel-caret">▾</span></div>
+        <div class="rel-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleRel('tp-med')"><h2>Medicamento <span class="tp-n" id="tpn-med">0</span></h2><span class="tp-est" id="tpe-med"></span><span class="rel-caret">▾</span></div>
         <div class="tp-sub" id="tps-med"></div>
         <div class="rel-body">
+        <div id="hf-med-como"></div>
         <div class="hint">Toque em "Dei agora" na hora certa — a plantonista de qualquer aparelho vê que já foi dado.</div>
         <div id="magHoje"></div>
 
@@ -3625,9 +3687,12 @@
       </div>
 
       <div class="card rel-card collapsed tp-card" id="tp-alim">
-        <div class="rel-head" onclick="toggleRel('tp-alim')"><h2>Alimentação</h2><span class="tp-est" id="tpe-alim"></span><span class="rel-caret">▾</span></div>
+        <div class="rel-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleRel('tp-alim')"><h2>Alimentação</h2><span class="tp-est" id="tpe-alim"></span><span class="rel-caret">▾</span></div>
         <div class="tp-sub" id="tps-alim"></div>
         <div class="rel-body">
+          <!-- 6.122: primeiro o que ele NÃO PODE comer (alergia, restrição do cadastro e a do almoço, quando é outra) e o como servir
+               (ANSIOSO); depois o «Como comeu?» e a comida. Pinta: fichaAlimPintar(). -->
+          <div id="hf-alim-topo"></div>
           <!-- Adriana, 27/out/2026: «Alimentação, coloque 3 opções: comeu / somente metade / não
                comeu. Para clicar. Essa informação é muito importante para a gestão.» Grava na hora
                em auaulandia/comeu/<dia>/<FILHOt> (fichaComeuMarcar) e acende o «NÃO COMEU» do card. -->
@@ -3638,9 +3703,13 @@
       </div>
 
       <div class="card rel-card collapsed tp-card" id="tp-obs">
-        <div class="rel-head" onclick="toggleRel('tp-obs')"><h2>Observações <span class="tp-n" id="tpn-obs">0</span></h2><span class="tp-est" id="tpe-obs"></span><span class="rel-caret">▾</span></div>
+        <div class="rel-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleRel('tp-obs')"><h2>Dados gerais <span class="tp-n" id="tpn-obs">0</span></h2><span class="tp-est" id="tpe-obs"></span><span class="rel-caret">▾</span></div>
         <div class="tp-sub" id="tps-obs"></div>
         <div class="rel-body">
+          <!-- 6.122, segunda rodada: «Dados gerais — condições gerais do peludinho» (Adriana, 22/10). As tarjas amarelas MANIAS e ANSIOSO
+               moram aqui, e não mais na faixa do alto; as vermelhas (alergia, restrição, saúde) e a MEDICAÇÃO do cadastro continuam lá
+               (a MEDICAÇÃO pode existir sem agenda: no Medicamento fechado, o resumo diria «Nenhum remédio hoje»). Pinta: fichaTarjasTopicosPintar(). -->
+          <div id="hf-dados-tarjas"></div>
           <div id="hf-obsgeral"></div>
           <div id="hf-vet-instr"></div>
         </div>
@@ -3651,7 +3720,7 @@
       <div id="medHistBanner" class="medhist-banner" style="display:none"></div>
       <div class="rel-stack">
       <div class="card rel-card collapsed" id="card-dia">
-        <div class="rel-head" onclick="toggleRel('card-dia')"><h2>Relatório do Dia</h2><span class="rel-tag">Monitora</span><span class="rel-caret">▾</span></div>
+        <div class="rel-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleRel('card-dia')"><h2>Relatório do Dia</h2><span class="rel-tag">Monitora</span><span class="rel-caret">▾</span></div>
         <div class="rel-body">
         <div class="hint">Como foi o Dia dos nossos FILHOts no Day Care? — o Monitor relata como foi o dia. Toque para marcar.</div>
         <div class="lock-note">🔒 Somente leitura — este relatório é da Monitora</div>
@@ -3694,7 +3763,7 @@
       </div>
 
       <div class="card rel-card collapsed" id="card-inicio">
-        <div class="rel-head" onclick="toggleRel('card-inicio')"><h2>Relatório do Jantar e preparação para dormir</h2><span class="rel-tag">Plantonista · 19h</span><span class="rel-caret">▾</span></div>
+        <div class="rel-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleRel('card-inicio')"><h2>Relatório do Jantar e preparação para dormir</h2><span class="rel-tag">Plantonista · 19h</span><span class="rel-caret">▾</span></div>
         <div class="rel-body">
         <div class="hint">A Plantonista relata o jantar e a preparação para dormir (chegada da noite, ~19h).</div>
         <div class="obsline"><span class="q">Como está agora?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Calmo</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
@@ -3727,7 +3796,7 @@
       </div>
 
       <div class="card rel-card collapsed" id="card-noite">
-        <div class="rel-head" onclick="toggleRel('card-noite')"><h2>Relatório da Noite</h2><span class="rel-tag">Plantonista · 7h</span><span class="rel-caret">▾</span></div>
+        <div class="rel-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleRel('card-noite')"><h2>Relatório da Noite</h2><span class="rel-tag">Plantonista · 7h</span><span class="rel-caret">▾</span></div>
         <div class="rel-body">
         <div class="hint">Como os FILHOts passaram a noite? — a Plantonista relata como dormiram TODOS que ficaram (os hóspedes saem até as 11h30, então todos que dormiram entram aqui).</div>
         <div class="obsline"><span class="q">Como passou a noite?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Dormiu a noite inteira</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
@@ -3768,7 +3837,7 @@
       <!-- O cadastro da medicação sai da frente de quem só dá o remédio (a plantonista nem vê este
            tópico — regra do CSS abaixo do .tp-card). Os ids continuam os mesmos de antes. -->
       <div class="card rel-card collapsed tp-card" id="tp-cad">
-        <div class="rel-head" onclick="toggleRel('tp-cad')"><h2>Cadastro da medicação 🔒</h2><span class="rel-tag">Gestão</span><span class="rel-caret">▾</span></div>
+        <div class="rel-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleRel('tp-cad')"><h2>Cadastro da medicação 🔒</h2><span class="rel-tag">Gestão</span><span class="rel-caret">▾</span></div>
         <div class="tp-sub">Acrescentar, alterar ou remover remédio — Consultora, Gestão/Supervisão ou Veterinária.</div>
         <div class="rel-body" id="card-medagenda">
         <div class="hint">Cadastre o medicamento ou suplemento e os horários fixos (ex.: colírio às 10:30, 16:30, 22:30 e 04:30). Salva sozinho — não precisa abrir o relatório do plantão nem assinar.</div>
@@ -3781,13 +3850,52 @@
       </div>
       <div class="checklist-note">📋 Antes de assinar — o Check-list de hospedagem é o seu material de trabalho principal. <strong>LEIA-O!</strong><br><span style="font-size:14px;font-weight:800;color:var(--crm-critico)">DÚVIDAS? LIGUE: 31 99764-4296 / 31 99111-1826</span></div>
 
-      <div class="card" id="card-texto">
+
+      <!-- 6.122 (03/11/2026), segunda rodada — MAIS INFORMAÇÕES (resposta 76: «o resto da ficha — fotos, brinquedos, cadastro, histórico —
+           vai para um último tópico «Mais informações», fechado»). Os blocos são os mesmos de antes, com os mesmos ids; quem vê cada um
+           continua decidido pelas classes de sempre (.so-gestao, .so-foto, #card-cadastro, #card-texto). Resumo: fichaMaisResumo(). -->
+      <div class="card rel-card collapsed tp-card" id="tp-mais">
+        <div class="rel-head" role="button" tabindex="0" aria-expanded="false" onclick="toggleRel('tp-mais')"><h2>Mais informações</h2><span class="tp-est" id="tpe-mais"></span><span class="rel-caret">▾</span></div>
+        <div class="tp-sub" id="tps-mais"></div>
+        <div class="rel-body">
+        <button type="button" onclick="reemitirFichaAtual()" style="margin-top:8px;background:var(--z-gold);color:var(--z-blue);border:none;border-radius:10px;padding:8px 14px;font-weight:800;font-size:12.5px;cursor:pointer">🖨️ Reemitir ficha de check-in (PDF)</button>
+        <div class="so-gestao" style="margin-top:10px">
+          <button class="btn-foto-mini" style="background:var(--z-gold);color:var(--z-blue)" onclick="toggleCadastro()">✏️ Editar cadastro</button>
+        </div>
+        <div class="so-foto" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <button class="btn-foto-mini" onclick="document.getElementById('hfPhotoFile').click()">📷 Trocar foto</button>
+          <button class="btn-foto-mini" style="background:var(--z-blue);color:var(--z-cream)" onclick="salvarFoto()">💾 Salvar foto</button>
+        </div>
+        <div id="hf-fotostatus" style="font-size:11.5px;font-weight:700;margin-top:5px"></div>
+        <div class="so-gestao" style="margin-top:10px">
+          <label style="display:block;font-size:11px;font-weight:700;color:var(--z-blue);margin-bottom:4px">Brincadeiras e brinquedos preferidos</label>
+          <input id="hf-brinq" class="cad-in" placeholder="Ex: bolinha, pelúcia do pato, cabo de guerra" oninput="onBrinq()" style="font-size:13px">
+        </div>
+        <div class="card" id="card-cadastro" style="display:none">
+        <h2 style="font-size:20px;margin-bottom:10px">Dados de cadastro</h2>
+        <div class="cad-grid">
+          <div class="field" style="grid-column:1/-1"><label>Nome do peludinho <span style="font-weight:600;color:var(--muted)">(Gestão / Supervisão)</span></label><input type="text" id="hf-nome-edit" class="cad-in" autocomplete="off" placeholder="Nome do FILHOt" oninput="onCadNome()"></div>
+          <div class="field"><label>Data de nascimento</label><input type="text" id="hf-nasc" class="cad-in" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off" oninput="onCad()" onblur="normalizarNasc()"></div>
+          <div class="field"><label>Idade</label><input type="text" id="hf-idade" class="cad-in" readonly placeholder="—"></div>
+          <div class="field" style="grid-column:1/-1"><label>Idade aproximada <span style="font-weight:600;color:var(--muted)">(quando não se sabe a data — adotado, resgatado)</span></label><input type="text" id="hf-idadeaprox" class="cad-in" placeholder="Ex: aprox. 3 anos · ~5 anos (desde que a família encontrou)" autocomplete="off" oninput="onCad()"></div>
+          <div class="field"><label>Raça</label><input id="hfRaca" class="cad-in" list="racasList" autocomplete="off" placeholder="wes → West Terrier" oninput="onRaca(this.value);onCad()"></div>
+          <div class="field"><label>Cor da pelagem</label><input id="hf-corpelo" class="cad-in" placeholder="Ex: caramelo · preto e branco · tricolor" autocomplete="off" oninput="onCad()"></div>
+          <div class="field"><label>Sexo</label><div class="seg" id="hf-sexo" data-single><button onclick="pick(this);onCad()">Macho</button><button onclick="pick(this);onCad()">Fêmea</button></div></div>
+          <div class="field"><label>Castrado?</label><div class="seg gold" id="hf-cast" data-single><button onclick="pick(this);onCad()">Sim</button><button onclick="pick(this);onCad()">Não</button></div></div>
+          <div class="field"><label>Nome do tutor</label><input type="text" id="hf-tutor" class="cad-in" oninput="onCad()" placeholder="Nome do tutor"></div>
+          <div class="field"><label>Microchip · número completo do visor</label><input type="text" id="hf-chip" class="cad-in" maxlength="15" inputmode="numeric" placeholder="todos os números — 11 a 15 dígitos" oninput="onChip(this.value)"></div>
+        </div>
+        <div class="actions" style="margin-top:8px"><button class="btn btn-primary" onclick="this.textContent=cadTextoSalvar(cadGravarAgora());setTimeout(()=>this.textContent='Salvar cadastro',3500)">Salvar cadastro</button><button class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="toggleCadastro()">Fechar</button></div>
+      </div>
+        <div class="card" id="card-texto">
         <h2>📱 Texto para o tutor</h2>
         <div class="hint">A Gestora gera o texto pronto a partir do que foi marcado e envia ao tutor.</div>
         <textarea id="hf-txt" style="width:100%;font-family:var(--font-ui);font-size:14.5px;line-height:1.5;padding:13px;border:1.5px solid var(--line);border-radius:11px;background:var(--z-cream);min-height:90px" placeholder="Clique em Gerar texto"></textarea>
         <div class="actions">
           <button class="btn btn-gold" onclick="gerarTexto()">Gerar texto</button>
           <button class="btn" style="flex:0 0 auto;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="copiarTexto()">Copiar</button>
+        </div>
+      </div>
         </div>
       </div>
 
@@ -5564,7 +5672,7 @@
 <script src="autoria-logica.js?v=2026-10-15-02"></script>
 <script src="navegacao-inicio.js?v=2026-10-15-02"></script>
 <script src="hospedes-atividades.js?v=2026-10-16-01"></script>
-<script src="alimentacao-hospede.js?v=2026-11-03-01"></script>
+<script src="alimentacao-hospede.js?v=2026-11-04-01"></script>
 <script src="cafe-operacional.js?v=2026-10-16-02"></script>
 <script src="cafe-aluno-logica.js?v=2026-10-16-06"></script>
 <script src="presenca-logica.js?v=2026-10-16-02"></script>
@@ -17104,6 +17212,7 @@ return { criar };
       }
     }
     const _pillsEl=document.getElementById('hf-pills'); if(_pillsEl) _pillsEl.innerHTML=(typeof alertPills==='function')?alertPills(extraDoHosp(currentHosp)):'';
+    try{ fichaTopicosPintar(); }catch(e){} /* silencioso de propósito: 6.122 — o «NÃO PODE» e as tarjas a mais se redesenham; a faixa de sempre já foi */
     renderHosp();
   }
   // Bloco "Alergia / Restrição" na ficha do hóspede — achável e editável por quem recebe o
@@ -18312,8 +18421,11 @@ return { criar };
     // Observação geral da estadia (ex.: "tutor pediu pra ver se manca à noite") — destaque pra quem cuida.
     try{ var _rk=(typeof medAgendaKey==='function')?medAgendaKey(h):''; var _reg=(_rk&&typeof CF_ESTADIAS!=='undefined')?CF_ESTADIAS[_rk]:null; var _fc=(_reg&&_reg.e&&_reg.e.ficha)?_reg.e.ficha:{};
       var _nota=function(rot,txt){ return txt?('<div style="background:rgba(222,180,40,.14);border-left:4px solid var(--z-gold);border-radius:8px;padding:9px 12px;margin-top:8px;font-size:13.5px;color:var(--z-blue);font-weight:600"><strong>'+rot+':</strong> '+esc(txt)+'</div>'):''; };
-      var _html=_nota('Observação',_fc.obsGeral||'')+_nota('Alimentação',(_fc.alim&&_fc.alim.obs)||'')+_nota('Medicação',_fc.medObs||'');
+      // 6.122 (P4): cada instrução no tópico em que ela é usada. A do remédio vai para o alto do Medicamento; a da comida já
+      // está na caixa do jantar da Alimentação (fichaAlimPintar). As Observações ficam com o que sobra: a observação da estadia.
+      var _html=_nota('Observação da estadia',_fc.obsGeral||'');
       var _oe=document.getElementById('hf-obsgeral'); if(_oe) _oe.innerHTML=_html;
+      var _mc=document.getElementById('hf-med-como'); if(_mc) _mc.innerHTML=_nota('Observação da medicação',_fc.medObs||'');
     }catch(e){} /* silencioso de propósito: função opcional, pode não existir nesta tela */
     if(typeof renderVetInstrucoesFicha==='function') renderVetInstrucoesFicha(h,'hf-vet-instr'); // Onda 3: instruções da vet (elizabetano, não deixar na matilha...)
     if(typeof renderHospAlergiaBlock==='function') renderHospAlergiaBlock(h);
@@ -18321,6 +18433,8 @@ return { criar };
     document.getElementById('hfRaca').value=raca;
     document.getElementById('hosp-lista').style.display='none';
     document.getElementById('hosp-ficha').style.display='block';
+    // 6.122: a classe que tira o cabeçalho da página no celular (CSS «Plantão: a ficha»); a Medicação decide de novo se abre sozinha.
+    try{ document.getElementById('hosp-ficha').classList.add('aberta'); fichaMedAutoZerar(); fichaTarjasExtraPintar(); fichaOntemFaixaPintar(); var _tm=document.getElementById('tp-mais'); if(_tm) _tm.classList.add('collapsed'); }catch(e){} /* silencioso de propósito: sem isto, a ficha abre como antes */
     const _hs=document.getElementById('hf-status'); if(_hs) _hs.textContent='';
     const cc=document.getElementById('card-cadastro'); if(cc) cc.style.display='none'; // cadastro começa fechado
     // Zona de risco (deletar pernoite do dia): só aparece para lançamento manual de hoje (tem manualKey);
@@ -18361,35 +18475,31 @@ return { criar };
     }
     var n=document.getElementById('tpn-'+k); if(n && o.n!=null) n.textContent=String(o.n);
     var e=document.getElementById('tpe-'+k); if(e) e.textContent=o.est||'';
-    var s=document.getElementById('tps-'+k); if(s) s.textContent=o.sub||'';
+    // 6.122: o resumo pode vir com um trecho em vermelho (o atrasado, o NÃO PODE); o texto livre já vem escapado por escAttr.
+    var s=document.getElementById('tps-'+k); if(s){ if(o.subHTML!=null) fichaPor(s, o.subHTML); else s.textContent=o.sub||''; }
   }
   function fichaTopicosPintar(){
     var f=document.getElementById('hosp-ficha'); if(!f || f.style.display==='none' || !currentHosp) return;
     var hoje=fichaEhHoje(), hora=fichaHoraAgora(), papel=(document.body.dataset.role||'');
-    // ALERTA
+    // 6.122: o que mora dentro dos tópicos e não pode ficar velho — as tarjas a mais do alto e a Alimentação (NÃO PODE, ANSIOSO, jantar e café).
+    try{ fichaTarjasExtraPintar(); fichaAlimPintar(); fichaOntemFaixaPintar(); }catch(e){} /* silencioso de propósito: redesenho de tela — os cabeçalhos abaixo continuam */
+    // ALERTA — 6.122 (S2): os alertas desta estadia ficam à vista na tarja «ALERTA: …» do alto, e a alergia na tarja dela. O resumo
+    // mostra só o que a faixa do alto não mostra (QA da 6.122, rodada 1, bloqueio 5): os fixos de convivência, comportamento e saúde.
+    // Tudo já na faixa: o título fica sem resumo (o «⚠ LER» e o número continuam), e o MEDICAMENTO sobe para a primeira tela.
     var al=alertasAtivosDe(currentHosp), fxA=fichaAlertasFixosDoHosp(currentHosp), nAl=al.length+fxA.length;
+    var foraDaFaixa=fxA.filter(function(x){ return x && x.id!=='alerg'; });
     fichaTopicoPintar('tp-alerta', nAl
-      ? {estado:'pisca', n:nAl, est:'⚠ LER', sub:String(fxA.length?fxA[0].tx:(al[0].txt||''))+(nAl>1?(' · e mais '+(nAl-1)):'')}
+      ? {estado:'pisca', n:nAl, est:'⚠ LER', sub:foraDaFaixa.length?(String(foraDaFaixa[0].tx||'')+(foraDaFaixa.length>1?(' · e mais '+(foraDaFaixa.length-1)):'')):''}
       : {estado:'zero', n:0, est:'', sub:'Nenhum alerta'});
-    // MEDICAMENTO
-    var m=MAG_RESUMO||{};
-    if(m.carregando) fichaTopicoPintar('tp-med', {estado:'', n:'…', est:'', sub:'Carregando a agenda…'});
-    else if(!m.itens) fichaTopicoPintar('tp-med', {estado:'zero', n:0, est:'', sub:'Nenhum remédio hoje'});
-    else if(m.pend>0 && hoje){
-      var sub=[]; if(m.proxima) sub.push('próxima '+m.proxima); if(m.atrasadas) sub.push(m.atrasadas+(m.atrasadas>1?' atrasadas':' atrasada'));
-      if(!sub.length) sub.push(m.pend+(m.pend>1?' doses para dar':' dose para dar'));
-      fichaTopicoPintar('tp-med', {estado:'pisca', n:m.itens, est:'⚠ DAR', sub:sub.join(' · ')});
-    }
-    else if(m.pend>0) fichaTopicoPintar('tp-med', {estado:'', n:m.itens, est:'', sub:m.pend+(m.pend>1?' doses não registradas':' dose não registrada')});
-    else fichaTopicoPintar('tp-med', {estado:'ok', n:m.itens, est:'✅ tudo dado', sub:'Todas as doses do dia foram registradas'});
-    // ALIMENTAÇÃO — «Como comeu?» é o que a Gestão precisa saber
-    var cm=FICHA_COMEU;
-    if(cm && cm.v) fichaTopicoPintar('tp-alim', {estado:'ok', est:'✅', sub:(COMEU_TXT[cm.v]||cm.v)+(cm.quem&&cm.quem!=='-'?(' · marcado por '+cm.quem):'')});
-    else if(hoje && hora>='18:00') fichaTopicoPintar('tp-alim', {estado:'pisca', est:'⚠ MARCAR', sub:'Falta marcar como comeu'});
-    else fichaTopicoPintar('tp-alim', {estado:'', est:'', sub:'Como comeu ainda não marcado'});
-    // OBSERVAÇÕES
-    var ob=0; try{ var og=document.getElementById('hf-obsgeral'); if(og) ob+=og.children.length; var vi=document.getElementById('hf-vet-instr'); if(vi) ob+=vi.querySelectorAll('.vet-instr-box').length; }catch(e){} /* silencioso de propósito: contagem de tela */
-    fichaTopicoPintar('tp-obs', ob ? {estado:'', n:ob, est:'', sub:ob+(ob>1?' recados':' recado')} : {estado:'zero', n:0, est:'', sub:'Nenhum recado'});
+    // MEDICAMENTO — 6.122 (S1, S4): o atrasado primeiro, com o nome; o pisca só com dose até 60 minutos à frente ou atrasada;
+    // a ficha de outro dia nunca fica verde.
+    fichaTopicoPintar('tp-med', fichaMedResumo());
+    // ALIMENTAÇÃO — 6.122 (P2): o NÃO PODE e a comida (a refeição mais perto primeiro); o «Como comeu?», que a Gestão precisa, depois.
+    fichaTopicoPintar('tp-alim', fichaAlimResumo(hoje, hora));
+    // DADOS GERAIS (6.122, segunda rodada; era OBSERVAÇÕES) — as condições gerais do peludinho, e MAIS INFORMAÇÕES, o resto da ficha.
+    try{ fichaTarjasTopicosPintar(); }catch(e){} /* silencioso de propósito: redesenho de tela — os cabeçalhos abaixo continuam */
+    fichaTopicoPintar('tp-obs', fichaDadosResumo());
+    fichaTopicoPintar('tp-mais', fichaMaisResumo());
     // OS TRÊS RELATÓRIOS — o Dia pisca até a plantonista ler e confirmar; o Jantar a partir das 18h;
     // a Noite de manhã (é preenchida às 7h, sobre a noite que passou).
     var R=(typeof RELSTATE!=='undefined'&&RELSTATE)||{};
@@ -18404,7 +18514,582 @@ return { criar };
     var manha=(hoje && hora>='05:00' && hora<'12:00' && papel==='plantonista');
     if(nt.passou) fichaTopicoPintar('card-noite', {estado:'ok', est:'✅ salvo', sub:'Feito por '+nt.passou});
     else fichaTopicoPintar('card-noite', {estado:manha?'pisca':'', est:manha?'⚠ FAZER':'', sub:'Preencher de manhã (7h), sobre a noite que passou'});
+    // 6.122 (P1): a Medicação abre sozinha uma vez por abertura, quando há remédio para dar na próxima hora; e o leitor de tela sabe o que está aberto.
+    try{ fichaMedAutoAbrir(); fichaAriaSincTodos(); }catch(e){} /* silencioso de propósito: sem isto, os tópicos ficam como estão */
   }
+  // ===== 6.122 (03/11/2026) — AS LACUNAS DA FICHA DO PLANTÃO =====================================
+  // Adriana, 22/10: «Clicou no hóspede, abre a ficha com os dados que as plantonistas precisam: Medicação, alimentação, dados
+  // gerais. [...] fica rolando a tela e não acha a informação.» Respostas 75 e 76: a Medicação abre sozinha quando há remédio
+  // para dar na próxima hora; alergia e restrição nunca ficam escondidas. Nada aqui lê nem grava no banco: tudo vem do que a
+  // abertura da ficha já trouxe (MED_AGENDA_ITENS, MED_AGENDA_LOG, CF_ESTADIAS, o cadastro e o almoço em memória).
+  // Escreve só quando muda (o redesenho não apaga nada que a pessoa esteja lendo e não entra em laço).
+  function fichaPor(el, html){
+    if(!el) return;
+    if(el.__fichaHtml===html && el.innerHTML===el.__fichaSer) return;
+    el.innerHTML=html; el.__fichaHtml=html; el.__fichaSer=el.innerHTML;
+  }
+  // «08:00» → «8h»; «22:30» → «22h30» (o jeito da casa de escrever hora).
+  function fichaHoraTxt(hhmm){
+    var m=/^(\d{1,2}):(\d{2})$/.exec(String(hhmm||'')); if(!m) return String(hhmm||'');
+    return String(parseInt(m[1],10))+'h'+(m[2]==='00'?'':m[2]);
+  }
+  // «a», «a e b», «a, b e c», sem repetir.
+  function fichaListaTxt(L){
+    var u=[]; (L||[]).forEach(function(x){ x=String(x||'').trim(); if(x && u.indexOf(x)<0) u.push(x); });
+    return u.length<2 ? (u[0]||'') : (u.slice(0,-1).join(', ')+' e '+u[u.length-1]);
+  }
+  function fichaDiaCurto(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||'')); return m?(m[3]+'/'+m[2]):String(iso||''); }
+  // As doses desta ficha que ainda pedem remédio, pela MESMA régua de renderMedAgendaHoje (que não muda): suspenso, fora do
+  // período e «lançado por engano» não pedem dose; a dose anulada não conta como dada (nem a cópia dela); as cópias da mesma
+  // dose (medDoseChave) viram uma só, e vale a que foi dada. Devolve [{h, nome}] na ordem do horário.
+  function fichaMedPendentes(){
+    var rows=[];
+    Object.keys(MED_AGENDA_ITENS||{}).forEach(function(id){
+      var it=MED_AGENDA_ITENS[id]||{};
+      if(it.suspenso) return;
+      if(!medVigenteEm(it)) return;
+      var remAnulado=medItemAnulado(it);
+      (it.horarios||[]).forEach(function(h){
+        var doseId=magDoseId(id,h), log=MED_AGENDA_LOG[doseId];
+        if(remAnulado && !log) return;
+        var vale=medDoseValendo(log) && medDoseOrigemVale(MED_AGENDA_LOG, doseId);
+        rows.push({nome:it.nome, q:it.q, u:it.u, local:it.local, h:h, feito:vale, semDar:remAnulado});
+      });
+    });
+    var vistos={}, unicas=[];
+    rows.forEach(function(r){
+      var k=medDoseChave(r)+'|ag';
+      if(vistos[k]!=null){ var ex=unicas[vistos[k]]; if((r.feito && !ex.feito) || (r.feito===ex.feito && ex.semDar && !r.semDar)) unicas[vistos[k]]=r; return; }
+      vistos[k]=unicas.length; unicas.push(r);
+    });
+    return unicas.filter(function(r){ return !r.feito && !r.semDar; })
+      .map(function(r){ return {h:String(r.h||''), nome:String(r.nome||'')}; })
+      .sort(function(a,b){ return a.h.localeCompare(b.h); });
+  }
+  // O cabeçalho do MEDICAMENTO. A conta de quantas faltam é a da tela (MAG_RESUMO); os nomes e as horas vêm de
+  // fichaMedPendentes, e só valem quando as duas contas batem (senão, o resumo de antes, sem nomes).
+  function fichaMedResumo(){
+    var m=MAG_RESUMO||{}, hoje=fichaEhHoje(), dia=dataKeyAtual(), hojeISO=zHojeISO();
+    if(m.carregando) return {estado:'', n:'…', est:'', sub:'Carregando a agenda…'};
+    if(!m.itens) return {estado:'zero', n:0, est:'', sub:hoje?'Nenhum remédio hoje':('Nenhum remédio em '+fichaDiaCurto(dia))};
+    var P=null; try{ P=fichaMedPendentes(); }catch(e){ P=null; } /* silencioso de propósito: sem a conta, fica o resumo sem nomes */
+    if(P && P.length!==m.pend) P=null;
+    if(hoje){
+      if(!(m.pend>0)) return {estado:'ok', n:m.itens, est:'✅ tudo dado', sub:'Todas as doses do dia foram registradas'};
+      if(!P){
+        var sub=[]; if(m.proxima) sub.push('próxima '+m.proxima); if(m.atrasadas) sub.push(m.atrasadas+(m.atrasadas>1?' atrasadas':' atrasada'));
+        if(!sub.length) sub.push(m.pend+(m.pend>1?' doses para dar':' dose para dar'));
+        var _jf=m.atrasadas>0 || (!!m.proxima && (minutosAte(m.proxima)||0)<=60);
+        return {estado:_jf?'pisca':'', n:m.itens, est:_jf?'⚠ DAR':'', sub:sub.join(' · ')};
+      }
+      var agora=fichaHoraAgora();
+      var atr=P.filter(function(r){ return r.h<agora; }), fut=P.filter(function(r){ return r.h>=agora; });
+      var prox=fut.length?fut[0].h:'';
+      var falta=prox?minutosAte(prox):null;
+      var janela=atr.length>0 || (falta!==null && falta<=60);
+      var txt=[], html=[];
+      if(atr.length){
+        var t1=(atr.length>1?(atr.length+' ATRASADAS'):'ATRASADA')+' desde '+fichaHoraTxt(atr[0].h)+': '+fichaListaTxt(atr.map(function(r){ return r.nome; }));
+        txt.push(t1); html.push('<span class="tp-sub-critico">'+escAttr(t1)+'</span>');
+      }
+      if(prox){
+        var t2='próxima '+fichaHoraTxt(prox)+': '+fichaListaTxt(fut.filter(function(r){ return r.h===prox; }).map(function(r){ return r.nome; }));
+        txt.push(t2); html.push(escAttr(t2));
+      }
+      return {estado:janela?'pisca':'', n:m.itens, est:janela?'⚠ DAR':'', sub:txt.join(' · '), subHTML:html.join(' · ')};
+    }
+    // Outro dia: nunca «tudo dado» em verde (a tela não é a de hoje). O dia que passou com dose sem registro fica em vermelho.
+    var ontem=(typeof addDiasISO==='function') && dia===addDiasISO(hojeISO,-1);
+    var rot=ontem?'Ficha de ontem':('Ficha de '+fichaDiaCurto(dia));
+    if(dia<hojeISO){
+      // A ficha segurada em ontem pela virada (AC-V1.4; QA da 6.122, rodada 1): o remédio de HOJE vem logo depois, em vermelho.
+      var tH='';
+      try{ if(ontem && medDiaVelhoAuto()) tH=fichaMedHojeTxt(); }catch(e){ tH=''; } /* silencioso de propósito: sem a conta, o resumo de ontem fica como estava */
+      var partes=[], partesH=[];
+      if(m.pend>0){
+        var horas=P?P.map(function(r){ return fichaHoraTxt(r.h); }):[];
+        var t3=m.pend+(m.pend>1?' doses de ':' dose de ')+fichaDiaCurto(dia)+' sem registro'+(horas.length?(' ('+fichaListaTxt(horas)+')'):'');
+        partes.push(t3); partesH.push('<span class="tp-sub-critico">'+escAttr(t3)+'</span>');
+      }else{
+        var t4='Todas as doses de '+fichaDiaCurto(dia)+' registradas';
+        partes.push(t4); partesH.push(escAttr(t4));
+      }
+      if(tH){ partes.push(tH); partesH.push('<span class="tp-sub-critico">'+escAttr(tH)+'</span>'); }
+      return {estado:(ontem && (m.pend>0 || !!tH))?'pisca':'', n:m.itens, est:rot, sub:partes.join(' · '), subHTML:partesH.join(' · ')};
+    }
+    if(m.pend>0) return {estado:'', n:m.itens, est:'', sub:m.pend+(m.pend>1?' doses agendadas para ':' dose agendada para ')+fichaDiaCurto(dia)};
+    return {estado:'', n:m.itens, est:'', sub:'Nenhuma dose agendada para '+fichaDiaCurto(dia)};
+  }
+  // A MEDICAÇÃO ABRE SOZINHA (resposta 75): uma vez por abertura da ficha (e por dia da ficha), só depois de a agenda DESTE
+  // hóspede chegar, quando a ficha é de hoje e há dose sem registro até 60 minutos à frente ou atrasada. O toque da pessoa no
+  // título vale mais: o que ela fechou não reabre. Nunca fecha sozinha.
+  var FICHA_MED_AUTO={dia:'', decidido:false, tocou:false};
+  function fichaMedAutoZerar(){ FICHA_MED_AUTO={dia:'', decidido:false, tocou:false}; }
+  function fichaMedAutoAbrir(){
+    var c=document.getElementById('tp-med'); if(!c || !currentHosp) return '';
+    var dia=dataKeyAtual();
+    if(FICHA_MED_AUTO.dia!==dia) FICHA_MED_AUTO={dia:dia, decidido:false, tocou:false};
+    if(FICHA_MED_AUTO.decidido || FICHA_MED_AUTO.tocou) return '';
+    var m=MAG_RESUMO||{};
+    if(m.carregando) return '';
+    if(!(MED_AGENDA_TS && MED_AGENDA_TS.key && MED_AGENDA_TS.key===medAgendaKey(currentHosp))) return '';
+    FICHA_MED_AUTO.decidido=true;
+    if(!fichaEhHoje() || !m.itens || !(m.pend>0)) return 'fechada';
+    var P=fichaMedPendentes(); if(P.length!==m.pend) return 'fechada';
+    var perto=P.some(function(r){ var x=minutosAte(r.h); return x!==null && x<=60; });
+    if(!perto) return 'fechada';
+    if(c.classList.contains('collapsed')){ c.classList.remove('collapsed'); relAriaSinc(c); }
+    return 'abriu';
+  }
+  // Título de tópico é botão (role="button"): o leitor de tela sabe se está aberto.
+  function relAriaSinc(c){
+    var hd=c && c.querySelector ? c.querySelector('.rel-head') : null;
+    if(hd && hd.getAttribute && hd.getAttribute('role')==='button') hd.setAttribute('aria-expanded', c.classList.contains('collapsed')?'false':'true');
+  }
+  function fichaAriaSincTodos(){
+    var f=document.getElementById('hosp-ficha'); if(!f || !f.querySelectorAll) return;
+    Array.prototype.forEach.call(f.querySelectorAll('.rel-card'), relAriaSinc);
+  }
+  // Enter e espaço no título fazem o mesmo que o toque.
+  try{ document.addEventListener('keydown', function(ev){
+    var k=ev && ev.key; if(k!=='Enter' && k!==' ' && k!=='Spacebar') return;
+    var t=ev.target; if(!t || !t.classList || !t.classList.contains('rel-head') || !t.getAttribute || t.getAttribute('role')!=='button') return;
+    ev.preventDefault(); t.click();
+  }); }catch(e){} /* silencioso de propósito: sem teclado, o toque continua valendo */
+  // ---- O QUE ELE NÃO PODE (S3) ----
+  // O texto `a` já está dentro de algum da lista? (sem acento e sem caixa)
+  function fichaTextoContido(a, lista){
+    var n=jsNorm(String(a||'')); if(!n) return true;
+    return (lista||[]).some(function(x){ var y=jsNorm(String(x||'')); return !!y && y.indexOf(n)>=0; });
+  }
+  // A restrição do almoço do Day Care deste FILHOt: a que o pernoite sem check-in repete (alimDoHospede) ou, com check-in, a
+  // do cadastro do almoço (a mesma busca de extraDoHosp, que só a usa quando o cadastro está vazio).
+  function fichaRestrAlmoco(h){
+    try{
+      var a=alimDoHospede(h);
+      if(a && (a.fonte==='almoco'||a.fonte==='nenhuma') && String(a.obs||'').trim()) return String(a.obs).trim();
+      var pm=(typeof pelMestreDe==='function')?pelMestreDe(h):null;
+      var nm=pm?pm.n:h.nome, tt=pm?((typeof pelGet==='function')?pelGet(pm,'tutor'):h.tutor):h.tutor;
+      var c=(typeof almCad==='function')?almCad({n:nm, tutor:tt}):null;
+      return (c && String(c.restr||'').trim()) || '';
+    }catch(e){ return ''; } /* silencioso de propósito: sem o almoço em memória, vale o que o cadastro diz */
+  }
+  // NÃO PODE: a alergia, a restrição do cadastro e a do almoço, quando é outra.
+  function fichaNaoPodeLista(h){
+    var ex=extraDoHosp(h)||{}, L=[];
+    var al=alergiaValida(ex.alergia); if(al) L.push(al);
+    var r=String(ex.restricao||'').trim(); if(r) L.push(r);
+    var rA=fichaRestrAlmoco(h); if(rA && !fichaTextoContido(rA, L)) L.push(rA);
+    return L;
+  }
+  // As tarjas a mais do alto (#hf-pills-extra), ao lado da faixa de sempre: a restrição do almoço que o cadastro não tem e os
+  // alertas só desta estadia (S2: «Suspeita de virose — afastado dos outros» à vista, sem tocar).
+  function fichaTarjasExtraHTML(h){
+    if(!h) return '';
+    var ex=extraDoHosp(h)||{}, P=[];
+    var rA=fichaRestrAlmoco(h);
+    if(rA && !fichaTextoContido(rA, [ex.restricao, alergiaValida(ex.alergia)])) P.push('<span class="alert-pill crit">RESTRIÇÃO (almoço do Day Care): '+escAttr(rA)+'</span>');
+    var L=[]; try{ L=alertasAtivosDe(h)||[]; }catch(e){ L=[]; } /* silencioso de propósito: sem o cache dos alertas, só a restrição */
+    // Os alertas da estadia numa tarja só (QA da 6.122, rodada 1, bloqueio 5): com dois alertas, a primeira tela ainda mostra o MEDICAMENTO.
+    var T=L.map(function(a){ return String((a && a.txt) || '').trim(); }).filter(function(t){ return !!t; });
+    if(T.length) P.push('<span class="alert-pill crit">ALERTA: '+T.map(function(t){ return escAttr(t); }).join(' · ')+'</span>');
+    return P.length?('<div class="alert-pills">'+P.join('')+'</div>'):'';
+  }
+  function fichaTarjasExtraPintar(){
+    var el=document.getElementById('hf-pills-extra'); if(!el) return;
+    fichaPor(el, currentHosp?fichaTarjasExtraHTML(currentHosp):'');
+  }
+  // ---- DADOS GERAIS E MAIS INFORMAÇÕES (6.122, segunda rodada) ----
+  // As tarjas amarelas MANIAS e ANSIOSO saem da faixa do alto (alertPills não muda: a faixa recebe uma classe que o CSS esconde) e
+  // entram em Dados gerais (o ANSIOSO também na Alimentação). As vermelhas e a MEDICAÇÃO do cadastro continuam na faixa: a MEDICAÇÃO
+  // pode estar no cadastro sem estar na agenda, e o Medicamento fechado diria «Nenhum remédio hoje».
+  function fichaTarjaAmarela(nome, txt){ return '<span class="alert-pill warn">'+escAttr(nome)+': '+escAttr(txt)+'</span>'; }
+  function fichaTarjasTopicosPintar(){
+    var h=currentHosp; if(!h) return;
+    try{ Array.prototype.forEach.call(document.querySelectorAll('#hf-pills .alert-pill.warn'), function(p){
+      var t=String(p.textContent||'').trim(); if(/^(MANIAS|ANSIOSO):/.test(t)) p.classList.add('tp-no-topico');
+    }); }catch(e){} /* silencioso de propósito: sem a marca, a tarja continua também no alto (nada some) */
+    var ex=extraDoHosp(h)||{}, D=[];
+    if(String(ex.manias||'').trim()) D.push(fichaTarjaAmarela('MANIAS', String(ex.manias).trim()));
+    if(ex.ansioso==='Sim') D.push(fichaTarjaAmarela('ANSIOSO', 'come em caixa própria — servir logo após quem tem banho'));
+    fichaPor(document.getElementById('hf-dados-tarjas'), D.length?('<div class="alert-pills">'+D.join('')+'</div>'):'');
+  }
+  // O resumo de Dados gerais: os cuidados e a instrução da veterinária, a observação da estadia, as manias e o ANSIOSO, nesta ordem.
+  function fichaDadosResumo(){
+    var h=currentHosp, P=[];
+    try{ var r=(typeof recomAtivaDe==='function')?recomAtivaDe(h):null;
+      if(r){ (r.cuidados||[]).forEach(function(c){ if(String(c||'').trim()) P.push(String(c).trim()); }); if(String(r.texto||'').trim()) P.push(String(r.texto).trim()); }
+    }catch(e){} /* silencioso de propósito: sem a instrução da veterinária em memória, o resumo segue com o resto */
+    try{ var k=medAgendaKey(h), reg=(k && typeof CF_ESTADIAS!=='undefined' && CF_ESTADIAS)?CF_ESTADIAS[k]:null, og=(reg&&reg.e&&reg.e.ficha&&reg.e.ficha.obsGeral)||'';
+      if(String(og).trim()) P.push(String(og).trim());
+    }catch(e){} /* silencioso de propósito: sem a estadia em memória, não há observação dela */
+    var ex={}; try{ ex=extraDoHosp(h)||{}; }catch(e){ ex={}; } /* silencioso de propósito: sem o cadastro, sem as tarjas */
+    if(String(ex.manias||'').trim()) P.push('Manias: '+String(ex.manias).trim());
+    if(ex.ansioso==='Sim') P.push('Ansioso: come em caixa própria');
+    return P.length ? {estado:'', n:P.length, est:'', sub:P.join(' · ')} : {estado:'zero', n:0, est:'', sub:'Nada especial anotado'};
+  }
+  // O resumo de Mais informações: o que a pessoa da vez vê lá dentro (quem vê cada bloco continua decidido pelo CSS de sempre).
+  function fichaMaisResumo(){
+    var L=['Ficha de check-in (PDF)'];
+    var ve=function(sel){ try{ var el=document.querySelector(sel); return !!(el && getComputedStyle(el).display!=='none'); }catch(e){ return false; } }; /* silencioso de propósito: sem a medida, não promete o bloco */
+    if(ve('#tp-mais .so-foto')) L.push('foto');
+    if(ve('#tp-mais .so-gestao')) { L.push('cadastro'); L.push('brinquedos'); }
+    if(ve('#card-texto')) L.push('texto para o tutor');
+    return {estado:'', est:'', sub:fichaListaTxt(L)};
+  }
+  // ---- A ALIMENTAÇÃO COM A COMIDA (P2, P3) ----
+  // A refeição mais perto da hora de agora (antes ou depois) vem primeiro: às 19h40, o jantar; às 7h10, o café.
+  function fichaCafePrimeiro(){
+    var ag=new Date(), n=ag.getHours()*60+ag.getMinutes();
+    var dist=function(hh){ var m=/^(\d{1,2}):(\d{2})$/.exec(String(hh||'')); if(!m) return 9999; var d=Math.abs(parseInt(m[1],10)*60+parseInt(m[2],10)-n); return Math.min(d, 1440-d); };
+    return dist(refHora('cafe')) < dist(refHora('jantar'));
+  }
+  // O que vai no prato, com a medida do check-in («80 gramas de ração + 50 g de natural»).
+  function fichaPratoTxt(r, unidade){
+    if(!r) return '';
+    var L=[];
+    if(r.racao) L.push(r.racao+(unidade?(' '+unidade):'')+' de ração');
+    if(r.natural) L.push(r.natural+' de natural');
+    if(r.extra) L.push(r.extra);
+    return L.join(' + ');
+  }
+  function fichaCafeTxt(a){
+    if(!a || a.semRacao || a.fonte!=='checkin' || !a.cafe) return '';
+    var t=fichaPratoTxt(a.cafe, a.unidade);
+    return t || (a.cafe.on ? 'sem quantidade lançada' : '');
+  }
+  // As partes do resumo da comida: [{t, crit}].
+  function fichaComidaResumo(h, a){
+    if(!a) return [{t:'Nada lançado', crit:false}];
+    if(a.semRacao) return [{t:'SEM RAÇÃO: comida úmida da casa', crit:true}];
+    if(a.fonte==='checkin'){
+      var j={t:'Jantar: '+(fichaPratoTxt(a, a.unidade)||'sem quantidade lançada'), crit:false}, cf=fichaCafeTxt(a);
+      if(!cf) return [j];
+      var c={t:'Café: '+cf, crit:false};
+      return fichaCafePrimeiro()?[c,j]:[j,c];
+    }
+    // A quantidade e a comida do almoço («90 g de Ração Teste Light»): só o número não dizia de quê (QA da 6.122, rodada 1).
+    if(a.fonte==='almoco'){ var qa=String(a.racao||'').trim(), ma=String(a.marca||'').trim();
+      return [{t:'Jantar: '+((qa && ma) ? (qa+' de '+ma) : (qa||ma||'a confirmar'))+' (do almoço do Day Care, confirme)', crit:false}]; }
+    var jm=(h && h.jantar) || null;
+    if(jm && String(jm.comida||'').trim()) return [{t:'Jantar: '+String(jm.comida).trim()+(jm.onde?(' · '+jm.onde):''), crit:false}];
+    return [{t:'Jantar a confirmar: ninguém lançou a comida', crit:true}];
+  }
+  function fichaAlimResumo(hoje, hora){
+    var h=currentHosp, a=null, np=[];
+    try{ a=alimDoHospede(h); }catch(e){ a=null; } /* silencioso de propósito: sem a comida, o resumo diz o que sabe */
+    try{ np=fichaNaoPodeLista(h); }catch(e){ np=[]; } /* silencioso de propósito: a faixa vermelha do alto continua */
+    var txt=[], html=[];
+    var add=function(t, crit){ if(!t) return; txt.push(t); html.push(crit?('<span class="tp-sub-critico">'+escAttr(t)+'</span>'):escAttr(t)); };
+    if(np.length) add('NÃO PODE: '+np.join(' · '), true);
+    // O ANSIOSO à vista sem tocar (QA da 6.122, rodada 1): a tarja amarela saiu do alto na segunda rodada e mora dentro da Alimentação.
+    var ex={}; try{ ex=extraDoHosp(h)||{}; }catch(e){ ex={}; } /* silencioso de propósito: sem o cadastro, o resumo segue sem o ANSIOSO */
+    if(ex.ansioso==='Sim') add('ANSIOSO: caixa própria', false);
+    fichaComidaResumo(h, a).forEach(function(c){ add(c.t, c.crit); });
+    var cm=FICHA_COMEU, estado='', est='';
+    if(cm && cm.v){ estado='ok'; est='✅'; add((COMEU_TXT[cm.v]||cm.v)+(cm.quem&&cm.quem!=='-'?(' · marcado por '+cm.quem):''), false); }
+    else if(hoje && hora>='18:00'){ estado='pisca'; est='⚠ MARCAR'; add('Falta marcar como comeu', false); }
+    else add('Como comeu ainda não marcado', false);
+    return {estado:estado, est:est, sub:txt.join(' · '), subHTML:html.join(' · ')};
+  }
+  // Dentro da Alimentação: NÃO PODE e ANSIOSO no alto (#hf-alim-topo); o jantar (a mesma caixa do Relatório do Jantar,
+  // redesenhada aqui para acompanhar a comida mudada com a ficha aberta) e o café (#hf-alim-info).
+  function fichaAlimPintar(){
+    var h=currentHosp; if(!h) return;
+    var topo=document.getElementById('hf-alim-topo'), info=document.getElementById('hf-alim-info');
+    var ex=extraDoHosp(h)||{}, np=fichaNaoPodeLista(h);
+    if(topo) fichaPor(topo, (np.length?('<div class="hf-naopode">NÃO PODE: '+escAttr(np.join(' · '))+'</div>'):'')
+      +(ex.ansioso==='Sim'?'<div class="alert-pills"><span class="alert-pill warn">ANSIOSO: come em caixa própria — servir logo após quem tem banho</span></div>':''));
+    if(!info) return;
+    try{ jantaSlotRender(); }catch(e){} /* silencioso de propósito: guarda defensiva — vale a caixa que já estava */
+    var js=document.getElementById('janta-slot-inicio'), jHtml=(js&&js.innerHTML)||'';
+    var a=null; try{ a=alimDoHospede(h); }catch(e){ a=null; } /* silencioso de propósito: sem a comida, só a caixa do jantar */
+    // SEM RAÇÃO com check-in (QA da 6.122, rodadas 1 e 3): a caixa do jantar (jantaSlotRender) escreve a observação da comida do
+    // check-in como «Observação da alimentação: …» (até a rodada 3, «NÃO PODE: …», com o sentido invertido). Na cópia da Alimentação,
+    // essa linha sai da caixa, e a observação aparece logo abaixo, na faixa amarela de sempre (uma vez só).
+    var semRacaoCk=!!(a && a.semRacao && a.fonte==='checkin' && String(a.obs||'').trim());
+    if(semRacaoCk && jHtml){
+      try{
+        var _tmp=document.createElement('div'), _alvo=('Observação da alimentação: '+String(a.obs)).replace(/\s+/g,' ').trim(); _tmp.innerHTML=jHtml;
+        Array.prototype.forEach.call(_tmp.querySelectorAll('.janta-box > div'), function(d){ if(String(d.textContent||'').replace(/\s+/g,' ').trim()===_alvo && d.parentNode) d.parentNode.removeChild(d); });
+        jHtml=_tmp.innerHTML;
+      }catch(e){} /* silencioso de propósito: sem o recorte, fica a caixa de sempre */
+    }
+    var cf=fichaCafeTxt(a), cHtml='';
+    if(cf) cHtml='<div class="janta-box"><strong>Café de '+escAttr(h.nome||'')+': '+escAttr(cf)+'</strong>'+(a.marca?('<div>'+escAttr(a.marca)+'</div>'):'')+'</div>';
+    // A observação da comida do check-in, quando a caixa do jantar não a mostra (check-in sem a quantidade do jantar, ou SEM RAÇÃO).
+    var oHtml='';
+    try{ var _k=medAgendaKey(h), _r=(_k && typeof CF_ESTADIAS!=='undefined' && CF_ESTADIAS)?CF_ESTADIAS[_k]:null, _o=(_r&&_r.e&&_r.e.ficha&&_r.e.ficha.alim&&_r.e.ficha.alim.obs)||'';
+      if(_o && (!(a && a.fonte==='checkin') || semRacaoCk)) oHtml='<div class="hf-alim-obs" style="background:rgba(222,180,40,.14);border-left:4px solid var(--z-gold);border-radius:8px;padding:9px 12px;margin-top:8px;color:var(--z-blue);font-weight:600"><strong>Observação da alimentação:</strong> '+escAttr(_o)+'</div>';
+    }catch(e){ oHtml=''; } /* silencioso de propósito: sem a estadia em memória, não há observação para mostrar */
+    var corpo=(cHtml && fichaCafePrimeiro()) ? (cHtml+jHtml) : (jHtml+cHtml);
+    corpo+=oHtml;
+    fichaPor(info, corpo+((jHtml||cHtml)?'<div class="hint" style="margin-top:6px">O que foi servido se escreve no Relatório do Jantar.</div>':''));
+  }
+  // ---- A FICHA ABERTA NA VIRADA DO DIA (S1) ----
+  // zDiaTelaAvancar segura a tela em ontem enquanto a ficha está aberta (para não trocar o dia debaixo de quem preenche).
+  // A faixa no alto diz isso e leva para a de hoje; o rótulo da data deixa de dizer «Hoje».
+  // Na hora de uma dose de hoje, com a ficha segurada em ontem por um relatório não salvo ou pelo teclado aberto (QA da 6.122,
+  // rodada 2), o relógio da ficha marca FICHA_DOSE_ESPERA: a faixa gruda no alto, logo abaixo da barra azul, diz a dose e o que
+  // fazer para o alarme tocar, e o bip de sempre (bipDespertador, que não muda) toca a cada batida — a pessoa pode estar rolada no
+  // fim do relatório que está preenchendo. checarDespertadorMed não muda: o alarme toca quando a ficha passa para hoje.
+  var FICHA_DOSE_ESPERA='';
+  function fichaOntemFaixaPintar(){
+    var b=document.getElementById('hf-ontem-faixa'); if(!b) return '';
+    var mostra=false, P=[], espera=false;
+    try{ mostra=!!(fichaAberta() && !fichaEhHoje() && medDiaVelhoAuto()); }catch(e){ mostra=false; } /* silencioso de propósito: na dúvida, sem a faixa */
+    // Com remédio de HOJE na próxima hora, ou já na hora (AC-V1.4), a faixa diz isso.
+    if(mostra){ try{ P=fichaMedHojeProximas(); }catch(e){ P=[]; } } /* silencioso de propósito: sem a agenda, a faixa de sempre */
+    // A espera vale enquanto o relatório ou o teclado ainda seguram a ficha (salvo ou fechado, a faixa volta ao normal na hora).
+    // E enquanto a dose de hoje ainda falta: registrada (aqui ou em outro aparelho), a faixa solta na hora (QA da 6.122, rodada 3).
+    if(mostra && FICHA_DOSE_ESPERA){ try{ espera=!!fichaEmUso() && fichaDoseHojeChegou(); }catch(e){ espera=false; } } /* silencioso de propósito: na dúvida, a faixa de sempre */
+    var txt=P.length?('Esta ficha é de ontem. Remédio de hoje às '+fichaHoraTxt(P[0].h)+': toque para ver a de hoje'):'Esta ficha é de ontem: toque para ver a de hoje';
+    if(espera){
+      var d='', rasc=false;
+      try{ d=fichaDosesHojeTxt(); }catch(e){ d=''; } /* silencioso de propósito: sem a lista, o aviso vai sem o nome */
+      try{ rasc=fichaRelRascunho().length>0; }catch(e){ rasc=false; } /* silencioso de propósito: sem a conta, vale o teclado */
+      txt=(d||'Remédio de hoje na hora')+'. Para o alarme tocar, '+(rasc?'salve o relatório ou toque aqui':'feche o teclado ou toque aqui');
+    }
+    if(b.textContent!==txt) b.textContent=txt;
+    b.style.display=mostra?'block':'none';
+    if(b.classList.contains('hf-espera')!==espera) b.classList.toggle('hf-espera', espera);
+    var topo=espera?(fichaTopoGrudado()+'px'):'';
+    if(b.style.top!==topo) b.style.top=topo;
+    return mostra?(espera?'mostra: espera':(P.length?'mostra: remédio de hoje':'mostra')):'';
+  }
+  // Até onde vai o que já gruda no alto da página: a faixa «O dia virou», a barra azul do celular e o cabeçalho da página. Todos
+  // ficam presos a partir do topo; vale o mais alto.
+  function fichaTopoGrudado(){
+    var t=0;
+    [document.getElementById('faixaVersaoTopo'), document.querySelector('.mobtop'), document.querySelector('.main > .head')].forEach(function(el){
+      try{ if(el && getComputedStyle(el).display!=='none') t=Math.max(t, el.offsetHeight||0); }catch(e){} /* silencioso de propósito: sem a medida, a faixa gruda mais alto */
+    });
+    return t;
+  }
+  // O toque na faixa (QA da 6.122, rodada 2). Sem relatório por salvar, leva para a ficha de hoje, como sempre. Com relatório por
+  // salvar, pergunta antes: na ficha de hoje o alarme toca, mas o que não foi salvo se perde; ou volta ao relatório, para salvar.
+  function fichaOntemFaixaToque(){
+    var R=[]; try{ R=fichaRelRascunho(); }catch(e){ R=[]; } /* silencioso de propósito: sem a conta, vale o toque de sempre */
+    if(!R.length || typeof zEscolha!=='function'){ fichaHoje(); return 'hoje'; }
+    var chegou='', prox='';
+    try{ chegou=fichaDosesHojeTxt(); }catch(e){ chegou=''; } /* silencioso de propósito: a pergunta vai sem a dose */
+    try{ prox=chegou?'':fichaMedHojeTxt(); }catch(e){ prox=''; } /* silencioso de propósito: idem */
+    var nomes=R.map(function(t){ var h=document.querySelector('#card-'+t+' .rel-head h2'); return h?String(h.textContent||'').trim():''; }).filter(Boolean);
+    var linhas=[];
+    if(chegou || prox) linhas.push((chegou||prox)+'.');
+    linhas.push((nomes.length ? ('«'+nomes.join('» e «')+'»'+(nomes.length>1?' ainda não foram salvos.':' ainda não foi salvo.')) : 'O relatório ainda não foi salvo.')
+      +' Indo agora para a ficha de hoje, o que não foi salvo se perde.');
+    zEscolha(chegou?'REMÉDIO DE HOJE NA HORA':'RELATÓRIO NÃO SALVO', linhas, [
+      {t:'Ir para a ficha de hoje', cor:'var(--crm-critico)', fn:function(){ fichaHoje(); }},
+      {t:'Continuar o relatório', cor:'var(--z-blue)', fn:function(){
+        var c=document.getElementById('card-'+R[0]); if(!c) return;
+        var alvo=(!c.classList.contains('collapsed') && c.querySelector('.actions button')) || c;
+        try{ alvo.scrollIntoView({block:'center'}); }catch(e){} /* silencioso de propósito: rolagem de tela */
+      }}
+    ]);
+    return 'pergunta';
+  }
+  // ---- A DOSE DE HOJE COM A FICHA SEGURADA EM ONTEM (AC-V1.4; QA da 6.122, rodada 1, bloqueio 1) ----
+  // zDiaTelaAvancar (não muda) segura a tela em ontem enquanto a ficha está aberta, e o alarme (checarDespertadorMed, não muda),
+  // com a tela em ontem, só toca a dose de ontem. Quando chega a hora de uma dose de HOJE — a régua do próprio alarme, DESP_ANTES_MIN
+  // antes e sem limite de atraso —, a ficha passa sozinha para hoje, pelo mesmo caminho do toque em «Hoje» (fichaHoje: as mesmas
+  // leituras, nenhuma gravação), e o alarme de sempre toca por cima dela na batida seguinte. Antes disso, e enquanto ela não pode
+  // passar, a faixa do alto e o resumo do Medicamento avisam do remédio de hoje.
+  // Não passa: para quem não recebe o alarme; com a dose de ontem ainda na janela (o alarme de ontem vem primeiro, como em
+  // zDiaTelaAvancar); com alarme na tela, check-in ou almoço aberto (zDiaTrabalhoAberto); e com a ficha em uso (um campo com o
+  // cursor, «Dei agora» armado ou registrando, ou um relatório com o que foi marcado ou escrito e ainda não salvo — o texto nunca
+  // se perde: passa quando ele é salvo ou desfeito). Enquanto o relatório ou o teclado seguram a ficha com a dose de hoje já na hora,
+  // a faixa gruda no alto e o bip toca a cada batida (QA da 6.122, rodada 2; fichaOntemFaixaPintar e fichaRelogioTick).
+  // AS DOSES DE HOJE COM A FICHA SEGURADA EM ONTEM — uma conta só para a faixa, o bip, a passagem para hoje e o resumo do Medicamento
+  // (QA da 6.122, rodada 3: a faixa e o bip usavam a fila do alarme montada para o dia da tela, ontem, e mandavam dar um remédio que
+  // terminou ontem; e o remédio que começa hoje não levava a ficha para hoje). A regra é a do alarme no dia de hoje
+  // (carregarAgendaMedTodos, que não muda): sem suspenso nem anulado, e valendo HOJE (medVigenteEm(it, hoje): início, fim e frequência).
+  // A agenda: a da casa inteira em memória (MED_AGENDA_GERAL, viva desde o login, o mesmo nó que o alarme lê) e, sem ela, a do FILHOt
+  // da ficha (MED_AGENDA_ITENS). Sem agenda em memória, o FILHOt não entra: não se afirma um remédio que não dá para conferir.
+  // Ficam de fora quem tinha saída marcada para ontem (já foi para casa) e o Day Care (dc__: a fila dele é a do dia em que foi lida;
+  // o alarme a lê de novo quando a tela passa para hoje).
+  function fichaItensHojeDe(key){
+    if(!key) return null;
+    try{ if(typeof MED_AGENDA_GERAL!=='undefined' && MED_AGENDA_GERAL_CARREGADA===true && MED_AGENDA_GERAL) return ((MED_AGENDA_GERAL[key]||{}).itens)||{}; }
+    catch(e){} /* silencioso de propósito: sem a agenda viva, vale a do FILHOt da ficha */
+    if(currentHosp && key===medAgendaKey(currentHosp)) return MED_AGENDA_ITENS||{};
+    return null;
+  }
+  // As doses de hoje de um FILHOt (itens = a agenda dele) até `dentro` minutos à frente, sem limite de atraso (a régua do alarme). Com o
+  // registro de hoje (log), a dose já registrada — aqui ou em outro aparelho; a anulada não conta — sai.
+  function fichaDosesHojeDe(h, key, itens, log, dentro, hoje){
+    var out=[], L=(log && key && log[key])||{};
+    Object.keys(itens||{}).forEach(function(id){
+      var it=itens[id]||{};
+      if(it.suspenso || medItemAnulado(it) || !medVigenteEm(it, hoje)) return;
+      (it.horarios||[]).forEach(function(hh){
+        var x=minutosAte(hh); if(x===null || x>dentro) return;
+        if(L[magDoseId(id, hh)]) return;
+        out.push({h:String(hh), horario:String(hh), nome:String(it.nome||''), hospNome:String((h&&h.nome)||''), key:key, itemId:id});
+      });
+    });
+    return out;
+  }
+  // As doses de hoje de todos os FILHOts da lista (o alarme é de todos), a mais cedo primeiro.
+  function fichaDosesHoje(dentro, log){
+    var hoje=zHojeISO(), out=[], vistos={};
+    ((typeof hospedes!=='undefined' && hospedes)||[]).forEach(function(h){
+      if(!h || h.saidaHoje) return;
+      var key=medAgendaKey(h); if(!key || vistos[key]) return; vistos[key]=1;
+      var itens=fichaItensHojeDe(key); if(!itens) return;
+      out=out.concat(fichaDosesHojeDe(h, key, itens, log, dentro, hoje));
+    });
+    return out.sort(function(a,b){ return a.horario.localeCompare(b.horario) || a.hospNome.localeCompare(b.hospNome); });
+  }
+  // O REGISTRO DAS DOSES DE HOJE (QA da 6.122, rodada 3: a dose dada em outro aparelho não calava a faixa nem o bip — risco de dose
+  // dupla). É o mesmo retrato vivo que o alarme lê com a tela em hoje (medLogHoje: auaulandia/medicacao-log/<dia>, por zMapaVivo):
+  // quando a ficha passa para hoje, o alarme usa este mesmo retrato, sem baixar de novo. Só o relógio da ficha o liga, com a ficha
+  // segurada em ontem e remédio de hoje até 60 minutos à frente ou já na hora. Antes de ele chegar, nenhuma dose conta como dada
+  // (errar para mais: a faixa avisa, e o texto dela nunca afirma que ninguém deu).
+  function fichaLogHoje(){
+    var m=null; try{ m=(typeof Z_MAPAS!=='undefined' && Z_MAPAS)?Z_MAPAS['auaulandia/medicacao-log/'+zHojeISO()]:null; }catch(e){ m=null; } /* silencioso de propósito: sem o retrato, nada conta como dado */
+    if(!m || !m.pronto) return null;
+    return medLogSemAnuladas(m.mapa);
+  }
+  function fichaLogHojeLigar(){
+    var p='auaulandia/medicacao-log/'+zHojeISO(), m=(typeof Z_MAPAS!=='undefined' && Z_MAPAS)?Z_MAPAS[p]:null;
+    if(m && m.slots && m.slots._fichaDoseHoje) return 'ligado';
+    if(typeof zMapaVivo!=='function') return '';
+    // Chegou uma dose registrada (aqui ou em outro aparelho): a faixa e o resumo se acertam na hora; o bip para na batida seguinte.
+    zMapaVivo(p, '_fichaDoseHoje', function(){ try{ if(fichaAberta() && !fichaEhHoje()) fichaTopicosPintar(); }catch(e){} /* silencioso de propósito: o relógio da ficha acerta em 30 s */ });
+    return 'ligou';
+  }
+  // As doses de HOJE deste FILHOt até 60 minutos à frente, ou já na hora, sem as já registradas hoje (a mesma conta da faixa e do bip).
+  function fichaMedHojeProximas(){
+    var h=currentHosp; if(!h || h.saidaHoje) return [];
+    var key=medAgendaKey(h), itens=fichaItensHojeDe(key); if(!itens) return [];
+    return fichaDosesHojeDe(h, key, itens, fichaLogHoje(), 60, zHojeISO()).map(function(r){ return {h:r.h, nome:r.nome}; })
+      .sort(function(a,b){ return a.h.localeCompare(b.h); });
+  }
+  function fichaMedHojeTxt(){
+    var P=fichaMedHojeProximas(); if(!P.length) return '';
+    return 'Remédio de hoje às '+fichaHoraTxt(P[0].h)+': '+fichaListaTxt(P.filter(function(r){ return r.h===P[0].h; }).map(function(r){ return r.nome; }));
+  }
+  // Chegou a hora de alguma dose de hoje, de qualquer FILHOt da lista (a régua do alarme: DESP_ANTES_MIN antes, sem limite de atraso)?
+  function fichaDosesHojeNaHora(){ return fichaDosesHoje(DESP_ANTES_MIN, fichaLogHoje()); }
+  function fichaDoseHojeChegou(){ return fichaDosesHojeNaHora().length>0; }
+  // A dose de hoje que já chegou, no jeito do alarme («Biscoito Teste toma Colírio Teste»): a do horário mais cedo, e quantas mais.
+  function fichaDosesHojeTxt(){
+    var L=fichaDosesHojeNaHora(); if(!L.length) return '';
+    var h=L[0].horario, ja=L.filter(function(it){ return it.horario===h; }), resto=L.length-ja.length;
+    return 'Remédio de hoje às '+fichaHoraTxt(h)+': '+ja.map(function(it){ return String(it.hospNome||'')+' toma '+String(it.nome||''); }).join('; ')
+      +(resto?(' (e mais '+resto+(resto>1?' doses':' dose')+')'):'');
+  }
+  // O que a pessoa escreveu e marcou em cada relatório: os campos de texto pela ordem, e só as respostas marcadas, pela pergunta (as
+  // linhas «Foi dado?» da medicação são redesenhadas pelo relógio, com outras linhas; a resposta marcada continua a mesma). A foto é
+  // tirada quando o relatório chega do banco ou é salvo (RELSTATE[tipo] vira outro objeto) e quando ele é aberto; o que mudou depois
+  // dela ainda não foi salvo.
+  var FICHA_REL_FOTO={};
+  function fichaRelValor(tipo){
+    var c=document.getElementById('card-'+tipo); if(!c || !c.querySelectorAll) return '';
+    var v=[], marcas=[];
+    Array.prototype.forEach.call(c.querySelectorAll('textarea, input'), function(t){ if(t.closest && t.closest('.med-confirm-slot')) return; v.push((t.type==='checkbox'||t.type==='radio')?(t.checked?'1':'0'):String(t.value||'')); });
+    Array.prototype.forEach.call(c.querySelectorAll('.obsline'), function(l){ var on=l.querySelector('button.on'); if(!on) return; var q=l.querySelector('.q');
+      marcas.push(String((q && (q.getAttribute('data-k') || q.textContent)) || '').trim()+'='+String(on.textContent||'').trim()); });
+    return JSON.stringify([v, marcas.sort()]);
+  }
+  function fichaRelFotoAcertar(tipo){
+    var rs=null; try{ rs=(typeof RELSTATE!=='undefined' && RELSTATE)?RELSTATE[tipo]:null; }catch(e){ rs=null; } /* silencioso de propósito: sem o estado dos relatórios, a foto vale pelo que está na tela */
+    var f=FICHA_REL_FOTO[tipo];
+    if(!f || f.rs!==rs) FICHA_REL_FOTO[tipo]={rs:rs, v:fichaRelValor(tipo)};
+  }
+  // Os relatórios com algo marcado ou escrito que ainda não foi salvo.
+  function fichaRelRascunho(){
+    return ['dia','inicio','noite'].filter(function(tipo){ fichaRelFotoAcertar(tipo); var f=FICHA_REL_FOTO[tipo]; return !!f && fichaRelValor(tipo)!==f.v; });
+  }
+  function fichaEmUso(){
+    var f=document.getElementById('hosp-ficha'), a=document.activeElement;
+    if(f && a && f.contains && f.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(String(a.tagName||''))) return 'campo com o cursor';
+    try{ if(fichaMagOcupada()) return 'Dei agora'; }catch(e){} /* silencioso de propósito: sem a medida, vale o resto */
+    return fichaRelRascunho().length ? 'relatório não salvo' : '';
+  }
+  // Devolve o que fez ('' = nada a fazer; 'virou'; 'espera: <motivo>') — é o que a prova C13 morde.
+  function fichaVirarParaHoje(agora){
+    agora=agora||Date.now();
+    if(typeof fichaAberta!=='function' || !fichaAberta() || !currentHosp) return '';
+    if(!medDiaVelhoAuto()) return '';
+    if(!papelRecebeAlarmeMed()) return 'espera: não recebe o alarme';
+    if(!fichaDoseHojeChegou()) return '';
+    // O alarme na tela (de remédio ou de banho), o check-in e o almoço: uma conta só, a de zDiaTrabalhoAberto (QA da 6.122, rodada 2:
+    // a linha própria do alarme repetia esta e por isso nenhuma prova a mordia; a C13 morde esta).
+    var ab=zDiaTrabalhoAberto(); if(ab && ab!=='sem internet') return 'espera: '+ab;
+    if(zDiaOntemPendente(agora)) return 'espera: dose de ontem';
+    var uso=fichaEmUso(); if(uso) return 'espera: '+uso;
+    fichaHoje();
+    if(dataKeyAtual()!==zHojeISO()) return 'espera: pergunta de ontem';   // zDiaHojePergunta abriu a pergunta: a pessoa decide
+    // O dia automático acompanha na hora (é o que zDiaTelaAvancar faz quando vê a tela em hoje): voltar à mão para ontem não puxa de novo.
+    try{ zDiaTelaAvancar(agora); }catch(e){} /* silencioso de propósito: o vigia de 15 s faz o mesmo */
+    return 'virou';
+  }
+  // A Medicação desenhada ainda é a da hora de agora? (ATRASADA e PRÓXIMA DOSE dependem do relógio)
+  function fichaMagDesatualizada(){
+    var el=document.getElementById('magHoje'); if(!el || !el.querySelectorAll) return false;
+    var m=MAG_RESUMO||{}; if(m.carregando) return false;
+    var agora=fichaHoraAgora(), P=fichaEhHoje()?fichaMedPendentes():[];
+    var atr={}, prox='';
+    P.forEach(function(r){ if(r.h<agora) atr[r.h]=1; else if(!prox || r.h<prox) prox=r.h; });
+    var dAtr={}, dProx='';
+    Array.prototype.forEach.call(el.querySelectorAll('.mag-hora'), function(d){
+      var hh=String((d.firstChild && d.firstChild.nodeValue) || '').trim();
+      if(d.classList.contains('atrasada')) dAtr[hh]=1;
+      if(d.classList.contains('proxima')) dProx=hh;
+    });
+    return JSON.stringify(Object.keys(atr).sort())!==JSON.stringify(Object.keys(dAtr).sort()) || prox!==dProx;
+  }
+  // «Dei agora» armado (o 1º toque) ou registrando: o redesenho espera a próxima batida.
+  function fichaMagOcupada(){
+    var el=document.getElementById('magHoje'); if(!el || !el.querySelector) return true;
+    return !!el.querySelector('button[data-armed="1"], button:disabled');
+  }
+  // Redesenha a Medicação sem perder o Sim/Não que a pessoa já marcou nas linhas «Foi dado?» dos relatórios
+  // (renderMedAgendaHoje redesenha essas linhas também).
+  function fichaRedesenharMag(){
+    var guarda=[];
+    try{ Array.prototype.forEach.call(document.querySelectorAll('.med-confirm-slot'), function(slot, si){
+      Array.prototype.forEach.call(slot.querySelectorAll('.obsline'), function(l){ var q=l.querySelector('.q'), on=l.querySelector('button.on'); if(q && on) guarda.push({si:si, k:q.getAttribute('data-k')||'', v:on.textContent.trim()}); });
+    }); }catch(e){ guarda=[]; } /* silencioso de propósito: sem a cópia, o redesenho segue como o de sempre */
+    renderMedAgendaHoje();
+    try{ var slots=document.querySelectorAll('.med-confirm-slot');
+      guarda.forEach(function(g){ var slot=slots[g.si]; if(!slot) return;
+        Array.prototype.forEach.call(slot.querySelectorAll('.obsline'), function(l){
+          var q=l.querySelector('.q'); if(!q || (q.getAttribute('data-k')||'')!==g.k || l.querySelector('button.on')) return;
+          Array.prototype.forEach.call(l.querySelectorAll('button'), function(b){ if(b.textContent.trim()===g.v){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone); } });
+        });
+      });
+    }catch(e){} /* silencioso de propósito: redesenho de tela */
+  }
+  // O RELÓGIO DA FICHA ABERTA (S1): a cada 30 s, com a ficha aberta, o rótulo da data, a faixa de ontem, a Medicação
+  // (ATRASADA e PRÓXIMA DOSE) e os resumos acompanham a hora — sem ler o banco. A única exceção é a ficha segurada em ontem na hora
+  // de uma dose de hoje (AC-V1.4): ela passa para hoje pelo «Hoje» de sempre (fichaVirarParaHoje), uma vez por virada.
+  function fichaRelogioTick(){
+    if(typeof fichaAberta!=='function' || !fichaAberta() || !currentHosp){ FICHA_DOSE_ESPERA=''; return ''; }
+    try{ fichaRelRascunho(); }catch(e){} /* silencioso de propósito: a foto dos relatórios se acerta na próxima batida */
+    // A ficha segurada em ontem com remédio de hoje até 60 minutos à frente ou já na hora: liga o registro das doses de hoje, para a
+    // dose dada em outro aparelho calar a faixa e o bip (QA da 6.122, rodada 3; fichaLogHojeLigar).
+    try{ if(medDiaVelhoAuto() && !fichaEhHoje() && fichaDosesHoje(60, null).length) fichaLogHojeLigar(); }catch(e){} /* silencioso de propósito: sem o registro, nenhuma dose conta como dada e a faixa avisa */
+    var vira='';
+    try{ vira=fichaVirarParaHoje(Date.now()); }catch(e){ vira=''; } /* silencioso de propósito: tenta de novo na próxima batida; a faixa avisa */
+    // A dose de hoje chegou e a ficha espera por um relatório não salvo ou pelo teclado (QA da 6.122, rodada 2): a faixa gruda no
+    // alto e o bip toca a cada batida, até a ficha poder passar para hoje.
+    FICHA_DOSE_ESPERA=(vira==='espera: relatório não salvo' || vira==='espera: campo com o cursor')?vira:'';
+    if(vira==='virou') return 'virou';
+    try{ var fl=document.getElementById('hf-datelabel'); if(fl && fl.innerHTML!==dateLabelHTML()) updateDateLabel(); }catch(e){} /* silencioso de propósito: o rótulo se acerta na próxima batida */
+    try{ fichaOntemFaixaPintar(); }catch(e){} /* silencioso de propósito: a faixa se acerta na próxima batida */
+    var feito='pintou';
+    try{ if(fichaMagDesatualizada() && !fichaMagOcupada()){ fichaRedesenharMag(); feito='redesenhou'; } }catch(e){} /* silencioso de propósito: tenta de novo na próxima batida */
+    try{ fichaTopicosPintar(); }catch(e){} /* silencioso de propósito: redesenho de tela */
+    if(FICHA_DOSE_ESPERA){ try{ bipDespertador(); }catch(e){} /* silencioso de propósito: o som é reforço; a faixa no alto é o aviso */ }
+    return feito;
+  }
+  try{ setInterval(function(){ try{ if(!document.hidden) fichaRelogioTick(); }catch(e){} /* silencioso de propósito: tenta de novo em 30 s */ }, 30000); }
+  catch(e){} /* silencioso de propósito: sem temporizador, a ficha se acerta a cada toque, como antes */
+  try{ document.addEventListener('visibilitychange', function(){ try{ if(!document.hidden) fichaRelogioTick(); }catch(e){} /* silencioso de propósito: o relógio de 30 s cobre */ }); }
+  catch(e){} /* silencioso de propósito: sem o evento, o relógio de 30 s cobre */
 
   // ===== ALERTA — Adriana, 27/out/2026 ===============================================
   // «Talvez esteja afastado por uma suspeita de vírus, ou porque não dorme junto com todos
@@ -19367,6 +20052,7 @@ return { criar };
   // ---- Relatórios da ficha: coletar, aplicar, salvar no banco, limpar ----
   function fichaKey(){ const p=x=>String(x).padStart(2,'0'); const d=selectedDate; const pk=currentHosp?currentHosp.nome+'__'+currentHosp.tutor:''; return (pk+'__'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())).toLowerCase().replace(/[.#$\[\]\/]/g,'-'); }
   function toggleRel(cardId){ const c=document.getElementById(cardId); if(!c) return; c.classList.toggle('collapsed');
+    try{ relAriaSinc(c); if(cardId==='tp-med') FICHA_MED_AUTO.tocou=true; if(/^card-(dia|inicio|noite)$/.test(cardId) && !c.classList.contains('collapsed')) fichaRelFotoAcertar(cardId.slice(5)); }catch(e){} /* silencioso de propósito: 6.122 — o aria, a marca do toque e a foto do relatório são extras; abrir e fechar continua */
     // cronometro de leitura: comeca a contar quando o card e ABERTO para leitura
     const tp=cardId.replace('card-','');
     if(!c.classList.contains('collapsed')){ if(!LEITURA_T0[tp]) LEITURA_T0[tp]=Date.now(); observarFimLeitura(tp); } }
@@ -23700,9 +24386,11 @@ return { criar };
     var a=(typeof alimDoHospede==='function')?alimDoHospede(h):null;
     if(!a){ el.innerHTML=''; return; }
     if(a.semRacao){
+      // 6.122 (QA, rodada 3): a observação da comida do check-in é a instrução de como servir («Servir morno, em pote raso»), não o que
+      // ele não pode comer; vai com o rótulo que a Alimentação da ficha usa. Vinda do almoço do Day Care, a.obs é a restrição: «NÃO PODE».
       el.innerHTML='<div class="janta-box janta-box-falta">'
         +'<strong>SEM RAÇÃO — '+escAttr(h.nome||'ele')+' come a comida úmida da casa hoje.</strong>'
-        +(a.obs?('<div>NÃO PODE: '+escAttr(a.obs)+'</div>'):'')
+        +(a.obs?('<div>'+(a.fonte==='checkin'?'Observação da alimentação: ':'NÃO PODE: ')+escAttr(a.obs)+'</div>'):'')
         +'<div>O tutor não trouxe a ração e a recepção registrou isso no check-in. Sirva a comida úmida e <strong>escreva abaixo o que deu</strong>.</div></div>';
       return;
     }
@@ -24639,6 +25327,7 @@ return { criar };
   }
   function fecharPlantao(){
     document.getElementById('hosp-ficha').style.display='none';
+    try{ document.getElementById('hosp-ficha').classList.remove('aberta'); fichaOntemFaixaPintar(); }catch(e){} /* silencioso de propósito: 6.122 — o cabeçalho volta com a ficha fechada */
     document.getElementById('hosp-lista').style.display='block';
     if(typeof carregarPainelGestora==='function') carregarPainelGestora();
     if(typeof carregarRiscoNaoComer==='function') carregarRiscoNaoComer();
@@ -31518,7 +32207,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-11-03-01';
+  const APP_VERSAO='2026-11-04-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -44346,11 +45035,20 @@ return { criar };
     try{
       var sec=document.getElementById('prevSec_'+id); if(!sec) return;
       var ct=document.getElementById('prevConta_'+id); if(ct && contaHTML!=null) ct.innerHTML=contaHTML;
+      if(prevSecNasceFechada(id)) padraoAberta=false;
       sec.dataset.padrao=padraoAberta?'1':'0';
       var ab=prevSecAberta(id, !!padraoAberta);
       if(sec.open!==ab) sec.open=ab;
     }catch(e){} /* silencioso de propósito: enfeite de tela (selo e aberto/fechado) — falhar não muda dado nenhum */
   }
+  // 6.122, Fatia 2 (03/11/2026; Adriana: «O «Protocolo do Plantão» e o «Terminou o seu turno?» passam para o fim, como tópicos
+  // fechados»): no fim da lista do Plantão, essas duas nascem fechadas, falte item do check-list ou não (o padrão «aberta enquanto
+  // falta item», que renderCheckoutPlantao manda, deixa de valer só para elas); a conta continua no título, e o aparelho lembra quando
+  // a pessoa abre (prevSecVirar, como nas outras). É função, e não tabela em «var», porque renderCafe chama a sincronização antes de
+  // este trecho do script rodar.
+  function prevSecNasceFechada(id){ return id==='plantao-protocolo' || id==='plantao-turno'; }
+  // 6.122, Fatia 2: o «Terminou o seu turno?», no fim da lista do Plantão, nasce fechado; se a pessoa o deixou aberto, o aparelho lembra.
+  prevSecSincronizar('plantao-turno', null, false);
   // O selo da conta de uma sanfona de pendência: vermelho quando há o que fazer, discreto no zero.
   function prevSecContaPend(n, rotulo){
     n=Number(n)||0;
@@ -101920,14 +102618,14 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',tentar,{once:true});else tentar();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
-<script src="agenda-marcia/dados.js?v=2026-11-03-01"></script>
-<script src="agenda-marcia/entrevistas.js?v=2026-11-03-01"></script>
-<script src="agenda-marcia/composta.js?v=2026-11-03-01"></script>
-<script src="agenda-marcia/painel.js?v=2026-11-03-01"></script>
-<script src="marcia129/painel.js?v=2026-11-03-01"></script>
-<script src="marcia129/dados.js?v=2026-11-03-01"></script>
-<script src="marcia129/app.js?v=2026-11-03-01"></script>
-<script src="agenda-marcia/app.js?v=2026-11-03-01"></script>
+<script src="agenda-marcia/dados.js?v=2026-11-04-01"></script>
+<script src="agenda-marcia/entrevistas.js?v=2026-11-04-01"></script>
+<script src="agenda-marcia/composta.js?v=2026-11-04-01"></script>
+<script src="agenda-marcia/painel.js?v=2026-11-04-01"></script>
+<script src="marcia129/painel.js?v=2026-11-04-01"></script>
+<script src="marcia129/dados.js?v=2026-11-04-01"></script>
+<script src="marcia129/app.js?v=2026-11-04-01"></script>
+<script src="agenda-marcia/app.js?v=2026-11-04-01"></script>
 <script id="menu-contadores171">'use strict';
 /* 30/out/2026 — contadores vermelhos no menu (maquete aprovada pela Adriana).
    «Márcia Gestão»: cuidados das avaliações de HOJE ainda não revisados + alertas de reação ainda sem «Tutor avisado».
