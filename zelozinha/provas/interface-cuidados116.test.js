@@ -19,6 +19,10 @@ const filaStart = source.indexOf('  function filaDoAlvo(el){');
 const filaEnd = source.indexOf('\n  function guardarAncora(){', filaStart);
 assert.ok(filaStart >= 0 && filaEnd > filaStart, 'helper real filaDoAlvo localizado');
 const filaSource = source.slice(filaStart, filaEnd);
+const cartaoStart = source.indexOf('  function assinaturaListas(f){');
+assert.ok(cartaoStart > paintStart && cartaoStart < start, 'função real pintarSoCartao localizada');
+const cartaoSource = source.slice(cartaoStart, start);
+let pinturasInteiras = 0;
 
 class Element {
   constructor(tag, dc='') { this.tag=tag; this.dc=dc; this.children=[]; this.parent=null; this.open=false; this.text=''; this.attributes={}; }
@@ -26,6 +30,9 @@ class Element {
   setAttribute(name,value) { this.attributes[name]=String(value); }
   set innerHTML(_html) { this.children=[]; this.append(wrapper('pet%2F1')); }
   append(child) { child.parent=this; this.children.push(child); return child; }
+  get parentNode() { return this.parent; }
+  closest(selector) { let n=this; while(n){ if(selector==='.rep-row'&&n.tag==='details')return n; n=n.parent; } return null; }
+  replaceChild(next,old) { const i=this.children.indexOf(old); next.parent=this; this.children[i]=next; old.parent=null; return old; }
   querySelector(selector) {
     const want=(selector.match(/data-zt694-pet="([^"]+)"/)||[])[1];
     if(!want)return null;
@@ -54,10 +61,11 @@ function contextFor(root,estado) {
     },
     createElement(){return {set innerHTML(_html){this.firstElementChild=wrapper('pet%2F1');}};}
   };
-  const ctx={estado,window:{},document:doc,encodeURIComponent,Array,petHTML:()=>'<details><article></article></details>',montarMarkup:()=>'<details><article></article></details>',alvosAtuais:()=>[root],guardarAncora:()=>null,anotarVista(){},lembrarAbertos(node){allDetails(node).forEach(d=>{estado.abertos['family|pet%2F1']=d.open;});},aplicarAbertos(node){allDetails(node).forEach(d=>{d.open=estado.abertos['family|pet%2F1']===true;});},atualizarTopo(){}};
+  const ctx={estado,window:{},document:doc,encodeURIComponent,Array,petHTML:()=>'<details><article></article></details>',montarMarkup:()=>{pinturasInteiras++;return '<details><article></article></details>';},classificacao117:()=>({paraResolver:[{dcKey:'pet/1'}],emAndamento:[]}),JSON,alvosAtuais:()=>[root],guardarAncora:()=>null,voltarAncora(){},anotarVista(){},lembrarAbertos(node){allDetails(node).forEach(d=>{estado.abertos['family|pet%2F1']=d.open;});},aplicarAbertos(node){allDetails(node).forEach(d=>{d.open=estado.abertos['family|pet%2F1']===true;});},atualizarTopo(){}};
   vm.runInNewContext(filaSource,ctx);
   vm.runInNewContext(draftSource,ctx);
   vm.runInNewContext(paintSource,ctx);
+  vm.runInNewContext(cartaoSource,ctx);
   return ctx;
 }
 function runRedraw({canonical}) {
@@ -85,6 +93,7 @@ for(let i=0;i<3;i++){
   assert.equal(articles.length,1,'após redesenho '+(i+1)+' permanece um article por peludinho');
   assert.equal(wrappers[0].open,true,'a gaveta aberta permanece aberta após o redesenho');
 }
+assert.equal(pinturasInteiras,1,'só a primeira vez refaz a lista; as outras trocam só o cartão');
 console.log('gaveta 6.94 DOM harness: regressão reproduzida e 3 redesenhos reais mantêm 1 details + 1 article e abertura.');
 
 // O editor embutido reutiliza os helpers REAIS, com apenas os nós externos em memória.
