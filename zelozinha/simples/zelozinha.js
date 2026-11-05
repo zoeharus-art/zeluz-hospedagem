@@ -8,6 +8,7 @@ const fs = require('node:fs');
 const N = require('./nucleo');
 const Mensagem = require('./mensagem-unica41');   // cópia idêntica do texto aprovado do app (a prova confere)
 const MensagemIrmaos = require('./mensagem-irmaos');   // texto aprovado para irmãos do mesmo tutor (30/out/2026), também idêntico ao do app
+const AvisoPlano = require('./aviso-plano');   // aviso do plano com cuidados incluídos (05/11/2026), idêntico ao do app
 
 const PASSO_MS = 15000, SINAL_MS = 120000, ESPERA_NUMERO_MS = 60000, TENTATIVAS_NUMERO = 3;
 
@@ -80,7 +81,7 @@ function criarServico(op) {
     const [saida, checkin, cadastro] = await Promise.all([ler(`daycare/checkout-corpo/${dia}/${dc}`), ler(`daycare/checkin-corpo/${dia}/${dc}`), ler(`daycare/cadastro/${it.pelKey}`)]);
     if (N.saidaConfirmada(saida)) { await mudar(dia, dc, 'enviando', { estado: 'cancelado', motivo: 'Saiu antes do envio.' }); return 'cancelado'; }
     /* não confia na fila: só sai o texto aprovado, para o tutor principal da ficha, de quem tem check-in hoje */
-    const conf = N.conferirItem({ item: it, cadastro, checkin, gerar: Mensagem.gerarMensagem });
+    const conf = N.conferirItem({ item: it, cadastro, checkin, gerar: Mensagem.gerarMensagem, gerarPlano: AvisoPlano.gerarAvisoPlano });
     if (!conf.ok) { await mudar(dia, dc, 'enviando', { estado: 'falhou', motivo: conf.motivo }); log('recusado', 'item não confere com o banco'); return 'recusado'; }
     return { it, tutor: N.responsavel(cadastro, it.tutor).nome };
   }
@@ -105,7 +106,12 @@ function criarServico(op) {
     }
     if (!numero.ok) { await Promise.all(grupo.map((g) => mudar(dia, g.it.dcKey, 'enviando', { estado: 'falhou', motivo: numero.motivo }))); return 'falhou'; }
     let texto = it.texto, juntos = grupo;
-    if (grupo.length > 1) {
+    if (grupo.length > 1 && it.tipo === 'plano') {
+      /* irmãos do plano recebem um aviso só (05/11/2026) */
+      const m = AvisoPlano.gerarAvisoPlano({ nomeTutor: principal.tutor, dia,
+        peludos: grupo.map((g) => ({ nome: g.it.nome, sexo: g.it.sexo || undefined, cuidados: g.it.itens })) });
+      if (m.ok) texto = m.texto; else { await devolver(grupo.slice(1)); juntos = [principal]; log('irmaos', 'o aviso dos irmãos do plano não fechou; vai um de cada vez'); }
+    } else if (grupo.length > 1) {
       const m = MensagemIrmaos.gerarMensagemIrmaos({ nomeTutor: principal.tutor, dia, presencaConfirmada: true,
         veterinariaConfirmada: grupo.some((g) => g.it.itens.some((x) => String(x && x.itemK).startsWith('vac_'))),
         peludos: grupo.map((g) => ({ nome: g.it.nome, sexo: g.it.sexo || undefined, cuidados: g.it.itens })) });

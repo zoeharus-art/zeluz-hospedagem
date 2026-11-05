@@ -6,7 +6,7 @@
 const FILA = 'daycare/zelozinha-fila';
 const SAUDE = 'daycare/zelozinha-saude/vps';
 const CONTROLE = 'daycare/zelozinha-controle/estado';
-const VERSAO = 'simples-3';
+const VERSAO = 'simples-4';
 const JID = /^\d{6,20}@s\.whatsapp\.net$/;
 
 const PADRAO = Object.freeze({
@@ -82,7 +82,8 @@ const IRMAOS_MAX = 5;
 function irmaos(fila, principal) {
   if (!objeto(principal)) return [];
   return Object.keys(objeto(fila) ? fila : {}).filter((k) => k !== principal.dcKey && objeto(fila[k]) && texto(fila[k].dcKey) === k).map((k) => fila[k])
-    .filter((it) => it.estado === 'pronto' && it.dia === principal.dia && texto(it.texto) && texto(it.para) === texto(principal.para))
+    .filter((it) => it.estado === 'pronto' && it.dia === principal.dia && texto(it.texto) && texto(it.para) === texto(principal.para)
+      && (it.tipo === 'plano') === (principal.tipo === 'plano'))   /* o aviso do plano só sai junto com outro aviso do plano */
     .sort((a, b) => (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0) || (a.dcKey < b.dcKey ? -1 : 1))
     .slice(0, IRMAOS_MAX - 1);
 }
@@ -137,7 +138,7 @@ function responsavel(cad, nomeLegado) {
 /* O serviço não confia no que veio da fila: antes de enviar, confere com o banco que o FILHOt tem
    check-in hoje, que o telefone é o do tutor principal da ficha e que o texto é exatamente o texto
    aprovado (MensagemUnica41) para aqueles cuidados. Qualquer diferença: nada sai. */
-function conferirItem({ item, cadastro, checkin, gerar }) {
+function conferirItem({ item, cadastro, checkin, gerar, gerarPlano }) {
   const recusa = (motivo) => ({ ok: false, motivo });
   if (!texto(item.pelKey) || dcKeyDoPelKey(item.pelKey) !== texto(item.dcKey)) return recusa('A ficha não corresponde ao FILHOt da fila; nada foi enviado.');
   if (!entradaConfirmada(checkin)) return recusa('Não achei o check-in de hoje deste FILHOt; nada foi enviado.');
@@ -150,6 +151,14 @@ function conferirItem({ item, cadastro, checkin, gerar }) {
   const chaveNome = texto(item.pelKey).split('__')[0];
   if (chaveNome !== nome.toLowerCase().replace(/[.#$[\]/]/g, '-') && jsNorm(texto(cadastro.n)) !== jsNorm(nome)) return recusa('O nome do FILHOt não confere com a ficha; nada foi enviado.');
   const itens = Array.isArray(item.itens) ? item.itens : [];
+  /* aviso do plano com cuidados incluídos (05/11/2026): o texto é o do aviso, remontado aqui; nunca o da pergunta */
+  if (item.tipo === 'plano') {
+    /* não confia na fila: quem decide é a ficha lida do banco (a marca vale só com true) */
+    if (cadastro.cuidadosNoPlano !== true) return recusa('A ficha não tem o plano com cuidados incluídos; nada foi enviado.');
+    const a = typeof gerarPlano === 'function' ? gerarPlano({ nomeTutor: r.nome, dia: texto(item.dia), peludos: [{ nome, sexo, cuidados: itens.map((x) => ({ itemK: texto(x && x.itemK) })) }] }) : null;
+    if (!a || a.ok !== true || a.texto !== texto(item.texto)) return recusa('O texto não confere com o aviso aprovado para esta ficha; nada foi enviado.');
+    return { ok: true };
+  }
   const m = typeof gerar === 'function' ? gerar({ nomeTutor: r.nome, nomePeludo: nome, sexo, dia: texto(item.dia), presencaConfirmada: true,
     cuidados: itens.map((x) => ({ itemK: texto(x && x.itemK), vence: texto(x && x.vence) })),
     veterinariaConfirmada: itens.some((x) => texto(x && x.itemK).startsWith('vac_')) }) : null;
