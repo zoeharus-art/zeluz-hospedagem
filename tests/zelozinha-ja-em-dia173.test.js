@@ -166,8 +166,8 @@ prova('a tela: o estado aberto/fechado e a rolagem seguem o mesmo mecanismo do r
   assert.match(html, /\.zs-emdia\{/); assert.match(html, /\.zs-emdia\[open\]/);
 });
 
-prova('regras da casa: sem alert/confirm/prompt novos, sem vocabulário proibido no texto novo; versão 2026-11-05-01 em todos os arquivos versionados', () => {
-  assert.match(html, /const APP_VERSAO='2026-11-05-01';/);
+prova('regras da casa: sem alert/confirm/prompt novos, sem vocabulário proibido no texto novo; versão 2026-11-05-02 em todos os arquivos versionados', () => {
+  assert.match(html, /const APP_VERSAO='2026-11-05-02';/);
   assert.ok(!/2026-11-02-01/.test(html), 'nenhum ?v= ficou na versão antiga');
   const ini = html.indexOf('/* JÁ EM DIA HOJE'), fim = html.indexOf('/* fim JÁ EM DIA HOJE */');
   assert.ok(ini > 0 && fim > ini, 'o bloco novo está marcado no código');

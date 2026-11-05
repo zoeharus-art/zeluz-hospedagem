@@ -12339,7 +12339,8 @@ async function main() {
       check('mordida — o texto pronto sai NO MOLDE dela: "tinha 4… usou 1 em 04/09/2026… ficará com 3… pernoite para acerto"',
         t4.modais.length === 1 && t4.modais[0].texto ===
         'Ana, a Serena tinha 4 reposições; como usou 1 em 04/09/2026, ficará com 3. ' +
-        'As reposições também podem ser usadas em hospedagem, ficando somente o valor da pernoite para acerto.',
+        'As reposições também podem ser usadas em hospedagem, ficando somente o valor da pernoite para acerto.\n\n' +
+        'Um detalhe para você ter sempre à mão: as reposições são feitas com o plano ativo, tá?',
         JSON.stringify(t4.modais.map((m) => m.texto)));
       check('a auditoria registra o uso vindo do lançamento',
         t4.audits.some((a) => /^reposicao-uso :: Serena — abatida pelo lançamento/.test(a)), JSON.stringify(t4.audits));
