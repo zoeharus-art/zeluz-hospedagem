@@ -177,6 +177,11 @@ const CFG = N.lerConfig({ banco: { firebaseUrl: 'https://banco-ficticio.invalid'
 prova('configuração: lê o arquivo que já existe na VPS e acusa o que falta', () => {
   assert.equal(CFG.ok, true); assert.equal(CFG.cfg.evolution.instancia, 'instancia'); assert.equal(CFG.cfg.serviceUid, 'uid-ficticio');
   assert.deepEqual(N.lerConfig({}).falta.slice(0, 2), ['firebaseUrl', 'serviceUid']);
+  /* a espera para juntar irmãos (04/11/2026) mora na configuração, como os intervalos; o arquivo da VPS pode ajustar em «simples» */
+  assert.equal(N.PADRAO.esperaIrmaosMs, 10 * 60000); assert.equal(CFG.cfg.esperaIrmaosMs, 10 * 60000);
+  const ajustada = N.lerConfig({ banco: { firebaseUrl: 'https://banco-ficticio.invalid', serviceUid: 'uid-ficticio' }, automatico: { evolution: { baseUrl: 'https://canal-ficticio.invalid', apiKey: 'valor-ficticio', instanceName: 'instancia' } }, simples: { esperaIrmaosMs: 120000 } });
+  assert.equal(ajustada.cfg.esperaIrmaosMs, 120000);
+  assert.equal(N.VERSAO, 'simples-3', 'a espera dos irmãos muda o comportamento do serviço: versão nova');
 });
 
 prova('horário: segunda a sexta, das 7h às 13h de São Paulo', () => {
@@ -250,7 +255,7 @@ prova('serviço não confia na fila: texto mexido, telefone trocado ou sem check
   outroNome.texto = MSv.gerarMensagem({ nomeTutor: 'Família Fictícia', nomePeludo: 'Rex', dia: SEG, presencaConfirmada: true, cuidados: base.itens }).texto;
   assert.match(N.conferirItem({ item: outroNome, cadastro: cad(), checkin: ck, gerar }).motivo, /nome do FILHOt não confere/);
   assert.equal(N.conferirItem({ item: outroNome, cadastro: cad({ n: 'Rex' }), checkin: ck, gerar }).ok, true, 'FILHOt renomeado na ficha passa pelo nome gravado nela');
-  assert.equal(N.escolherProximo({ 'chave-errada': base }), null, 'item fora da sua chave não sai');
+  assert.equal(N.escolherProximo({ 'chave-errada': base }, 5 * 60000, CFG.cfg), null, 'item fora da sua chave não sai');
 });
 
 prova('serviço: um de cada vez, com «digitando…», e o próximo só depois do intervalo', async () => {

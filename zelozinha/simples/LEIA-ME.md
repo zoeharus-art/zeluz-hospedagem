@@ -5,7 +5,7 @@ Pedido da Adriana (29/10/2026): «Quero que a zelozinha entre no app da forma ma
 ## Como funciona
 
 1. **A fila nasce no check-in.** Quando o check-in do corpo é salvo, o app confere o que o FILHOt tem devendo hoje e ainda sem resposta. Depois monta a mensagem com o texto aprovado (`mensagem-unica41`, sem mudar uma letra) e grava **um** item em `daycare/zelozinha-fila/<dia>/<dcKey>`. O item que já existe nunca é sobrescrito.
-2. **O serviço só envia.** De segunda a sexta, das 7h às 13h (São Paulo), ele pega o item «pronto» mais antigo e mostra «digitando…» por 4 a 9 segundos antes de enviar. Depois espera de 3 a 7 minutos, sorteados, até o próximo.
+2. **O serviço só envia.** De segunda a sexta, das 7h às 13h (São Paulo), ele pega o item «pronto» mais antigo (que já esperou 10 minutos, ver «Espera» abaixo) e mostra «digitando…» por 4 a 9 segundos antes de enviar. Depois espera de 3 a 7 minutos, sorteados, até o próximo.
 3. **Cada item tem o seu estado:**
    - `pronto`: está na fila.
    - `enviando`: está saindo agora.
@@ -36,6 +36,8 @@ Se algo não bater, nada sai e o item fica «Não enviada». Assim, nem quem con
 
 **Irmãos (30/10/2026):** «tutor dono de dois peludinhos, sempre se tiver coisa junta mandar juntos, na mesma mensagem». Quando chega a vez de um FILHOt, os outros «prontos» do mesmo dia para o mesmo telefone saem na mesma mensagem, até cinco, com o texto aprovado para irmãos (`mensagem-irmaos.js`). Cada um é conferido antes, como sempre; quem não confere ou já saiu fica de fora. Todos os cartões ficam «ENVIADA», e «Ver mensagem» mostra o texto que saiu (`textoEnviado`). O irmão que entra na fila depois que a mensagem saiu recebe uma mensagem separada.
 
+**Espera de 10 minutos (04/11/2026):** dois irmãos fizeram check-in com 26 segundos de diferença, a fila estava vazia e saíram duas mensagens. Agora só sai quem está na fila há 10 minutos (`esperaIrmaosMs`, ajustável em `simples` no arquivo de configuração), e os irmãos «prontos» entram na mesma mensagem sem esperar. Quem entra depois das 12h50 não espera, para não ficar preso até o dia seguinte, e item sem hora de criação sai sem esperar.
+
 **A fila se completa sozinha (30/10/2026):** além do check-in, todo aparelho logado olha os check-ins do dia e põe na fila quem tem check-in e cuidado vencendo e ainda não está nela. Gravar é «só se não existir», então nada se duplica.
 
 ## Arquivos
@@ -60,7 +62,7 @@ A configuração já existe na VPS e não muda: `/etc/zeluz-piloto/automatico80.
 1. Copie a pasta `zelozinha/simples/` para `/opt/zelozinha/`.
 2. Em `/opt/zelozinha`, rode `npm install --omit=dev`.
 3. Copie a unidade: `cp /opt/zelozinha/zelozinha.service /etc/systemd/system/`. Depois rode `systemctl daemon-reload` e `systemctl enable --now zelozinha`.
-4. Confira com `journalctl -u zelozinha -n 20`. Tem de aparecer `{"ok":true,"zelozinha":"simples-1",…}`.
+4. Confira com `journalctl -u zelozinha -n 20`. Tem de aparecer `{"ok":true,"zelozinha":"simples-3",…}`.
 5. A tela da Zelozinha deve mostrar «WhatsApp conectado», sem a faixa vermelha.
 6. O webhook da instância do WhatsApp ainda aponta para a ponte antiga, que foi desligada. Desligue esse webhook, porque o serviço novo não usa eventos de entrada.
 
