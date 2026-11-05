@@ -6,13 +6,14 @@
 const FILA = 'daycare/zelozinha-fila';
 const SAUDE = 'daycare/zelozinha-saude/vps';
 const CONTROLE = 'daycare/zelozinha-controle/estado';
-const VERSAO = 'simples-2';
+const VERSAO = 'simples-3';
 const JID = /^\d{6,20}@s\.whatsapp\.net$/;
 
 const PADRAO = Object.freeze({
   janelaInicio: 7, janelaFim: 13,            // segunda a sexta, 7h (inclusive) às 13h (exclusive), São Paulo
   intervaloMinMs: 3 * 60000, intervaloMaxMs: 7 * 60000,   // entre uma mensagem e outra, sorteado
   digitandoMinMs: 4000, digitandoMaxMs: 9000,             // «digitando…» antes de cada envio
+  esperaIrmaosMs: 10 * 60000,                // quem entrou na fila há menos que isso ainda não sai: dá tempo de o irmão chegar
   httpTimeoutMs: 15000
 });
 
@@ -56,11 +57,21 @@ const sorteio = (r, min, max) => Math.round(min + Math.min(Math.max(Number(r) ||
 const proximoIntervalo = (r, cfg = PADRAO) => sorteio(r, cfg.intervaloMinMs, cfg.intervaloMaxMs);
 const digitandoMs = (r, cfg = PADRAO) => sorteio(r, cfg.digitandoMinMs, cfg.digitandoMaxMs);
 
-/* O próximo da fila: o «pronto» que entrou primeiro. Item sem texto ou sem telefone não sai. */
-function escolherProximo(fila) {
+/* Espera para juntar irmãos (Adriana, 04/11/2026): dois irmãos fizeram check-in com 26 s de diferença e saíram duas mensagens.
+   Só sai quem está na fila há `esperaIrmaosMs`. Não espera: item sem criadoEm válido, com criadoEm mais de uma espera à frente
+   (relógio do aparelho errado) e qualquer um nos últimos 10 minutos da janela (depois disso a fila só volta no dia seguinte). */
+function jaEsperou(it, agora, cfg = PADRAO) {
+  const espera = Number.isFinite(cfg.esperaIrmaosMs) && cfg.esperaIrmaosMs >= 0 ? cfg.esperaIrmaosMs : PADRAO.esperaIrmaosMs;
+  const c = typeof it.criadoEm === 'number' ? it.criadoEm : NaN;
+  if (!(c > 0) || !Number.isFinite(c) || c > agora + espera || agora - c >= espera) return true;
+  return !naJanela(agora + espera, cfg);
+}
+
+/* O próximo da fila: o «pronto» que entrou primeiro e já esperou. Item sem texto ou sem telefone não sai. */
+function escolherProximo(fila, agora = Date.now(), cfg = PADRAO) {
   /* o item só vale na chave dele: dcKey de dentro = chave da fila */
   const prontos = Object.keys(objeto(fila) ? fila : {}).filter((k) => objeto(fila[k]) && texto(fila[k].dcKey) === k).map((k) => fila[k])
-    .filter((it) => it.estado === 'pronto' && texto(it.texto) && /^55\d{10,11}$/.test(texto(it.para)));
+    .filter((it) => it.estado === 'pronto' && texto(it.texto) && /^55\d{10,11}$/.test(texto(it.para)) && jaEsperou(it, agora, cfg));
   prontos.sort((a, b) => (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0) || (a.dcKey < b.dcKey ? -1 : 1));
   return prontos[0] || null;
 }
@@ -169,4 +180,4 @@ function interpretarEnvio(r, jid) {
 }
 
 module.exports = { FILA, SAUDE, CONTROLE, VERSAO, PADRAO, lerConfig, partesSP, diaSP, naJanela, proximoIntervalo, digitandoMs,
-  escolherProximo, irmaos, abandonados, saidaConfirmada, entradaConfirmada, dcKeyDoPelKey, telefone, responsavel, conferirItem, interpretarNumero, interpretarEnvio };
+  escolherProximo, jaEsperou, irmaos, abandonados, saidaConfirmada, entradaConfirmada, dcKeyDoPelKey, telefone, responsavel, conferirItem, interpretarNumero, interpretarEnvio };

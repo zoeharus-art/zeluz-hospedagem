@@ -124,6 +124,87 @@ prova('quem é irmão: mesmo telefone, mesmo dia, ainda na fila; até cinco numa
   assert.equal(N.irmaos(muitos, primeiro).length, 4, 'no máximo cinco numa mensagem');
 });
 
+/* Espera de 10 minutos (Adriana, 04/11/2026): dois irmãos fizeram check-in com 26 s de diferença, a fila estava vazia e saíram duas mensagens. */
+const EM = (hora) => Date.parse(SEG + 'T' + hora + '-03:00');
+prova('espera: só sai quem está na fila há 10 minutos; os irmãos prontos entram sem esperar', () => {
+  const t = EM('08:00:00'), esp = CFG.esperaIrmaosMs;
+  assert.equal(esp, 10 * 60000, 'a espera é 10 minutos por padrão');
+  const novo = filhot('Bolinha', 'Família Um', TEL_UM, [{ itemK: 'verm_p', vence: SEG }], t - 30000);
+  const irmao = filhot('Farofa', 'Família Um', TEL_UM, [{ itemK: 'ecto_p', vence: SEG }], t - 4000);
+  const filaDia = { [novo.dcKey]: novo, [irmao.dcKey]: irmao };
+  assert.equal(N.escolherProximo(filaDia, t, CFG), null, 'com 30 s de fila ainda não sai');
+  const quase = filhot('Bolinha', 'Família Um', TEL_UM, [{ itemK: 'verm_p', vence: SEG }], t - esp + 1);
+  assert.equal(N.escolherProximo({ [quase.dcKey]: quase }, t, CFG), null, 'faltando 1 ms ainda não sai');
+  const justo = filhot('Bolinha', 'Família Um', TEL_UM, [{ itemK: 'verm_p', vence: SEG }], t - esp);
+  assert.equal(N.escolherProximo({ [justo.dcKey]: justo }, t, CFG).nome, 'Bolinha', 'com 10 minutos exatos sai');
+  /* o que esperou 10 minutos sai, e o irmão recém-chegado vai junto, sem esperar */
+  const velho = filhot('Bolinha', 'Família Um', TEL_UM, [{ itemK: 'verm_p', vence: SEG }], t - esp - 1);
+  const fila2 = { [velho.dcKey]: velho, [irmao.dcKey]: irmao };
+  const p = N.escolherProximo(fila2, t, CFG);
+  assert.equal(p.nome, 'Bolinha'); assert.deepEqual(N.irmaos(fila2, p).map((x) => x.nome), ['Farofa']);
+  assert.equal(N.escolherProximo(fila2, t, Object.assign({}, CFG, { esperaIrmaosMs: 0 })).nome, 'Bolinha', 'espera zero desliga a regra');
+});
+
+prova('espera: nos últimos 10 minutos da janela (a partir de 12h50) não espera, para ninguém ficar preso para o dia seguinte', () => {
+  const entrou = (hora, folga) => { const t = EM(hora); return { t, it: filhot('Bolinha', 'Família Um', TEL_UM, [{ itemK: 'verm_p', vence: SEG }], t - folga) }; };
+  const pega = (x) => N.escolherProximo({ [x.it.dcKey]: x.it }, x.t, CFG);
+  assert.equal(pega(entrou('12:49:59', 1000)), null, 'às 12h49 ainda espera (sai às 12h59)');
+  assert.equal(pega(entrou('12:50:00', 1000)).nome, 'Bolinha', 'às 12h50 já não espera');
+  assert.equal(pega(entrou('12:59:59', 0)).nome, 'Bolinha', 'um segundo antes das 13h sai na hora');
+  assert.equal(pega(entrou('12:49:59', 10 * 60000)).nome, 'Bolinha', 'quem já esperou sai, claro');
+  assert.equal(pega(entrou('12:30:00', 5 * 60000)), null, 'meio-dia e meia: entrou há 5 min, espera mais 5 e sai às 12h35');
+  assert.equal(pega(entrou('12:35:00', 10 * 60000)).nome, 'Bolinha', 'entrou às 12h25, às 12h35 completa os 10 minutos');
+});
+
+prova('espera: item sem criadoEm (ou com valor inválido, ou do futuro distante) não trava; o do futuro próximo espera', () => {
+  const t = EM('09:00:00');
+  const base = filhot('Bolinha', 'Família Um', TEL_UM, [{ itemK: 'verm_p', vence: SEG }], 1);
+  [undefined, null, 0, -5, 'ontem', NaN, {}].forEach((c) => {
+    const it = Object.assign({}, base, { criadoEm: c });
+    assert.equal(N.escolherProximo({ [it.dcKey]: it }, t, CFG).nome, 'Bolinha', 'criadoEm ' + String(c) + ' sai sem esperar');
+  });
+  const sem = Object.assign({}, base); delete sem.criadoEm;
+  assert.equal(N.escolherProximo({ [sem.dcKey]: sem }, t, CFG).nome, 'Bolinha', 'sem o campo, sai');
+  const relogioAdiantado = Object.assign({}, base, { criadoEm: t + 3 * 3600000 });
+  assert.equal(N.escolherProximo({ [relogioAdiantado.dcKey]: relogioAdiantado }, t, CFG).nome, 'Bolinha', 'aparelho com relógio horas adiantado não prende o item');
+  const seg = Object.assign({}, base, { criadoEm: t + 20000 });
+  assert.equal(N.escolherProximo({ [seg.dcKey]: seg }, t, CFG), null, 'poucos segundos à frente: espera como os outros');
+  assert.equal(N.escolherProximo({ [seg.dcKey]: seg }, t + 10 * 60000 + 20000, CFG).nome, 'Bolinha');
+});
+
+prova('serviço: dois irmãos com 26 s de diferença, fila vazia: nada sai nos primeiros 10 minutos e depois sai UMA mensagem para os dois', async () => {
+  let t = EM('09:50:00');
+  const a = filhot('Bolinha', 'Família Um', TEL_UM, [{ itemK: 'verm_p', vence: SEG }], t, 'M');
+  const b = filhot('Farofa', 'Família Um', TEL_UM, [{ itemK: 'ecto_p', vence: SEG }], t + 26000, 'F');
+  /* a fila começa vazia; o primeiro entra e o serviço já olha, como no dia real */
+  const db = banco([a]), evo = evoFalso();
+  const s = criarServico({ db, evo, cfg: CFG, agora: () => t, aleatorio: () => 0 });
+  await s.iniciar();
+  assert.equal(await s.passo(), 'vazio', 'recém-chegado: ainda não sai');
+  t += 26000;
+  db.gravar(`daycare/cadastro/${b.pelKey}`, { tutor: b.tutor, tel: b.para.slice(2) });
+  db.gravar(`daycare/checkin-corpo/${SEG}/${b.dcKey}`, { tipo: 'entrada', quem: 'Pessoa Fictícia', fim: EM('07:30:00') });
+  db.gravar(`${N.FILA}/${SEG}/${b.dcKey}`, b);
+  t += 60000; assert.equal(await s.passo(), 'vazio', 'um minuto depois ainda espera');
+  t = EM('09:59:59'); assert.equal(await s.passo(), 'vazio', 'faltando 1 s ainda espera');
+  assert.equal(evo.envios.length, 0);
+  t = EM('10:00:00'); assert.equal(await s.passo(), 'enviado');
+  assert.equal(evo.envios.length, 1, 'uma mensagem só para os dois');
+  const esperado = MI.gerarMensagemIrmaos({ nomeTutor: 'Família Um', dia: SEG, presencaConfirmada: true, veterinariaConfirmada: false,
+    peludos: [{ nome: 'Bolinha', sexo: 'M', cuidados: a.itens }, { nome: 'Farofa', sexo: 'F', cuidados: b.itens }] }).texto;
+  assert.equal(evo.envios[0].t, esperado);
+  [a, b].forEach((x) => assert.equal(db.ler(`${N.FILA}/${SEG}/${x.dcKey}`).estado, 'enviado'));
+});
+
+prova('serviço: quem entra às 12h55 sai na hora (não fica preso até o dia seguinte)', async () => {
+  const t = EM('12:55:00');
+  const a = filhot('Bolinha', 'Família Um', TEL_UM, [{ itemK: 'verm_p', vence: SEG }], t - 5000);
+  const db = banco([a]), evo = evoFalso();
+  const s = criarServico({ db, evo, cfg: CFG, agora: () => t, aleatorio: () => 0 });
+  await s.iniciar();
+  assert.equal(await s.passo(), 'enviado'); assert.equal(evo.envios.length, 1);
+});
+
 prova('serviço: dois irmãos saem numa mensagem só, com o texto aprovado; o outro tutor sai na vez dele', async () => {
   let t = Date.parse(SEG + 'T08:00:00-03:00');
   const a = filhot('Bolinha', 'Família Um', TEL_UM, [{ itemK: 'verm_p', vence: SEG }], 1, 'M');

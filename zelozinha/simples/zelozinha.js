@@ -67,7 +67,7 @@ function criarServico(op) {
     const t = agora(), dia = N.diaSP(t);
     if (dia !== est.dia) await trocarDia(dia);
     if (est.ocupado || est.pausado || !N.naJanela(t, cfg) || t < est.proximoEm) return 'esperando';
-    const it = N.escolherProximo(est.fila);
+    const it = N.escolherProximo(est.fila, t, cfg);
     if (!it) return 'vazio';
     est.ocupado = true;
     try { return await enviarItem(dia, it); } finally { est.ocupado = false; }
