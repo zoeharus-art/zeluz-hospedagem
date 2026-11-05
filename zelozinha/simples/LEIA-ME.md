@@ -38,6 +38,8 @@ Se algo não bater, nada sai e o item fica «Não enviada». Assim, nem quem con
 
 **Espera de 10 minutos (04/11/2026):** dois irmãos fizeram check-in com 26 segundos de diferença, a fila estava vazia e saíram duas mensagens. Agora só sai quem está na fila há 10 minutos (`esperaIrmaosMs`, ajustável em `simples` no arquivo de configuração), e os irmãos «prontos» entram na mesma mensagem sem esperar. Quem entra depois das 12h50 não espera, para não ficar preso até o dia seguinte, e item sem hora de criação sai sem esperar.
 
+**Plano com cuidados incluídos (05/11/2026, `simples-4`):** a família que acerta os cuidados no início do mês não recebe pergunta, só o aviso, e só no dia em que o FILHOt vem (vence 05, vem 06: dá e avisa em 06; se não vier, não avisa nada). Quem decide é o campo `cuidadosNoPlano` da ficha (`daycare/cadastro/<chave>`), ligado na aba «Plano com cuidados incluídos» da tela da Zelozinha. No check-in, o app grava o item na mesma fila, com `tipo: "plano"` e o texto de `aviso-plano.js`: «Oi, {tutor}, tudo bem? Hoje {o/a} {nome} recebe aqui {cuidado}, já combinada no acerto do mês. Qualquer novidade, a gente conta. 💛» (muda só o artigo, os nomes e a concordância). O serviço não confia na fila nem nessa marca: antes de enviar, confere que a ficha lida do banco tem `cuidadosNoPlano: true` (senão, «Não enviada»). Ele trata o item igual aos outros, com três diferenças: (1) antes de enviar, remonta o texto com `aviso-plano.js`, e não com `mensagem-unica41`; (2) item de plano só sai junto com outro item de plano do mesmo telefone (irmãos recebem um aviso só, com o mesmo texto para os dois); (3) pergunta e aviso nunca saem na mesma mensagem. O texto de `mensagem-unica41` não mudou nenhuma letra.
+
 **A fila se completa sozinha (30/10/2026):** além do check-in, todo aparelho logado olha os check-ins do dia e põe na fila quem tem check-in e cuidado vencendo e ainda não está nela. Gravar é «só se não existir», então nada se duplica.
 
 ## Arquivos
@@ -48,6 +50,7 @@ Se algo não bater, nada sai e o item fica «Não enviada». Assim, nem quem con
 | `zelozinha.js` | O serviço: escuta a fila e a pausa, confere, envia, marca e dá sinal de vida |
 | `mensagem-unica41.js` | Cópia idêntica do texto aprovado que está no app. A prova falha se as duas ficarem diferentes |
 | `mensagem-irmaos.js` | O texto aprovado para irmãos do mesmo tutor, também idêntico ao do app (`<script id="mensagem-irmaos">`) |
+| `aviso-plano.js` | O aviso do plano com cuidados incluídos (abaixo), idêntico ao do app (`<script id="aviso-plano">`). A prova falha se as duas cópias ficarem diferentes |
 | `package.json` | Uma dependência só: `firebase-admin` 14.5.0 |
 | `zelozinha.service` | A unidade do systemd |
 
@@ -62,7 +65,7 @@ A configuração já existe na VPS e não muda: `/etc/zeluz-piloto/automatico80.
 1. Copie a pasta `zelozinha/simples/` para `/opt/zelozinha/`.
 2. Em `/opt/zelozinha`, rode `npm install --omit=dev`.
 3. Copie a unidade: `cp /opt/zelozinha/zelozinha.service /etc/systemd/system/`. Depois rode `systemctl daemon-reload` e `systemctl enable --now zelozinha`.
-4. Confira com `journalctl -u zelozinha -n 20`. Tem de aparecer `{"ok":true,"zelozinha":"simples-3",…}`.
+4. Confira com `journalctl -u zelozinha -n 20`. Tem de aparecer `{"ok":true,"zelozinha":"simples-4",…}`.
 5. A tela da Zelozinha deve mostrar «WhatsApp conectado», sem a faixa vermelha.
 6. O webhook da instância do WhatsApp ainda aponta para a ponte antiga, que foi desligada. Desligue esse webhook, porque o serviço novo não usa eventos de entrada.
 
