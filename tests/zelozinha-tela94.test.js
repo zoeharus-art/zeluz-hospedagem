@@ -401,10 +401,14 @@ async function mundo(S, opcoes) {
       ultimo = t.n;
     }
   };
-  m.tocar = async (n, k, valor) => { await page.click(m.botao(n, k, valor)); await m.quieto(); };
+  /* «Hoje ou outra data» (06/nov/2026): loja e bolsa perguntam antes de lançar; o toque das provas antigas responde «Hoje» */
+  m.hoje = async (n, k) => { const s = m.cuidadoSel(n, k) + ' [data-zt694-acao="quando-hoje"]'; if (await page.$(s)) { await page.click(s); await m.quieto(); } };
+  m.tocar = async (n, k, valor) => { await page.click(m.botao(n, k, valor)); await m.quieto(); await m.hoje(n, k); };
   m.abrirTela = async (rota) => {
-    await page.evaluate((r) => { abrirItemDoMenu(r || 'painel-amanda'); }, rota || opcoes.rota);
+    await page.evaluate((r) => { abrirItemDoMenu(r || 'hoje'); }, rota || opcoes.rota);
     await page.waitForSelector(opcoes.seletorTela || '[data-zt694]', { timeout: 15000 });
+    /* os cartões abrem fechados (a família é uma sanfona): abre todos, como a equipe faria */
+    await page.evaluate(() => document.querySelectorAll('details.zt694-familia').forEach((d) => { d.open = true; }));
     await m.quieto(200);
   };
   m.recarregar = async () => { await page.evaluate(() => { window.__banco.log.leituras.length = 0; return window.z89Render104(true); }); await m.quieto(200); };
@@ -657,6 +661,39 @@ prova('P8', 'vermífugo com dose do peso: 1 toque; a dose e o «onde» já vêm 
     assert.strictEqual(m.erros.length, 0, m.erros.join(' | '));
   } finally { await m.fechar(); }
 }, 'C');
+prova('P80', '«Hoje ou outra data»: nada é lançado antes da escolha; outra data agenda sem linha, recusa dia em que ele não vem; «Lançar hoje» volta e lança', async () => {
+  const m = await mundo({ filhots: [{ n: 'Teste Quando', tutor: 'Tutor Quando', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] });
+  try {
+    const n = 'Teste Quando', k = 'verm_p', care = m.cuidadoSel(n, k);
+    const hoje = await m.ev(() => dcDataKey());
+    /* a ficha vem só às segundas e sextas */
+    await m.ev(() => { PELUDINHOS[0].dias = ['seg', 'sex']; });
+    await m.page.click(m.botao(n, k, 'autorizar_loja')); await m.quieto();
+    assert.ok(await m.page.$(care + ' [data-zt694-quando]'), 'a pergunta aparece');
+    assert.strictEqual(await linhaDo(m, n, k), null, 'nada foi lançado antes da escolha');
+    await m.page.click(care + ' [data-zt694-acao="quando-data"]'); await m.quieto();
+    const atalhos = await m.ev((s) => [...document.querySelectorAll(s + ' [data-zt694-acao="agendar-dia"]')].map((b) => b.getAttribute('data-zt694-valor')), care);
+    assert.strictEqual(atalhos.length, 3, 'três próximas vindas: ' + atalhos);
+    assert.ok(atalhos.every((d) => d > hoje && ['seg', 'sex'].includes(['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][new Date(d + 'T12:00:00').getDay()])), 'só dias em que ele vem: ' + atalhos);
+    /* uma quarta qualquer: é recusada */
+    const quarta = await m.ev((h) => { const d = new Date(h + 'T12:00:00'); do { d.setDate(d.getDate() + 1); } while (d.getDay() !== 3); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }, hoje);
+    await m.page.fill(care + ' [data-zt694-agenda-data]', quarta);
+    await m.page.click(care + ' [data-zt694-acao="agendar-salvar"]'); await m.quieto();
+    assert.ok(/não vem nesse dia/.test(await m.ev((s) => document.querySelector(s + ' [data-zt694-agenda-erro]').textContent, care)), 'recusa o dia em que ele não vem');
+    await m.page.click(care + ' [data-zt694-acao="agendar-dia"][data-zt694-valor="' + atalhos[0] + '"]'); await m.quieto();
+    await m.page.click(care + ' [data-zt694-acao="agendar-salvar"]'); await m.quieto();
+    const ag = await m.ev(([dc, it]) => window.__banco.ler('daycare/agendamentos/' + dc + '/' + it), [m.dcDe(n), k]);
+    assert.strictEqual(ag.para, atalhos[0]); assert.strictEqual(ag.onde, 'LOJA', 'o agendamento guarda o lugar da resposta');
+    assert.strictEqual(await linhaDo(m, n, k), null, 'agendado não entra no Lançamento de hoje');
+    assert.ok(await m.page.$(care + ' [data-zt694-agendado]'), 'o cartão mostra o agendamento');
+    /* agendado para outro dia: o cartão vai para «Em andamento», onde continua dando para voltar */
+    await m.page.click('#hub116-tab-progress'); await m.ev(() => document.querySelectorAll('details.zt694-familia').forEach((d) => { d.open = true; })); await m.quieto();
+    await m.page.click(care + ' [data-zt694-acao="agendar-hoje"]'); await m.quieto();
+    assert.ok(!(await m.ev(([dc, it]) => window.__banco.ler('daycare/agendamentos/' + dc + '/' + it), [m.dcDe(n), k])), '«Lançar hoje» tira o agendamento');
+    const l = await linhaDo(m, n, k); assert.ok(l && l.origemVencimento.origemResposta === 'loja', '«Lançar hoje» lança na loja');
+    const erros = m.erros.filter((e) => !/prevSecVirar/.test(e)); assert.strictEqual(erros.length, 0, erros.join(' | '));
+  } finally { await m.fechar(); }
+}, 'C');
 prova('P8', 'sem dose pré-marcada são 2 toques; trocar o «onde» não tira a pendência do Snoopy da loja; escolher o que a resposta já diz tira a marca (AC4.1, AC4.3, AC4.4, AC4.9)', async () => {
   const m = await mundo({ filhots: [{ n: 'Teste Loja', tutor: 'Tutor Loja', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] });
   try {
@@ -683,7 +720,7 @@ prova('P8', 'carrapaticida: a lista de produtos é a viva da Gestão; produto + 
   const m = await mundo({ filhots: [{ n: 'Teste Ecto', tutor: 'Tutor Ecto', tel: '(31) 99999-0001', cuidados: ['ecto_p'] }, { n: 'Teste Col', tutor: 'Tutor Col', tel: '(31) 99999-0002', cuidados: ['col_p'] }, { n: 'Teste Vac', tutor: 'Tutor Vac', tel: '(31) 99999-0003', cuidados: ['vac_raiva_p'] }] });
   try {
     let toques = 0; const clicar = async (sel) => { await m.page.click(sel); toques++; await m.quieto(); };
-    await clicar(m.botao('Teste Ecto', 'ecto_p', 'autorizar_bolsa'));
+    await clicar(m.botao('Teste Ecto', 'ecto_p', 'autorizar_bolsa')); await m.hoje('Teste Ecto', 'ecto_p');
     const lista = () => m.ev((s) => [...document.querySelectorAll(s + ' [data-zt694-campo="prod"]')].map((b) => b.getAttribute('data-zt694-valor')), m.sel('Teste Ecto'));
     const viva = await m.ev(() => DASH_ECTO_PROD.map((o) => o.v)); assert.deepStrictEqual(await lista(), viva, 'os botões são a lista viva');
     await m.ev(() => { ectoCfgAplicar({ Pipeta: { dias: 30 }, Bravecto: { dias: 90 }, ProdutoNovoTeste: { dias: 20 } }); });
@@ -708,7 +745,7 @@ prova('P8', 'sem estado global dos Lançamentos: dez FILHOts com escolhas aberta
     /* o `dashDet(k)` do app cria um objeto vazio quando alguém só lê; o que não pode existir é conteúdo */
     const estadoGlobal = () => m.ev(() => JSON.stringify([DASH_SEL, DASH_SEL_I, Object.keys(DASH_DET).filter((k) => Object.keys(DASH_DET[k] || {}).length > 0).map((k) => [k, DASH_DET[k]])]));
     const antes = await estadoGlobal();
-    for (let i = 0; i < 10; i++) await m.page.click(m.botao(nomeTeste(i), 'verm_p', 'autorizar_bolsa')), await m.quieto(80);
+    for (let i = 0; i < 10; i++) await m.tocar(nomeTeste(i), 'verm_p', 'autorizar_bolsa');
     assert.strictEqual(await m.ev(() => document.querySelectorAll('[data-zt694-esc]').length), 10);
     await m.ev(() => document.querySelectorAll('[data-zt694-esc]').forEach((d) => { d.open = true; }));
     const valores = ['MEIO COMPRIMIDO', '1 COMPRIMIDO', '1 COMPRIMIDO E MEIO', '2 COMPRIMIDOS', '2 COMPRIMIDOS E MEIO', '3 COMPRIMIDOS', '3 COMPRIMIDOS E MEIO', '4 COMPRIMIDOS', '4 COMPRIMIDOS E MEIO', 'MEIO COMPRIMIDO'];
@@ -743,7 +780,8 @@ prova('P9', 'uma linha, id fixo, no cuidado certo; toque duplo e dois aparelhos 
   try {
     await m.ev(() => { window.__reg = []; const o = ZeluzRespostaApp88.registrar; ZeluzRespostaApp88.registrar = function (gk, itens, op) { window.__reg.push(1); return o.apply(this, arguments); }; });
     // toque duplo (dois cliques seguidos, antes da primeira resposta voltar)
-    await m.ev((s) => { const b = document.querySelector(s); b.click(); b.click(); }, m.botao('Teste Bolsa', 'verm_p', 'autorizar_bolsa')); await m.quieto();
+    await m.page.click(m.botao('Teste Bolsa', 'verm_p', 'autorizar_bolsa')); await m.quieto();
+    await m.ev((s) => { const b = document.querySelector(s); b.click(); b.click(); }, m.cuidadoSel('Teste Bolsa', 'verm_p') + ' [data-zt694-acao="quando-hoje"]'); await m.quieto();
     assert.strictEqual(await m.ev(() => window.__reg.length), 1, 'o toque duplo grava uma vez só');
     let ls = await linhasDoDia(m, 'vermifugo'); assert.strictEqual(Object.keys(ls).length, 1, 'uma linha: ' + Object.keys(ls));
     const lid = await m.ev((ck) => ZeluzCuidado57SolCore.linhaId({ cycleKey: ck, itemK: 'verm_p' }), m.cicloDe('Teste Bolsa', 'verm_p'));
@@ -1254,7 +1292,7 @@ prova('P23', 'conflito: outra pessoa respondeu no meio → «{nome} respondeu ag
     await m.ev(([dia, dc, ck, gk]) => { const p = 'daycare/vencimentos/' + dia + '/' + dc, k = ZeluzResposta88.codificarChave(ck); window.__banco.poe(p, { respostasEscopo49: { porCiclo: { [k]: { cycleKey: ck, itemK: 'verm_p', groupKey: gk, respostaId: 'r88_outra', decisao: 'autorizar', origem: 'externo', onde: '', humanoId: 'bia', humanoNome: 'Bia', ts: Date.now(), revisao: 0, estado: 'decidido', baseOperacional88: {} } }, porResposta: {} }, historicoRespostas49: [] }); },
       [DIA, m.dcDe('Teste Conf'), m.cicloDe('Teste Conf', 'verm_p'), m.info[0].groupKey]);
     const outroAntes = await m.texto('Teste Outro');
-    await m.page.click(m.botao('Teste Conf', 'verm_p', 'autorizar_bolsa')); await m.quieto();
+    await m.tocar('Teste Conf', 'verm_p', 'autorizar_bolsa');
     const t = await m.texto('Teste Conf'); assert.ok(/Bia respondeu agora: Vai fazer em casa\. Nada foi trocado\./.test(t), t);
     assert.strictEqual(Object.values((await regDo(m, 'Teste Conf')).respostasEscopo49.porCiclo)[0].origem, 'externo', 'nada foi trocado');
     assert.ok(/Vai fazer em casa · Bia/.test(t), 'a linha se atualizou com a resposta da outra pessoa');
@@ -1357,7 +1395,8 @@ prova('P24', 'um toque redesenha só a linha tocada: durante o salvamento a pág
 prova('P24', 'o botão tocado mostra «Salvando…» no mesmo quadro (AC10.2)', async () => {
   const m = await mundo({ filhots: [{ n: 'Teste Salva', tutor: 'Tutor Salva', tel: '(31) 99999-0001', cuidados: ['verm_p'] }] }, { latencia: 60 });
   try {
-    await m.ev((s) => { const b = document.querySelector(s); b.click(); window.__rotulo = b.textContent; }, m.botao('Teste Salva', 'verm_p', 'autorizar_bolsa'));
+    await m.page.click(m.botao('Teste Salva', 'verm_p', 'autorizar_bolsa')); await m.quieto();
+    await m.ev((s) => { const b = document.querySelector(s); b.click(); window.__rotulo = b.textContent; }, m.cuidadoSel('Teste Salva', 'verm_p') + ' [data-zt694-acao="quando-hoje"]');
     assert.strictEqual(await m.ev(() => window.__rotulo), 'Salvando…', 'no mesmo quadro do toque'); await m.quieto();
   } finally { await m.fechar(); }
 }, 'C');

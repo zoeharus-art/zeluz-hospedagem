@@ -72,7 +72,7 @@ prova('agendar o carrapaticida pede a pipeta ou a quantidade; grava, desfaz e co
   assert.equal(ZA.rotuloSelo(reg, SEX), 'AGENDADO · 03/11');
   assert.match(ZA.motivoSelo(reg, SEX), /^Vai para o lançamento de terça, 03\/11, para confirmar o horário\.$/);
   assert.equal(ZA.rotuloSelo(reg, TER), 'AGENDADO PARA HOJE');
-  assert.match(ZA.infoHTML(reg, SEX, 0), /agendar-desfazer/); assert.ok(!/agendar-desfazer/.test(ZA.infoHTML(reg, TER, 0)), 'no próprio dia não se desfaz pelo cartão');
+  assert.match(ZA.infoHTML(reg, SEX, 0), /agendar-hoje/); assert.ok(!/agendar-hoje/.test(ZA.infoHTML(reg, TER, 0)), 'no próprio dia não se desfaz pelo cartão');
   assert.match((await ZA.confirmarHorario(db, 'biscoito__ciclano', 'ecto_p', '9h', 'Consultora')).motivo, /horário/);
   assert.equal((await ZA.confirmarHorario(db, 'biscoito__ciclano', 'ecto_p', '09:30', 'Consultora')).ok, true);
   assert.equal(db.ler('daycare/agendamentos/biscoito__ciclano/ecto_p/horario'), '09:30');
@@ -84,6 +84,21 @@ prova('agendar o carrapaticida pede a pipeta ou a quantidade; grava, desfaz e co
   assert.equal(db.ler('daycare/agendamentos/biscoito__ciclano/ecto_p'), null); assert.equal(ZA.de('biscoito__ciclano', 'ecto_p'), null);
 });
 
+prova('«Hoje ou outra data» (06/nov/2026): a pergunta, as próximas vindas e o que o cartão oferece depois de agendar', () => {
+  const ZA = ctx.ZelozinhaAgenda;
+  const q = ZA.quandoHTML(0, false); assert.match(q, /data-zt694-acao="quando-hoje"/); assert.match(q, /data-zt694-acao="quando-data"/); assert.match(q, /Quando vai ser feito\?/);
+  /* hoje é sexta 06/11/2026; ele vem às segundas e sextas */
+  const vem = (d) => [1, 5].includes(new Date(d + 'T12:00:00Z').getUTCDay());
+  assert.deepEqual([...ZA.proximasVindas('2026-11-06', vem, 3)], ['2026-11-09', '2026-11-13', '2026-11-16']);
+  assert.deepEqual([...ZA.proximasVindas('2026-11-06', () => null, 3)], [], 'sem dias na ficha, sem atalho');
+  const f = ZA.formHTML('verm_p', '2026-11-06', 0, { atalhos: ['2026-11-09', '2026-11-13'], data: '2026-11-13' });
+  assert.match(f, /Próxima vinda: segunda 09\/11/); assert.match(f, /data-zt694-valor="2026-11-13" data-zt694-ciclo="0" aria-pressed="true"/);
+  const com = { para: '2026-11-13', onde: 'LOJA', itemK: 'verm_p' }, sem = { para: '2026-11-13', onde: '', itemK: 'verm_p' };
+  assert.match(ZA.infoHTML(com, '2026-11-06', 0), /Mudar a data/); assert.match(ZA.infoHTML(com, '2026-11-06', 0), /Lançar hoje/); assert.match(ZA.infoHTML(com, '2026-11-06', 0), /A Zelozinha não manda de novo/);
+  assert.match(ZA.infoHTML(sem, '2026-11-06', 0), /Desfazer/); assert.ok(!/Lançar hoje/.test(ZA.infoHTML(sem, '2026-11-06', 0)), 'sem lugar gravado não lança hoje sem perguntar');
+  assert.ok(html.includes("if(w.ZelozinhaAgenda&&w.ZelozinhaAgenda.bloqueiaMensagem(dc,k,h))return false;"), 'agendado no cartão não aparece em Sem finalização');
+  assert.ok(html.includes("if(daLinha(valor)&&!daLinha(vq.valor)&&window.ZelozinhaAgenda&&c.dia===diaAtual()){estado.quando[kq]={valor:valor};"), 'loja e bolsa perguntam antes de lançar');
+});
 prova('o formulário: data, e no carrapaticida as escolhas de pipeta/quantidade e onde', () => {
   const ecto = ZA.formHTML('ecto_p', SEX, 2, { data: TER, qtd: 'PIPETA', onde: 'LOJA', erro: 'Algo faltou.' });
   assert.match(ecto, /Para qual dia\?/); assert.match(ecto, /type="date"[^>]*value="2026-11-03"[^>]*min="2026-10-30"/);
@@ -112,7 +127,7 @@ prova('a Zelozinha não manda mensagem de cuidado agendado; sem agendamento, man
 prova('a página: o botão, o cálculo do cuidado, o lançamento do dia e a fila usam a agenda', () => {
   assert.ok(html.indexOf('<script id="zelozinha-agenda">') < html.indexOf('<script id="zelozinha-simples">'), 'a agenda carrega antes da Zelozinha simples');
   assert.match(html, /data-zt694-acao="agendar-abrir"/);
-  assert.match(html, /if\(acao==='agendar-abrir'\|\|acao==='agendar-esc'\|\|acao==='agendar-salvar'\|\|acao==='agendar-desfazer'\)/);
+  assert.match(html, /if\(acao==='agendar-abrir'\|\|acao==='agendar-dia'\|\|acao==='agendar-hoje'\|\|acao==='agendar-esc'\|\|acao==='agendar-salvar'\|\|acao==='agendar-desfazer'\)/);
   assert.match(html, /if\(v\.agendado&&v\.agendado\.para>c\.dia\)return\{respostaSalva:true,/);
   assert.match(html, /<div data-zt694-agendados><\/div>\s*<div data-zt694-snoopy-list>/);
   assert.match(html, /agendado:function\(dc,itemK,d\)\{var ZA=root\.ZelozinhaAgenda;return !!\(ZA&&ZA\.bloqueiaMensagem\(dc,itemK,d\)\);\}/);
