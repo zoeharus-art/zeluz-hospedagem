@@ -867,9 +867,9 @@ prova('a fábrica do check-in recebe a porta que lança o plano, e a auditoria s
   assert.ok(script('zelozinha-simples').includes("FINAIS={'na-fila':1,'ja-estava-na-fila':1,humano:1,'resolvido-antes':1};"), 'plano-sem-linha NÃO é final: a fila se completa sozinha e tenta de novo');
 });
 
-prova('versão 2026-11-05-03 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
-  assert.match(html, /const APP_VERSAO='2026-11-05-03';/);
-  assert.equal(html.split('2026-11-05-03').length - 1, 12);
+prova('versão 2026-11-06-01 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
+  assert.match(html, /const APP_VERSAO='2026-11-06-01';/);
+  assert.equal(html.split('2026-11-06-01').length - 1, 12);
   assert.ok(!/2026-11-05-01|2026-11-05-02/.test(html), 'nenhum ?v= ficou na versão antiga');
 });
 
