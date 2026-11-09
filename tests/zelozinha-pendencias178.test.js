@@ -947,15 +947,23 @@ prova('os cuidados pagos são marcados na ficha › aba Plano (plano_cuidados) e
   const ip = html.indexOf('  async function pcSalvar('), pc = html.slice(ip, html.indexOf('\n  }\n', ip)); assert.ok(pc.length > 100, 'a página tem pcSalvar'); assert.ok(pc.includes("patch['plano_cuidados/'+per.inicio]") && pc.includes('renovPodeDesfazer()') && pc.includes('setPelExtra('), 'grava pela porta da ficha, com a régua do Confirmar do plano');
 });
 
+prova('o bloco «Cuidados pagos» usa o desenho da ficha: caixa creme com faixa dourada e as doses na barra dourada, sem caixinha nem −/+', () => {
+  const i = html.indexOf('  function planoCuidadosHTML('), b = html.slice(i, html.indexOf('\n  }\n', i));
+  assert.ok(b.includes('border-left:4px solid var(--z-gold)') && b.includes('background:var(--z-cream-warm)'), 'mesma caixa do «Começou no meio do mês?»');
+  assert.ok(b.includes('class="seg gold" data-single') && b.includes('class="field"') && b.includes('class="cad-grid"'), 'campo com rótulo e barra dourada, como o «Nº do peludinho»');
+  assert.ok(b.includes("'Não pagou'") && b.includes('onclick="pcPor('), '«Não pagou» é o zero e cada número grava no rascunho');
+  assert.ok(!b.includes('type="checkbox"') && !b.includes('pcDoses(') && !html.includes('function pcMarcar('), 'sem caixinha de marcar e sem −/+');
+});
+
 prova('a fábrica do check-in recebe a porta que lança o plano, e a auditoria sabe contar a história do plano', () => {
   const f = funcaoDaPagina('fabricaPonte'); assert.ok(f.includes('lancarPlano:'), 'fabricaPonte entrega lancarPlano');
   assert.ok(f.includes("'plano-sem-linha'"), 'a auditoria diz quando a linha do plano não entrou');
   assert.ok(script('zelozinha-simples').includes("FINAIS={'na-fila':1,'ja-estava-na-fila':1,humano:1,'resolvido-antes':1};"), 'plano-sem-linha NÃO é final: a fila se completa sozinha e tenta de novo');
 });
 
-prova('versão 2026-11-09-01 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
-  assert.match(html, /const APP_VERSAO='2026-11-09-01';/);
-  assert.equal(html.split('2026-11-09-01').length - 1, 12);
+prova('versão 2026-11-09-02 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
+  assert.match(html, /const APP_VERSAO='2026-11-09-02';/);
+  assert.equal(html.split('2026-11-09-02').length - 1, 12);
   assert.ok(!/2026-11-05-01|2026-11-05-02/.test(html), 'nenhum ?v= ficou na versão antiga');
 });
 
