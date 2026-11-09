@@ -166,8 +166,8 @@ prova('a página: a ponte usa a fila simples, o controle antigo saiu e a versão
   assert.match(html, /data-zs-estado/); assert.match(html, /data-zs-faixa/); assert.match(html, /data-zs-pausa/);
   assert.match(html, /window\.ZelozinhaSimples\.statusDoCiclo\(c,cy\)/);
   assert.match(html, /window\.ZelozinhaSimples\.ligar\(DB,diaAtual\(\)\)/);
-  assert.match(html, /const APP_VERSAO='2026-11-06-02';/);
-  assert.equal(html.split('2026-11-06-02').length - 1, 12);
+  assert.match(html, /const APP_VERSAO='2026-11-09-01';/);
+  assert.equal(html.split('2026-11-09-01').length - 1, 12);
 });
 
 /* ---------- o serviço da VPS ---------- */
@@ -181,7 +181,7 @@ prova('configuração: lê o arquivo que já existe na VPS e acusa o que falta',
   assert.equal(N.PADRAO.esperaIrmaosMs, 10 * 60000); assert.equal(CFG.cfg.esperaIrmaosMs, 10 * 60000);
   const ajustada = N.lerConfig({ banco: { firebaseUrl: 'https://banco-ficticio.invalid', serviceUid: 'uid-ficticio' }, automatico: { evolution: { baseUrl: 'https://canal-ficticio.invalid', apiKey: 'valor-ficticio', instanceName: 'instancia' } }, simples: { esperaIrmaosMs: 120000 } });
   assert.equal(ajustada.cfg.esperaIrmaosMs, 120000);
-  assert.equal(N.VERSAO, 'simples-4', 'o aviso do plano (05/11/2026) muda o comportamento do serviço: versão nova');
+  assert.equal(N.VERSAO, 'simples-5', 'os cuidados pagos no plano (09/11/2026) mudam o comportamento do serviço: versão nova');
 });
 
 prova('horário: segunda a sexta, das 7h às 13h de São Paulo', () => {

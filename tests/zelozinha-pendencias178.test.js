@@ -82,24 +82,24 @@ const cuid = (...ks) => ks.map((itemK) => ({ itemK }));
 prova('aviso do plano: um FILHOt, o texto aprovado (muda só o artigo e os nomes)', () => {
   const m = AP.gerarAvisoPlano({ nomeTutor: 'Dora', peludos: [{ nome: 'Mingau', sexo: 'M', cuidados: cuid('vac_mult_p') }] });
   assert.equal(m.ok, true);
-  assert.equal(m.texto, 'Oi, Dora, tudo bem? Hoje o Mingau recebe aqui a vacina múltipla, já combinada no acerto do mês. Qualquer novidade, a gente conta. 💛');
+  assert.equal(m.texto, 'Oi, Dora, tudo bem? Hoje o Mingau recebe aqui a vacina múltipla, conforme fechado no plano. Qualquer novidade, a gente conta. 💛');
   assert.equal(AP.gerarAvisoPlano({ nomeTutor: 'Dora', peludos: [{ nome: 'Nina', sexo: 'F', cuidados: cuid('verm_p') }] }).texto,
-    'Oi, Dora, tudo bem? Hoje a Nina recebe aqui o vermífugo, já combinado no acerto do mês. Qualquer novidade, a gente conta. 💛');
-  assert.match(AP.gerarAvisoPlano({ nomeTutor: 'Dora', peludos: [{ nome: 'Luna', cuidados: cuid('ecto_p') }] }).texto, /Hoje Luna recebe aqui a proteção contra pulgas e carrapatos, já combinada/);
+    'Oi, Dora, tudo bem? Hoje a Nina recebe aqui o vermífugo, conforme fechado no plano. Qualquer novidade, a gente conta. 💛');
+  assert.match(AP.gerarAvisoPlano({ nomeTutor: 'Dora', peludos: [{ nome: 'Luna', cuidados: cuid('ecto_p') }] }).texto, /Hoje Luna recebe aqui a proteção contra pulgas e carrapatos, conforme fechado no plano\./);
 });
 
-prova('aviso do plano: vários cuidados concordam («combinados»/«combinadas») e saem sempre na mesma ordem', () => {
+prova('aviso do plano: vários cuidados saem sempre na mesma ordem, com «conforme fechado no plano» (09/11/2026)', () => {
   const a = AP.gerarAvisoPlano({ nomeTutor: 'Dora', peludos: [{ nome: 'Mingau', sexo: 'M', cuidados: cuid('verm_p', 'vac_mult_p') }] });
-  assert.match(a.texto, /recebe aqui a vacina múltipla e o vermífugo, já combinados no acerto do mês\./);
+  assert.match(a.texto, /recebe aqui a vacina múltipla e o vermífugo, conforme fechado no plano\./);
   const b = AP.gerarAvisoPlano({ nomeTutor: 'Dora', peludos: [{ nome: 'Mingau', sexo: 'M', cuidados: cuid('col_p', 'ecto_p', 'vac_mult_p') }] });
-  assert.match(b.texto, /a vacina múltipla, a proteção contra pulgas e carrapatos e a coleira repelente, já combinadas no acerto/);
+  assert.match(b.texto, /a vacina múltipla, a proteção contra pulgas e carrapatos e a coleira repelente, conforme fechado no plano\./);
 });
 
 prova('aviso do plano: irmãos do mesmo tutor recebem um aviso só', () => {
   const igual = AP.gerarAvisoPlano({ nomeTutor: 'Helena', peludos: [{ nome: 'Tico', sexo: 'M', cuidados: cuid('vac_mult_p') }, { nome: 'Teca', sexo: 'F', cuidados: cuid('vac_mult_p') }] });
-  assert.equal(igual.texto, 'Oi, Helena, tudo bem? Hoje o Tico e a Teca recebem aqui a vacina múltipla, já combinada no acerto do mês. Qualquer novidade, a gente conta. 💛');
+  assert.equal(igual.texto, 'Oi, Helena, tudo bem? Hoje o Tico e a Teca recebem aqui a vacina múltipla, conforme fechado no plano. Qualquer novidade, a gente conta. 💛');
   const dif = AP.gerarAvisoPlano({ nomeTutor: 'Helena', peludos: [{ nome: 'Tico', sexo: 'M', cuidados: cuid('vac_mult_p') }, { nome: 'Teca', sexo: 'F', cuidados: cuid('verm_p') }] });
-  assert.equal(dif.texto, 'Oi, Helena, tudo bem? Hoje o Tico recebe aqui a vacina múltipla e a Teca recebe aqui o vermífugo, já combinados no acerto do mês. Qualquer novidade, a gente conta. 💛');
+  assert.equal(dif.texto, 'Oi, Helena, tudo bem? Hoje o Tico recebe aqui a vacina múltipla e a Teca recebe aqui o vermífugo, conforme fechado no plano. Qualquer novidade, a gente conta. 💛');
   assert.equal((igual.texto.match(/Oi, /g) || []).length, 1, 'uma mensagem só');
 });
 
@@ -118,14 +118,42 @@ prova('o texto da mensagem do dia (mensagem-unica41) NÃO mudou: nenhuma letra',
   assert.equal(m.texto, 'Bom dia, Dora! Como você está? 💛\n\nO Mingau está com a gente hoje e temos um cuidado para deixar em dia:\n🐾 O vermífugo *vence hoje*.\n\nPodemos cuidar disso hoje, enquanto ele aproveita o dia na Zêluz? Assim, vocês resolvem tudo em uma só visita, sem precisar encaixar outro compromisso na rotina — e sobra mais tempo para curtirem juntos. 💛');
 });
 
-prova('a cópia do app é idêntica à do serviço e o serviço está na versão simples-4', () => {
+prova('a cópia do app é idêntica à do serviço e o serviço está na versão simples-5', () => {
   assert.equal(script('aviso-plano').replace(/\s+$/, ''), fs.readFileSync(path.resolve(__dirname, '../zelozinha/simples/aviso-plano.js'), 'utf8').replace(/\s+$/, ''));
-  assert.equal(N.VERSAO, 'simples-4', 'o aviso do plano muda o comportamento do serviço: versão nova');
+  assert.equal(N.VERSAO, 'simples-5', 'os cuidados pagos no plano (doses e segunda mensagem) mudam o serviço: versão nova');
+});
+
+prova('cuidados pagos no plano (09/11/2026): vale dentro do período, só o que foi pago, e cada dose uma vez; o check-in repetido no dia não gasta de novo', () => {
+  const ficha = { plano_cuidados: { '2026-11-01': { fim: '2026-11-30', itens: { verm_p: 2, ecto_p: 1, escova_p: 3, col_p: 9 } } } };
+  assert.equal(AP.cobre(ficha, '2026-11-02', 'verm_p'), true);
+  assert.equal(AP.cobre(ficha, '2026-11-02', 'verm_dose2_p'), true, 'a 2ª dose do vermífugo gasta do vermífugo');
+  assert.equal(AP.cobre(ficha, '2026-11-02', 'vac_mult_p'), false, 'não pago: pergunta normal');
+  assert.equal(AP.cobre(ficha, '2026-11-02', 'col_p'), false, 'quantidade fora de 1 a 6 não vale');
+  assert.equal(AP.cobre(ficha, '2026-12-01', 'verm_p'), false, 'fora do período: pergunta normal');
+  assert.equal(AP.cobre(ficha, '2026-10-31', 'verm_p'), false, 'antes do período: pergunta normal');
+  let usos = AP.gastar(ficha, '2026-11-02', ['verm_p', 'ecto_p', 'vac_mult_p'], null);
+  assert.deepEqual(json(usos), { verm_p: { '2026-11-02': true }, ecto_p: { '2026-11-02': true } });
+  assert.deepEqual(json(AP.gastar(ficha, '2026-11-02', ['verm_p', 'ecto_p'], usos)), json(usos), 'o mesmo dia não gasta de novo');
+  ficha.plano_usos = usos;
+  assert.equal(AP.cobre(ficha, '2026-11-02', 'ecto_p'), true, 'a dose de hoje já gasta continua valendo hoje');
+  assert.equal(AP.cobre(ficha, '2026-11-09', 'ecto_p'), false, 'a única dose acabou: volta a pergunta');
+  usos = AP.gastar(ficha, '2026-11-09', ['verm_p', 'ecto_p'], usos); ficha.plano_usos = usos;
+  assert.deepEqual(json(Object.keys(usos.verm_p)), ['2026-11-02', '2026-11-09']); assert.deepEqual(json(Object.keys(usos.ecto_p)), ['2026-11-02']);
+  assert.equal(AP.cobre(ficha, '2026-11-16', 'verm_p'), false, 'as duas doses do vermífugo acabaram');
+  assert.equal(AP.doseDoDia(ficha, '2026-11-09', 'verm_p'), true); assert.equal(AP.doseDoDia(ficha, '2026-11-09', 'ecto_p'), false);
+  /* renovação: o plano novo começa outro período, e a dose do plano anterior não conta nele */
+  ficha.plano_cuidados['2026-12-01'] = { fim: '2027-02-28', itens: { verm_p: 1 } };
+  assert.equal(AP.planoDoDia(ficha, '2026-12-07').inicio, '2026-12-01'); assert.equal(AP.cobre(ficha, '2026-12-07', 'verm_p'), true);
+  assert.equal(AP.saldo(ficha, AP.planoDoDia(ficha, '2026-12-07'), 'verm_p', '2026-12-07').antes, 0);
 });
 
 /* ---- o serviço ---- */
 const SEG = '2026-11-02', QUI = '2026-11-05', TEL = '(00) 90000-0000', NUM = '5500900000000';
 const cad = (extra) => Object.assign({ tutor: TUTOR, tel: TEL, n: 'Filhot' }, extra || {});
+/* a ficha com os cuidados pagos no plano e a dose do dia já gasta (o check-in grava plano_usos antes de pôr o aviso na fila) */
+const PLANO = { '2026-11-01': { fim: '2026-11-30', itens: { verm_p: 2, vac_mult_p: 1 } } };
+const cadP = (extra, dia) => cad(Object.assign({ plano_cuidados: PLANO, plano_usos: { verm_p: { [dia || SEG]: true }, vac_mult_p: { [dia || SEG]: true } } }, extra || {}));
+const CONF = { gerar: MU.gerarMensagem, gerarPlano: AP.gerarAvisoPlano, doseDoDia: AP.doseDoDia };
 const itemPlano = (nome, pelKey, itens, extra) => Object.assign({ v: 1, estado: 'pronto', tipo: 'plano', dia: SEG, dcKey: N.dcKeyDoPelKey(pelKey), pelKey, nome, sexo: 'F', tutor: TUTOR, para: NUM, itens, criadoEm: 1,
   texto: AP.gerarAvisoPlano({ nomeTutor: TUTOR, dia: SEG, peludos: [{ nome, sexo: 'F', cuidados: itens }] }).texto }, extra || {});
 const checkin = { tipo: 'entrada', quem: 'pessoa', fim: Date.parse(SEG + 'T09:00:00-03:00') };
@@ -133,33 +161,36 @@ const checkin = { tipo: 'entrada', quem: 'pessoa', fim: Date.parse(SEG + 'T09:00
 prova('serviço: o aviso do plano só sai com o texto do aviso, remontado pelo serviço; o texto da pergunta num item de plano é recusado', () => {
   const pk = 'luna__' + TUTOR.toLowerCase();
   const it = itemPlano('Luna', pk, cuid('verm_p'));
-  const ok = N.conferirItem({ item: it, cadastro: cad({ n: 'Luna', cuidadosNoPlano: true }), checkin, gerar: MU.gerarMensagem, gerarPlano: AP.gerarAvisoPlano });
+  const ok = N.conferirItem({ item: it, cadastro: cadP({ n: 'Luna' }), checkin, ...CONF });
   assert.equal(ok.ok, true, ok.motivo);
   const pergunta = MU.gerarMensagem({ nomeTutor: TUTOR, nomePeludo: 'Luna', sexo: 'F', dia: SEG, presencaConfirmada: true, cuidados: [{ itemK: 'verm_p', vence: SEG }], veterinariaConfirmada: false }).texto;
-  assert.equal(N.conferirItem({ item: Object.assign({}, it, { texto: pergunta }), cadastro: cad({ n: 'Luna', cuidadosNoPlano: true }), checkin, gerar: MU.gerarMensagem, gerarPlano: AP.gerarAvisoPlano }).ok, false);
-  assert.equal(N.conferirItem({ item: Object.assign({}, it, { texto: it.texto + ' Pague agora.' }), cadastro: cad({ n: 'Luna', cuidadosNoPlano: true }), checkin, gerar: MU.gerarMensagem, gerarPlano: AP.gerarAvisoPlano }).ok, false);
-  assert.equal(N.conferirItem({ item: it, cadastro: cad({ n: 'Luna', cuidadosNoPlano: true }), checkin, gerar: MU.gerarMensagem }).ok, false, 'sem o gerador do aviso, nada sai');
-  assert.equal(N.conferirItem({ item: Object.assign({}, it, { tipo: undefined }), cadastro: cad({ n: 'Luna', cuidadosNoPlano: true }), checkin, gerar: MU.gerarMensagem, gerarPlano: AP.gerarAvisoPlano }).ok, false, 'item sem a marca do plano é conferido como pergunta e não fecha');
+  assert.equal(N.conferirItem({ item: Object.assign({}, it, { texto: pergunta }), cadastro: cadP({ n: 'Luna' }), checkin, ...CONF }).ok, false);
+  assert.equal(N.conferirItem({ item: Object.assign({}, it, { texto: it.texto + ' Pague agora.' }), cadastro: cadP({ n: 'Luna' }), checkin, ...CONF }).ok, false);
+  assert.equal(N.conferirItem({ item: it, cadastro: cadP({ n: 'Luna' }), checkin, gerar: MU.gerarMensagem, doseDoDia: AP.doseDoDia }).ok, false, 'sem o gerador do aviso, nada sai');
+  assert.equal(N.conferirItem({ item: Object.assign({}, it, { tipo: undefined }), cadastro: cadP({ n: 'Luna' }), checkin, ...CONF }).ok, false, 'item sem a marca do plano é conferido como pergunta e não fecha');
 });
 
-prova('serviço: o aviso do plano só sai se a FICHA tem o plano (o serviço não confia na fila): ficha sem a marca recusa, com a marca passa', () => {
+prova('serviço: o aviso do plano só sai se a FICHA tem o cuidado pago no plano que vale hoje, com a dose de hoje gasta (o serviço não confia na fila)', () => {
   const pk = 'luna__' + TUTOR.toLowerCase(), it = itemPlano('Luna', pk, cuid('verm_p'));
-  const conf = (cadastro) => N.conferirItem({ item: it, cadastro, checkin, gerar: MU.gerarMensagem, gerarPlano: AP.gerarAvisoPlano });
-  assert.equal(conf(cad({ n: 'Luna', cuidadosNoPlano: true })).ok, true);
-  [cad({ n: 'Luna' }), cad({ n: 'Luna', cuidadosNoPlano: false }), cad({ n: 'Luna', cuidadosNoPlano: 'true' })].forEach((c) => {
-    const r = conf(c); assert.equal(r.ok, false); assert.equal(r.motivo, 'A ficha não tem o plano com cuidados incluídos; nada foi enviado.');
+  const conf = (cadastro) => N.conferirItem({ item: it, cadastro, checkin, ...CONF });
+  assert.equal(conf(cadP({ n: 'Luna' })).ok, true);
+  [cad({ n: 'Luna' }), cad({ n: 'Luna', cuidadosNoPlano: true }), cadP({ n: 'Luna' }, '2026-11-03'),
+    cad({ n: 'Luna', plano_cuidados: { '2026-10-01': { fim: '2026-10-31', itens: { verm_p: 2 } } }, plano_usos: { verm_p: { [SEG]: true } } }),
+    cad({ n: 'Luna', plano_cuidados: { '2026-11-01': { fim: '2026-11-30', itens: { ecto_p: 2 } } }, plano_usos: { verm_p: { [SEG]: true } } })].forEach((c) => {
+    const r = conf(c); assert.equal(r.ok, false); assert.equal(r.motivo, 'A ficha não tem este cuidado pago no plano, com a dose de hoje; nada foi enviado.');
   });
-  /* o caso contrário não é recusado: ficha com a marca e item comum segue como pergunta (não engana o tutor) */
+  assert.equal(N.conferirItem({ item: it, cadastro: cadP({ n: 'Luna' }), checkin, gerar: MU.gerarMensagem, gerarPlano: AP.gerarAvisoPlano }).ok, false, 'sem a conferência da dose, nada sai');
+  /* o caso contrário não é recusado: ficha com plano e item comum segue como pergunta (não engana o tutor) */
   const pergunta = MU.gerarMensagem({ nomeTutor: TUTOR, nomePeludo: 'Luna', sexo: 'F', dia: SEG, presencaConfirmada: true, cuidados: [{ itemK: 'verm_p', vence: SEG }], veterinariaConfirmada: false }).texto;
   const comum = Object.assign({}, it, { texto: pergunta, itens: [{ itemK: 'verm_p', vence: SEG }] }); delete comum.tipo;
-  assert.equal(N.conferirItem({ item: comum, cadastro: cad({ n: 'Luna', cuidadosNoPlano: true }), checkin, gerar: MU.gerarMensagem, gerarPlano: AP.gerarAvisoPlano }).ok, true);
+  assert.equal(N.conferirItem({ item: comum, cadastro: cadP({ n: 'Luna' }), checkin, ...CONF }).ok, true);
 });
 
 prova('serviço: irmão sem a marca do plano não entra no aviso conjunto (cada um é conferido antes) e fica «Não enviada»', async () => {
   const pk1 = 'tico__' + TUTOR.toLowerCase(), pk2 = 'teca__' + TUTOR.toLowerCase();
   const a = itemPlano('Tico', pk1, cuid('verm_p'), { sexo: 'M' }), b = itemPlano('Teca', pk2, cuid('verm_p'), { criadoEm: 2 });
   a.texto = AP.gerarAvisoPlano({ nomeTutor: TUTOR, dia: SEG, peludos: [{ nome: 'Tico', sexo: 'M', cuidados: a.itens }] }).texto;
-  const db = bancoFalso({ daycare: { 'zelozinha-fila': { [SEG]: { [a.dcKey]: a, [b.dcKey]: b } }, cadastro: { [pk1]: cad({ n: 'Tico', cuidadosNoPlano: true }), [pk2]: cad({ n: 'Teca' }) },
+  const db = bancoFalso({ daycare: { 'zelozinha-fila': { [SEG]: { [a.dcKey]: a, [b.dcKey]: b } }, cadastro: { [pk1]: cadP({ n: 'Tico' }), [pk2]: cad({ n: 'Teca', cuidadosNoPlano: true }) },
     'checkin-corpo': { [SEG]: { [a.dcKey]: checkin, [b.dcKey]: checkin } } } });
   const enviados = [];
   const evo = { numero: async () => ({ ok: true, jid: NUM + '@s.whatsapp.net' }), enviar: async (jid, texto) => { enviados.push(texto); return { status: 201, corpo: { key: { id: 'X' + enviados.length, remoteJid: jid } } }; }, estado: async () => 'open' };
@@ -167,7 +198,7 @@ prova('serviço: irmão sem a marca do plano não entra no aviso conjunto (cada 
   await sv.trocarDia(SEG); await sv.passo();
   assert.equal(enviados.length, 1); assert.match(enviados[0], /Hoje o Tico recebe aqui o vermífugo/); assert.ok(!/Teca/.test(enviados[0]), 'o irmão sem o plano não aparece no aviso');
   const f = db.ler('daycare/zelozinha-fila/' + SEG);
-  assert.equal(f[a.dcKey].estado, 'enviado'); assert.equal(f[b.dcKey].estado, 'falhou'); assert.match(f[b.dcKey].motivo, /não tem o plano/);
+  assert.equal(f[a.dcKey].estado, 'enviado'); assert.equal(f[b.dcKey].estado, 'falhou'); assert.match(f[b.dcKey].motivo, /não tem este cuidado pago no plano/);
 });
 
 prova('serviço: o aviso do plano só se junta a outro aviso do plano (irmãos); pergunta e aviso nunca saem na mesma mensagem', () => {
@@ -178,11 +209,14 @@ prova('serviço: o aviso do plano só se junta a outro aviso do plano (irmãos);
   assert.deepEqual(N.irmaos(f, c).map((x) => x.dcKey), [], 'a pergunta não leva o aviso do plano junto');
 });
 
-prova('serviço de ponta a ponta: aviso do plano sai uma vez, devagar; irmãos do plano saem juntos num aviso só', async () => {
+prova('serviço de ponta a ponta: aviso do plano (na chave {dcKey}~plano) sai uma vez, devagar; irmãos do plano saem juntos num aviso só; a pergunta do mesmo FILHOt sai na sua mensagem', async () => {
   const pk1 = 'tico__' + TUTOR.toLowerCase(), pk2 = 'teca__' + TUTOR.toLowerCase();
   const a = itemPlano('Tico', pk1, cuid('verm_p'), { sexo: 'M' }), b = itemPlano('Teca', pk2, cuid('verm_p'), { criadoEm: 2 });
   a.texto = AP.gerarAvisoPlano({ nomeTutor: TUTOR, dia: SEG, peludos: [{ nome: 'Tico', sexo: 'M', cuidados: a.itens }] }).texto;
-  const db = bancoFalso({ daycare: { 'zelozinha-fila': { [SEG]: { [a.dcKey]: a, [b.dcKey]: b } }, cadastro: { [pk1]: cad({ n: 'Tico', cuidadosNoPlano: true }), [pk2]: cad({ n: 'Teca', cuidadosNoPlano: true }) },
+  const pergunta = MU.gerarMensagem({ nomeTutor: TUTOR, nomePeludo: 'Tico', sexo: 'M', dia: SEG, presencaConfirmada: true, cuidados: [{ itemK: 'ecto_p', vence: SEG }], veterinariaConfirmada: false }).texto;
+  const q = Object.assign({}, a, { texto: pergunta, itens: [{ itemK: 'ecto_p', vence: SEG }], criadoEm: 3 }); delete q.tipo;
+  const ka = a.dcKey + N.SUFIXO_PLANO, kb = b.dcKey + N.SUFIXO_PLANO;
+  const db = bancoFalso({ daycare: { 'zelozinha-fila': { [SEG]: { [ka]: a, [kb]: b, [a.dcKey]: q } }, cadastro: { [pk1]: cadP({ n: 'Tico' }), [pk2]: cadP({ n: 'Teca' }) },
     'checkin-corpo': { [SEG]: { [a.dcKey]: checkin, [b.dcKey]: checkin } } } });
   const enviados = [];
   const evo = { numero: async () => ({ ok: true, jid: NUM + '@s.whatsapp.net' }), enviar: async (jid, texto) => { enviados.push(texto); return { status: 201, corpo: { key: { id: 'X' + enviados.length, remoteJid: jid } } }; }, estado: async () => 'open' };
@@ -191,17 +225,30 @@ prova('serviço de ponta a ponta: aviso do plano sai uma vez, devagar; irmãos d
   await sv.trocarDia(SEG);
   assert.equal(await sv.passo(), 'enviado');
   assert.equal(enviados.length, 1, 'uma mensagem só para os dois irmãos');
-  assert.match(enviados[0], /^Oi, Tutora Fictícia, tudo bem\? Hoje o Tico e a Teca recebem aqui o vermífugo, já combinado no acerto do mês\./);
+  assert.match(enviados[0], /^Oi, Tutora Fictícia, tudo bem\? Hoje o Tico e a Teca recebem aqui o vermífugo, conforme fechado no plano\./);
   assert.ok(!/Bom dia/.test(enviados[0]), 'não é a mensagem da pergunta');
-  const f = db.ler('daycare/zelozinha-fila/' + SEG);
-  assert.equal(f[a.dcKey].estado, 'enviado'); assert.equal(f[b.dcKey].estado, 'enviado');
-  assert.deepEqual(f[a.dcKey].junto.sort(), [a.dcKey, b.dcKey].sort()); assert.equal(f[a.dcKey].textoEnviado, enviados[0]);
+  let f = db.ler('daycare/zelozinha-fila/' + SEG);
+  assert.equal(f[ka].estado, 'enviado'); assert.equal(f[kb].estado, 'enviado'); assert.equal(f[a.dcKey].estado, 'pronto', 'a pergunta não foi junto');
+  assert.deepEqual(f[ka].junto.sort(), [a.dcKey, b.dcKey].sort()); assert.equal(f[ka].textoEnviado, enviados[0]);
+  t += 8 * 60000; assert.equal(await sv.passo(), 'enviado');
+  assert.equal(enviados.length, 2); assert.match(enviados[1], /^Bom dia, /, 'a pergunta do que não foi pago sai na sua mensagem');
+  f = db.ler('daycare/zelozinha-fila/' + SEG); assert.equal(f[a.dcKey].estado, 'enviado');
+});
+
+prova('serviço: só vale a chave do item (a pergunta na dcKey; o aviso na dcKey ou na dcKey~plano); a pergunta numa chave ~plano não sai', () => {
+  const it = itemPlano('Luna', 'luna__t', cuid('verm_p')), q = Object.assign({}, it); delete q.tipo;
+  const T0 = Date.parse(SEG + 'T10:00:00-03:00');
+  assert.equal(N.escolherProximo({ [it.dcKey + '~plano']: it }, T0).chave, it.dcKey + '~plano');
+  assert.equal(N.escolherProximo({ [it.dcKey]: it }, T0).chave, it.dcKey, 'o aviso antigo, na dcKey, ainda sai');
+  assert.equal(N.escolherProximo({ [it.dcKey + '~plano']: q }, T0), null);
+  assert.equal(N.escolherProximo({ 'outra__t~plano': it }, T0), null);
+  assert.deepEqual(json(N.abandonados({ [it.dcKey + '~plano']: Object.assign({}, it, { estado: 'enviando' }) }).map((x) => x.chave)), [it.dcKey + '~plano']);
 });
 
 prova('serviço: um aviso do plano com texto adulterado na fila não sai (fica «Não enviada»)', async () => {
   const pk = 'luna__' + TUTOR.toLowerCase(), it = itemPlano('Luna', pk, cuid('verm_p'));
   it.texto = 'Oi, Tutora Fictícia! Pague a conta de R$ 100 agora.';
-  const db = bancoFalso({ daycare: { 'zelozinha-fila': { [SEG]: { [it.dcKey]: it } }, cadastro: { [pk]: cad({ n: 'Luna', cuidadosNoPlano: true }) }, 'checkin-corpo': { [SEG]: { [it.dcKey]: checkin } } } });
+  const db = bancoFalso({ daycare: { 'zelozinha-fila': { [SEG]: { [it.dcKey]: it } }, cadastro: { [pk]: cadP({ n: 'Luna' }) }, 'checkin-corpo': { [SEG]: { [it.dcKey]: checkin } } } });
   const enviados = [];
   const evo = { numero: async () => ({ ok: true, jid: NUM + '@s.whatsapp.net' }), enviar: async (jid, t) => { enviados.push(t); return { status: 201, corpo: { key: { id: 'X', remoteJid: jid } } }; }, estado: async () => 'open' };
   const sv = criarServico({ db, evo, cfg: N.PADRAO, agora: () => Date.parse(SEG + 'T10:00:00-03:00'), aleatorio: () => 0, log: () => {} });
@@ -212,43 +259,76 @@ prova('serviço: um aviso do plano com texto adulterado na fila não sai (fica �
 
 /* ================= B. o check-in: o aviso do plano nasce no lugar da pergunta ================= */
 const pecaFicha = { dcKey: 'luna__' + TUTOR.toLowerCase(), pelKey: 'luna__' + TUTOR.toLowerCase(), nome: 'Luna', tutor: TUTOR, sexo: 'F' };
-prova('ZelozinhaSimples.montar com plano: item do tipo plano, texto do aviso, mesmas regras de vacina (só com a veterinária no dia, nunca na quinta)', () => {
-  const ctx = novoContexto(), ZS = ctx.ZelozinhaSimples;
-  const m = ZS.montar({ dia: SEG, ficha: pecaFicha, cadastro: cad(), plano: true, veterinariaConfirmada: true, prevencoes: [{ itemK: 'vac_mult_p', vence: SEG }, { itemK: 'verm_p', vence: '2026-11-01' }, { itemK: 'escova_p', vence: SEG }] });
-  assert.equal(m.ok, true, m.motivo);
-  assert.equal(m.item.tipo, 'plano'); assert.equal(m.item.estado, 'pronto'); assert.equal(m.item.para, NUM);
+prova('ZelozinhaSimples.montar com o que o plano cobre: o pago vai no aviso ({dcKey}~plano), o resto na pergunta; mesmas regras de vacina (só com a veterinária no dia, nunca na quinta)', () => {
+  const ctx = novoContexto(), ZS = ctx.ZelozinhaSimples, todos = { vac_mult_p: true, verm_p: true };
+  const m = ZS.montar({ dia: SEG, ficha: pecaFicha, cadastro: cad(), plano: todos, veterinariaConfirmada: true, prevencoes: [{ itemK: 'vac_mult_p', vence: SEG }, { itemK: 'verm_p', vence: '2026-11-01' }, { itemK: 'escova_p', vence: SEG }] });
+  assert.equal(m.ok, true, m.motivo); assert.equal(m.itens.length, 1, 'tudo pago: só o aviso, sem pergunta');
+  assert.equal(m.item.tipo, 'plano'); assert.equal(m.item.estado, 'pronto'); assert.equal(m.item.para, NUM); assert.equal(ZS.chaveDe(m.item), pecaFicha.dcKey + '~plano');
   assert.deepEqual(json(m.item.itens.map((x) => x.itemK)), ['verm_p', 'vac_mult_p'].sort());
   assert.equal(m.item.texto, AP.gerarAvisoPlano({ nomeTutor: TUTOR, dia: SEG, peludos: [{ nome: 'Luna', sexo: 'F', cuidados: cuid('vac_mult_p', 'verm_p') }] }).texto);
-  const quinta = ZS.montar({ dia: QUI, ficha: pecaFicha, cadastro: cad(), plano: true, veterinariaConfirmada: true, prevencoes: [{ itemK: 'vac_mult_p', vence: QUI }, { itemK: 'verm_p', vence: QUI }] });
+  const misto = ZS.montar({ dia: SEG, ficha: pecaFicha, cadastro: cad(), plano: { verm_p: true }, veterinariaConfirmada: true, prevencoes: [{ itemK: 'vac_mult_p', vence: SEG }, { itemK: 'verm_p', vence: SEG }] });
+  assert.equal(misto.itens.length, 2, 'pago e não pago no mesmo dia: duas mensagens');
+  assert.equal(misto.itens[0].tipo, undefined); assert.match(misto.itens[0].texto, /^Bom dia, /); assert.deepEqual(json(misto.itens[0].itens.map((x) => x.itemK)), ['vac_mult_p']);
+  assert.equal(ZS.chaveDe(misto.itens[0]), pecaFicha.dcKey);
+  assert.equal(misto.itens[1].tipo, 'plano'); assert.match(misto.itens[1].texto, /Hoje a Luna recebe aqui o vermífugo, conforme fechado no plano\./);
+  const quinta = ZS.montar({ dia: QUI, ficha: pecaFicha, cadastro: cad(), plano: todos, veterinariaConfirmada: true, prevencoes: [{ itemK: 'vac_mult_p', vence: QUI }, { itemK: 'verm_p', vence: QUI }] });
   assert.deepEqual(json(quinta.item.itens.map((x) => x.itemK)), ['verm_p'], 'quinta: só o vermífugo');
-  const so = ZS.montar({ dia: QUI, ficha: pecaFicha, cadastro: cad(), plano: true, veterinariaConfirmada: true, prevencoes: [{ itemK: 'vac_mult_p', vence: QUI }] });
+  const so = ZS.montar({ dia: QUI, ficha: pecaFicha, cadastro: cad(), plano: todos, veterinariaConfirmada: true, prevencoes: [{ itemK: 'vac_mult_p', vence: QUI }] });
   assert.equal(so.ok, false); assert.equal(so.vazio, true, 'só a vacina e a veterinária não vem: nenhum aviso, nada sai');
-  const humano = ZS.montar({ dia: SEG, ficha: pecaFicha, cadastro: cad({ comunicacaoZelozinha: { modo: 'humano' } }), plano: true, prevencoes: [{ itemK: 'verm_p', vence: SEG }] });
+  const humano = ZS.montar({ dia: SEG, ficha: pecaFicha, cadastro: cad({ comunicacaoZelozinha: { modo: 'humano' } }), plano: todos, prevencoes: [{ itemK: 'verm_p', vence: SEG }] });
   assert.equal(humano.ok, false); assert.equal(humano.humano, true);
   const normal = ZS.montar({ dia: SEG, ficha: pecaFicha, cadastro: cad(), prevencoes: [{ itemK: 'verm_p', vence: SEG }] });
   assert.equal(normal.item.tipo, undefined, 'sem o plano, a pergunta de sempre'); assert.match(normal.item.texto, /^Bom dia, /);
+  assert.equal(ZS.montar({ dia: SEG, ficha: pecaFicha, cadastro: cad(), plano: true, prevencoes: [{ itemK: 'verm_p', vence: SEG }] }).item.tipo, undefined, 'a chave antiga (plano: true) não vale mais');
 });
 
-function fabrica(ctx, cadastro, extra) {
+function fabrica(ctx, cadastro, extra, prevs) {
   const ZS = ctx.ZelozinhaSimples, db = bancoFalso({ daycare: { cadastro: { [pecaFicha.pelKey]: cadastro } } });
   const p = { n: 'Luna', tutor: TUTOR, sexo: 'F' }, portas = { peludinhos: () => [p], dcKey: () => pecaFicha.dcKey, pelNome: (x) => x.n };
   const lancadas = [];
-  const snapshot = () => ({ ok: true, ficha: { dcKey: pecaFicha.dcKey, pelKey: pecaFicha.pelKey, base: { n: 'Luna', tutor: TUTOR } }, prevencoes: [{ itemK: 'verm_p', dueDate: SEG, care: 'vermifugo' }] });
+  const snapshot = () => ({ ok: true, ficha: { dcKey: pecaFicha.dcKey, pelKey: pecaFicha.pelKey, base: { n: 'Luna', tutor: TUTOR } }, prevencoes: prevs || [{ itemK: 'verm_p', dueDate: SEG, care: 'vermifugo' }] });
   const f = ZS.criarFabrica(Object.assign({ db: () => db, hoje: () => SEG, snapshot, veterinaria: async () => false, lancarPlano: async (x) => { lancadas.push(x); return { ok: true }; } }, extra || {}));
   const recibo = { dia: SEG, dcKey: pecaFicha.dcKey, nome: 'Luna', tutor: TUTOR };
   return { f, db, recibo, portas, lancadas };
 }
-prova('o check-in de ficha com o plano ligado põe o AVISO na fila (sem pergunta) e pede a linha do Lançamento do dia', async () => {
-  const ctx = novoContexto(), { f, db, recibo, portas, lancadas } = fabrica(ctx, cad({ cuidadosNoPlano: true }));
+prova('o check-in de ficha com o vermífugo pago no plano gasta a dose, põe o AVISO na fila ({dcKey}~plano, sem pergunta) e pede a linha do Lançamento do dia', async () => {
+  const ctx = novoContexto(), { f, db, recibo, portas, lancadas } = fabrica(ctx, cad({ plano_cuidados: { '2026-11-01': { fim: '2026-11-30', itens: { verm_p: 2 } } } }));
   assert.equal((await f.receber(recibo, portas, { monId: 'pessoa' })).status, 'na-fila');
-  const it = db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey);
-  assert.equal(it.tipo, 'plano'); assert.match(it.texto, /^Oi, Tutora Fictícia, tudo bem\? Hoje a Luna recebe aqui o vermífugo, já combinado no acerto do mês\./);
-  assert.ok(!/Bom dia|Podemos cuidar/.test(it.texto), 'nenhuma pergunta');
+  const it = db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey + '~plano');
+  assert.equal(it.tipo, 'plano'); assert.match(it.texto, /^Oi, Tutora Fictícia, tudo bem\? Hoje a Luna recebe aqui o vermífugo, conforme fechado no plano\./);
+  assert.ok(!/Bom dia|Podemos cuidar/.test(it.texto), 'nenhuma pergunta'); assert.equal(db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey), null, 'nenhuma pergunta na fila');
+  assert.deepEqual(json(db.ler('daycare/cadastro/' + pecaFicha.pelKey + '/plano_usos')), { verm_p: { [SEG]: true } }, 'a dose do dia foi gasta na ficha');
   assert.equal(lancadas.length, 1); assert.equal(lancadas[0].dia, SEG); assert.equal(lancadas[0].dcKey, pecaFicha.dcKey);
   assert.deepEqual(json(lancadas[0].itens.map((x) => x.itemK)), ['verm_p']);
   assert.equal((await f.receber(recibo, portas, { monId: 'pessoa' })).status, 'ja-estava-na-fila');
+  assert.deepEqual(json(db.ler('daycare/cadastro/' + pecaFicha.pelKey + '/plano_usos')), { verm_p: { [SEG]: true } }, 'o check-in repetido no dia não gasta outra dose');
   assert.equal(lancadas.length, 2, 'a linha é pedida de novo (gravar é «só se não existir»): se a primeira falhou, esta refaz');
-  assert.equal(db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey + '/texto'), it.texto, 'o item da fila não é sobrescrito');
+  assert.equal(db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey + '~plano/texto'), it.texto, 'o item da fila não é sobrescrito');
+});
+
+prova('check-in com um cuidado pago e outro não: o aviso e a pergunta, cada um na sua chave; doses acabadas voltam para a pergunta', async () => {
+  const prevs = [{ itemK: 'verm_p', dueDate: SEG }, { itemK: 'ecto_p', dueDate: SEG }];
+  const { f, db, recibo, portas, lancadas } = fabrica(novoContexto(), cad({ plano_cuidados: { '2026-11-01': { fim: '2026-11-30', itens: { verm_p: 2 } } } }), null, prevs);
+  assert.equal((await f.receber(recibo, portas, {})).status, 'na-fila');
+  const q = db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey), a = db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey + '~plano');
+  assert.match(q.texto, /^Bom dia, /); assert.deepEqual(json(q.itens.map((x) => x.itemK)), ['ecto_p']);
+  assert.equal(a.tipo, 'plano'); assert.deepEqual(json(a.itens.map((x) => x.itemK)), ['verm_p']); assert.deepEqual(json(lancadas[0].itens.map((x) => x.itemK)), ['verm_p']);
+  /* as duas doses já foram gastas em outros dias do plano: pergunta normal, nenhuma dose a mais */
+  const usado = cad({ plano_cuidados: { '2026-11-01': { fim: '2026-11-30', itens: { verm_p: 2 } } }, plano_usos: { verm_p: { '2026-11-01': true, '2026-11-03': true } } });
+  const acabou = fabrica(novoContexto(), usado);
+  await acabou.f.receber(acabou.recibo, acabou.portas, {});
+  assert.match(acabou.db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey + '/texto'), /^Bom dia, /);
+  assert.equal(acabou.db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey + '~plano'), null);
+  assert.equal(acabou.lancadas.length, 0);
+  assert.deepEqual(json(acabou.db.ler('daycare/cadastro/' + pecaFicha.pelKey + '/plano_usos')), { verm_p: { '2026-11-01': true, '2026-11-03': true } }, 'nenhuma dose a mais');
+});
+
+prova('check-in: se a dose do plano não puder ser gravada na ficha, nada vai para a fila (nem pergunta a quem pagou) e a fila tenta de novo', async () => {
+  const { f, db, recibo, portas } = fabrica(novoContexto(), cad({ plano_cuidados: { '2026-11-01': { fim: '2026-11-30', itens: { verm_p: 2 } } } }));
+  const ref = db.ref; db.ref = (p, ...x) => { const r = ref.call(db, p, ...x); if (/plano_usos$/.test(p)) r.transaction = async () => { throw Error('sem conexão'); }; return r; };
+  const r = await f.receber(recibo, portas, {});
+  assert.equal(r.ok, false); assert.equal(r.status, 'pendente-fila'); assert.match(r.motivo, /doses do plano/);
+  assert.equal(db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey), null); assert.equal(db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey + '~plano'), null);
 });
 
 prova('sem o plano, o check-in segue como sempre (pergunta) e nenhuma linha de plano nasce', async () => {
@@ -256,16 +336,16 @@ prova('sem o plano, o check-in segue como sempre (pergunta) e nenhuma linha de p
   assert.equal((await f.receber(recibo, portas, {})).status, 'na-fila');
   const it = db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey);
   assert.equal(it.tipo, undefined); assert.match(it.texto, /^Bom dia, /); assert.equal(lancadas.length, 0);
-  const desligado = fabrica(novoContexto(), cad({ cuidadosNoPlano: false }));
+  const desligado = fabrica(novoContexto(), cad({ cuidadosNoPlano: true }));
   await desligado.f.receber(desligado.recibo, desligado.portas, {});
   assert.match(desligado.db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey + '/texto'), /^Bom dia, /);
 });
 
 prova('plano: se a linha do Lançamento do dia não entrar, o aviso continua na fila e o check-in diz o que faltou', async () => {
-  const ctx = novoContexto(), { f, db, recibo, portas } = fabrica(ctx, cad({ cuidadosNoPlano: true }), { lancarPlano: async () => ({ ok: false }) });
+  const ctx = novoContexto(), { f, db, recibo, portas } = fabrica(ctx, cad({ plano_cuidados: { '2026-11-01': { fim: '2026-11-30', itens: { verm_p: 2 } } } }), { lancarPlano: async () => ({ ok: false }) });
   const r = await f.receber(recibo, portas, {});
   assert.equal(r.status, 'plano-sem-linha', 'não é um final: a fila se completa sozinha e tenta a linha de novo'); assert.equal(r.ok, true); assert.match(r.motivo || '', /Lançamento do dia/);
-  assert.equal(db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey + '/estado'), 'pronto');
+  assert.equal(db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey + '~plano/estado'), 'pronto');
 });
 
 /* ============== C. «Sem finalização»: a lista, a máquina de estados, a gravação e a tela ============== */
@@ -279,7 +359,7 @@ function filaDeExemplo() {
       'biscoito__tutora-d': rg('2026-11-03', 'biscoito__tutora-d', 'Biscoito', 'Tutora D', [{ itemK: 'ecto_p', vence: '2026-11-03' }]) },
     '2026-11-04': { 'farofa__tutora-e': rg('2026-11-04', 'farofa__tutora-e', 'Farofa', 'Tutora E', [{ itemK: 'vac_mult_p', vence: '2026-11-04' }], { junto: ['farofa__tutora-e', 'pacoca__tutora-e'], textoEnviado: 'Texto dos irmãos' }),
       'pacoca__tutora-e': rg('2026-11-04', 'pacoca__tutora-e', 'Paçoca', 'Tutora E', [{ itemK: 'vac_mult_p', vence: '2026-11-04' }], { junto: ['farofa__tutora-e', 'pacoca__tutora-e'], textoEnviado: 'Texto dos irmãos' }),
-      'luna__tutora-f': rg('2026-11-04', 'luna__tutora-f', 'Luna', 'Tutora F', [{ itemK: 'verm_p', vence: '2026-11-04' }], { tipo: 'plano' }) },
+      'luna__tutora-f~plano': rg('2026-11-04', 'luna__tutora-f', 'Luna', 'Tutora F', [{ itemK: 'verm_p', vence: '2026-11-04' }], { tipo: 'plano' }) },
     '2026-11-05': { 'rex__tutor-g': rg('2026-11-05', 'rex__tutor-g', 'Rex', 'Tutor G', [{ itemK: 'verm_p', vence: HOJE }], { estado: 'pronto' }),
       'mel__tutora-h': rg('2026-11-05', 'mel__tutora-h', 'Mel', 'Tutora H', [{ itemK: 'verm_p', vence: HOJE }], { enviadoEm: EM(HOJE, '08:15') }) }
   };
@@ -692,13 +772,16 @@ prova('o bloco do horário no cartão da família: salvo mostra «alarme na TV �
   ui.horaAberta[ref] = true; assert.match(P.horaBlocoHTML({ ref, hora: '16:30' }, ui), /value="16:30"[\s\S]*cancelar/);
 });
 
-prova('a tela do plano: lista as fichas com o plano ligado, o botão de ligar, os irmãos e o texto aprovado', () => {
+prova('a tela do plano (09/11/2026): só conferência, sem chave; validade, doses usadas, quem falta marcar na ficha, irmãos e o texto aprovado', () => {
   const P = modulo(), ui = P.novoUI();
-  const h = P.planoHTML({ fichas: [{ dc: 'tico__h', pet: 'Tico', raca: 'Beagle', tutor: 'Helena', irmaos: ['Teca'] }], busca: [], hoje: [{ pet: 'Tico', cuidados: 'Vacina múltipla', estado: 'ENVIADA 10:03' }], texto: 'Oi, Dora, tudo bem? Hoje o Mingau recebe aqui a vacina múltipla, já combinada no acerto do mês. Qualquer novidade, a gente conta. 💛' }, ui);
-  assert.match(h, /Famílias com o plano ligado \(1\)/); assert.match(h, /role="switch" aria-checked="true"[^>]*data-z178-ligar="0"/); assert.match(h, /um aviso só/); assert.match(h, /ENVIADA 10:03/); assert.match(h, /Hoje o Mingau recebe aqui a vacina múltipla/);
-  ui.busca = 'lu'; const b = P.planoHTML({ fichas: [], busca: [{ dc: 'luna__d', pet: 'Luna', raca: 'Poodle', tutor: 'Dora' }] }, ui);
-  assert.match(b, /data-z178-a="plano-sw" data-z178-dc="luna__d" data-z178-ligar="1">Luna\/Poodle · Dora/);
-  assert.match(P.planoHTML({}, P.novoUI()), /Nenhuma ficha com o plano ligado/);
+  const h = P.planoHTML({ fichas: [{ dc: 'tico__h', pet: 'Tico', raca: 'Beagle', tutor: 'Helena', irmaos: ['Teca'], ate: '30/11/2026', linhas: [{ nome: 'Vermífugo', texto: '1 de 2 doses usadas', acabou: false }, { nome: 'Coleira repelente', texto: '1 de 1 dose usada', acabou: true }] }],
+    falta: [{ dc: 'luna__d', pet: 'Luna', raca: 'Poodle', tutor: 'Dora' }], hoje: [{ pet: 'Tico', cuidados: 'Vermífugo', estado: 'ENVIADA 10:03' }], texto: 'Oi, Dora, tudo bem? Hoje o Mingau recebe aqui o vermífugo, conforme fechado no plano. Qualquer novidade, a gente conta. 💛' }, ui);
+  assert.match(h, /Famílias com cuidados pagos \(1\)/); assert.match(h, /plano até 30\/11\/2026/); assert.match(h, /Vermífugo<\/strong> · 1 de 2 doses usadas/);
+  assert.match(h, /1 de 1 dose usada <span class="z178-chip sem">acabou: volta a pergunta/); assert.match(h, /Falta marcar na ficha \(1\)/); assert.match(h, /Luna/);
+  assert.match(h, /um aviso só/); assert.match(h, /ENVIADA 10:03/); assert.match(h, /conforme fechado no plano/); assert.match(h, /aba Plano › «Cuidados pagos junto com o plano»/);
+  assert.ok(!/role="switch"|plano-sw|data-z178-ligar/.test(h), 'a chave de ligar saiu');
+  assert.match(P.planoHTML({}, P.novoUI()), /Nenhuma ficha com cuidados pagos no plano que vale hoje/);
+  assert.ok(!/Falta marcar/.test(P.planoHTML({}, P.novoUI())));
 });
 
 prova('a ligação com a página (sem navegador de verdade): o toque no botão chama a camada de gravação e repinta; o erro aparece no cartão', async () => {
@@ -790,7 +873,7 @@ prova('a página carrega o aviso do plano e o módulo novo, na ordem certa, e li
   assert.ok(pos('aviso-plano') < pos('zelozinha-simples'), 'o aviso vem antes de quem o usa');
   assert.ok(pos('zelozinha-simples') < pos('zelozinha-pendencias178') && pos('zelozinha-pendencias178') < pos('zelozinha-contatos89-ui') && pos('zelozinha-painel116-controller') < pos('zelozinha-pendencias178-ligacao'));
   const lig = script('zelozinha-pendencias178-ligacao');
-  ['gravarLinha', 'removerLinha', 'marcarLinha', 'agendar', 'desfazerAgenda', 'marcarAgenda', 'respostaAntiga', 'aindaVence', 'precisaDe', 'filaHoje', 'salvarHora', 'editarHora', 'espelhar', 'planoView', 'planoLigar', 'lerLinha', 'redesenharLinha'].forEach((n) => assert.ok(lig.includes(n + ':') || lig.includes('function ' + n + '('), 'a ligação entrega ' + n));
+  ['gravarLinha', 'removerLinha', 'marcarLinha', 'agendar', 'desfazerAgenda', 'marcarAgenda', 'respostaAntiga', 'aindaVence', 'precisaDe', 'filaHoje', 'salvarHora', 'editarHora', 'espelhar', 'planoView', 'lerLinha', 'redesenharLinha'].forEach((n) => assert.ok(lig.includes(n + ':') || lig.includes('function ' + n + '('), 'a ligação entrega ' + n));
   assert.ok(!/\b(alert|confirm|prompt)\(/.test(lig), 'sem alert/confirm/prompt novos'); assert.ok(!/\b(cão|cães|cachorro|baia|soltar|solto)\b/i.test(lig), 'vocabulário da casa');
 });
 
@@ -855,10 +938,13 @@ prova('cartões da Zelozinha: a vacina que foi para o Lançamento do dia pede o 
   assert.match(html, /document\.addEventListener\('z178:hora',function\(ev\)/);
 });
 
-prova('a ficha ganha o campo do plano (cuidadosNoPlano) e o check-in lê dele: o campo é marcado na tela «Plano com cuidados incluídos»', () => {
-  const lig = script('zelozinha-pendencias178-ligacao');
-  assert.ok(lig.includes("cuidadosNoPlano") && lig.includes('setPelExtra'), 'liga e desliga pela porta da ficha (setPelExtra), com a permissão de quem edita ficha');
-  assert.ok(script('zelozinha-simples').includes('cuidadosNoPlano===true'), 'o check-in decide pelo campo da ficha');
+prova('os cuidados pagos são marcados na ficha › aba Plano (plano_cuidados) e o check-in lê deles, com a dose gasta numa transação; a chave antiga não decide mais', () => {
+  const lig = script('zelozinha-pendencias178-ligacao'), zs = script('zelozinha-simples');
+  assert.ok(!/setPelExtra\(p,\{cuidadosNoPlano/.test(lig), 'a aba da Zelozinha não liga mais nada na ficha');
+  assert.ok(!zs.includes('cuidadosNoPlano===true'), 'o check-in não decide mais pela chave antiga');
+  assert.ok(zs.includes("db.ref('daycare/cadastro/'+pelKey+'/plano_usos').transaction("), 'a dose do dia é gasta numa transação na ficha');
+  assert.ok(html.includes('+planoCuidadosHTML(ex,p)'), 'o bloco fica na aba Plano da ficha');
+  const ip = html.indexOf('  async function pcSalvar('), pc = html.slice(ip, html.indexOf('\n  }\n', ip)); assert.ok(pc.length > 100, 'a página tem pcSalvar'); assert.ok(pc.includes("patch['plano_cuidados/'+per.inicio]") && pc.includes('renovPodeDesfazer()') && pc.includes('setPelExtra('), 'grava pela porta da ficha, com a régua do Confirmar do plano');
 });
 
 prova('a fábrica do check-in recebe a porta que lança o plano, e a auditoria sabe contar a história do plano', () => {
@@ -867,9 +953,9 @@ prova('a fábrica do check-in recebe a porta que lança o plano, e a auditoria s
   assert.ok(script('zelozinha-simples').includes("FINAIS={'na-fila':1,'ja-estava-na-fila':1,humano:1,'resolvido-antes':1};"), 'plano-sem-linha NÃO é final: a fila se completa sozinha e tenta de novo');
 });
 
-prova('versão 2026-11-06-02 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
-  assert.match(html, /const APP_VERSAO='2026-11-06-02';/);
-  assert.equal(html.split('2026-11-06-02').length - 1, 12);
+prova('versão 2026-11-09-01 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
+  assert.match(html, /const APP_VERSAO='2026-11-09-01';/);
+  assert.equal(html.split('2026-11-09-01').length - 1, 12);
   assert.ok(!/2026-11-05-01|2026-11-05-02/.test(html), 'nenhum ?v= ficou na versão antiga');
 });
 
@@ -929,7 +1015,8 @@ function ligacaoContexto(extra, inicial) {
   const pets = [
     { n: 'Luna', tutor: 'Tutora F', raca: 'Poodle' }, { n: 'Tico', tutor: 'Helena', raca: 'Beagle' }, { n: 'Teca', tutor: 'Helena', raca: 'Beagle' }, { n: 'Mingau', tutor: 'Dora', raca: 'Yorkshire' }, { n: 'Mel', tutor: 'Dora', raca: 'SRD' }
   ];
-  const cad = { 'tico__helena': { cuidadosNoPlano: true, raca: 'Beagle', tutor: 'Helena' }, 'teca__helena': { cuidadosNoPlano: true, raca: 'Beagle', tutor: 'Helena' } };
+  const PL = { '2026-11-01': { fim: '2026-11-30', itens: { verm_p: 2, col_p: 1 } } };
+  const cad = { 'tico__helena': { plano_cuidados: PL, plano_usos: { verm_p: { '2026-11-02': true }, col_p: { '2026-11-02': true } }, raca: 'Beagle', tutor: 'Helena' }, 'teca__helena': { plano_cuidados: PL, raca: 'Beagle', tutor: 'Helena' }, 'luna__tutora f': { cuidadosNoPlano: true, raca: 'Poodle', tutor: 'Tutora F' } };
   const jsNorm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
   Object.assign(ctx, {
     DB: db, CARTEIRA_CARREGADA: true, PELUDINHOS: pets, pelCadCache: cad, jsNorm,
@@ -1031,20 +1118,15 @@ prova('o que a tela lê do app: resposta já registrada no cartão, ficha em dia
   assert.equal(T.portas.raca('luna__tutora-f'), 'Poodle'); assert.deepEqual(json(T.portas.pet('luna__tutora-f')), { base: 'Luna/Poodle', chave: 'luna__tutora-f' }); assert.equal(T.portas.pet('ninguem__t'), null);
 });
 
-prova('o plano: lista as fichas ligadas (irmãos juntos), busca por nome, e liga/desliga pelo campo da ficha, pela porta da ficha', async () => {
-  const { ctx, chamadas, T } = ligacaoContexto();
-  const v = T.planoView('');
-  assert.deepEqual(json(v.fichas.map((f) => [f.pet, f.irmaos])), [['Teca', ['Tico']], ['Tico', ['Teca']]]); assert.deepEqual(json(v.busca), []);
-  assert.match(v.texto, /^Oi, Dora, tudo bem\? Hoje o Mingau recebe aqui a vacina múltipla, já combinada no acerto do mês\./);
-  assert.deepEqual(json(T.planoView('lu').busca.map((f) => f.pet)), ['Luna']); assert.deepEqual(json(T.planoView('tic').busca), [], 'quem já está ligado não aparece na busca');
-  const liga = await T.planoLigar('luna__tutora-f', true);
-  assert.deepEqual(json(liga), { ok: true }); assert.deepEqual(json(chamadas.ficha), ['luna__tutora f', { cuidadosNoPlano: true }], 'só o campo do plano, mais nada na ficha');
-  assert.deepEqual(json(T.planoView('').fichas.map((f) => f.pet)), ['Luna', 'Teca', 'Tico']);
-  assert.deepEqual(json(await T.planoLigar('tico__helena', false)), { ok: true }); assert.deepEqual(json(chamadas.ficha), ['tico__helena', { cuidadosNoPlano: false }]);
-  assert.deepEqual(json(T.planoView('').fichas.map((f) => f.pet)), ['Luna', 'Teca']);
-  const barrada = ligacaoContexto({ setPelExtra: async () => ({ ok: false }) });
-  const r = await barrada.T.planoLigar('luna__tutora-f', true); assert.equal(r.ok, false); assert.match(r.erro, /Só a recepção, a Supervisão e a Gestão ligam o plano/);
-  assert.equal((await T.planoLigar('ninguem__t', true)).ok, false);
+prova('o plano: lista quem tem cuidados pagos no plano de hoje (validade, doses usadas, irmãos juntos) e quem tinha a chave antiga e falta marcar na ficha', () => {
+  const { T } = ligacaoContexto();
+  const v = T.planoView();
+  assert.deepEqual(json(v.fichas.map((f) => [f.pet, f.irmaos, f.ate])), [['Teca', ['Tico'], '30/11/2026'], ['Tico', ['Teca'], '30/11/2026']]);
+  assert.deepEqual(json(v.fichas[1].linhas), [{ nome: 'Vermífugo', texto: '1 de 2 doses usadas', acabou: false }, { nome: 'Coleira repelente', texto: '1 de 1 dose usada', acabou: true }]);
+  assert.deepEqual(json(v.fichas[0].linhas.map((l) => l.texto)), ['0 de 2 doses usadas', '0 de 1 dose usada']);
+  assert.deepEqual(json(v.falta.map((f) => f.pet)), ['Luna']);
+  assert.match(v.texto, /^Oi, Dora, tudo bem\? Hoje o Mingau recebe aqui o vermífugo, conforme fechado no plano\./);
+  assert.equal(T.planoLigar, undefined, 'não há mais ligar e desligar');
 });
 
 prova('lançar o plano pela ponte do check-in: uma linha por cuidado, no Lançamento do dia de hoje', async () => {
