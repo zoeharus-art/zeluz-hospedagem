@@ -49,7 +49,7 @@ function criarServico(op) {
     /* quem ficou «enviando» num reinício vai para Conferir: nunca reenviar sozinho */
     const tudo = (await ref.once('value')).val() || {};
     for (const it of N.abandonados(tudo)) {
-      await mudar(dia, it.dcKey, 'enviando', { estado: 'conferir', motivo: 'O serviço reiniciou durante o envio; veja no WhatsApp da Zêluz se a mensagem saiu.' });
+      await mudar(dia, it.chave, 'enviando', { estado: 'conferir', motivo: 'O serviço reiniciou durante o envio; veja no WhatsApp da Zêluz se a mensagem saiu.' });
     }
   }
   function mudar(dia, dc, de, campos) {
@@ -75,28 +75,29 @@ function criarServico(op) {
   }
   /* reserva o item (pronto -> enviando) e confere com o banco; devolve o item conferido ou o estado em que ele ficou */
   async function prepararItem(dia, it) {
-    const dc = it.dcKey;
-    if (!(await mudar(dia, dc, 'pronto', { estado: 'enviando', tentativaEm: agora() }))) return 'disputado';
+    const dc = it.dcKey, ch = it.chave || dc;   /* o aviso do plano pode morar em {dcKey}~plano */
+    if (!(await mudar(dia, ch, 'pronto', { estado: 'enviando', tentativaEm: agora() }))) return 'disputado';
     const ler = (c) => db.ref(c).once('value').then((s) => s.val());
     const [saida, checkin, cadastro] = await Promise.all([ler(`daycare/checkout-corpo/${dia}/${dc}`), ler(`daycare/checkin-corpo/${dia}/${dc}`), ler(`daycare/cadastro/${it.pelKey}`)]);
-    if (N.saidaConfirmada(saida)) { await mudar(dia, dc, 'enviando', { estado: 'cancelado', motivo: 'Saiu antes do envio.' }); return 'cancelado'; }
+    if (N.saidaConfirmada(saida)) { await mudar(dia, ch, 'enviando', { estado: 'cancelado', motivo: 'Saiu antes do envio.' }); return 'cancelado'; }
     /* não confia na fila: só sai o texto aprovado, para o tutor principal da ficha, de quem tem check-in hoje */
-    const conf = N.conferirItem({ item: it, cadastro, checkin, gerar: Mensagem.gerarMensagem, gerarPlano: AvisoPlano.gerarAvisoPlano });
-    if (!conf.ok) { await mudar(dia, dc, 'enviando', { estado: 'falhou', motivo: conf.motivo }); log('recusado', 'item não confere com o banco'); return 'recusado'; }
+    const conf = N.conferirItem({ item: it, cadastro, checkin, gerar: Mensagem.gerarMensagem, gerarPlano: AvisoPlano.gerarAvisoPlano, doseDoDia: AvisoPlano.doseDoDia });
+    if (!conf.ok) { await mudar(dia, ch, 'enviando', { estado: 'falhou', motivo: conf.motivo }); log('recusado', 'item não confere com o banco'); return 'recusado'; }
     return { it, tutor: N.responsavel(cadastro, it.tutor).nome };
   }
   async function enviarItem(dia, it) {
-    const dc = it.dcKey;
+    const ch = it.chave || it.dcKey;
     const principal = await prepararItem(dia, it);
     if (typeof principal === 'string') return principal;
     /* irmãos do mesmo tutor (mesmo telefone) que estão na fila saem juntos, na vez do primeiro; cada um é conferido */
     const grupo = [principal];
     for (const x of N.irmaos(est.fila, it)) { const p = await prepararItem(dia, x); if (typeof p !== 'string') grupo.push(p); }
-    const devolver = (lista) => Promise.all(lista.map((g) => mudar(dia, g.it.dcKey, 'enviando', { estado: 'pronto' })));
+    const chaveDe = (g) => g.it.chave || g.it.dcKey;
+    const devolver = (lista) => Promise.all(lista.map((g) => mudar(dia, chaveDe(g), 'enviando', { estado: 'pronto' })));
     let numero;
     try { numero = await evo.numero(it.para); } catch (e) {
       const tentativas = (Number(it.tentativasNumero) || 0) + 1;
-      await mudar(dia, dc, 'enviando', tentativas >= TENTATIVAS_NUMERO
+      await mudar(dia, ch, 'enviando', tentativas >= TENTATIVAS_NUMERO
         ? { estado: 'falhou', motivo: 'Não consegui confirmar o número no WhatsApp.', tentativasNumero: tentativas }
         : { estado: 'pronto', tentativasNumero: tentativas });
       await devolver(grupo.slice(1));
@@ -104,7 +105,7 @@ function criarServico(op) {
       log('numero', e.message);   // sem nome de FILHOt nem de tutor no registro
       return 'numero-depois';
     }
-    if (!numero.ok) { await Promise.all(grupo.map((g) => mudar(dia, g.it.dcKey, 'enviando', { estado: 'falhou', motivo: numero.motivo }))); return 'falhou'; }
+    if (!numero.ok) { await Promise.all(grupo.map((g) => mudar(dia, chaveDe(g), 'enviando', { estado: 'falhou', motivo: numero.motivo }))); return 'falhou'; }
     let texto = it.texto, juntos = grupo;
     if (grupo.length > 1 && it.tipo === 'plano') {
       /* irmãos do plano recebem um aviso só (05/11/2026) */
@@ -120,7 +121,7 @@ function criarServico(op) {
     }
     const r = N.interpretarEnvio(await evo.enviar(numero.jid, texto, N.digitandoMs(aleatorio(), cfg)), numero.jid);
     const t = agora(), extra = juntos.length > 1 ? { textoEnviado: texto, junto: juntos.map((g) => g.it.dcKey) } : {};
-    await Promise.all(juntos.map((g) => mudar(dia, g.it.dcKey, 'enviando', Object.assign(r.estado === 'enviado' ? { estado: 'enviado', enviadoEm: t, msgId: r.msgId, motivo: null } : { estado: r.estado, motivo: r.motivo }, extra))));
+    await Promise.all(juntos.map((g) => mudar(dia, chaveDe(g), 'enviando', Object.assign(r.estado === 'enviado' ? { estado: 'enviado', enviadoEm: t, msgId: r.msgId, motivo: null } : { estado: r.estado, motivo: r.motivo }, extra))));
     est.proximoEm = t + N.proximoIntervalo(aleatorio(), cfg);
     await db.ref(N.SAUDE).update({ ultimoEnvioEm: t, proximoEm: est.proximoEm });
     log('envio', r.estado + (juntos.length > 1 ? ` (${juntos.length} irmãos numa mensagem)` : ''));

@@ -1,12 +1,15 @@
 'use strict';
 /* Zelozinha simples — as decisões do serviço, sem rede e sem banco (por isso testáveis).
    A fila nasce no app (daycare/zelozinha-fila/{dia}/{dcKey}); o serviço só manda devagar e marca:
-   pronto -> enviando -> enviado | conferir | falhou | cancelado. */
+   pronto -> enviando -> enviado | conferir | falhou | cancelado.
+   O aviso do plano mora na chave {dcKey}~plano (09/11/2026): no mesmo dia, o FILHOt pode ter o aviso do que foi pago
+   e a pergunta do que não foi, e cada um sai na sua mensagem. */
 
 const FILA = 'daycare/zelozinha-fila';
 const SAUDE = 'daycare/zelozinha-saude/vps';
 const CONTROLE = 'daycare/zelozinha-controle/estado';
-const VERSAO = 'simples-4';
+const VERSAO = 'simples-5';
+const SUFIXO_PLANO = '~plano';
 const JID = /^\d{6,20}@s\.whatsapp\.net$/;
 
 const PADRAO = Object.freeze({
@@ -67,12 +70,18 @@ function jaEsperou(it, agora, cfg = PADRAO) {
   return !naJanela(agora + espera, cfg);
 }
 
+/* o item só vale na chave dele: a pergunta na dcKey; o aviso do plano na dcKey ou na dcKey~plano. Devolve o item com a chave. */
+function itensNaChave(fila) {
+  return Object.keys(objeto(fila) ? fila : {}).filter((k) => objeto(fila[k]) && texto(fila[k].dcKey)
+    && (texto(fila[k].dcKey) === k || (fila[k].tipo === 'plano' && texto(fila[k].dcKey) + SUFIXO_PLANO === k)))
+    .map((k) => Object.assign({}, fila[k], { chave: k }));
+}
+
 /* O próximo da fila: o «pronto» que entrou primeiro e já esperou. Item sem texto ou sem telefone não sai. */
 function escolherProximo(fila, agora = Date.now(), cfg = PADRAO) {
-  /* o item só vale na chave dele: dcKey de dentro = chave da fila */
-  const prontos = Object.keys(objeto(fila) ? fila : {}).filter((k) => objeto(fila[k]) && texto(fila[k].dcKey) === k).map((k) => fila[k])
+  const prontos = itensNaChave(fila)
     .filter((it) => it.estado === 'pronto' && texto(it.texto) && /^55\d{10,11}$/.test(texto(it.para)) && jaEsperou(it, agora, cfg));
-  prontos.sort((a, b) => (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0) || (a.dcKey < b.dcKey ? -1 : 1));
+  prontos.sort((a, b) => (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0) || (a.chave < b.chave ? -1 : 1));
   return prontos[0] || null;
 }
 
@@ -81,16 +90,17 @@ function escolherProximo(fila, agora = Date.now(), cfg = PADRAO) {
 const IRMAOS_MAX = 5;
 function irmaos(fila, principal) {
   if (!objeto(principal)) return [];
-  return Object.keys(objeto(fila) ? fila : {}).filter((k) => k !== principal.dcKey && objeto(fila[k]) && texto(fila[k].dcKey) === k).map((k) => fila[k])
+  const chave = texto(principal.chave) || texto(principal.dcKey);
+  return itensNaChave(fila).filter((it) => it.chave !== chave && it.dcKey !== principal.dcKey)
     .filter((it) => it.estado === 'pronto' && it.dia === principal.dia && texto(it.texto) && texto(it.para) === texto(principal.para)
       && (it.tipo === 'plano') === (principal.tipo === 'plano'))   /* o aviso do plano só sai junto com outro aviso do plano */
-    .sort((a, b) => (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0) || (a.dcKey < b.dcKey ? -1 : 1))
+    .sort((a, b) => (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0) || (a.chave < b.chave ? -1 : 1))
     .slice(0, IRMAOS_MAX - 1);
 }
 
 /* Quem ficou «enviando» quando o serviço caiu nunca é reenviado sozinho: vai para Conferir. */
 function abandonados(fila) {
-  return Object.keys(objeto(fila) ? fila : {}).map((k) => fila[k]).filter((it) => objeto(it) && it.estado === 'enviando');
+  return Object.keys(objeto(fila) ? fila : {}).filter((k) => objeto(fila[k]) && fila[k].estado === 'enviando').map((k) => Object.assign({}, fila[k], { chave: k }));
 }
 
 /* A saída do dia (checkout do corpo) confirmada cancela o envio que ainda não saiu. */
@@ -138,7 +148,7 @@ function responsavel(cad, nomeLegado) {
 /* O serviço não confia no que veio da fila: antes de enviar, confere com o banco que o FILHOt tem
    check-in hoje, que o telefone é o do tutor principal da ficha e que o texto é exatamente o texto
    aprovado (MensagemUnica41) para aqueles cuidados. Qualquer diferença: nada sai. */
-function conferirItem({ item, cadastro, checkin, gerar, gerarPlano }) {
+function conferirItem({ item, cadastro, checkin, gerar, gerarPlano, doseDoDia }) {
   const recusa = (motivo) => ({ ok: false, motivo });
   if (!texto(item.pelKey) || dcKeyDoPelKey(item.pelKey) !== texto(item.dcKey)) return recusa('A ficha não corresponde ao FILHOt da fila; nada foi enviado.');
   if (!entradaConfirmada(checkin)) return recusa('Não achei o check-in de hoje deste FILHOt; nada foi enviado.');
@@ -153,8 +163,9 @@ function conferirItem({ item, cadastro, checkin, gerar, gerarPlano }) {
   const itens = Array.isArray(item.itens) ? item.itens : [];
   /* aviso do plano com cuidados incluídos (05/11/2026): o texto é o do aviso, remontado aqui; nunca o da pergunta */
   if (item.tipo === 'plano') {
-    /* não confia na fila: quem decide é a ficha lida do banco (a marca vale só com true) */
-    if (cadastro.cuidadosNoPlano !== true) return recusa('A ficha não tem o plano com cuidados incluídos; nada foi enviado.');
+    /* não confia na fila: cada cuidado tem de estar pago no plano que vale hoje, com a dose de hoje gasta na ficha (09/11/2026) */
+    if (!itens.length || typeof doseDoDia !== 'function' || !itens.every((x) => doseDoDia(cadastro, texto(item.dia), texto(x && x.itemK))))
+      return recusa('A ficha não tem este cuidado pago no plano, com a dose de hoje; nada foi enviado.');
     const a = typeof gerarPlano === 'function' ? gerarPlano({ nomeTutor: r.nome, dia: texto(item.dia), peludos: [{ nome, sexo, cuidados: itens.map((x) => ({ itemK: texto(x && x.itemK) })) }] }) : null;
     if (!a || a.ok !== true || a.texto !== texto(item.texto)) return recusa('O texto não confere com o aviso aprovado para esta ficha; nada foi enviado.');
     return { ok: true };
@@ -188,5 +199,5 @@ function interpretarEnvio(r, jid) {
   return { estado: 'conferir', motivo: `O WhatsApp respondeu com erro (código ${r.status}); a mensagem pode ter saído.` };
 }
 
-module.exports = { FILA, SAUDE, CONTROLE, VERSAO, PADRAO, lerConfig, partesSP, diaSP, naJanela, proximoIntervalo, digitandoMs,
+module.exports = { FILA, SAUDE, CONTROLE, VERSAO, SUFIXO_PLANO, PADRAO, itensNaChave, lerConfig, partesSP, diaSP, naJanela, proximoIntervalo, digitandoMs,
   escolherProximo, jaEsperou, irmaos, abandonados, saidaConfirmada, entradaConfirmada, dcKeyDoPelKey, telefone, responsavel, conferirItem, interpretarNumero, interpretarEnvio };
