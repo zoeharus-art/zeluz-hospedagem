@@ -58,7 +58,7 @@ const TEL_UM = '5500900000001', TEL_DOIS = '5500900000002';
 function filhot(nome, tutor, para, itens, criadoEm, sexo) {
   const pelKey = nome.toLowerCase() + '__' + tutor.toLowerCase(), dcKey = N.dcKeyDoPelKey(pelKey);
   const it = { v: 1, dia: SEG, dcKey, pelKey, nome, sexo: sexo || '', tutor, para, itens, estado: 'pronto', criadoEm };
-  it.texto = MU.gerarMensagem({ nomeTutor: N.primeiroNome(tutor), nomePeludo: nome, sexo: sexo || undefined, dia: SEG, presencaConfirmada: true, cuidados: itens, veterinariaConfirmada: itens.some((x) => x.itemK.startsWith('vac_')) }).texto;
+  it.texto = MU.gerarMensagem({ nomeTutor: tutor, nomePeludo: nome, sexo: sexo || undefined, dia: SEG, presencaConfirmada: true, cuidados: itens, veterinariaConfirmada: itens.some((x) => x.itemK.startsWith('vac_')) }).texto;
   return it;
 }
 function banco(itens, extra) {
@@ -190,7 +190,7 @@ prova('serviço: dois irmãos com 26 s de diferença, fila vazia: nada sai nos p
   assert.equal(evo.envios.length, 0);
   t = EM('10:00:00'); assert.equal(await s.passo(), 'enviado');
   assert.equal(evo.envios.length, 1, 'uma mensagem só para os dois');
-  const esperado = MI.gerarMensagemIrmaos({ nomeTutor: 'Família', dia: SEG, presencaConfirmada: true, veterinariaConfirmada: false,
+  const esperado = MI.gerarMensagemIrmaos({ nomeTutor: 'Família Um', dia: SEG, presencaConfirmada: true, veterinariaConfirmada: false,
     peludos: [{ nome: 'Bolinha', sexo: 'M', cuidados: a.itens }, { nome: 'Farofa', sexo: 'F', cuidados: b.itens }] }).texto;
   assert.equal(evo.envios[0].t, esperado);
   [a, b].forEach((x) => assert.equal(db.ler(`${N.FILA}/${SEG}/${x.dcKey}`).estado, 'enviado'));
@@ -215,7 +215,7 @@ prova('serviço: dois irmãos saem numa mensagem só, com o texto aprovado; o ou
   await s.iniciar();
   assert.equal(await s.passo(), 'enviado');
   assert.equal(evo.envios.length, 1, 'uma mensagem só para a Família Um');
-  const esperado = MI.gerarMensagemIrmaos({ nomeTutor: 'Família', dia: SEG, presencaConfirmada: true, veterinariaConfirmada: true,
+  const esperado = MI.gerarMensagemIrmaos({ nomeTutor: 'Família Um', dia: SEG, presencaConfirmada: true, veterinariaConfirmada: true,
     peludos: [{ nome: 'Bolinha', sexo: 'M', cuidados: a.itens }, { nome: 'Farofa', sexo: 'F', cuidados: c.itens }] }).texto;
   assert.equal(evo.envios[0].t, esperado); assert.equal(evo.envios[0].jid, TEL_UM + '@' + 's.whatsapp' + '.net');
   for (const x of [a, c]) {
