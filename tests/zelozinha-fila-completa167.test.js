@@ -116,7 +116,7 @@ prova('a fila se completa sozinha: quem tem check-in e cuidado entra; vários ap
   a.mapas[caminho]({ 'bolinha__familia-um': checkin('bolinha__familia-um'), 'pipoca__familia-dois': checkin('pipoca__familia-dois'), 'farofa__familia-tres': checkin('farofa__familia-tres', { tipo: 'outra' }) });
   assert.equal(await a.c.rodar(), 1, 'só o FILHOt com cuidado entra');
   const it = db.ler(`${ZS.FILA}/${SEG}/bolinha__familia-um`);
-  assert.equal(it.estado, 'pronto'); assert.equal(it.criadoPor, 'aparelho'); assert.match(it.texto, /^Bom dia, Família!/);
+  assert.equal(it.estado, 'pronto'); assert.equal(it.criadoPor, 'aparelho'); assert.match(it.texto, /^Bom dia, Família Um!/);
   assert.ok(!a.recebidos.includes('farofa__familia-tres'), 'registro que não é de entrada fica de fora');
   /* o outro aparelho vê o mesmo mapa: nada duplica */
   b.mapas[caminho]({ 'bolinha__familia-um': checkin('bolinha__familia-um') });
@@ -177,8 +177,8 @@ prova('a página: veterinária pela agenda, vencimentos sob demanda, registro e 
   assert.match(html, /var enviada=lista\[0\]\.st\.enviada&&!lista\[0\]\.st\.zs,/);
   assert.match(html, /ZS\.veterinariaNoDia\(c\.dia,v\)\?'Veterinária: está hoje':'Veterinária: não vem hoje'/);
   assert.equal(ZS.statusDoCiclo({ dia: SEG, dcKey: 'x' }, { itemK: 'verm_p' }), null, 'sem item na fila, o cartão segue como antes');
-  assert.match(html, /const APP_VERSAO='2026-11-10-01';/);
-  assert.equal(html.split('2026-11-10-01').length - 1, 12);
+  assert.match(html, /const APP_VERSAO='2026-11-10-02';/);
+  assert.equal(html.split('2026-11-10-02').length - 1, 12);
 });
 
 (async () => {
