@@ -8,7 +8,7 @@
 const FILA = 'daycare/zelozinha-fila';
 const SAUDE = 'daycare/zelozinha-saude/vps';
 const CONTROLE = 'daycare/zelozinha-controle/estado';
-const VERSAO = 'simples-5';
+const VERSAO = 'simples-6';
 const SUFIXO_PLANO = '~plano';
 const JID = /^\d{6,20}@s\.whatsapp\.net$/;
 
@@ -145,6 +145,10 @@ function responsavel(cad, nomeLegado) {
   return { ok: true, nome: texto(cad.tutorPrinc) ? nome : (texto(nomeLegado) || nome), telefone: tel };
 }
 
+/* PRIMEIRO NOME (Adriana, 10/11/2026: "está mandando nome e sobrenome do tutor e não precisamos disso, apenas o primeiro nome"):
+   a mensagem chama o tutor só pelo primeiro nome da ficha («Fulana Fictícia» -> «Fulana»). O app usa a mesma regra. */
+function primeiroNome(nome) { const s = texto(nome); return s.split(/[\s\/,]+/)[0] || s; }
+
 /* O serviço não confia no que veio da fila: antes de enviar, confere com o banco que o FILHOt tem
    check-in hoje, que o telefone é o do tutor principal da ficha e que o texto é exatamente o texto
    aprovado (MensagemUnica41) para aqueles cuidados. Qualquer diferença: nada sai. */
@@ -166,11 +170,11 @@ function conferirItem({ item, cadastro, checkin, gerar, gerarPlano, doseDoDia })
     /* não confia na fila: cada cuidado tem de estar pago no plano que vale hoje, com a dose de hoje gasta na ficha (09/11/2026) */
     if (!itens.length || typeof doseDoDia !== 'function' || !itens.every((x) => doseDoDia(cadastro, texto(item.dia), texto(x && x.itemK))))
       return recusa('A ficha não tem este cuidado pago no plano, com a dose de hoje; nada foi enviado.');
-    const a = typeof gerarPlano === 'function' ? gerarPlano({ nomeTutor: r.nome, dia: texto(item.dia), peludos: [{ nome, sexo, cuidados: itens.map((x) => ({ itemK: texto(x && x.itemK) })) }] }) : null;
+    const a = typeof gerarPlano === 'function' ? gerarPlano({ nomeTutor: primeiroNome(r.nome), dia: texto(item.dia), peludos: [{ nome, sexo, cuidados: itens.map((x) => ({ itemK: texto(x && x.itemK) })) }] }) : null;
     if (!a || a.ok !== true || a.texto !== texto(item.texto)) return recusa('O texto não confere com o aviso aprovado para esta ficha; nada foi enviado.');
     return { ok: true };
   }
-  const m = typeof gerar === 'function' ? gerar({ nomeTutor: r.nome, nomePeludo: nome, sexo, dia: texto(item.dia), presencaConfirmada: true,
+  const m = typeof gerar === 'function' ? gerar({ nomeTutor: primeiroNome(r.nome), nomePeludo: nome, sexo, dia: texto(item.dia), presencaConfirmada: true,
     cuidados: itens.map((x) => ({ itemK: texto(x && x.itemK), vence: texto(x && x.vence) })),
     veterinariaConfirmada: itens.some((x) => texto(x && x.itemK).startsWith('vac_')) }) : null;
   if (!m || m.ok !== true || m.texto !== texto(item.texto)) return recusa('O texto não confere com o texto aprovado para esta ficha; nada foi enviado.');
@@ -200,4 +204,4 @@ function interpretarEnvio(r, jid) {
 }
 
 module.exports = { FILA, SAUDE, CONTROLE, VERSAO, SUFIXO_PLANO, PADRAO, itensNaChave, lerConfig, partesSP, diaSP, naJanela, proximoIntervalo, digitandoMs,
-  escolherProximo, jaEsperou, irmaos, abandonados, saidaConfirmada, entradaConfirmada, dcKeyDoPelKey, telefone, responsavel, conferirItem, interpretarNumero, interpretarEnvio };
+  escolherProximo, jaEsperou, irmaos, abandonados, saidaConfirmada, entradaConfirmada, dcKeyDoPelKey, telefone, responsavel, primeiroNome, conferirItem, interpretarNumero, interpretarEnvio };
