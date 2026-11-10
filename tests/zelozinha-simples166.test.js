@@ -73,10 +73,24 @@ prova('o tutor principal recebe: Tutor 2 usa tutor2/tel2; sem telefone não há 
 prova('a mensagem é a do texto aprovado, sem mudar uma letra', () => {
   const m = ZS.montar({ dia: SEG, ficha, cadastro: cad({ tutorPrinc: 'Tutor 1' }), prevencoes: [{ itemK: 'verm_p', vence: SEG }, { itemK: 'ecto_p', vence: '2026-10-30' }, { itemK: 'escova_p', vence: SEG }] });
   assert.equal(m.ok, true);
-  const esperado = MU.gerarMensagem({ nomeTutor: 'Família Fictícia', nomePeludo: 'Paçoca', sexo: 'F', dia: SEG, presencaConfirmada: true, cuidados: [{ itemK: 'ecto_p', vence: '2026-10-30' }, { itemK: 'verm_p', vence: SEG }], veterinariaConfirmada: false });
+  const esperado = MU.gerarMensagem({ nomeTutor: 'Família', nomePeludo: 'Paçoca', sexo: 'F', dia: SEG, presencaConfirmada: true, cuidados: [{ itemK: 'ecto_p', vence: '2026-10-30' }, { itemK: 'verm_p', vence: SEG }], veterinariaConfirmada: false });
   assert.equal(m.item.texto, esperado.texto);
   assert.equal(m.item.para, NUM); assert.equal(m.item.estado, 'pronto');
   assert.deepEqual(m.item.itens.map((x) => x.itemK), ['ecto_p', 'verm_p'], 'a escova fica com a equipe');
+});
+
+prova('só o primeiro nome do tutor (10/11/2026): «Fulana Fictícia» vira «Fulana», no app e no serviço', () => {
+  const casos = [['Fulana Fictícia', 'Fulana'], ['  Maria Clara Souza ', 'Maria'], ['Ana/João', 'Ana'], ['Pedro, Lia', 'Pedro'], ['Dora', 'Dora']];
+  casos.forEach(([nome, primeiro]) => { assert.equal(ZS.primeiroNome(nome), primeiro, 'app: ' + nome); assert.equal(N.primeiroNome(nome), primeiro, 'serviço: ' + nome); });
+  const m = ZS.montar({ dia: SEG, ficha, cadastro: cad({ tutorPrinc: 'Tutor 1', tutor: 'Fulana Fictícia' }), prevencoes: [{ itemK: 'verm_p', vence: SEG }] });
+  assert.equal(m.ok, true);
+  assert.match(m.item.texto, /^Bom dia, Fulana! Como você está\?/);
+  assert.doesNotMatch(m.item.texto, /Fictícia/);
+  assert.equal(m.item.tutor, 'Fulana Fictícia', 'a fila guarda o nome da ficha; só o texto usa o primeiro nome');
+  const it = Object.assign({}, m.item, { pelKey: 'filhot-ficticio', dcKey: N.dcKeyDoPelKey('filhot-ficticio') }), cadastro = cad({ tutorPrinc: 'Tutor 1', tutor: 'Fulana Fictícia', n: 'Paçoca' }), ck = { tipo: 'entrada', quem: 'Pessoa', fim: 1 };
+  assert.equal(N.conferirItem({ item: it, cadastro, checkin: ck, gerar: MU.gerarMensagem }).ok, true, 'o serviço aceita o texto com o primeiro nome');
+  const comSobrenome = Object.assign({}, it, { texto: it.texto.replace('Bom dia, Fulana!', 'Bom dia, Fulana Fictícia!') });
+  assert.equal(N.conferirItem({ item: comSobrenome, cadastro, checkin: ck, gerar: MU.gerarMensagem }).ok, false, 'texto com sobrenome não sai');
 });
 
 prova('vacina só com a veterinária confirmada, e nunca na quinta', () => {
@@ -113,7 +127,7 @@ prova('a fábrica da ponte: check-in de hoje vira item; falta de telefone avisa 
   const f = ZS.criarFabrica({ db: () => db, hoje: () => SEG, snapshot, veterinaria: async () => false });
   assert.equal((await f.receber(recibo, portas, { monId: 'pessoa' })).status, 'na-fila');
   const it = db.ler(`${ZS.FILA}/${SEG}/${ficha.dcKey}`);
-  assert.equal(it.estado, 'pronto'); assert.equal(it.criadoPor, 'pessoa'); assert.match(it.texto, /^Bom dia, Família Fictícia!/);
+  assert.equal(it.estado, 'pronto'); assert.equal(it.criadoPor, 'pessoa'); assert.match(it.texto, /^Bom dia, Família!/);
   assert.equal((await f.receber(Object.assign({}, recibo, { dia: QUI }), portas, {})).status, 'outro-dia');
   const semTel = ZS.criarFabrica({ db: () => bancoFalso({ daycare: { cadastro: { 'filhot-ficticio': cad({ tel: '' }) } } }), hoje: () => SEG, snapshot, veterinaria: async () => false });
   const r = await semTel.receber(recibo, portas, {});
@@ -166,8 +180,8 @@ prova('a página: a ponte usa a fila simples, o controle antigo saiu e a versão
   assert.match(html, /data-zs-estado/); assert.match(html, /data-zs-faixa/); assert.match(html, /data-zs-pausa/);
   assert.match(html, /window\.ZelozinhaSimples\.statusDoCiclo\(c,cy\)/);
   assert.match(html, /window\.ZelozinhaSimples\.ligar\(DB,diaAtual\(\)\)/);
-  assert.match(html, /const APP_VERSAO='2026-11-10-02';/);
-  assert.equal(html.split('2026-11-10-02').length - 1, 12);
+  assert.match(html, /const APP_VERSAO='2026-11-10-03';/);
+  assert.equal(html.split('2026-11-10-03').length - 1, 12);
 });
 
 /* ---------- o serviço da VPS ---------- */
@@ -181,7 +195,7 @@ prova('configuração: lê o arquivo que já existe na VPS e acusa o que falta',
   assert.equal(N.PADRAO.esperaIrmaosMs, 10 * 60000); assert.equal(CFG.cfg.esperaIrmaosMs, 10 * 60000);
   const ajustada = N.lerConfig({ banco: { firebaseUrl: 'https://banco-ficticio.invalid', serviceUid: 'uid-ficticio' }, automatico: { evolution: { baseUrl: 'https://canal-ficticio.invalid', apiKey: 'valor-ficticio', instanceName: 'instancia' } }, simples: { esperaIrmaosMs: 120000 } });
   assert.equal(ajustada.cfg.esperaIrmaosMs, 120000);
-  assert.equal(N.VERSAO, 'simples-5', 'os cuidados pagos no plano (09/11/2026) mudam o comportamento do serviço: versão nova');
+  assert.equal(N.VERSAO, 'simples-6', 'os cuidados pagos no plano (09/11/2026) mudam o comportamento do serviço: versão nova');
 });
 
 prova('horário: segunda a sexta, das 7h às 13h de São Paulo', () => {
@@ -218,7 +232,7 @@ const K = (dc) => N.dcKeyDoPelKey('filhot ' + dc + '__família fictícia');
 const telDe = (dc) => (dc === 'a' ? NUM : '55009000000' + String(dc.charCodeAt(0)).slice(-2));
 function itemS(dc, criadoEm, extra) {
   const it = { v: 1, dia: SEG, dcKey: K(dc), pelKey: 'filhot ' + dc + '__família fictícia', nome: 'FILHOt ' + dc.toUpperCase(), sexo: '', tutor: 'Família Fictícia', para: telDe(dc), itens: [{ itemK: 'verm_p', vence: SEG }], estado: 'pronto', criadoEm };
-  it.texto = MSv.gerarMensagem({ nomeTutor: 'Família Fictícia', nomePeludo: it.nome, dia: SEG, presencaConfirmada: true, cuidados: it.itens }).texto;
+  it.texto = MSv.gerarMensagem({ nomeTutor: 'Família', nomePeludo: it.nome, dia: SEG, presencaConfirmada: true, cuidados: it.itens }).texto;
   return Object.assign(it, extra || {});
 }
 /* o banco de mentira do serviço: a fila, a ficha e o check-in de cada FILHOt da fila */
@@ -252,7 +266,7 @@ prova('serviço não confia na fila: texto mexido, telefone trocado ou sem check
   assert.match(N.conferirItem({ item: Object.assign({}, base, { nome: 'X\nLinha extra' }), cadastro: cad(), checkin: ck, gerar }).motivo, /nome/);
   assert.match(N.conferirItem({ item: Object.assign({}, base, { pelKey: 'outro filhot__outra família' }), cadastro: cad(), checkin: ck, gerar }).motivo, /ficha não corresponde/);
   const outroNome = Object.assign({}, base, { nome: 'Rex' });
-  outroNome.texto = MSv.gerarMensagem({ nomeTutor: 'Família Fictícia', nomePeludo: 'Rex', dia: SEG, presencaConfirmada: true, cuidados: base.itens }).texto;
+  outroNome.texto = MSv.gerarMensagem({ nomeTutor: 'Família', nomePeludo: 'Rex', dia: SEG, presencaConfirmada: true, cuidados: base.itens }).texto;
   assert.match(N.conferirItem({ item: outroNome, cadastro: cad(), checkin: ck, gerar }).motivo, /nome do FILHOt não confere/);
   assert.equal(N.conferirItem({ item: outroNome, cadastro: cad({ n: 'Rex' }), checkin: ck, gerar }).ok, true, 'FILHOt renomeado na ficha passa pelo nome gravado nela');
   assert.equal(N.escolherProximo({ 'chave-errada': base }, 5 * 60000, CFG.cfg), null, 'item fora da sua chave não sai');

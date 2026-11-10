@@ -77,7 +77,7 @@ function novoContexto() {
 }
 
 /* ================= A. o texto do aviso do plano e o serviço da VPS ================= */
-const TUTOR = 'Tutora Fictícia';
+const TUTOR = 'Tutora Fictícia', PRIMEIRO = 'Tutora';   // a mensagem chama o tutor só pelo primeiro nome (10/11/2026)
 const cuid = (...ks) => ks.map((itemK) => ({ itemK }));
 prova('aviso do plano: um FILHOt, o texto aprovado (muda só o artigo e os nomes)', () => {
   const m = AP.gerarAvisoPlano({ nomeTutor: 'Dora', peludos: [{ nome: 'Mingau', sexo: 'M', cuidados: cuid('vac_mult_p') }] });
@@ -118,9 +118,9 @@ prova('o texto da mensagem do dia (mensagem-unica41) NÃO mudou: nenhuma letra',
   assert.equal(m.texto, 'Bom dia, Dora! Como você está? 💛\n\nO Mingau está com a gente hoje e temos um cuidado para deixar em dia:\n🐾 O vermífugo *vence hoje*.\n\nPodemos cuidar disso hoje, enquanto ele aproveita o dia na Zêluz? Assim, vocês resolvem tudo em uma só visita, sem precisar encaixar outro compromisso na rotina — e sobra mais tempo para curtirem juntos. 💛');
 });
 
-prova('a cópia do app é idêntica à do serviço e o serviço está na versão simples-5', () => {
+prova('a cópia do app é idêntica à do serviço e o serviço está na versão simples-6', () => {
   assert.equal(script('aviso-plano').replace(/\s+$/, ''), fs.readFileSync(path.resolve(__dirname, '../zelozinha/simples/aviso-plano.js'), 'utf8').replace(/\s+$/, ''));
-  assert.equal(N.VERSAO, 'simples-5', 'os cuidados pagos no plano (doses e segunda mensagem) mudam o serviço: versão nova');
+  assert.equal(N.VERSAO, 'simples-6', 'os cuidados pagos no plano (doses e segunda mensagem) mudam o serviço: versão nova');
 });
 
 prova('cuidados pagos no plano (09/11/2026): vale dentro do período, só o que foi pago, e cada dose uma vez; o check-in repetido no dia não gasta de novo', () => {
@@ -155,7 +155,7 @@ const PLANO = { '2026-11-01': { fim: '2026-11-30', itens: { verm_p: 2, vac_mult_
 const cadP = (extra, dia) => cad(Object.assign({ plano_cuidados: PLANO, plano_usos: { verm_p: { [dia || SEG]: true }, vac_mult_p: { [dia || SEG]: true } } }, extra || {}));
 const CONF = { gerar: MU.gerarMensagem, gerarPlano: AP.gerarAvisoPlano, doseDoDia: AP.doseDoDia };
 const itemPlano = (nome, pelKey, itens, extra) => Object.assign({ v: 1, estado: 'pronto', tipo: 'plano', dia: SEG, dcKey: N.dcKeyDoPelKey(pelKey), pelKey, nome, sexo: 'F', tutor: TUTOR, para: NUM, itens, criadoEm: 1,
-  texto: AP.gerarAvisoPlano({ nomeTutor: TUTOR, dia: SEG, peludos: [{ nome, sexo: 'F', cuidados: itens }] }).texto }, extra || {});
+  texto: AP.gerarAvisoPlano({ nomeTutor: PRIMEIRO, dia: SEG, peludos: [{ nome, sexo: 'F', cuidados: itens }] }).texto }, extra || {});
 const checkin = { tipo: 'entrada', quem: 'pessoa', fim: Date.parse(SEG + 'T09:00:00-03:00') };
 
 prova('serviço: o aviso do plano só sai com o texto do aviso, remontado pelo serviço; o texto da pergunta num item de plano é recusado', () => {
@@ -163,7 +163,7 @@ prova('serviço: o aviso do plano só sai com o texto do aviso, remontado pelo s
   const it = itemPlano('Luna', pk, cuid('verm_p'));
   const ok = N.conferirItem({ item: it, cadastro: cadP({ n: 'Luna' }), checkin, ...CONF });
   assert.equal(ok.ok, true, ok.motivo);
-  const pergunta = MU.gerarMensagem({ nomeTutor: TUTOR, nomePeludo: 'Luna', sexo: 'F', dia: SEG, presencaConfirmada: true, cuidados: [{ itemK: 'verm_p', vence: SEG }], veterinariaConfirmada: false }).texto;
+  const pergunta = MU.gerarMensagem({ nomeTutor: PRIMEIRO, nomePeludo: 'Luna', sexo: 'F', dia: SEG, presencaConfirmada: true, cuidados: [{ itemK: 'verm_p', vence: SEG }], veterinariaConfirmada: false }).texto;
   assert.equal(N.conferirItem({ item: Object.assign({}, it, { texto: pergunta }), cadastro: cadP({ n: 'Luna' }), checkin, ...CONF }).ok, false);
   assert.equal(N.conferirItem({ item: Object.assign({}, it, { texto: it.texto + ' Pague agora.' }), cadastro: cadP({ n: 'Luna' }), checkin, ...CONF }).ok, false);
   assert.equal(N.conferirItem({ item: it, cadastro: cadP({ n: 'Luna' }), checkin, gerar: MU.gerarMensagem, doseDoDia: AP.doseDoDia }).ok, false, 'sem o gerador do aviso, nada sai');
@@ -181,7 +181,7 @@ prova('serviço: o aviso do plano só sai se a FICHA tem o cuidado pago no plano
   });
   assert.equal(N.conferirItem({ item: it, cadastro: cadP({ n: 'Luna' }), checkin, gerar: MU.gerarMensagem, gerarPlano: AP.gerarAvisoPlano }).ok, false, 'sem a conferência da dose, nada sai');
   /* o caso contrário não é recusado: ficha com plano e item comum segue como pergunta (não engana o tutor) */
-  const pergunta = MU.gerarMensagem({ nomeTutor: TUTOR, nomePeludo: 'Luna', sexo: 'F', dia: SEG, presencaConfirmada: true, cuidados: [{ itemK: 'verm_p', vence: SEG }], veterinariaConfirmada: false }).texto;
+  const pergunta = MU.gerarMensagem({ nomeTutor: PRIMEIRO, nomePeludo: 'Luna', sexo: 'F', dia: SEG, presencaConfirmada: true, cuidados: [{ itemK: 'verm_p', vence: SEG }], veterinariaConfirmada: false }).texto;
   const comum = Object.assign({}, it, { texto: pergunta, itens: [{ itemK: 'verm_p', vence: SEG }] }); delete comum.tipo;
   assert.equal(N.conferirItem({ item: comum, cadastro: cadP({ n: 'Luna' }), checkin, ...CONF }).ok, true);
 });
@@ -189,7 +189,7 @@ prova('serviço: o aviso do plano só sai se a FICHA tem o cuidado pago no plano
 prova('serviço: irmão sem a marca do plano não entra no aviso conjunto (cada um é conferido antes) e fica «Não enviada»', async () => {
   const pk1 = 'tico__' + TUTOR.toLowerCase(), pk2 = 'teca__' + TUTOR.toLowerCase();
   const a = itemPlano('Tico', pk1, cuid('verm_p'), { sexo: 'M' }), b = itemPlano('Teca', pk2, cuid('verm_p'), { criadoEm: 2 });
-  a.texto = AP.gerarAvisoPlano({ nomeTutor: TUTOR, dia: SEG, peludos: [{ nome: 'Tico', sexo: 'M', cuidados: a.itens }] }).texto;
+  a.texto = AP.gerarAvisoPlano({ nomeTutor: PRIMEIRO, dia: SEG, peludos: [{ nome: 'Tico', sexo: 'M', cuidados: a.itens }] }).texto;
   const db = bancoFalso({ daycare: { 'zelozinha-fila': { [SEG]: { [a.dcKey]: a, [b.dcKey]: b } }, cadastro: { [pk1]: cadP({ n: 'Tico' }), [pk2]: cad({ n: 'Teca', cuidadosNoPlano: true }) },
     'checkin-corpo': { [SEG]: { [a.dcKey]: checkin, [b.dcKey]: checkin } } } });
   const enviados = [];
@@ -212,8 +212,8 @@ prova('serviço: o aviso do plano só se junta a outro aviso do plano (irmãos);
 prova('serviço de ponta a ponta: aviso do plano (na chave {dcKey}~plano) sai uma vez, devagar; irmãos do plano saem juntos num aviso só; a pergunta do mesmo FILHOt sai na sua mensagem', async () => {
   const pk1 = 'tico__' + TUTOR.toLowerCase(), pk2 = 'teca__' + TUTOR.toLowerCase();
   const a = itemPlano('Tico', pk1, cuid('verm_p'), { sexo: 'M' }), b = itemPlano('Teca', pk2, cuid('verm_p'), { criadoEm: 2 });
-  a.texto = AP.gerarAvisoPlano({ nomeTutor: TUTOR, dia: SEG, peludos: [{ nome: 'Tico', sexo: 'M', cuidados: a.itens }] }).texto;
-  const pergunta = MU.gerarMensagem({ nomeTutor: TUTOR, nomePeludo: 'Tico', sexo: 'M', dia: SEG, presencaConfirmada: true, cuidados: [{ itemK: 'ecto_p', vence: SEG }], veterinariaConfirmada: false }).texto;
+  a.texto = AP.gerarAvisoPlano({ nomeTutor: PRIMEIRO, dia: SEG, peludos: [{ nome: 'Tico', sexo: 'M', cuidados: a.itens }] }).texto;
+  const pergunta = MU.gerarMensagem({ nomeTutor: PRIMEIRO, nomePeludo: 'Tico', sexo: 'M', dia: SEG, presencaConfirmada: true, cuidados: [{ itemK: 'ecto_p', vence: SEG }], veterinariaConfirmada: false }).texto;
   const q = Object.assign({}, a, { texto: pergunta, itens: [{ itemK: 'ecto_p', vence: SEG }], criadoEm: 3 }); delete q.tipo;
   const ka = a.dcKey + N.SUFIXO_PLANO, kb = b.dcKey + N.SUFIXO_PLANO;
   const db = bancoFalso({ daycare: { 'zelozinha-fila': { [SEG]: { [ka]: a, [kb]: b, [a.dcKey]: q } }, cadastro: { [pk1]: cadP({ n: 'Tico' }), [pk2]: cadP({ n: 'Teca' }) },
@@ -225,7 +225,7 @@ prova('serviço de ponta a ponta: aviso do plano (na chave {dcKey}~plano) sai um
   await sv.trocarDia(SEG);
   assert.equal(await sv.passo(), 'enviado');
   assert.equal(enviados.length, 1, 'uma mensagem só para os dois irmãos');
-  assert.match(enviados[0], /^Oi, Tutora Fictícia, tudo bem\? Hoje o Tico e a Teca recebem aqui o vermífugo, conforme fechado no plano\./);
+  assert.match(enviados[0], /^Oi, Tutora, tudo bem\? Hoje o Tico e a Teca recebem aqui o vermífugo, conforme fechado no plano\./);
   assert.ok(!/Bom dia/.test(enviados[0]), 'não é a mensagem da pergunta');
   let f = db.ler('daycare/zelozinha-fila/' + SEG);
   assert.equal(f[ka].estado, 'enviado'); assert.equal(f[kb].estado, 'enviado'); assert.equal(f[a.dcKey].estado, 'pronto', 'a pergunta não foi junto');
@@ -265,7 +265,7 @@ prova('ZelozinhaSimples.montar com o que o plano cobre: o pago vai no aviso ({dc
   assert.equal(m.ok, true, m.motivo); assert.equal(m.itens.length, 1, 'tudo pago: só o aviso, sem pergunta');
   assert.equal(m.item.tipo, 'plano'); assert.equal(m.item.estado, 'pronto'); assert.equal(m.item.para, NUM); assert.equal(ZS.chaveDe(m.item), pecaFicha.dcKey + '~plano');
   assert.deepEqual(json(m.item.itens.map((x) => x.itemK)), ['verm_p', 'vac_mult_p'].sort());
-  assert.equal(m.item.texto, AP.gerarAvisoPlano({ nomeTutor: TUTOR, dia: SEG, peludos: [{ nome: 'Luna', sexo: 'F', cuidados: cuid('vac_mult_p', 'verm_p') }] }).texto);
+  assert.equal(m.item.texto, AP.gerarAvisoPlano({ nomeTutor: PRIMEIRO, dia: SEG, peludos: [{ nome: 'Luna', sexo: 'F', cuidados: cuid('vac_mult_p', 'verm_p') }] }).texto);
   const misto = ZS.montar({ dia: SEG, ficha: pecaFicha, cadastro: cad(), plano: { verm_p: true }, veterinariaConfirmada: true, prevencoes: [{ itemK: 'vac_mult_p', vence: SEG }, { itemK: 'verm_p', vence: SEG }] });
   assert.equal(misto.itens.length, 2, 'pago e não pago no mesmo dia: duas mensagens');
   assert.equal(misto.itens[0].tipo, undefined); assert.match(misto.itens[0].texto, /^Bom dia, /); assert.deepEqual(json(misto.itens[0].itens.map((x) => x.itemK)), ['vac_mult_p']);
@@ -295,7 +295,7 @@ prova('o check-in de ficha com o vermífugo pago no plano gasta a dose, põe o A
   const ctx = novoContexto(), { f, db, recibo, portas, lancadas } = fabrica(ctx, cad({ plano_cuidados: { '2026-11-01': { fim: '2026-11-30', itens: { verm_p: 2 } } } }));
   assert.equal((await f.receber(recibo, portas, { monId: 'pessoa' })).status, 'na-fila');
   const it = db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey + '~plano');
-  assert.equal(it.tipo, 'plano'); assert.match(it.texto, /^Oi, Tutora Fictícia, tudo bem\? Hoje a Luna recebe aqui o vermífugo, conforme fechado no plano\./);
+  assert.equal(it.tipo, 'plano'); assert.match(it.texto, /^Oi, Tutora, tudo bem\? Hoje a Luna recebe aqui o vermífugo, conforme fechado no plano\./);
   assert.ok(!/Bom dia|Podemos cuidar/.test(it.texto), 'nenhuma pergunta'); assert.equal(db.ler('daycare/zelozinha-fila/' + SEG + '/' + pecaFicha.dcKey), null, 'nenhuma pergunta na fila');
   assert.deepEqual(json(db.ler('daycare/cadastro/' + pecaFicha.pelKey + '/plano_usos')), { verm_p: { [SEG]: true } }, 'a dose do dia foi gasta na ficha');
   assert.equal(lancadas.length, 1); assert.equal(lancadas[0].dia, SEG); assert.equal(lancadas[0].dcKey, pecaFicha.dcKey);
@@ -961,9 +961,9 @@ prova('a fábrica do check-in recebe a porta que lança o plano, e a auditoria s
   assert.ok(script('zelozinha-simples').includes("FINAIS={'na-fila':1,'ja-estava-na-fila':1,humano:1,'resolvido-antes':1};"), 'plano-sem-linha NÃO é final: a fila se completa sozinha e tenta de novo');
 });
 
-prova('versão 2026-11-10-02 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
-  assert.match(html, /const APP_VERSAO='2026-11-10-02';/);
-  assert.equal(html.split('2026-11-10-02').length - 1, 12);
+prova('versão 2026-11-10-03 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
+  assert.match(html, /const APP_VERSAO='2026-11-10-03';/);
+  assert.equal(html.split('2026-11-10-03').length - 1, 12);
   assert.ok(!/2026-11-05-01|2026-11-05-02/.test(html), 'nenhum ?v= ficou na versão antiga');
 });
 
