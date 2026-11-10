@@ -83,7 +83,7 @@ function criarServico(op) {
     /* não confia na fila: só sai o texto aprovado, para o tutor principal da ficha, de quem tem check-in hoje */
     const conf = N.conferirItem({ item: it, cadastro, checkin, gerar: Mensagem.gerarMensagem, gerarPlano: AvisoPlano.gerarAvisoPlano, doseDoDia: AvisoPlano.doseDoDia });
     if (!conf.ok) { await mudar(dia, ch, 'enviando', { estado: 'falhou', motivo: conf.motivo }); log('recusado', 'item não confere com o banco'); return 'recusado'; }
-    return { it, tutor: N.responsavel(cadastro, it.tutor).nome };
+    return { it, tutor: N.primeiroNome(N.responsavel(cadastro, it.tutor).nome) };   // só o primeiro nome (10/11/2026)
   }
   async function enviarItem(dia, it) {
     const ch = it.chave || it.dcKey;
