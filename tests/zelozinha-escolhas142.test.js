@@ -112,13 +112,14 @@ async function testarAbaSnoopy116() {
   check=caixa(false);resultadoAcao={estado:'falhou'};eventos.change({target:check});await new Promise(setImmediate);
   assert.equal(check.checked,true);assert.equal(check.disabled,false);assert.equal(atualizacoes,2);
   assert.equal(w.zelozinha116SnoopyInvalidar(dia), true);
-  assert.equal(invalidacoes,1); assert.equal(badge.textContent,'—');
+  // 10/11/2026: cada caixinha que não confirmou relê a lista (2 falhas acima = 2 invalidações) — a terceira é a da troca de escolha
+  assert.equal(invalidacoes,3); assert.equal(badge.textContent,'—');
   assert.doesNotMatch(listaSnoopy.innerHTML, />Lançado<\/span>/, 'cartão financeiro antigo some imediatamente');
   assert.equal(leiturasDados,1, 'chip não relê presença nem projeção');
   confirmadoProximo=false;
   eventos.click({ target: { closest: () => tabs[2] } });
   await new Promise(setImmediate);
-  assert.equal(leiturasSnoopy,2, 'abrir a aba relê apenas o financeiro uma vez');
+  assert.equal(leiturasSnoopy,4, 'abrir a aba relê apenas o financeiro uma vez (as 2 caixinhas que falharam já releram: 1+2+1)');
   assert.equal(leiturasDados,1, 'abrir a aba não relê presença nem projeção');
   assert.match(listaSnoopy.innerHTML, /Pendente/); assert.doesNotMatch(listaSnoopy.innerHTML, />Lançado<\/span>/);
   assert.equal(badge.textContent,'1'); assert.equal(elementoDia.textContent.includes('2026'),true,'data escolhida preservada');
