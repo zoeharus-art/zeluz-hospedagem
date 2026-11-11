@@ -80,6 +80,13 @@ function criarServico(op) {
     const ler = (c) => db.ref(c).once('value').then((s) => s.val());
     const [saida, checkin, cadastro] = await Promise.all([ler(`daycare/checkout-corpo/${dia}/${dc}`), ler(`daycare/checkin-corpo/${dia}/${dc}`), ler(`daycare/cadastro/${it.pelKey}`)]);
     if (N.saidaConfirmada(saida)) { await mudar(dia, ch, 'enviando', { estado: 'cancelado', motivo: 'Saiu antes do envio.' }); return 'cancelado'; }
+    /* o cuidado já foi lançado na ficha depois que a fila foi montada (caso Bruce, 11/11/2026): a pergunta não sai */
+    const emDia = N.cuidadosJaEmDia(it, cadastro);
+    if (emDia.length) {
+      const br = (d) => d.split('-').reverse().join('/');
+      await mudar(dia, ch, 'enviando', { estado: 'cancelado', motivo: `A ficha já mostra o cuidado em dia (próximo vencimento em ${emDia.map((x) => br(x.vence)).join(', ')}); nada foi enviado.` });
+      log('cancelado', 'cuidado já em dia na ficha'); return 'cancelado';
+    }
     /* não confia na fila: só sai o texto aprovado, para o tutor principal da ficha, de quem tem check-in hoje */
     const conf = N.conferirItem({ item: it, cadastro, checkin, gerar: Mensagem.gerarMensagem, gerarPlano: AvisoPlano.gerarAvisoPlano, doseDoDia: AvisoPlano.doseDoDia });
     if (!conf.ok) { await mudar(dia, ch, 'enviando', { estado: 'falhou', motivo: conf.motivo }); log('recusado', 'item não confere com o banco'); return 'recusado'; }

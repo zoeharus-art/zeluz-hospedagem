@@ -45,9 +45,9 @@ prova('o café do dia mostra «40 g de ração» e não deixa a Pipoca em «Caf�
   assert.match(JSON.stringify(r.participantes[0]), /40 g de ração/);
 });
 
-prova('a página carrega o módulo novo e está na versão 2026-11-10-03', () => {
-  assert.match(html, /<script src="alimentacao-hospede\.js\?v=2026-11-10-03"><\/script>/);
-  assert.match(html, /const APP_VERSAO='2026-11-10-03';/);
+prova('a página carrega o módulo novo e está na versão 2026-11-11-01', () => {
+  assert.match(html, /<script src="alimentacao-hospede\.js\?v=2026-11-11-01"><\/script>/);
+  assert.match(html, /const APP_VERSAO='2026-11-11-01';/);
 });
 
 console.log(`racao-gramas172: ${total - falhas} de ${total} provas passaram`);

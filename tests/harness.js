@@ -8012,7 +8012,7 @@ async function main() {
       check('uso com saldo zero avisa que terminaram', /terminaram/.test(mu), mu);
       const m1 = ctx.repMensagem(p, 'uso', {saldo: 1});
       check('resta 1 no singular', /resta 1 reposição/.test(m1), m1);
-      check('fecho dela: "controlar juntas"', /controlar juntas/.test(mc) && /controlar juntas/.test(mu));
+      check('fecho dela: "controlar tudo em conjunto"', /controlar tudo em conjunto/.test(mc) && /controlar tudo em conjunto/.test(mu));
       ctx.pelExtra = pelExtraOrig;
     }
     check('lançar e usar mostram o modal com a mensagem',

@@ -40,7 +40,7 @@ prova('a dose do peso é sugestão: não acende nem conta como escolhida até o 
 prova('o texto do plano ativo aprovado está nas mensagens de saldo e fora das de troca', () => {
   assert.ok(html.includes("REP_OBS_PLANO='Um detalhe para você ter sempre à mão: as reposições são feitas com o plano ativo, tá?'"));
   assert.ok(html.includes("var semReposicao=modo==='troca'||modo==='troca-desmarcada-fora'||(modo==='troca-desfeita'&&info.estorna);"));
-  assert.ok(html.includes("(semReposicao?'':'\\n\\n'+REP_OBS_PLANO)+'\\n\\nEssa mensagem é para que possamos controlar juntas. 💛'"));
+  assert.ok(html.includes("(semReposicao?'':'\\n\\n'+REP_OBS_PLANO)+'\\n\\nEssa mensagem é para que possamos controlar tudo em conjunto. 💛'"));
   assert.ok(html.includes("ficando somente o valor da pernoite para acerto.\\n\\n'+REP_OBS_PLANO"));
 });
 console.log(`zelozinha-dose-lancamento177: ${total - falhas} de ${total} provas passaram`);

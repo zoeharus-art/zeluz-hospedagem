@@ -19328,7 +19328,7 @@ prova('6.38 P38-32 — R1: a mensagem da falta com o dia de repor, da reposiçã
     const p = "{n:'Totó', tutor:'Ana Teste'}";
     const R = (n) => 'Caso precise desmarcar a reposição, me avise até as 24h do dia anterior. Temos apenas ' + n + ' por dia, além dos nossos Aulunos, e assim consigo remanejar outros Aulunos e famílias que precisam.';
     const T = (n) => 'Caso precise desmarcar a troca, me avise até as 24h do dia anterior. Temos apenas ' + n + ' por dia, além dos nossos Aulunos, e assim consigo remanejar outros Aulunos e famílias que precisam.';
-    const fim = (m, par) => m.indexOf('\n\n' + par + '\n\nEssa mensagem é para que possamos controlar juntas.') >= 0;
+    const fim = (m, par) => m.indexOf('\n\n' + par + '\n\nEssa mensagem é para que possamos controlar tudo em conjunto.') >= 0;
     for (const [n, rr, tt] of [[5, '5 vagas de reposição', '5 vagas'], [6, '6 vagas de reposição', '6 vagas'], [1, '1 vaga de reposição', '1 vaga']]) {
       run('__vl638=' + n + ';');
       assert.ok(fim(run(`repMensagem(${p}, 'credito', {qtd:1, data:'2026-10-07', volta:'2026-10-13', saldo:1})`), R(rr)), 'crédito com o dia de repor, ' + n);
