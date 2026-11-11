@@ -76,6 +76,25 @@ prova('na revisão, a ficha atualizada (cuidado já sem pendência) tira a mensa
   assert.equal(db2.ler(`${ZS.FILA}/${SEX}/${DC}`).estado, 'pronto');
 });
 
+prova('o aparelho com a ficha velha não manda o cuidado que a ficha do banco já mostra em dia (caso Bruce, 11/11/2026)', async () => {
+  const prev = () => [{ itemK: 'verm_dose2_p', dueDate: '2026-10-20' }];
+  const recibo = { dia: SEX, dcKey: DC, nome: 'Mel', tutor: 'Fulana' };
+  const db = bancoFalso({ daycare: { cadastro: { 'mel__fulana': { tutor: 'Fulana', tel: '(00) 90000-0000', verm_dose2_p: '2026-11-28' } } } });
+  const m = montar(db, prev);
+  const r = await m.f.receber(recibo, m.portas, { monId: 'aparelho' });
+  assert.equal(r.status, 'sem-cuidados'); assert.equal(r.motivo, 'a ficha já mostra o cuidado em dia');
+  assert.equal(db.ler(`${ZS.FILA}/${SEX}/${DC}`), null, 'nada entra na fila');
+  /* na revisão, quem já estava «pronto» sai da fila */
+  const db2 = bancoFalso({ daycare: { cadastro: { 'mel__fulana': { tutor: 'Fulana', tel: '(00) 90000-0000', verm_dose2_p: '2026-11-28' } }, 'zelozinha-fila': { [SEX]: { [DC]: item('pronto') } } } });
+  const m2 = montar(db2, prev);
+  assert.equal((await m2.f.receber(Object.assign({ revisar: true }, recibo), m2.portas, { monId: 'aparelho' })).status, 'resolvido-antes');
+  assert.equal(db2.ler(`${ZS.FILA}/${SEX}/${DC}`).estado, 'cancelado');
+  /* a mesma data da ficha (ainda vencido) continua entrando */
+  const db3 = bancoFalso({ daycare: { cadastro: { 'mel__fulana': { tutor: 'Fulana', tel: '(00) 90000-0000', verm_dose2_p: '2026-10-20' } } } });
+  const m3 = montar(db3, prev);
+  assert.equal((await m3.f.receber(recibo, m3.portas, { monId: 'aparelho' })).status, 'na-fila');
+});
+
 prova('a fila que se completa revisa de 10 em 10 min lendo a fila do dia e olhando de novo só quem está «pronto»', async () => {
   const db = bancoFalso({ daycare: { cadastro: { 'mel__fulana': { tutor: 'Fulana', tel: '(00) 90000-0000' } }, 'zelozinha-fila': { [SEX]: { [DC]: item('pronto') } } } });
   let prev = [{ itemK: 'verm_dose2_p', dueDate: '2026-10-20' }], relogio = null, mapaFn = null, leituras = 0;
@@ -101,7 +120,7 @@ prova('a página: registro da equipe sem o painel antigo, resposta e agendamento
   assert.match(html, /cancelarSePronto\(DB,c\.dia,c\.dcKey,'A equipe agendou o cuidado antes do envio\.'\)/);
   assert.match(html, /lerFila:function\(d\)\{var db=dbAtual\(\);return db\?db\.ref\('daycare\/zelozinha-fila\/'\+d\)\.once\('value'\)/);
   assert.match(html, /'resolvido-antes':'saiu da fila da Zelozinha: o cuidado foi resolvido antes do envio'/);
-  assert.match(html, /const APP_VERSAO='2026-11-10-03';/);
+  assert.match(html, /const APP_VERSAO='2026-11-11-01';/);
 });
 
 (async () => {

@@ -118,9 +118,9 @@ prova('o texto da mensagem do dia (mensagem-unica41) NÃO mudou: nenhuma letra',
   assert.equal(m.texto, 'Bom dia, Dora! Como você está? 💛\n\nO Mingau está com a gente hoje e temos um cuidado para deixar em dia:\n🐾 O vermífugo *vence hoje*.\n\nPodemos cuidar disso hoje, enquanto ele aproveita o dia na Zêluz? Assim, vocês resolvem tudo em uma só visita, sem precisar encaixar outro compromisso na rotina — e sobra mais tempo para curtirem juntos. 💛');
 });
 
-prova('a cópia do app é idêntica à do serviço e o serviço está na versão simples-6', () => {
+prova('a cópia do app é idêntica à do serviço e o serviço está na versão simples-7', () => {
   assert.equal(script('aviso-plano').replace(/\s+$/, ''), fs.readFileSync(path.resolve(__dirname, '../zelozinha/simples/aviso-plano.js'), 'utf8').replace(/\s+$/, ''));
-  assert.equal(N.VERSAO, 'simples-6', 'os cuidados pagos no plano (doses e segunda mensagem) mudam o serviço: versão nova');
+  assert.equal(N.VERSAO, 'simples-7', 'o cuidado já em dia na ficha não sai (11/11/2026): versão nova');
 });
 
 prova('cuidados pagos no plano (09/11/2026): vale dentro do período, só o que foi pago, e cada dose uma vez; o check-in repetido no dia não gasta de novo', () => {
@@ -961,9 +961,9 @@ prova('a fábrica do check-in recebe a porta que lança o plano, e a auditoria s
   assert.ok(script('zelozinha-simples').includes("FINAIS={'na-fila':1,'ja-estava-na-fila':1,humano:1,'resolvido-antes':1};"), 'plano-sem-linha NÃO é final: a fila se completa sozinha e tenta de novo');
 });
 
-prova('versão 2026-11-10-03 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
-  assert.match(html, /const APP_VERSAO='2026-11-10-03';/);
-  assert.equal(html.split('2026-11-10-03').length - 1, 12);
+prova('versão 2026-11-11-01 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
+  assert.match(html, /const APP_VERSAO='2026-11-11-01';/);
+  assert.equal(html.split('2026-11-11-01').length - 1, 12);
   assert.ok(!/2026-11-05-01|2026-11-05-02/.test(html), 'nenhum ?v= ficou na versão antiga');
 });
 

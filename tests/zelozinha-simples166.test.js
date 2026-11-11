@@ -180,8 +180,8 @@ prova('a página: a ponte usa a fila simples, o controle antigo saiu e a versão
   assert.match(html, /data-zs-estado/); assert.match(html, /data-zs-faixa/); assert.match(html, /data-zs-pausa/);
   assert.match(html, /window\.ZelozinhaSimples\.statusDoCiclo\(c,cy\)/);
   assert.match(html, /window\.ZelozinhaSimples\.ligar\(DB,diaAtual\(\)\)/);
-  assert.match(html, /const APP_VERSAO='2026-11-10-03';/);
-  assert.equal(html.split('2026-11-10-03').length - 1, 12);
+  assert.match(html, /const APP_VERSAO='2026-11-11-01';/);
+  assert.equal(html.split('2026-11-11-01').length - 1, 12);
 });
 
 /* ---------- o serviço da VPS ---------- */
@@ -195,7 +195,7 @@ prova('configuração: lê o arquivo que já existe na VPS e acusa o que falta',
   assert.equal(N.PADRAO.esperaIrmaosMs, 10 * 60000); assert.equal(CFG.cfg.esperaIrmaosMs, 10 * 60000);
   const ajustada = N.lerConfig({ banco: { firebaseUrl: 'https://banco-ficticio.invalid', serviceUid: 'uid-ficticio' }, automatico: { evolution: { baseUrl: 'https://canal-ficticio.invalid', apiKey: 'valor-ficticio', instanceName: 'instancia' } }, simples: { esperaIrmaosMs: 120000 } });
   assert.equal(ajustada.cfg.esperaIrmaosMs, 120000);
-  assert.equal(N.VERSAO, 'simples-6', 'os cuidados pagos no plano (09/11/2026) mudam o comportamento do serviço: versão nova');
+  assert.equal(N.VERSAO, 'simples-7', 'o cuidado já em dia na ficha não sai (11/11/2026): versão nova');
 });
 
 prova('horário: segunda a sexta, das 7h às 13h de São Paulo', () => {
@@ -338,6 +338,25 @@ prova('serviço: item que não confere com o banco vira Não enviada, sem tocar 
   await s.iniciar();
   assert.equal(await s.passo(), 'recusado');
   assert.equal(db.ler(`${N.FILA}/${SEG}/${K('a')}`).estado, 'falhou');
+  assert.equal(evo.envios.length, 0); assert.equal(evo.numeros, 0);
+});
+
+prova('cuidado já lançado na ficha depois da fila (caso Bruce, 11/11/2026): o serviço cancela e não manda', async () => {
+  const it = itemS('a', 1, { itens: [{ itemK: 'ecto_p', vence: '2026-11-08' }] });
+  assert.deepEqual(N.cuidadosJaEmDia(it, { ecto_p: '2026-12-09' }), [{ itemK: 'ecto_p', vence: '2026-12-09' }]);
+  assert.deepEqual(N.cuidadosJaEmDia(it, { ecto_p: '2026-11-08' }), [], 'mesmo vencimento da fila: ainda vencido');
+  assert.deepEqual(N.cuidadosJaEmDia(it, { ecto_p: '2026-10-01' }), [], 'ficha com data mais antiga não tira nada');
+  assert.deepEqual(N.cuidadosJaEmDia(it, {}), [], 'sem data na ficha não tira nada');
+  assert.deepEqual(N.cuidadosJaEmDia(Object.assign({}, it, { tipo: 'plano' }), { ecto_p: '2026-12-09' }), [], 'o aviso do plano tem a sua própria conferência');
+  const t = Date.parse(SEG + 'T08:30:00-03:00');
+  const a = itemS('a', 1), db = bancoServico([a]);
+  db.gravar('daycare/cadastro/' + a.pelKey + '/verm_p', '2027-02-01');
+  const evo = evoFalso();
+  const s = criarServico({ db, evo, cfg: CFG.cfg, agora: () => t, aleatorio: () => 0 });
+  await s.iniciar();
+  assert.equal(await s.passo(), 'cancelado');
+  const fim = db.ler(`${N.FILA}/${SEG}/${K('a')}`);
+  assert.equal(fim.estado, 'cancelado'); assert.match(fim.motivo, /já mostra o cuidado em dia \(próximo vencimento em 01\/02\/2027\)/);
   assert.equal(evo.envios.length, 0); assert.equal(evo.numeros, 0);
 });
 

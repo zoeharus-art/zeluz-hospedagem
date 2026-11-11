@@ -8,7 +8,7 @@
 const FILA = 'daycare/zelozinha-fila';
 const SAUDE = 'daycare/zelozinha-saude/vps';
 const CONTROLE = 'daycare/zelozinha-controle/estado';
-const VERSAO = 'simples-6';
+const VERSAO = 'simples-7';
 const SUFIXO_PLANO = '~plano';
 const JID = /^\d{6,20}@s\.whatsapp\.net$/;
 
@@ -149,6 +149,18 @@ function responsavel(cad, nomeLegado) {
    a mensagem chama o tutor só pelo primeiro nome da ficha («Fulana Fictícia» -> «Fulana»). O app usa a mesma regra. */
 function primeiroNome(nome) { const s = texto(nome); return s.split(/[\s\/,]+/)[0] || s; }
 
+/* JÁ FEITO NA FICHA (Adriana, 11/11/2026, caso Bruce: "foi feito o carrapaticida no dia 09 e hoje foi mandada mensagem"):
+   a fila guarda o vencimento que o aparelho do check-in viu. Se a ficha lida agora tem, para o mesmo cuidado, um
+   vencimento DEPOIS desse, o cuidado já foi lançado e a pergunta não pode sair. Devolve os cuidados já em dia. */
+function cuidadosJaEmDia(item, cadastro) {
+  if (!objeto(item) || !objeto(cadastro) || item.tipo === 'plano') return [];
+  const data = (v) => /^\d{4}-\d{2}-\d{2}$/.test(texto(v)) ? texto(v) : '';
+  return (Array.isArray(item.itens) ? item.itens : []).filter((x) => {
+    const k = texto(x && x.itemK), visto = data(x && x.vence), agora = /^[a-z0-9_]+$/.test(k) ? data(cadastro[k]) : '';
+    return !!(visto && agora && agora > visto);
+  }).map((x) => ({ itemK: texto(x.itemK), vence: data(cadastro[texto(x.itemK)]) }));
+}
+
 /* O serviço não confia no que veio da fila: antes de enviar, confere com o banco que o FILHOt tem
    check-in hoje, que o telefone é o do tutor principal da ficha e que o texto é exatamente o texto
    aprovado (MensagemUnica41) para aqueles cuidados. Qualquer diferença: nada sai. */
@@ -204,4 +216,4 @@ function interpretarEnvio(r, jid) {
 }
 
 module.exports = { FILA, SAUDE, CONTROLE, VERSAO, SUFIXO_PLANO, PADRAO, itensNaChave, lerConfig, partesSP, diaSP, naJanela, proximoIntervalo, digitandoMs,
-  escolherProximo, jaEsperou, irmaos, abandonados, saidaConfirmada, entradaConfirmada, dcKeyDoPelKey, telefone, responsavel, primeiroNome, conferirItem, interpretarNumero, interpretarEnvio };
+  escolherProximo, jaEsperou, irmaos, abandonados, saidaConfirmada, entradaConfirmada, dcKeyDoPelKey, telefone, responsavel, primeiroNome, cuidadosJaEmDia, conferirItem, interpretarNumero, interpretarEnvio };
