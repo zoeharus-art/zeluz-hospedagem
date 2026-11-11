@@ -10580,6 +10580,8 @@ return { criar };
   //  padrão nosso de escrita — verifique e crie essas mensagens."
   // O texto-base é dela: "Passando para dizer que o xxx tem tantas reposições com a de
   // hoje, referente ao dia x. Essa mensagem é para que possamos, juntas, controlar."
+  // Fecho neutro (Adriana, 11/nov/2026): "Juntas se fossem mulheres, Bruno é homem" — o cadastro não diz o
+  // sexo do tutor, então o fecho não flexiona: "controlar tudo em conjunto".
   // O padrão da casa vem do empMensagem: "Oi, {tutor}, como está?", flexão pelo sexo da
   // ficha, fecho com o coração amarelo. A consultora copia e manda — o app nunca envia
   // sozinho para o tutor.
@@ -10700,7 +10702,7 @@ return { criar };
     }
     // O plano ativo (Adriana, 05/nov/2026): vai em toda mensagem que fala de reposição e saldo; a troca de dia não fala nisso.
     var semReposicao=modo==='troca'||modo==='troca-desmarcada-fora'||(modo==='troca-desfeita'&&info.estorna);
-    return ola+'\n\n'+corpo+(semReposicao?'':'\n\n'+REP_OBS_PLANO)+'\n\nEssa mensagem é para que possamos controlar juntas. 💛';
+    return ola+'\n\n'+corpo+(semReposicao?'':'\n\n'+REP_OBS_PLANO)+'\n\nEssa mensagem é para que possamos controlar tudo em conjunto. 💛';
   }
   // O PRAZO NA MENSAGEM AO TUTOR (R1 — texto da Adriana, 08/out/2026; Story 6.38). Entra no fim da
   // mensagem da falta com o dia de repor combinado, da reposição marcada e da troca — e só nelas.
