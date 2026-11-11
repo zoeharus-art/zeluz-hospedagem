@@ -1,0 +1,35 @@
+{
+  "modelo": true,
+  "origens": [
+    "https://CONFIGURAR-ORIGEM-EXATA"
+  ],
+  "ttlMs": 0,
+  "limiteCorpo": 16384,
+  "corpoTimeoutMs": 0,
+  "bancoTimeoutMs": 5000,
+  "limite": {
+    "janelaMs": 0,
+    "bloqueioMs": 0,
+    "maxFalhas": 0,
+    "maxConcorrentes": 0,
+    "maxConcorrentesPorIp": 0,
+    "maxSessoes": 0,
+    "maxEntradasFalha": 0
+  },
+  "principais": {
+    "adriana": {
+      "id": "adriana",
+      "nome": "Adriana",
+      "saltHex": "CONFIGURAR-FORA-DO-REPOSITORIO",
+      "hashHex": "CONFIGURAR-FORA-DO-REPOSITORIO",
+      "ativo": true
+    },
+    "marcia": {
+      "id": "marcia",
+      "nome": "Márcia",
+      "saltHex": "CONFIGURAR-FORA-DO-REPOSITORIO",
+      "hashHex": "CONFIGURAR-FORA-DO-REPOSITORIO",
+      "ativo": true
+    }
+  }
+}

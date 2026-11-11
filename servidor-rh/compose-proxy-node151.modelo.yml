@@ -1,0 +1,33 @@
+services:
+  proxy-rh151:
+    image: "@@IMAGEM_NODE_EXISTENTE_POR_DIGEST@@"
+    pull_policy: never
+    entrypoint: ["node"]
+    command: ["/app/proxy-node151.js"]
+    restart: unless-stopped
+    read_only: true
+    user: "@@ZELUZ_PILOTO_UID@@:@@ZELUZ_PILOTO_GID@@"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 32
+    volumes:
+      - "@@RELEASE_DIR@@/proxy-node151.js:/app/proxy-node151.js:ro"
+      - "/run/zeluz-rh151:/run/zeluz-rh151:ro"
+    networks:
+      - proxy_existente
+    expose:
+      - "8080"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.rh151.rule: "Host(`@@HOST_EXISTENTE@@`) && PathPrefix(`/rh151`)"
+      traefik.http.routers.rh151.entrypoints: "@@ENTRYPOINT_HTTPS_EXISTENTE@@"
+      traefik.http.routers.rh151.tls: "true"
+      traefik.http.routers.rh151.priority: "@@PRIORIDADE_RH151@@"
+      traefik.http.services.rh151.loadbalancer.server.port: "8080"
+
+networks:
+  proxy_existente:
+    external: true
+    name: "@@REDE_TRAEFIK_EXISTENTE@@"
