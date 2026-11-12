@@ -2251,6 +2251,67 @@
   .na-cancel{flex:0 0 auto;background:none;border:2px solid var(--line);color:var(--muted);padding:14px 20px;border-radius:100px;font-family:var(--font-ui);font-size:15px;font-weight:700;cursor:pointer}
   .na-ok{flex:1;background:var(--z-daycare);color:#fff;border:none;padding:14px;border-radius:100px;font-family:var(--font-ui);font-size:16px;font-weight:800;cursor:pointer}
   .na-ok:hover{filter:brightness(1.06)}
+  /* NOVO AULUNO EM 7 PASSOS (Adriana, 11/nov/2026): o card fica mais largo e ganha a barra de passos */
+  #novoAlunoModal{align-items:flex-start!important}
+  #novoAlunoModal .na-card{max-width:680px;padding:22px 22px 20px;margin:auto 0}
+  #novoAlunoModal [hidden]{display:none!important}
+  #novoAlunoModal .na-sub{margin:6px 0 12px}
+  #novoAlunoModal .na-ok,#novoAlunoModal .na-cancel{min-height:46px}
+  #novoAlunoModal .na-selo{display:inline-block;background:var(--z-blue);color:var(--z-cream);font-size:13px;font-weight:800;border-radius:100px;padding:5px 13px;margin-bottom:10px}
+  #novoAlunoModal .na-barra{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+  #novoAlunoModal .na-p{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:6px 10px;border:1.5px solid var(--line);border-radius:100px;background:var(--z-white);color:var(--muted);font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+  #novoAlunoModal .na-p:disabled{opacity:.55;cursor:default}
+  #novoAlunoModal .na-p.feito{color:var(--z-blue);background:var(--z-cream-warm)}
+  #novoAlunoModal .na-p.atual{background:var(--z-gold);color:var(--z-blue);border-color:var(--z-gold)}
+  #novoAlunoModal .na-n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--z-cream-warm);color:var(--z-blue);font-size:12px;font-weight:800}
+  #novoAlunoModal .na-p.atual .na-n{background:var(--z-blue);color:var(--z-cream)}
+  #novoAlunoModal .na-h{font-size:18px;font-weight:800;color:var(--z-blue);margin:4px 0 10px}
+  #novoAlunoModal .cad-grid{gap:0 14px}
+  #novoAlunoModal .na-largo{grid-column:1/-1}
+  #novoAlunoModal .na-sub{font-size:13.5px}
+  #novoAlunoModal .na-secao{font-size:13px;font-weight:800;color:var(--z-blue);margin:4px 0 8px;padding-top:8px;border-top:1.5px solid var(--line)}
+  #novoAlunoModal .cad-in{min-height:42px;min-width:0;font-size:15px;box-sizing:border-box}
+  #novoAlunoModal .seg{max-width:100%}
+  #novoAlunoModal .seg button{min-height:40px}
+  #novoAlunoModal .field.inv>label{color:var(--crm-critico-text,var(--crm-critico))}
+  #novoAlunoModal .field.inv .cad-in,#novoAlunoModal [data-fk].inv .cad-in{border-color:var(--crm-critico)}
+  #novoAlunoModal [data-fk].inv>.seg,#novoAlunoModal .field.inv .seg{outline:2px solid var(--crm-critico);outline-offset:1px}
+  #novoAlunoModal .na-prev{border:1.5px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:8px;background:var(--z-cream)}
+  #novoAlunoModal .na-prev.inv{border-color:var(--crm-critico)}
+  #novoAlunoModal .na-prev-t{font-size:13px;font-weight:800;color:var(--z-blue);margin-bottom:6px}
+  #novoAlunoModal .na-sub2{font-size:12.5px;font-weight:700;color:var(--z-blue);margin:0 0 8px}
+  #novoAlunoModal .na-sub2 .seg{margin-top:5px;display:flex}
+  #novoAlunoModal .na-linha{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  #novoAlunoModal .na-linha .cad-in{flex:1 1 150px;width:auto}
+  #novoAlunoModal .na-lb2{flex:1 1 100%;font-size:12.5px;font-weight:600;color:var(--z-blue)}
+  #novoAlunoModal .na-af,#novoAlunoModal .na-btn2{min-height:42px;padding:8px 14px;font-size:13px;font-weight:800;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)}
+  #novoAlunoModal .na-af.on{background:var(--z-gold);border-color:var(--z-gold)}
+  #novoAlunoModal .na-troca{font-size:13px;color:var(--z-blue);font-weight:600;background:var(--z-cream-warm);border-radius:9px;padding:9px 12px}
+  #novoAlunoModal .na-foto{width:56px;height:56px;border-radius:50%;background-size:cover;background-position:center;border:2px solid var(--line)}
+  #novoAlunoModal #naFaltas{margin:12px 0 0}
+  #novoAlunoModal .na-dias{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;max-width:340px}
+  #novoAlunoModal .na-dias .dia{min-height:44px;padding:0;margin:0;font-family:var(--font-ui);font-size:13px;display:flex;align-items:center;justify-content:center}
+  #novoAlunoModal .na-rs{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;background:var(--z-white)}
+  #novoAlunoModal .na-rs-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;color:var(--z-blue);font-size:14px}
+  #novoAlunoModal .na-rs-h .na-btn2{min-height:36px;padding:6px 14px}
+  #novoAlunoModal .na-rs-l{display:flex;gap:10px;padding:4px 0;font-size:13.5px;border-top:1px solid var(--line)}
+  #novoAlunoModal .na-rs-k{flex:0 0 40%;max-width:170px;color:var(--muted);font-weight:600}
+  #novoAlunoModal .na-rs-v{flex:1;min-width:0;overflow-wrap:anywhere;color:var(--z-blue);font-weight:600}
+  #novoAlunoModal .na-rs-vazio{color:var(--muted);font-weight:500}
+  #novoAlunoModal .na-rs-af{background:var(--z-gold);color:var(--z-blue);border-radius:6px;padding:1px 7px}
+  #novoAlunoModal .na-nota{background:var(--z-cream-warm);border-left:4px solid var(--z-gold);border-radius:10px;padding:10px 14px;color:var(--z-blue);font-size:14px;margin-bottom:12px}
+  #novoAlunoModal .na-nota ul{margin:6px 0 0 18px;font-size:13.5px;font-weight:600}
+  @media(max-width:640px){
+    #novoAlunoModal{padding:8px 6px!important}
+    #novoAlunoModal .na-card{padding:16px 12px}
+    #novoAlunoModal .cad-grid{grid-template-columns:1fr}
+    #novoAlunoModal .na-barra{gap:5px}
+    #novoAlunoModal .na-p{padding:6px 7px;font-size:12.5px;flex:1 1 22%;gap:4px}
+    #novoAlunoModal .na-rs-l{flex-direction:column;gap:0}
+    #novoAlunoModal .na-rs-k{flex:none;max-width:none}
+    #novoAlunoModal .na-btns{gap:8px}
+    #novoAlunoModal .na-cancel{padding:12px 14px}
+  }
 
   /* responsivo */
   .overlay{display:none;position:fixed;inset:0;background:rgba(26,58,79,.5);z-index:45}
@@ -2862,8 +2923,8 @@
 .z-painel44{--p44-blue:#234d67;--p44-soft:#3a6a85;--p44-cream:#fffdf6;--p44-warm:#faf5e9;--p44-gold:#deb428;--p44-line:#e7e0d2;--p44-muted:#7c8a93;box-sizing:border-box;max-width:1160px;padding:24px 38px 52px;background:var(--p44-cream);color:var(--p44-blue);font-family:Inter,Poppins,system-ui,sans-serif}.z-painel44 *{box-sizing:border-box}.z-painel44 [hidden]{display:none!important}.z-painel44 button{font:inherit}.z-painel44 button:focus-visible{outline:3px solid rgba(222,180,40,.55);outline-offset:3px}.z-painel44__topo{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.z-painel44__saudacao .pm-saud1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.12;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2{margin:8px 0 0;font-size:16px;font-weight:600;line-height:1.45;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2 b{font-size:21px;font-weight:800;color:#a57a00}.z-painel44__saudacao .pm-saud3{max-width:54ch;margin:5px 0 0;color:var(--p44-soft);font-size:15px;font-weight:500;font-style:italic;line-height:1.5}.z-painel44__saudacao .pm-traco{display:block;width:40px;height:3px;margin-top:13px;border-radius:2px;background:linear-gradient(90deg,var(--p44-gold),#a57a00)}.z-painel44__saudacao .pm-data{margin-top:14px;color:var(--p44-muted);font-size:12px;font-weight:600}.z-painel44__selo{flex:0 0 auto;padding:8px 11px;border:1px solid var(--p44-line);border-radius:999px;background:#fff;color:var(--p44-blue);font-size:12px;font-weight:700}.z-painel44__selo:before{content:'•';margin-right:5px;color:var(--p44-gold);font-size:18px}.z-painel44__sticker{display:block;width:62px;max-width:90px;height:68px;max-height:80px;object-fit:contain;margin:4px auto 0}.z-painel44__bem-estar{display:block;width:100%;margin-bottom:18px}.z-painel44__bem-estar>*{width:100%}.z-painel44__abas{display:flex;gap:7px;margin:0 0 16px}.z-painel44__abas button{padding:10px 14px;border:1px solid var(--p44-line);border-radius:10px;background:#fff;color:var(--p44-blue);font-size:14px;font-weight:700;cursor:pointer}.z-painel44__abas button[aria-selected=true]{border-color:var(--p44-blue);background:var(--p44-blue);color:var(--p44-cream)}.z-painel44__intro{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:12px 0}.z-painel44__intro h2,.z-painel44__equipe h2{margin:0;font-size:20px}.z-painel44__intro p,.z-painel44__equipe>p{margin:5px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__contagem{color:var(--p44-muted);font-size:12px;font-weight:700}.z-painel44__temas{display:grid;gap:9px}.z-painel44__tema{overflow:hidden;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__tema-cabeca{display:grid;grid-template-columns:36px 1fr auto 20px;align-items:center;gap:10px;width:100%;padding:14px 15px;border:0;background:transparent;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__tema-icone{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--p44-warm);font-size:17px}.z-painel44__tema-titulo,.z-painel44__tema-passo{display:block}.z-painel44__tema-titulo{font-size:15px;font-weight:800}.z-painel44__tema-passo{margin-top:3px;color:var(--p44-muted);font-size:12px}.z-painel44__pill{padding:4px 8px;border-radius:999px;background:#e9f5f7;color:#226477;font-size:11px;font-weight:800}.z-painel44__seta{color:var(--p44-soft);font-size:18px;transition:transform .16s}.z-painel44__tema.aberto .z-painel44__seta{transform:rotate(90deg)}.z-painel44__tema-corpo{margin:0 12px 12px;padding:14px 15px;border-top:1px solid var(--p44-line);background:var(--p44-warm)}.z-painel44__equipe{padding:18px;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__pessoas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}.z-painel44__pessoa{display:flex;align-items:center;gap:11px;width:100%;padding:13px;border:1px solid var(--p44-line);border-radius:12px;background:#fff;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__avatar{display:grid;place-items:center;width:39px;height:39px;flex:0 0 auto;border-radius:50%;background:var(--p44-blue);color:var(--p44-cream);font-size:12px;font-weight:800}.z-painel44__pessoa-info{min-width:0}.z-painel44__pessoa strong,.z-painel44__pessoa small{display:block}.z-painel44__pessoa strong{font-size:14px}.z-painel44__pessoa small{overflow:hidden;margin-top:3px;color:var(--p44-muted);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.z-painel44__pessoa-seta{margin-left:auto;color:#a57a00;font-size:18px}.z-painel44__pessoa-detalhe{margin-top:15px}.z-painel44__pessoa-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__pessoa-secao h3{margin:0;font-size:14px}.z-painel44__pessoa-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}.z-painel44__vazio{margin:15px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__zelozinha{display:block;width:100%;margin-top:16px;padding:12px;border:1px dashed var(--p44-gold);border-radius:11px;background:var(--p44-warm);color:#805d00;text-align:left;cursor:pointer}.z-painel44__zelozinha-titulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.z-painel44__canal{padding:3px 7px;border-radius:999px;background:#fff;color:var(--p44-muted);font-size:11px}.z-painel44__zelozinha-aviso{display:block;margin-top:7px;font-size:12px;line-height:1.45}.z-painel44__perfil{margin-top:15px}.z-painel44__voltar{margin-bottom:12px;padding:8px 11px;border:1px solid var(--p44-line);border-radius:9px;background:#fff;color:var(--p44-blue);font-size:13px;font-weight:700;cursor:pointer}.z-painel44__perfil-subtitulo{margin:4px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__perfil-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__perfil-secao h3{margin:0;font-size:14px}.z-painel44__perfil-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}@media(max-width:760px){.z-painel44{padding:18px}.z-painel44__topo,.z-painel44__intro{display:block}.z-painel44__selo{display:inline-block;margin-top:13px}.z-painel44__contagem{display:block;margin-top:8px}.z-painel44__tema-cabeca{grid-template-columns:32px 1fr auto 16px;padding:12px}.z-painel44__tema-corpo{margin:0 8px 8px;padding:12px}.z-painel44__pessoas,.z-painel44__perfil-conteudo,.z-painel44__pessoa-conteudo{grid-template-columns:1fr}}
 
 </style>
-<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-10-03">
-<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-10-03">
+<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-12-01">
+<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-12-01">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -3252,36 +3313,13 @@
   </div>
 </div>
 
-<!-- ============ NOVO AULUNO — 2 campos → ficha completa ============ -->
+<!-- ============ NOVO AULUNO — cadastro em 7 passos (Adriana, 11/nov/2026) ============ -->
+<!-- Adriana, 19/ago/2026: "no sistema do Day Care e Hospedagem não tem cadastro simplificado, todas as
+     informações são vitais... não pode salvar sem os itens obrigatórios". Adriana, 11/nov/2026: "Tinha que ter
+     tudo de uma só vez... passando de uma tela para outra, obrigatoriamente". O card é desenhado pelo naRender
+     (FILHOt · Tutor · Saúde · Rotina · Jeito · Plano · Conferir); nada grava antes do último botão. -->
 <div id="novoAlunoModal" onclick="if(event.target===this)fecharNovoAluno()">
-  <div class="na-card">
-    <div class="na-title">Novo AULUNO ou HÓSPEDE</div>
-    <!-- Adriana, 19/ago/2026: "no sistema do Day Care e Hospedagem não tem cadastro
-         simplificado, todas as informações são vitais... não pode salvar sem os itens
-         obrigatórios: raça, nome do peludo, nome do tutor, telefone do tutor, a parte de
-         vacina, carrapaticida e vermífugo."
-         A prevenção não trava a recepção: se ainda não foi feita, marca-se "a fazer na
-         Zêluz" e ela nasce como pendência na tela de Prevenção. O que não pode é ficar em
-         branco, ninguém saber, e o FILHOt entrar assim mesmo. -->
-    <div class="na-sub">É o mesmo cadastro do Day Care e da AuAulândia. Tudo aqui é obrigatório — se a prevenção ainda não foi feita, marque <strong>a fazer na Zêluz</strong> e ela já entra como pendência.</div>
-    <label class="na-lb">Nome do FILHOt</label>
-    <input class="na-in" id="naNome" placeholder="Ex: Beau" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('naRaca').focus()">
-    <label class="na-lb">Raça</label>
-    <input class="na-in" id="naRaca" placeholder="Ex: Poodle · SRD · Shih Tzu" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('naTutor').focus()">
-    <label class="na-lb">Tutor — nome e sobrenome</label>
-    <input class="na-in" id="naTutor" placeholder="Ex: Rebeca Azevedo" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('naTel').focus()">
-    <label class="na-lb">Telefone do tutor</label>
-    <input class="na-in" id="naTel" placeholder="Ex: (31) 99999-0000" inputmode="tel" autocomplete="off">
-    <!-- Quando o cadastro vem de um pré-cadastro de avulso, esta linha diz de onde veio e o
-         que ainda falta perguntar ao tutor (a data de quem foi marcado só como "em dia"). -->
-    <div id="naPreAviso"></div>
-    <div id="naPrev"></div>
-    <div class="na-warn" id="naWarn"></div>
-    <div class="na-btns">
-      <button class="na-cancel" onclick="fecharNovoAluno()">Cancelar</button>
-      <button class="na-ok" onclick="criarAluno()">Criar e abrir a ficha →</button>
-    </div>
-  </div>
+  <div class="na-card" id="naCad" role="dialog" aria-modal="true" aria-labelledby="naTitulo"></div>
 </div>
 
 <!-- ============ TOPO MOBILE ============ -->
@@ -5572,7 +5610,7 @@
 <script src="autoria-logica.js?v=2026-10-15-02"></script>
 <script src="navegacao-inicio.js?v=2026-10-15-02"></script>
 <script src="hospedes-atividades.js?v=2026-10-16-01"></script>
-<script src="alimentacao-hospede.js?v=2026-11-10-03"></script>
+<script src="alimentacao-hospede.js?v=2026-11-12-01"></script>
 <script src="cafe-operacional.js?v=2026-10-16-02"></script>
 <script src="cafe-aluno-logica.js?v=2026-10-16-06"></script>
 <script src="presenca-logica.js?v=2026-10-16-02"></script>
@@ -31531,7 +31569,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-11-10-03';
+  const APP_VERSAO='2026-11-12-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -50387,23 +50425,21 @@ return { criar };
     if(typeof gateCadastro==='function' && !gateCadastro()) return;
     inserirAluno();
     NA_PRE_CAD=chave;
-    var preencher=function(id, v){ var e=document.getElementById(id); if(e) e.value=String(v==null?'':v); };
-    preencher('naNome', o.nome); preencher('naRaca', o.raca); preencher('naTutor', o.tutor); preencher('naTel', o.tel);
+    var txt=function(v){ return String(v==null?'':v); };
+    if(NA_S){ NA_S.nome=txt(o.nome); NA_S.raca=txt(o.raca); NA_S.t1=txt(o.tutor); NA_S.t1tel=txt(o.tel); }
     var prev=(o.prev||{}), emDia=prev.em_dia||{}, semData=[];
     PRE_CAD_PREV.forEach(function(it){
       var dt=prev[it.k+'_t'];
-      if(dt){ preencher('naP_'+it.k, dt); return; }
+      if(dt && NA_S && NA_S.p[it.k]){ NA_S.p[it.k].d=txt(dt); return; }
       if(emDia[it.k]) semData.push(it.t);
     });
-    var av=document.getElementById('naPreAviso');
-    if(av){
-      av.innerHTML='<div class="hint" style="margin-top:10px;padding:8px 10px;border-radius:10px;background:var(--z-cream-warm);border:1px solid var(--line)">'
-        +'Veio do <strong>pré-cadastro do avulso</strong> de '+escAttr(o.nome||'')+'.'
-        +(semData.length
-          ? (' No balcão marcaram <strong>'+escAttr(semData.join(' · '))+'</strong> como «em dia», sem data — peça a data da carteirinha ao tutor, ou marque «a fazer na Zêluz».')
-          : '')
-        +'</div>';
-    }
+    NA_PRE_AVISO='<div class="hint" style="margin:0 0 10px;padding:8px 10px;border-radius:10px;background:var(--z-cream-warm);border:1px solid var(--line)">'
+      +'Veio do <strong>pré-cadastro do avulso</strong> de '+escAttr(o.nome||'')+'.'
+      +(semData.length
+        ? (' No balcão marcaram <strong>'+escAttr(semData.join(' · '))+'</strong> como «em dia», sem data — peça a data da carteirinha ao tutor, ou marque «a fazer na Zêluz».')
+        : '')
+      +'</div>';
+    try{ naRender(); }catch(e){ _logFalhaGrav('desenhar o cadastro novo do pré-cadastro', e); }
     if(typeof audit==='function') audit('pre-cadastro','abriu o cadastro para promover '+(o.nome||'')+' (tutor '+(o.tutor||'')+')',{pet:(o.nome||''), alvo:chave});
   }
   // A ficha nasceu: o pré-cadastro fica marcado como promovido, com a chave da ficha, quem
@@ -50418,25 +50454,16 @@ return { criar };
       return true;
     }).catch(function(e){ _logFalhaGrav('daycare/pre-cadastro/'+chave+'/promovido', e); return false; });
   }
-  // Novo AULUNO: telinha de 2 campos (nome + tutor) → abre a FICHA COMPLETA para o resto
-  function inserirAluno(){
-    if(!canEditPel()){ alert('Apenas Gestão e Supervisão podem cadastrar um novo aluno.'); return; }
-    const m=document.getElementById('novoAlunoModal'); if(!m) return;
-    const n=document.getElementById('naNome'), t=document.getElementById('naTutor'), w=document.getElementById('naWarn');
-    if(n) n.value=''; if(t) t.value=''; if(w) w.innerHTML='';
-    ['naRaca','naTel'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
-    NA_AFAZER={};
-    // O modal abre limpo: se o anterior veio de um pré-cadastro, nada dele sobra aqui.
-    NA_PRE_CAD='';
-    var _av=document.getElementById('naPreAviso'); if(_av) _av.innerHTML='';
-    try{ naRenderPrev(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
-    m.classList.add('show');
-    setTimeout(()=>{ try{ n&&n.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ },150);
-  }
-  function fecharNovoAluno(){ NA_PRE_CAD=''; const m=document.getElementById('novoAlunoModal'); if(m) m.classList.remove('show'); }
-  // ===== CADASTRO NOVO NÃO NASCE PELA METADE — Adriana, 19/ago/2026 ==============
-  // Os itens de prevenção que a Zêluz exige para o FILHOt frequentar. Cada um pede a data
-  // OU o "a fazer na Zêluz" — as duas respostas servem, o branco não.
+  // ===== NOVO AULUNO EM 7 PASSOS — Adriana, 11/nov/2026 ================================================
+  // "Não abre a ficha completa, não tem informação de seresto, microchip, data de nascimento, se é
+  //  castrado, macho ou fêmea. Depois tem que entrar em cadastro para atualizar as informações. Tinha
+  //  que ter tudo de uma só vez... passando de uma tela para outra, obrigatoriamente para poder cadastrar."
+  // Maquete aprovada em 12/nov/2026. O cadastro pede, um passo por vez, o que a ficha precisa na entrada:
+  // FILHOt · Tutor · Saúde · Rotina · Jeito · Plano · Conferir. Nada grava antes do último botão, e grava
+  // UMA vez (daycare/cadastro/<chave>), nos MESMOS campos que a ficha lê e grava. O plano em dinheiro NÃO
+  // grava aqui: fica como rascunho na aba Plano, para o «Confirmar» de sempre (com a conta da vigência e o
+  // Recebimentos de sempre). Continua valendo a regra de 19/ago/2026: não existe cadastro pela metade, e a
+  // prevenção que ainda não foi feita entra como «a fazer na Zêluz» e nasce como pendência na Prevenção.
   const NA_PREV=[
     {k:'vac_mult',  t:'Vacina múltipla',  dias:365},
     {k:'vac_raiva', t:'Antirrábica',      dias:365},
@@ -50444,101 +50471,576 @@ return { criar };
     {k:'verm',      t:'Vermífugo',        dias:120},
     {k:'ecto',      t:'Carrapaticida',    dias:30}
   ];
-  function naRenderPrev(){
-    var el=document.getElementById('naPrev'); if(!el) return;
-    // "VENCE EM" TAMBÉM NO CADASTRO NOVO (Adriana, 24/set/2026): quem está com a carteira
-    // na mão digita o vencimento impresso. Gestão, Diretoria e Supervisão veem o campo; os
-    // demais papéis cadastram como sempre, pela data em que tomou.
-    var manual=podeVencManual();
-    el.innerHTML='<div class="na-lb" style="margin-top:12px">Prevenção — obrigatória</div>'
-      +NA_PREV.map(function(it){
-        return '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:5px 0">'
-          +'<span style="min-width:128px;font-size:12.5px;font-weight:800;color:var(--z-blue)">'+it.t+'</span>'
-          +'<input type="date" class="na-in" id="naP_'+it.k+'" style="width:auto;margin:0;flex:1;min-width:140px" max="'+hojeISO()+'" onchange="naMarcarFeito(\''+it.k+'\')" min="2015-01-01" onkeydown="return dataSoNoCalendario(event)" title="Última dose — a data em que tomou">'
-          +(manual?('<input type="date" class="na-in" id="naV_'+it.k+'" style="width:auto;margin:0;flex:1;min-width:140px" min="2015-01-01" max="2035-12-31" onchange="naMarcarFeito(\''+it.k+'\')" onkeydown="return dataSoNoCalendario(event)" title="Vence em (próxima) — a data futura, a que está na carteira">'):'')
-          +'<button type="button" class="btn" id="naF_'+it.k+'" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line);padding:6px 11px;font-size:12px;font-weight:800" onclick="naAFazer(\''+it.k+'\')">a fazer na Zêluz</button>'
-          +'</div>';
-      }).join('')
-      +'<div class="hint" style="margin-top:4px">'
-      +(manual?'A 1ª data é a <strong>última dose</strong>; a 2ª é <strong>Vence em (próxima)</strong>. Se você só sabe quando vence, digite em &laquo;Vence em&raquo; — não precisa da data em que tomou.'
-              :'Informe a data da última dose, ou marque &laquo;a fazer na Zêluz&raquo;.')
+  const NA_ECTO=['Bravecto','Credelli','Simparic','Nexgard','Pipeta','Outro'];
+  const NA_VERM=['Endogard','Outro'];
+  const NA_REFS=['Café da manhã','Almoço','Jantar'];
+  const NA_JEITO=['Se dá bem','Às vezes estranha','Não se dá bem'];
+  const NA_VEZES=['1x','2x','3x','5x'];
+  const NA_ULTIMO=7;
+  var NA_S=null, NA_PASSO=1, NA_MAX=1, NA_TENTOU={}, NA_PRE_AVISO='';
+  function naEstadoNovo(){
+    var p={}; NA_PREV.forEach(function(it){ p[it.k]={d:'', v:'', af:false}; });
+    return {nome:'', apelido:'', raca:'', sexo:'', castrado:'', dataModo:'data', nasc:'', idade:'', peso:'', chip:'', chipNum:'', foto:'',
+      matricula:'', adaptacao:'Não', adaptDesde:'', adaptTipo:'Day Care',
+      t1:'', t1tel:'', t2:'', t2tel:'', tprinc:'', bairro:'', indicou:'', vet:'', vettel:'', clinica:'', vetEnd:'',
+      p:p, vermProd:'', ectoMarca:'', seresto:'', serestoData:'',
+      checkupFez:'', checkupT:'', escovaT:'', alergia:'', alergiaQ:'', saude:'', saudeQ:'', restr:'', med:'Não', medQ:'',
+      racaoMarca:'', racaoQtd:'', nat:'', natQtd:'', horarios:'', refs:[], mistura:'', alimObs:'', passeia:'', banheiro:'',
+      compCasa:'', outros:'', pessoas:'', atacou:'', medos:'', manias:'', brinc:'', eaRestr:'', eaNao:false, matilha:'', obsTutor:'',
+      plano:'', vezes:'', dias:[], ordemPet:'1º', dataPag:''};
+  }
+  function naEsc(s){ return escAttr(s==null?'':String(s)); }
+  function naDig(s){ return String(s||'').replace(/\D/g,''); }
+  function naDataOk(v, min){ return /^\d{4}-\d{2}-\d{2}$/.test(v||'') && v<=hojeISO() && v>=(min||'2015-01-01'); }
+  // o texto acompanha o sexo do FILHOt (antes de escolher, os dois)
+  function naFem(){ return NA_S.sexo==='Fêmea'; }
+  function naEle(){ return NA_S.sexo?(naFem()?'ela':'ele'):'ele(a)'; }
+  function naCast(){ return NA_S.sexo?(naFem()?'Castrada':'Castrado'):'Castrado(a)'; }
+  function naJeitoTit(){ return NA_S.sexo?(naFem()?'Jeito dela':'Jeito dele'):'Jeito dele(a)'; }
+  // «do Beau», «da Mel», «pelo Beau», «pela Mel»; sem nome ainda, «do FILHOt»
+  function naComNome(prep){
+    var n=String(NA_S.nome||'').trim();
+    if(!n) return prep+'o FILHOt';
+    return prep+(NA_S.sexo?(naFem()?'a':'o'):'o(a)')+' '+n;
+  }
+  function naVePlano(){ try{ return podePapel('ver-plano'); }catch(e){ return false; } /* silencioso de propósito: sem como saber, o plano em dinheiro fica para a ficha */ }
+  // As opções do «Tipo de plano». Quem vê plano escolhe Mensal/Trimestral/Semestral (é o que fica de rascunho
+  // na aba Plano); quem não vê escolhe só se é auluno, avulso ou hóspede — a categoria do FILHOt.
+  function naPlanoOpcoes(){
+    var L=[];
+    if(naVePlano()){
+      var pl={}; try{ pl=planos()||{}; }catch(e){ pl={}; } /* silencioso de propósito: sem a tabela, fica a opção sem plano */
+      Object.keys(pl).forEach(function(k){
+        var c=String((pl[k]||{}).compromisso||'');
+        if(!PLANO_MESES[c]) return;
+        L.push({v:c.charAt(0).toUpperCase()+c.slice(1)+' · '+((pl[k]||{}).rotulo||k), cat:'auluno', k:k});
+      });
+    }
+    if(!L.length) L.push({v:'Auluno do Day Care', cat:'auluno', k:''});
+    L.push({v:'Avulso · diária', cat:'avulso', k:''});
+    L.push({v:'Só AuAulândia · hospedagem', cat:'hospede', k:''});
+    return L;
+  }
+  function naPlanoEscolhido(){ var v=NA_S.plano; return naPlanoOpcoes().filter(function(o){ return o.v===v; })[0]||null; }
+  function naVezesN(){ return parseInt(NA_S.vezes,10)||0; }
+  function naTemTutor2(){ return !!(String(NA_S.t2||'').trim()||String(NA_S.t2tel||'').trim()); }
+  function naPrimeiro(s, alt){ return String(s||'').trim().split(/\s+/)[0]||alt; }
+  function naColeiraTroca(){
+    if(NA_S.seresto!=='Usa' || !naDataOk(NA_S.serestoData)) return '';
+    var d=0; try{ d=coleiraDur({col_nome:'Seresto'}); }catch(e){ d=0; } /* silencioso de propósito: sem a duração, a ficha calcula ao abrir */
+    return d?addDiasISO(NA_S.serestoData, d):'';
+  }
+  function naPesoLido(){ try{ return pesoLer(NA_S.peso); }catch(e){ return {erro:'Não entendi esse número.'}; } /* silencioso de propósito: o erro vira a falta do campo */ }
+  function naPesoHint(){ var pe=naPesoLido(); return (!pe.erro && pe.como)?('<div class="hint" style="margin:6px 0 0">Entendi <strong>'+naEsc(pesoFmt(pe.kg))+' kg</strong> ('+naEsc(pe.como)+').</div>'):''; }
+
+  // ---- o que falta em cada passo: [{fk, txt}] — fk é o campo que fica vermelho
+  function naFaltas(n){
+    var S=NA_S, L=[];
+    var add=function(fk, txt){ L.push({fk:fk, txt:txt}); };
+    if(n===1){
+      if(!S.nome.trim()) add('nome','o nome');
+      if(!S.raca.trim()) add('raca','a raça');
+      if(!S.sexo) add('sexo','o sexo');
+      if(!S.castrado) add('castrado','se '+naEle()+' é '+naCast().toLowerCase());
+      if(S.dataModo==='data'){ if(!nascPlausivel(S.nasc)) add('nasc', S.nasc?'uma data de nascimento possível':'a data de nascimento'); }
+      else { var id=parseFloat(String(S.idade).replace(',','.')); if(String(S.idade).trim()===''||isNaN(id)||id<0||id>30) add('nasc','a idade aproximada (0 a 30 anos)'); }
+      var pe=naPesoLido(); if(pe.erro) add('peso', String(S.peso).trim()?'o peso em kg ('+pe.erro+')':'o peso (kg)');
+      if(!S.chip) add('chip','se tem microchip');
+      else if(S.chip==='Tem' && naDig(S.chipNum).length!==15) add('chipNum','o número do microchip (15 dígitos)');
+    }
+    if(n===2){
+      if(S.t1.trim().split(/\s+/).filter(Boolean).length<2) add('t1', S.t1.trim()?'o sobrenome do Tutor 1':'o nome e sobrenome do Tutor 1');
+      if(naDig(S.t1tel).length<10) add('t1tel','o telefone do Tutor 1 (com DDD)');
+      if(naTemTutor2()){
+        if(!S.t2.trim()) add('t2','o nome do Tutor 2');
+        if(naDig(S.t2tel).length<10) add('t2tel','o telefone do Tutor 2 (com DDD)');
+        if(!S.tprinc) add('tprinc','quem é o tutor principal');
+      }
+    }
+    if(n===3){
+      var manual=podeVencManual();
+      NA_PREV.forEach(function(it){
+        var p=S.p[it.k], vc=manual?p.v:'';
+        if(p.af) return;
+        if(!p.d && !vc){ add('p_'+it.k,'a data ou «a fazer na Zêluz» em '+it.t); return; }
+        if(p.d && !naDataOk(p.d)) { add('p_'+it.k, p.d>hojeISO()?'uma data que já passou em '+it.t:'uma data válida em '+it.t); return; }
+        if(vc && (!/^\d{4}-\d{2}-\d{2}$/.test(vc) || vc<'2015-01-01' || vc>'2035-12-31')){ add('p_'+it.k,'uma data válida em '+it.t+' (Vence em — confira o ano)'); return; }
+        if(it.k==='verm' && !S.vermProd) add('vermProd','o produto do vermífugo');
+        if(it.k==='ecto' && !S.ectoMarca) add('ectoMarca','a marca do carrapaticida');
+      });
+      if(!S.seresto) add('seresto','se usa coleira Seresto');
+      else if(S.seresto==='Usa' && !naDataOk(S.serestoData)) add('serestoData','a data em que colocou a coleira Seresto');
+      if(S.checkupFez==='Sim' && S.checkupT && !naDataOk(S.checkupT)) add('checkupT','uma data que já passou no último check-up');
+      if(S.escovaT && !naDataOk(S.escovaT)) add('escovaT','uma data que já passou na troca de escova');
+      if(!S.alergia) add('alergia','se '+naEle()+' tem alergia');
+      else if(S.alergia==='Tem' && !S.alergiaQ.trim()) add('alergiaQ','qual é a alergia');
+      if(!S.saude) add('saude','se '+naEle()+' tem algum problema de saúde');
+      else if(S.saude==='Sim' && !S.saudeQ.trim()) add('saudeQ','qual é o problema de saúde');
+      if(S.med==='Sim' && !S.medQ.trim()) add('medQ','qual é a medicação contínua');
+    }
+    if(n===4){
+      if(!S.refs.length) add('refs','em quais refeições '+naEle()+' come (café, almoço, jantar)');
+    }
+    if(n===5){
+      if(!S.outros) add('outros','como '+naEle()+' é com outros peludos');
+      if(!S.pessoas) add('pessoas','como '+naEle()+' é com pessoas');
+      if(!S.atacou) add('atacou','se '+naEle()+' já atacou outro peludo');
+      if(!S.eaRestr.trim() && !S.eaNao) add('eaRestr','a restrição no Enriquecimento Ambiental (ou «não tem restrição»)');
+    }
+    if(n===6){
+      var op=naPlanoEscolhido();
+      if(!op) add('plano','o tipo de plano');
+      else if(op.cat==='auluno'){
+        if(!S.vezes) add('vezes','quantas aulas por semana');
+        else {
+          var q=naVezesN(), m=S.dias.length;
+          if(m<q) add('dias','marcar mais '+(q-m)+' dia'+(q-m>1?'s':'')+' da semana (são '+q+'x por semana)');
+          else if(m>q) add('dias','tirar '+(m-q)+' dia'+(m-q>1?'s':'')+' da semana (são '+q+'x por semana)');
+        }
+        if(op.k && S.dataPag && (!/^\d{4}-\d{2}-\d{2}$/.test(S.dataPag) || S.dataPag<'2015-01-01' || S.dataPag>'2035-12-31')) add('dataPag','uma data de pagamento válida');
+      }
+    }
+    return L;
+  }
+
+  // ---- peças de HTML (as mesmas classes da ficha: field, cad-in, seg gold, dia clic)
+  function naCampo(fk, rot, html, obrig, largo){
+    return '<div class="field'+(largo?' na-largo':'')+'" data-fk="'+fk+'"><label>'+rot+(obrig?' *':'')+'</label>'+html+'</div>';
+  }
+  function naIn(k, ph, o){
+    o=o||{};
+    var dt=(o.type==='date');
+    return '<input class="cad-in" data-in="'+k+'" value="'+naEsc(NA_S[k])+'" placeholder="'+naEsc(ph||'')+'" autocomplete="off"'
+      +(o.type?' type="'+o.type+'"':'')+(o.im?' inputmode="'+o.im+'"':'')+(o.max?' max="'+o.max+'"':'')+(o.min?' min="'+o.min+'"':'')
+      +(o.list?' list="'+o.list+'"':'')+(dt?' onkeydown="return dataSoNoCalendario(event)"':'')+'>';
+  }
+  function naSeg(k, opts, val){
+    var cur=(val!==undefined)?val:NA_S[k];
+    return '<div class="seg gold" data-single>'+opts.map(function(o){
+      return '<button type="button" class="'+(cur===o?'on':'')+'" data-seg="'+k+'" data-v="'+naEsc(o)+'">'+naEsc(o)+'</button>';
+    }).join('')+'</div>';
+  }
+  function naPasso1(){
+    var S=NA_S, hj=hojeISO();
+    var nasc=(S.dataModo==='data')
+      ? '<input class="cad-in" type="date" data-in="nasc" value="'+naEsc(S.nasc)+'" min="'+nascMinISO()+'" max="'+hj+'" onkeydown="return dataSoNoCalendario(event)">'
+      : '<input class="cad-in" data-in="idade" value="'+naEsc(S.idade)+'" placeholder="Ex: 3" inputmode="decimal" autocomplete="off">';
+    return '<div class="cad-grid">'
+      +naCampo('nome','Nome do FILHOt',naIn('nome','Ex: Beau'),1)
+      +naCampo('apelido','Apelido',naIn('apelido','Como o chamam em casa'))
+      +naCampo('raca','Raça',naIn('raca','Ex: Poodle · SRD · Shih Tzu',{list:'racasList'}),1)
+      +naCampo('sexo','Sexo',naSeg('sexo',['Macho','Fêmea']),1)
+      +naCampo('castrado',naCast()+'?',naSeg('castrado',['Sim','Não']),1)
+      +naCampo('peso','Peso (kg)',naIn('peso','Ex: 7,5',{im:'decimal'})+'<div data-na-peso>'+naPesoHint()+'</div>',1)
+      +naCampo('nasc','Data de nascimento',
+          naSeg('dataModo',['Sei a data','Só sei a idade'], S.dataModo==='data'?'Sei a data':'Só sei a idade')
+          +'<div style="margin-top:8px">'+nasc+(S.dataModo==='idade'?'<div class="hint" style="margin:6px 0 0">Idade aproximada, em anos.</div>':'')+'</div>',1,1)
+      +naCampo('chip','Microchip',naSeg('chip',['Tem','Não tem'])
+          +(S.chip==='Tem'?'<div style="margin-top:8px" data-fk="chipNum">'+naIn('chipNum','15 dígitos',{im:'numeric'})+'</div>':''),1,1)
+      +naCampo('matricula','Data de matrícula',naIn('matricula','',{type:'date', min:'2015-01-01', max:'2035-12-31'}),0,1)
+      +naCampo('adaptacao','Em adaptação (45 dias)?',naSeg('adaptacao',['Sim','Não']),0,1)
+      +(S.adaptacao==='Sim'
+        ? naCampo('adaptDesde','Adaptação começou em',naIn('adaptDesde','',{type:'date', min:'2015-01-01', max:'2035-12-31'}))
+          +naCampo('adaptTipo','Adaptação de quê?',naSeg('adaptTipo',['Day Care','Hospedagem'])+'<div class="hint" style="margin:6px 0 0">Day Care conta '+ADAPT_DIAS+' dias corridos. Hospedagem só registra a data.</div>')
+        : '')
+      +naCampo('foto','Foto (opcional)','<input type="file" accept="image/*" capture="environment" id="naFotoArq" style="display:none">'
+          +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+          +(S.foto?'<span class="na-foto" style="background-image:url(\''+S.foto+'\')" role="img" aria-label="Foto escolhida"></span>':'')
+          +'<button type="button" class="btn na-btn2" data-acao="foto">'+(S.foto?'Trocar a foto':'Escolher foto')+'</button>'
+          +(S.foto?'<button type="button" class="btn na-btn2" data-acao="semfoto">Tirar a foto</button>':'')+'</div>',0,1)
       +'</div>';
   }
-  var NA_AFAZER={};
-  function naAFazer(k){
-    NA_AFAZER[k]=!NA_AFAZER[k];
-    var b=document.getElementById('naF_'+k), d=document.getElementById('naP_'+k);
-    if(!b) return;
-    if(NA_AFAZER[k]){
-      b.style.background='var(--z-gold)'; b.style.color='var(--z-blue)'; b.textContent='✓ a fazer na Zêluz';
-      if(d) d.value='';
-      var v=document.getElementById('naV_'+k); if(v) v.value='';
-    } else { b.style.background='var(--z-cream-warm)'; b.style.color='var(--z-blue)'; b.textContent='a fazer na Zêluz'; }
+  function naPasso2(){
+    var S=NA_S, tem2=naTemTutor2();
+    return '<div class="cad-grid">'
+      +naCampo('t1','Tutor 1 — nome e sobrenome',naIn('t1','Ex: Rebeca Azevedo'),1)
+      +naCampo('t1tel','Telefone do Tutor 1',naIn('t1tel','Ex: (31) 99999-0000',{im:'tel'}),1)
+      +naCampo('bairro','Bairro',naIn('bairro','Bairro'))
+      +naCampo('indicou','Quem indicou',naIn('indicou','Indicação'))
+      +'<div class="na-largo na-secao">Tutor 2 — guarda compartilhada (opcional)</div>'
+      +naCampo('t2','Tutor 2 — nome',naIn('t2','Outro responsável'))
+      +naCampo('t2tel','Tutor 2 — telefone',naIn('t2tel','Ex: (31) 98888-0000',{im:'tel'}))
+      +'<div class="field na-largo" data-fk="tprinc" id="naBoxPrinc"'+(tem2?'':' hidden')+'><label>Tutor principal — quem responde pelos cuidados '+naEsc(naComNome('d'))+' *</label>'
+        +'<div class="seg gold" data-single><button type="button" class="'+(S.tprinc==='Tutor 1'?'on':'')+'" data-seg="tprinc" data-v="Tutor 1">Tutor 1 · '+naEsc(naPrimeiro(S.t1,'Tutor 1'))+'</button>'
+        +'<button type="button" class="'+(S.tprinc==='Tutor 2'?'on':'')+'" data-seg="tprinc" data-v="Tutor 2">Tutor 2 · '+naEsc(naPrimeiro(S.t2,'Tutor 2'))+'</button></div></div>'
+      +'<div class="na-largo na-secao">Veterinário(a) de confiança do tutor (opcional)</div>'
+      +naCampo('vet','Veterinário(a) — nome',naIn('vet','Ex: Dra. Camila'))
+      +naCampo('vettel','Veterinário(a) — telefone',naIn('vettel','Ex: (31) 3333-0000',{im:'tel'}))
+      +naCampo('clinica','Clínica — nome',naIn('clinica','Nome da clínica'))
+      +naCampo('vetEnd','Clínica — endereço',naIn('vetEnd','Rua, número, bairro'))
+      +'</div>';
   }
-  function naMarcarFeito(k){
-    // Vale para as DUAS datas: a última dose e o "Vence em". Escolheu uma, o item deixou
-    // de ser "a fazer na Zêluz" — alguma proteção existe (24/set/2026).
-    var d=document.getElementById('naP_'+k), v=document.getElementById('naV_'+k);
-    var algo=!!((d&&d.value)||(v&&v.value));
-    if(NA_AFAZER[k] && algo) naAFazer(k);
+  function naItemPrev(it, manual){
+    var S=NA_S, p=S.p[it.k], extra='';
+    if(it.k==='verm') extra='<div class="na-sub2" data-fk="vermProd">Produto *'+naSeg('vermProd',NA_VERM)+'</div>';
+    if(it.k==='ecto') extra='<div class="na-sub2" data-fk="ectoMarca">Marca *'+naSeg('ectoMarca',NA_ECTO)+'</div>';
+    return '<div class="na-prev" data-fk="p_'+it.k+'"><div class="na-prev-t">'+it.t+' *</div>'+extra
+      +'<div class="na-linha"><input class="cad-in" type="date" data-pin="'+it.k+'" value="'+naEsc(p.d)+'" min="2015-01-01" max="'+hojeISO()+'" onkeydown="return dataSoNoCalendario(event)" title="Última dose: a data em que tomou" aria-label="Última dose de '+it.t+'">'
+      +(manual?'<input class="cad-in" type="date" data-pvc="'+it.k+'" value="'+naEsc(p.v)+'" min="2015-01-01" max="2035-12-31" onkeydown="return dataSoNoCalendario(event)" title="Vence em (próxima): a data que está na carteira" aria-label="Vence em — '+it.t+'">':'')
+      +'<button type="button" class="btn na-af'+(p.af?' on':'')+'" data-af="'+it.k+'">'+(p.af?'✓ a fazer na Zêluz':'a fazer na Zêluz')+'</button></div></div>';
   }
-  // 6.57 (2ª rodada, L-1): a ficha que está sendo criada (pela chave). O segundo toque em «Criar e abrir a
+  function naPasso3(){
+    var S=NA_S, manual=podeVencManual(), troca=naColeiraTroca();
+    return '<div class="hint" style="margin:0 0 10px">'+(manual
+        ? 'Em cada item: a 1ª data é a <strong>última dose</strong>; a 2ª é <strong>Vence em (próxima)</strong>. Se só sabe quando vence, preencha só a 2ª. Ainda não fez? Marque «a fazer na Zêluz»: vira pendência na Prevenção.'
+        : 'Em cada item: a data da última dose, ou «a fazer na Zêluz» (vira pendência na Prevenção).')+'</div>'
+      +NA_PREV.map(function(it){ return naItemPrev(it, manual); }).join('')
+      +'<div class="na-prev" data-fk="seresto"><div class="na-prev-t">Coleira Seresto *</div>'
+        +naSeg('seresto',['Usa','Não usa'])
+        +(S.seresto==='Usa'?'<div class="na-linha" style="margin-top:8px" data-fk="serestoData"><label class="na-lb2">Data em que colocou</label>'
+          +'<input class="cad-in" type="date" data-in="serestoData" value="'+naEsc(S.serestoData)+'" min="2015-01-01" max="'+hojeISO()+'" onkeydown="return dataSoNoCalendario(event)">'
+          +(troca?'<span class="na-troca">troca em <b>'+naEsc(fmtBR(troca))+'</b></span>':'')+'</div>':'')
+      +'</div>'
+      +'<div class="cad-grid" style="margin-top:6px">'
+      +naCampo('checkupFez','Já fez check-up?',naSeg('checkupFez',['Sim','Nunca fez']),0,1)
+      +(S.checkupFez==='Sim'?naCampo('checkupT','Último check-up (fez em)',naIn('checkupT','',{type:'date', min:'2015-01-01', max:hojeISO()}),0,1):'')
+      +naCampo('escovaT','Última troca de escova de dentes',naIn('escovaT','',{type:'date', min:'2015-01-01', max:hojeISO()}),0,1)
+      +naCampo('alergia','Alergia',naSeg('alergia',['Não tem','Tem'])+(S.alergia==='Tem'?'<div style="margin-top:8px" data-fk="alergiaQ">'+naIn('alergiaQ','Qual? Ex: frango — ou TUDO')+'</div>':''),1,1)
+      +naCampo('saude','Algum problema de saúde',naSeg('saude',['Não','Sim'])+(S.saude==='Sim'?'<div style="margin-top:8px" data-fk="saudeQ">'+naIn('saudeQ','Qual? Ex: cardíaco')+'</div>':''),1,1)
+      +naCampo('restr','Restrição alimentar',naIn('restr','Ex: sem grãos — ou vazio'),0,1)
+      +naCampo('med','Medicação contínua',naSeg('med',['Não','Sim'])+(S.med==='Sim'?'<div style="margin-top:8px" data-fk="medQ">'+naIn('medQ','Nome, dose, horário')+'</div>':''),0,1)
+      +'</div>';
+  }
+  function naPasso4(){
+    var S=NA_S;
+    var refs='<div class="seg gold">'+NA_REFS.map(function(r){ return '<button type="button" class="'+(S.refs.indexOf(r)>=0?'on':'')+'" data-ref="'+naEsc(r)+'">'+r+'</button>'; }).join('')+'</div>';
+    return '<div class="cad-grid">'
+      +naCampo('racaoMarca','Ração (marca)',naIn('racaoMarca','Ex: Hills Gastrointestinal'))
+      +naCampo('racaoQtd','Quanto de ração por refeição',naIn('racaoQtd','Ex: 60 gramas'))
+      +naCampo('nat','Comida natural (o quê)',naIn('nat','Ex: patê gastrô — ou vazio'))
+      +naCampo('natQtd','Quanto de natural por refeição',naIn('natQtd','Ex: 1 colher'))
+      +naCampo('horarios','Horários das refeições',naIn('horarios','Ex: 07:00, 12:00 e 18:00'),0,1)
+      +naCampo('refs','Em quais refeições',refs,1,1)
+      +naCampo('mistura','Mistura ração com natural?',naSeg('mistura',['Sim','Não']),0,1)
+      +naCampo('alimObs','Observação da comida',naIn('alimObs','Ex: come devagar'),0,1)
+      +'<div class="na-largo na-secao">Rotina do Day Care</div>'
+      +naCampo('passeia','Passeia?',naSeg('passeia',['Sim','Não']))
+      +naCampo('banheiro','Xixi e cocô',naIn('banheiro','Ex: fora de casa'))
+      +'</div>';
+  }
+  function naPasso5(){
+    var S=NA_S;
+    return '<div class="cad-grid">'
+      +naCampo('compCasa','Em casa',naIn('compCasa','Como '+naEle()+' é em casa'),0,1)
+      +naCampo('outros','Com outros peludos',naSeg('outros',NA_JEITO),1,1)
+      +naCampo('pessoas','Com pessoas',naSeg('pessoas',NA_JEITO),1,1)
+      +naCampo('atacou','Já atacou outro peludo?',naSeg('atacou',['Não','Sim']),1,1)
+      +naCampo('medos','Medos',naIn('medos','Ex: trovão, aspirador'),0,1)
+      +naCampo('manias','Manias',naIn('manias','Ex: protege a comida'),0,1)
+      +naCampo('brinc','Brincadeira favorita',naIn('brinc','Ex: buscar a bolinha'),0,1)
+      +'<div class="na-largo na-secao">Enriquecimento ambiental</div>'
+      +naCampo('eaRestr','Restrição no Enriquecimento Ambiental (EA)',
+          naIn('eaRestr','O que '+naEle()+' NÃO pode. Ex: abobrinha · feno · TUDO')
+          +'<div style="margin-top:6px"><button type="button" class="btn na-af'+(S.eaNao?' on':'')+'" id="naEaBtn" data-acao="eanao">'+(S.eaNao?'✓ não tem restrição — perguntei ao tutor':'não tem restrição (perguntei ao tutor)')+'</button></div>',1,1)
+      +naCampo('matilha','Matilha (EA)',naSeg('matilha',['Pequeno porte','Médio porte','Outro']),0,1)
+      +naCampo('obsTutor','O que o tutor contou',naIn('obsTutor','Check-up, cio, mudanças em casa — o que veio na resposta do tutor'),0,1)
+      +'</div>';
+  }
+  function naPasso6(){
+    var S=NA_S, op=naPlanoEscolhido();
+    var h='<div class="cad-grid">'+naCampo('plano','Tipo de plano',naSeg('plano',naPlanoOpcoes().map(function(o){ return o.v; })),1,1);
+    if(op && op.cat==='auluno'){
+      var q=naVezesN(), m=S.dias.length;
+      var chips='<div class="na-dias">'+ORDEM_DIAS.map(function(d){
+          return '<button type="button" class="dia clic'+(S.dias.indexOf(d)>=0?' on':'')+'" data-dia="'+d+'">'+(DIA_LBL[d]||d)+'</button>'; }).join('')+'</div>'
+        +'<div class="hint" style="margin:6px 0 0">'+(m?('Marcados: '+m+(q?' de '+q:'')+' ('+S.dias.map(function(d){ return DIA_LBL[d]||d; }).join(', ')+')'):'Nenhum dia marcado')+'.</div>';
+      h+=naCampo('vezes','Aulas por semana — é a quantidade de dias marcados',naSeg('vezes',NA_VEZES),1,1)
+        +naCampo('dias','Quais dias?',chips,1,1);
+      if(op.k)
+        h+=naCampo('ordemPet','Nº do peludinho na família',naSeg('ordemPet',['1º','2º','3º']))
+          +naCampo('dataPag','Data do pagamento',naIn('dataPag','',{type:'date', min:'2015-01-01', max:'2035-12-31'}))
+          +'<div class="na-largo"><div class="na-nota">O plano fica <strong>pronto na aba Plano</strong>, que abre logo depois do cadastro: confira o valor e toque em <strong>Confirmar / renovar plano</strong>. Só aí ele grava, como sempre.</div></div>';
+    } else if(op){
+      h+='<div class="na-largo"><div class="na-nota">'+(op.cat==='hospede'
+        ? 'Este FILHOt é <strong>só da AuAulândia</strong>: não é auluno do Day Care, não tem plano nem dias fixos. A ficha é a mesma; a cobrança é por diária de hospedagem.'
+        : 'Este FILHOt é <strong>avulso</strong>: vem em diária, sem plano mensal e sem dias fixos na semana. A ficha é a mesma.')+'</div></div>';
+    }
+    return h+'</div>';
+  }
+  function naLinha(r, v){ return '<div class="na-rs-l"><span class="na-rs-k">'+r+'</span><span class="na-rs-v">'+(v||'<span class="na-rs-vazio">não informado</span>')+'</span></div>'; }
+  function naSecao(n, tit, corpo){
+    return '<div class="na-rs"><div class="na-rs-h"><strong>'+n+' · '+naEsc(tit)+'</strong><button type="button" class="btn na-btn2" data-ir="'+n+'">Editar</button></div>'+corpo+'</div>';
+  }
+  function naNascTxt(){ var S=NA_S; return S.dataModo==='data'?naEsc(fmtBR(S.nasc)):(String(S.idade).trim()!==''?'aprox. '+naEsc(S.idade)+(+String(S.idade).replace(',','.')===1?' ano':' anos'):''); }
+  function naPrevTxt(it){
+    var S=NA_S, p=S.p[it.k], r;
+    if(p.af) r='<b class="na-rs-af">a fazer na Zêluz</b>';
+    else r=(p.d?naEsc(fmtBR(p.d)):'')+(p.v?((p.d?' · ':'')+'vence em '+naEsc(fmtBR(p.v))):'');
+    if(!p.af && it.k==='verm' && S.vermProd) r+=' · '+naEsc(S.vermProd);
+    if(!p.af && it.k==='ecto' && S.ectoMarca) r+=' · '+naEsc(S.ectoMarca);
+    return r;
+  }
+  function naPasso7(){
+    var S=NA_S, af=NA_PREV.filter(function(it){ return S.p[it.k].af; }), tem2=naTemTutor2(), op=naPlanoEscolhido(), h='';
+    var tr=naColeiraTroca();
+    var seres=S.seresto==='Usa'?('Usa · colocou em '+naEsc(fmtBR(S.serestoData))+(tr?' · troca em <b>'+naEsc(fmtBR(tr))+'</b>':'')):naEsc(S.seresto);
+    var pe=naPesoLido();
+    h+=naSecao(1,'FILHOt',
+      naLinha('Nome',naEsc(S.nome)+(S.apelido?' ('+naEsc(S.apelido)+')':''))+naLinha('Raça',naEsc(S.raca))+naLinha('Sexo',naEsc(S.sexo))
+      +naLinha(naCast(),naEsc(S.castrado))+naLinha('Nascimento',naNascTxt())+naLinha('Peso',pe.erro?'':naEsc(pesoFmt(pe.kg))+' kg')
+      +naLinha('Microchip',S.chip==='Tem'?naEsc(S.chipNum):naEsc(S.chip))+naLinha('Data de matrícula',naEsc(fmtBR(S.matricula)))
+      +naLinha('Em adaptação (45 dias)?',S.adaptacao==='Sim'?'Sim · '+naEsc(S.adaptTipo)+(S.adaptDesde?' · desde '+naEsc(fmtBR(S.adaptDesde)):''):'Não')
+      +naLinha('Foto',S.foto?'escolhida':'sem foto'));
+    h+=naSecao(2,'Tutor',
+      naLinha('Tutor 1',naEsc(S.t1)+' · '+naEsc(S.t1tel))
+      +(tem2?naLinha('Tutor 2',naEsc(S.t2)+' · '+naEsc(S.t2tel))+naLinha('Tutor principal',naEsc(S.tprinc)+' ('+naEsc(naPrimeiro(S.tprinc==='Tutor 2'?S.t2:S.t1,''))+')'):naLinha('Tutor 2','não tem'))
+      +naLinha('Bairro',naEsc(S.bairro))+naLinha('Quem indicou',naEsc(S.indicou))
+      +naLinha('Veterinário(a)',S.vet?naEsc(S.vet)+(S.vettel?' · '+naEsc(S.vettel):''):'')+naLinha('Clínica',naEsc(S.clinica))+naLinha('Clínica — endereço',naEsc(S.vetEnd)));
+    h+=naSecao(3,'Saúde e prevenção',
+      NA_PREV.map(function(it){ return naLinha(it.t,naPrevTxt(it)); }).join('')
+      +naLinha('Coleira Seresto',seres)
+      +naLinha('Check-up',S.checkupFez==='Sim'?'Fez'+(S.checkupT?' em '+naEsc(fmtBR(S.checkupT)):''):naEsc(S.checkupFez))
+      +naLinha('Última troca de escova',naEsc(fmtBR(S.escovaT)))
+      +naLinha('Alergia',S.alergia==='Tem'?'Tem · '+naEsc(S.alergiaQ):naEsc(S.alergia))
+      +naLinha('Problema de saúde',S.saude==='Sim'?'Sim · '+naEsc(S.saudeQ):naEsc(S.saude))+naLinha('Restrição alimentar',naEsc(S.restr))
+      +naLinha('Medicação contínua',S.med==='Sim'?'Sim · '+naEsc(S.medQ):'Não'));
+    h+=naSecao(4,'Rotina e alimentação',
+      naLinha('Ração',naEsc(S.racaoMarca)+(S.racaoQtd?' · '+naEsc(S.racaoQtd):''))+naLinha('Comida natural',naEsc(S.nat)+(S.natQtd?' · '+naEsc(S.natQtd):''))
+      +naLinha('Horários',naEsc(S.horarios))+naLinha('Refeições',naEsc(S.refs.join(', ')))+naLinha('Mistura ração com natural?',naEsc(S.mistura))
+      +naLinha('Observação da comida',naEsc(S.alimObs))+naLinha('Passeia?',naEsc(S.passeia))+naLinha('Xixi e cocô',naEsc(S.banheiro)));
+    h+=naSecao(5,naJeitoTit(),
+      naLinha('Em casa',naEsc(S.compCasa))+naLinha('Com outros peludos',naEsc(S.outros))+naLinha('Com pessoas',naEsc(S.pessoas))+naLinha('Já atacou outro peludo?',naEsc(S.atacou))
+      +naLinha('Medos',naEsc(S.medos))+naLinha('Manias',naEsc(S.manias))+naLinha('Brincadeira favorita',naEsc(S.brinc))
+      +naLinha('Restrição no EA',S.eaNao?'não tem restrição (perguntei ao tutor)':naEsc(S.eaRestr))+naLinha('Matilha (EA)',naEsc(S.matilha))
+      +naLinha('O que o tutor contou',naEsc(S.obsTutor)));
+    var plano=naLinha('Plano',naEsc(S.plano));
+    if(op && op.cat==='auluno'){
+      plano+=naLinha('Aulas por semana',naEsc(S.vezes))+naLinha('Dias',naEsc(S.dias.map(function(d){ return DIA_LBL[d]||d; }).join(', ')));
+      if(op.k) plano+=naLinha('Nº do peludinho na família',naEsc(S.ordemPet))+naLinha('Data do pagamento',naEsc(fmtBR(S.dataPag)));
+    }
+    h+=naSecao(6,'Plano e dias',plano);
+    h+='<div class="na-nota" id="naPendencias"><strong>Vão nascer como pendência na Prevenção ('+af.length+')</strong>'
+      +(af.length?'<ul>'+af.map(function(it){ return '<li>'+it.t+' '+naEsc(naComNome('d'))+' — a fazer na Zêluz</li>'; }).join('')+'</ul>'
+                 :'<div class="hint" style="margin:6px 0 0">Nenhuma: todos os itens têm data.</div>')+'</div>';
+    return h;
+  }
+  var NA_TITULOS={1:'FILHOt', 2:'Tutor', 3:'Saúde e prevenção', 4:'Rotina e alimentação', 6:'Plano e dias', 7:'Conferir'};
+  function naTitulo(n){ return n===5?naJeitoTit():NA_TITULOS[n]; }
+  function naPassosCurtos(){ return ['FILHOt','Tutor','Saúde','Rotina',naJeitoTit(),'Plano','Conferir']; }
+  function naSub(n){
+    if(n===1) return 'Os dados do peludinho. Nada é gravado até o último botão.';
+    if(n===2) return 'Quem responde '+naEsc(naComNome('pel'))+'.';
+    if(n===3) return 'Prevenção e saúde '+naEsc(naComNome('d'))+'.';
+    if(n===4) return 'O que e quanto '+naEle()+' come, e a rotina em casa.';
+    if(n===5) return 'Como '+naEle()+' se comporta, para a equipe cuidar bem.';
+    if(n===6) return 'Plano e dias da semana em que '+naEle()+' vem.';
+    return 'Confira tudo. Para corrigir, toque em «Editar». Só grava no botão final.';
+  }
+  function naBarra(){
+    var P=naPassosCurtos();
+    return '<div class="na-selo" aria-live="polite">Passo '+NA_PASSO+' de '+NA_ULTIMO+' · '+naEsc(P[NA_PASSO-1])+'</div>'
+      +'<div class="na-barra" role="list">'+P.map(function(t, i){
+        var n=i+1, cls='na-p'+(n===NA_PASSO?' atual':'')+(n<=NA_MAX && n!==NA_PASSO?' feito':'');
+        return '<button type="button" role="listitem" class="'+cls+'" data-passo="'+n+'"'+(n>NA_MAX?' disabled':'')+(n===NA_PASSO?' aria-current="step"':'')+'><span class="na-n">'+n+'</span> '+naEsc(t)+'</button>';
+      }).join('')+'</div>';
+  }
+  function naRender(){
+    var root=document.getElementById('naCad'); if(!root||!NA_S) return;
+    var w0=document.getElementById('naWarn'), aviso=(w0&&w0.innerHTML)||'';
+    var corpo=[null,naPasso1,naPasso2,naPasso3,naPasso4,naPasso5,naPasso6,naPasso7][NA_PASSO]();
+    root.innerHTML='<div class="na-title" id="naTitulo">Novo AULUNO ou HÓSPEDE</div>'
+      +'<div class="na-sub">'+naSub(NA_PASSO)+'</div>'
+      +naBarra()
+      +'<h3 class="na-h">'+naEsc(naTitulo(NA_PASSO))+'</h3>'
+      +((NA_PASSO===1 && NA_PRE_AVISO)?'<div id="naPreAviso">'+NA_PRE_AVISO+'</div>':'')
+      +'<div id="naCorpo">'+corpo+'</div>'
+      +'<div class="dc-faltas" id="naFaltas" role="alert" hidden></div>'
+      +'<div class="na-warn" id="naWarn">'+aviso+'</div>'
+      +'<div class="na-btns">'
+      +(NA_PASSO===1?'<button type="button" class="na-cancel" data-acao="cancelar">Cancelar</button>':'<button type="button" class="na-cancel" data-acao="voltar">← Voltar</button>')
+      +(NA_PASSO<NA_ULTIMO?'<button type="button" class="na-ok" data-acao="continuar">Continuar →</button>':'<button type="button" class="na-ok" data-acao="cadastrar">Cadastrar e abrir a ficha</button>')
+      +'</div>';
+    if(NA_TENTOU[NA_PASSO]) naMarcar(naFaltas(NA_PASSO));
+  }
+  function naMarcar(L){
+    var root=document.getElementById('naCad'); if(!root) return;
+    var ks={}; L.forEach(function(f){ ks[f.fk]=1; });
+    try{ root.querySelectorAll('[data-fk]').forEach(function(e){ e.classList.toggle('inv', !!ks[e.getAttribute('data-fk')]); }); }
+    catch(e){} /* silencioso de propósito: marcar em vermelho é enfeite — a lista do que falta aparece logo abaixo */
+    var box=document.getElementById('naFaltas'); if(!box) return;
+    if(L.length){ box.hidden=false; box.innerHTML='<strong>Falta preencher:</strong> '+L.map(function(f){ return naEsc(f.txt); }).join(' · '); }
+    else { box.hidden=true; box.innerHTML=''; }
+  }
+  function naIrPara(n){
+    NA_PASSO=n; if(n>NA_MAX) NA_MAX=n;
+    var w=document.getElementById('naWarn'); if(w) w.innerHTML='';
+    naRender();
+    var m=document.getElementById('novoAlunoModal'); try{ if(m) m.scrollTop=0; }catch(e){} /* silencioso de propósito: enfeite de tela (rolagem) */
+  }
+  function naContinuar(){
+    var L=naFaltas(NA_PASSO);
+    if(L.length){ NA_TENTOU[NA_PASSO]=true; naMarcar(L); var b=document.getElementById('naFaltas'); try{ if(b&&b.scrollIntoView) b.scrollIntoView({block:'nearest'}); }catch(e){} /* silencioso de propósito: enfeite de tela (rolagem) */ return; }
+    naIrPara(NA_PASSO+1);
+  }
+  function naAjustaPrinc(){
+    var b=document.getElementById('naBoxPrinc'); if(!b) return;
+    var tem2=naTemTutor2(); b.hidden=!tem2;
+    if(!tem2) NA_S.tprinc='';
+    var bs=b.querySelectorAll('button'); if(bs.length<2) return;
+    bs[0].textContent='Tutor 1 · '+naPrimeiro(NA_S.t1,'Tutor 1'); bs[1].textContent='Tutor 2 · '+naPrimeiro(NA_S.t2,'Tutor 2');
+    bs[0].classList.toggle('on', NA_S.tprinc==='Tutor 1'); bs[1].classList.toggle('on', NA_S.tprinc==='Tutor 2');
+  }
+  // A foto vai do mesmo jeito que a da ficha: 160 px, JPEG (daycare/cadastro é baixado inteiro a cada abertura).
+  function naFotoLer(fl){
+    if(!fl) return;
+    var r=new FileReader();
+    r.onload=function(){ var img=new Image(); img.onload=function(){ var max=160, w=img.width, h=img.height;
+      if(w>h){ if(w>max){ h=Math.round(h*max/w); w=max; } } else { if(h>max){ w=Math.round(w*max/h); h=max; } }
+      var c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+      if(NA_S){ NA_S.foto=c.toDataURL('image/jpeg',0.72); naRender(); } }; img.src=r.result; };
+    r.readAsDataURL(fl);
+  }
+  function naLigar(){
+    var root=document.getElementById('naCad');
+    if(!root || root._naLigado || typeof root.addEventListener!=='function') return;
+    root._naLigado=true;
+    root.addEventListener('click', function(ev){
+      var t=ev.target&&ev.target.closest?ev.target.closest('button'):null; if(!t||!root.contains(t)||!NA_S) return;
+      var S=NA_S;
+      if(t.hasAttribute('data-passo')){ naIrPara(+t.getAttribute('data-passo')); return; }
+      if(t.hasAttribute('data-ir')){ naIrPara(+t.getAttribute('data-ir')); return; }
+      if(t.hasAttribute('data-seg')){
+        var k=t.getAttribute('data-seg'), v=t.getAttribute('data-v');
+        if(k==='dataModo') S.dataModo=(v==='Sei a data')?'data':'idade'; else S[k]=v;
+        if(k==='chip' && v!=='Tem') S.chipNum='';
+        if(k==='seresto' && v!=='Usa') S.serestoData='';
+        if(k==='alergia' && v!=='Tem') S.alergiaQ='';
+        if(k==='saude' && v!=='Sim') S.saudeQ='';
+        if(k==='med' && v!=='Sim') S.medQ='';
+        if(k==='checkupFez' && v!=='Sim') S.checkupT='';
+        if(k==='adaptacao' && v!=='Sim') S.adaptDesde='';
+        if(k==='plano'){ var op=naPlanoEscolhido(); if(!op || op.cat!=='auluno'){ S.vezes=''; S.dias=[]; } }
+        naRender(); return;
+      }
+      if(t.hasAttribute('data-ref')){ var r=t.getAttribute('data-ref'), ix=S.refs.indexOf(r); if(ix>=0) S.refs.splice(ix,1); else S.refs.push(r); naRender(); return; }
+      if(t.hasAttribute('data-dia')){
+        var d=t.getAttribute('data-dia'), iy=S.dias.indexOf(d); if(iy>=0) S.dias.splice(iy,1); else S.dias.push(d);
+        S.dias.sort(function(a,b){ return ORDEM_DIAS.indexOf(a)-ORDEM_DIAS.indexOf(b); }); naRender(); return;
+      }
+      if(t.hasAttribute('data-af')){ var p=S.p[t.getAttribute('data-af')]; p.af=!p.af; if(p.af){ p.d=''; p.v=''; } naRender(); return; }
+      var a=t.getAttribute('data-acao'); if(!a) return;
+      if(a==='continuar') naContinuar();
+      else if(a==='cadastrar') criarAluno();
+      else if(a==='voltar') naIrPara(NA_PASSO-1);
+      else if(a==='cancelar') fecharNovoAluno();
+      else if(a==='eanao'){ S.eaNao=!S.eaNao; if(S.eaNao) S.eaRestr=''; naRender(); }
+      else if(a==='foto'){ var f=document.getElementById('naFotoArq'); if(f) f.click(); }
+      else if(a==='semfoto'){ S.foto=''; naRender(); }
+    });
+    root.addEventListener('input', function(ev){
+      var e=ev.target, k=e&&e.getAttribute&&e.getAttribute('data-in'); if(!k||!NA_S) return;
+      NA_S[k]=e.value;
+      if(k==='eaRestr' && e.value.trim() && NA_S.eaNao){ NA_S.eaNao=false; var eb=document.getElementById('naEaBtn'); if(eb){ eb.classList.remove('on'); eb.textContent='não tem restrição (perguntei ao tutor)'; } }
+      if(k==='t1'||k==='t2'||k==='t2tel') naAjustaPrinc();
+      if(k==='peso'){ var box=root.querySelector('[data-na-peso]'); if(box) box.innerHTML=naPesoHint(); }
+      if(NA_TENTOU[NA_PASSO]) naMarcar(naFaltas(NA_PASSO));
+    });
+    root.addEventListener('change', function(ev){
+      var e=ev.target; if(!e||!NA_S) return;
+      if(e.id==='naFotoArq'){ naFotoLer(e.files&&e.files[0]); return; }
+      var pk=e.getAttribute('data-pin'), pv=e.getAttribute('data-pvc');
+      if(pk){ NA_S.p[pk].d=e.value; if(e.value) NA_S.p[pk].af=false; naRender(); return; }
+      if(pv){ NA_S.p[pv].v=e.value; if(e.value) NA_S.p[pv].af=false; naRender(); return; }
+      var k=e.getAttribute('data-in');
+      if(k==='serestoData'||k==='nasc'){ NA_S[k]=e.value; naRender(); }
+    });
+  }
+  // Novo AULUNO: abre o cadastro em 7 passos, limpo
+  function inserirAluno(){
+    if(!canEditPel()){ alert('Apenas Gestão e Supervisão podem cadastrar um novo aluno.'); return; }
+    const m=document.getElementById('novoAlunoModal'); if(!m) return;
+    NA_S=naEstadoNovo(); NA_PASSO=1; NA_MAX=1; NA_TENTOU={};
+    // O modal abre limpo: se o anterior veio de um pré-cadastro, nada dele sobra aqui.
+    NA_PRE_CAD=''; NA_PRE_AVISO='';
+    var w=document.getElementById('naWarn'); if(w) w.innerHTML='';
+    naLigar();
+    try{ naRender(); }catch(e){ _logFalhaGrav('desenhar o cadastro novo', e); }
+    m.classList.add('show');
+    try{ m.scrollTop=0; }catch(e){} /* silencioso de propósito: enfeite de tela (rolagem) */
+    setTimeout(()=>{ try{ var n=document.querySelector('#naCad [data-in="nome"]'); if(n) n.focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ },150);
+  }
+  function fecharNovoAluno(){ NA_PRE_CAD=''; NA_PRE_AVISO=''; const m=document.getElementById('novoAlunoModal'); if(m) m.classList.remove('show'); }
+  // O que o cadastro grava, nos MESMOS campos da ficha (abas Cadastro, Saúde, Prevenção, Comportamento,
+  // Rotina). Devolve {reg, prevManual, plano} — reg vai inteiro, numa gravação só, para daycare/cadastro/<chave>.
+  function naMontarRegistro(quem){
+    var S=NA_S, hj=hojeISO(), reg={}, prevManual=[], manual=podeVencManual(), agora=Date.now();
+    var t=function(v){ return String(v==null?'':v).trim(); };
+    reg.n=t(S.nome); reg.raca=t(S.raca); reg.tutor=t(S.t1); reg.tel=t(S.t1tel);
+    if(t(S.apelido)) reg.apelido=t(S.apelido);
+    reg.sexo=S.sexo; reg.castrado=S.castrado;
+    if(S.dataModo==='data') reg.nasc=S.nasc;
+    else { reg.nasc=''; reg.idadeAprox=t(S.idade).replace('.',',')+(+t(S.idade).replace(',','.')===1?' ano':' anos'); }
+    var pe=naPesoLido(); if(!pe.erro) reg.pesos=[{data:hj, kg:pe.kg, quem:quem}];
+    if(S.chip==='Tem') Object.assign(reg, zChipPatch(naDig(S.chipNum)));
+    else Object.assign(reg, zChipPatch(Z_NAO_TEM), {microchip_nao_tem:{quem:quem, ts:agora}});
+    if(S.foto) reg.foto=S.foto;
+    if(S.matricula) reg.matricula=S.matricula;
+    // a ficha guarda «Nao» sem acento neste campo (segBtnsPel da adaptação)
+    reg.adaptacao=(S.adaptacao==='Sim')?'Sim':'Nao';
+    if(S.adaptacao==='Sim'){ if(S.adaptDesde) reg.adaptacao_desde=S.adaptDesde; reg.adaptacao_tipo=S.adaptTipo||'Day Care'; }
+    // tutor e contatos
+    if(naTemTutor2()){ reg.tutor2=t(S.t2); reg.tel2=t(S.t2tel); reg.tutorPrinc=S.tprinc||'Tutor 1'; }
+    else reg.tutorPrinc='Tutor 1';
+    [['bairro','bairro'],['indicou','indicou'],['vet','vetNome'],['vettel','vetTel'],['clinica','vetClinica'],['vetEnd','vetEnd']].forEach(function(c){ if(t(S[c[0]])) reg[c[1]]=t(S[c[0]]); });
+    // prevenção (as mesmas contas de antes: a última dose + os dias; o «Vence em» digitado manda e nada inventa a última)
+    NA_PREV.forEach(function(it){
+      var p=S.p[it.k], dt=t(p.d), vc=manual?t(p.v):'';
+      if(p.af){ reg[it.k+'_afazer']=true; return; }   // nasce como pendência na tela de Prevenção
+      if(dt) reg[it.k+'_t']=dt;
+      if(vc){ reg[it.k+'_p']=vc; reg[it.k+'_p_manual']=true; prevManual.push(it.t+' vence em '+fmtBR(vc)); }
+      else if(dt) reg[it.k+'_p']=addDiasISO(dt, it.dias);
+    });
+    if(!S.p.verm.af && S.vermProd) reg.verm_nome=S.vermProd;
+    if(!S.p.ecto.af && S.ectoMarca) reg.ecto_nome=S.ectoMarca;
+    if(S.seresto==='Usa' && S.serestoData){ reg.col_nome='Seresto'; reg.col_t=S.serestoData; var tr=naColeiraTroca(); if(tr) reg.col_p=tr; }
+    if(S.checkupFez) reg.checkup_fez=S.checkupFez;
+    // 6.27: as três casas da data do check-up recebem a mesma data
+    if(S.checkupFez==='Sim' && S.checkupT){ reg.checkup_t=S.checkupT; reg.checkup_p=addDiasISO(S.checkupT,365); reg.checkup_data=S.checkupT; reg.checkup=S.checkupT; }
+    if(S.escovaT){ reg.escova_t=S.escovaT; reg.escova_p=addDiasISO(S.escovaT,90); }
+    // saúde: o «Não tem» da alergia fica registrado com quem e quando, como o botão da ficha
+    if(S.alergia==='Tem') reg.alergia=t(S.alergiaQ);
+    else { reg.alergia=''; reg.alergia_nenhuma={quem:quem, ts:agora}; }
+    if(S.saude==='Sim') reg.problema=t(S.saudeQ);
+    if(t(S.restr)) reg.restricao=t(S.restr);
+    if(S.med==='Sim') reg.medicacao=t(S.medQ);
+    // rotina e alimentação
+    [['racaoMarca','alim_racao_marca'],['racaoQtd','alim_racao_qtd'],['nat','alim_nat'],['natQtd','alim_nat_qtd'],['horarios','alim_horarios'],['alimObs','alim_obs'],['banheiro','banheiro']].forEach(function(c){ if(t(S[c[0]])) reg[c[1]]=t(S[c[0]]); });
+    reg.alim_refs=NA_REFS.filter(function(r){ return S.refs.indexOf(r)>=0; }).join(' · ');
+    if(S.mistura) reg.alim_mistura=(S.mistura==='Sim')?'Sim':'Nao';   // idem: «Nao» sem acento, como a ficha grava
+    if(S.passeia) reg.passeia=S.passeia;
+    // jeito
+    reg.comp_peludos=S.outros; reg.comp_pessoas=S.pessoas; reg.atacou=S.atacou;
+    [['compCasa','comp_casa'],['medos','medos'],['manias','manias'],['brinc','brincadeira'],['obsTutor','obs_tutor']].forEach(function(c){ if(t(S[c[0]])) reg[c[1]]=t(S[c[0]]); });
+    if(S.eaNao) reg.ea_restr_nao=true; else reg.ea_restr=t(S.eaRestr);
+    if(S.matilha) reg.matilha=S.matilha;
+    // categoria e dias (o plano em dinheiro fica de rascunho na aba Plano)
+    var op=naPlanoEscolhido();
+    reg.categoria=op?op.cat:'auluno';
+    if(op && op.cat==='auluno' && S.dias.length){ reg.dias=S.dias.slice(); reg.freq=S.dias.length+'x'; }
+    else { reg.dias=[]; reg.freq=''; }
+    return {reg:reg, prevManual:prevManual, plano:(op&&op.k)?{plano:op.k, ordemPet:(parseInt(S.ordemPet,10)||1), inicio:(S.dataPag||'')}:null};
+  }
+  // 6.57 (2ª rodada, L-1): a ficha que está sendo criada (pela chave). O segundo toque em «Cadastrar e abrir a
   // ficha», antes de o banco responder, espera: um cadastro, um rastro, uma ficha aberta. A marca sai
   // quando o banco responde (sim ou não); sem resposta, ela fica até ele responder.
   var NA_SALVANDO={};
   async function criarAluno(){
     if(!gateCadastro()) return;   // LEI do cadastro único — monitor não cadastra
-    const nome=(document.getElementById('naNome').value||'').trim();
-    const raca=((document.getElementById('naRaca')||{}).value||'').trim();
-    const tutor=(document.getElementById('naTutor').value||'').trim();
-    const tel=((document.getElementById('naTel')||{}).value||'').trim();
-    const w=document.getElementById('naWarn');
-    const faltando=[];
-    if(!nome)  faltando.push('o nome do FILHOt');
-    if(!raca)  faltando.push('a raça');
-    if(!tutor) faltando.push('o nome do tutor');
-    if(!tel)   faltando.push('o telefone do tutor');
-    else if(String(tel).replace(/\D/g,'').length<10) faltando.push('o telefone completo (com DDD)');
-    const prevPatch={};
-    // Guardado para o rastro: quais vencimentos foram digitados à mão neste cadastro.
-    const prevManual=[];
-    const podeManual=podeVencManual();
-    NA_PREV.forEach(function(it){
-      const dt=((document.getElementById('naP_'+it.k)||{}).value||'').trim();
-      const vc=podeManual?(((document.getElementById('naV_'+it.k)||{}).value||'').trim()):'';
-      if(vc && !/^\d{4}-\d{2}-\d{2}$/.test(vc)){ faltando.push('uma data válida em '+it.t+' (Vence em)'); return; }
-      if(vc && (vc<'2015-01-01' || vc>'2035-12-31')){ faltando.push('uma data válida em '+it.t+' (Vence em — confira o ano)'); return; }
-      if(dt && dt>hojeISO()){ faltando.push('uma data válida em '+it.t+' (essa ainda não chegou)'); return; }
-      if(dt) prevPatch[it.k+'_t']=dt;
-      if(vc){
-        // O vencimento digitado manda sobre a conta — e sem a última dose NADA é inventado:
-        // o campo "_t" fica em branco, e a ficha dirá "última: não informada" (24/set/2026).
-        prevPatch[it.k+'_p']=vc;
-        prevPatch[it.k+'_p_manual']=true;
-        prevManual.push(it.t+' vence em '+fmtBR(vc));
-      } else if(dt){
-        prevPatch[it.k+'_p']=addDiasISO(dt,it.dias);
-      } else if(NA_AFAZER[it.k]){
-        prevPatch[it.k+'_afazer']=true;   // nasce como pendência na tela de Prevenção
-      } else {
-        faltando.push(it.t+' (a data, ou marque "a fazer na Zêluz")');
-      }
-    });
-    if(faltando.length){
-      if(w) w.innerHTML='<strong>Falta '+(faltando.length>1?'preencher:':'')+'</strong> '+faltando.join(' · ')
-        +'<div style="font-weight:600;margin-top:3px">No Day Care e na AuAulândia não existe cadastro pela metade — tudo aqui é usado para cuidar dele.</div>';
-      return;
+    if(!NA_S) NA_S=naEstadoNovo();
+    // os 6 passos de novo, na hora de gravar: o primeiro passo com falta abre na tela
+    for(var n=1;n<NA_ULTIMO;n++){
+      var Lf=naFaltas(n);
+      if(Lf.length){ NA_TENTOU[n]=true; NA_PASSO=n; if(n>NA_MAX) NA_MAX=n; naRender(); naMarcar(Lf); return; }
     }
+    const w=document.getElementById('naWarn');
+    const nome=String(NA_S.nome||'').trim(), raca=String(NA_S.raca||'').trim(), tutor=String(NA_S.t1||'').trim(), tel=String(NA_S.t1tel||'').trim();
     const novo={n:nome,raca:raca,freq:'',tutor:tutor,nasc:'',dias:[]};
     const key=pelKey(novo);
-    // Nível 1 (nome+tutor+raça) — aqui a raça ainda não existe (só entra na ficha completa,
-    // ver onRacaPel), então neste passo a chave equivale a nome+tutor: bloqueia sem opção
-    // de forçar, porque é o mesmo FILHOt tentando cadastrar de novo.
+    // Nível 1 (nome+tutor) — é o mesmo FILHOt tentando cadastrar de novo: bloqueia sem opção de forçar.
     if(PELUDINHOS.some(p=>pelKey(p)===key)){ if(w) w.textContent='Já existe um AULUNO com esse nome e tutor.'; return; }
     // Nível 3 — só o nome bate, tutor diferente: pode ser outro FILHOt de verdade (a Zêluz já
     // tem 3 "Ozzy" de famílias diferentes) — avisa e deixa o humano confirmar, nunca bloqueia
-    // nem funde sozinho. (O nível 2, nome+raça, roda em onRacaPel — na hora de completar a
-    // ficha — porque aqui ainda não há raça para comparar.)
+    // nem funde sozinho. (O nível 2, nome+raça, roda em onRacaPel, na ficha.)
     const homonimo=PELUDINHOS.find(p=>jsNorm(p.n)===jsNorm(nome));
     if(homonimo && !await zPergunta('Já existe um(a) '+nome+' cadastrado(a)',
       ['O cadastro que já existe é do(a) tutor(a) "'+(pelGet(homonimo,'tutor')||'sem tutor informado')+'".',
@@ -50547,14 +51049,16 @@ return { criar };
       if(w) w.textContent='Cadastro não concluído — confira se não é o mesmo FILHOt já cadastrado.';
       return;
     }
-    // grava no banco para não sumir ao recarregar (e aparecer em todos os aparelhos)
-    const reg=Object.assign({_novo:true,n:nome,tutor:tutor,raca:raca,tel:tel,nasc:'',dias:[],freq:''}, prevPatch);
-    // 6.57 (AC3.4): a ficha só abre como criada DEPOIS do ok do banco. Antes, o FILHOt entrava na
-    // lista deste aparelho e a ficha abria como salva mesmo quando a gravação era recusada. Com a
-    // falha, o que foi digitado continua no formulário para tentar de novo.
-    const preCad=NA_PRE_CAD;
     // o rastro leva quem cadastrou, tirado agora (2ª rodada, M-2): o ok pode chegar depois do prazo
     const quemNA=corrQuemAgora();
+    const montado=naMontarRegistro((typeof quemSou==='function')?quemSou():'-');
+    // grava no banco para não sumir ao recarregar (e aparecer em todos os aparelhos)
+    const reg=Object.assign({_novo:true}, montado.reg);
+    const prevManual=montado.prevManual, planoRasc=montado.plano;
+    const restrAlm=String(reg.restricao||'');
+    // 6.57 (AC3.4): a ficha só abre como criada DEPOIS do ok do banco. Com a falha, o que foi digitado
+    // continua no cadastro para tentar de novo.
+    const preCad=NA_PRE_CAD;
     let feitoJa=false;
     const feito=function(){
       if(feitoJa) return; feitoJa=true;
@@ -50563,24 +51067,33 @@ return { criar };
         PELUDINHOS.sort((a,b)=>jsNorm(a.n).localeCompare(jsNorm(b.n))||jsNorm(a.tutor).localeCompare(jsNorm(b.tutor)));
       }
       try{ localStorage.setItem('zeluz_pel_'+key,JSON.stringify(reg)); }catch(e){} /* silencioso de propósito: guardar no aparelho é conveniência — o dado de verdade mora no banco */
+      // Restrição é um dado só: a grade do Day Care lê o almoço (almoco-cad.restr), como no campo da ficha.
+      if(restrAlm){ try{ setAlmCad(novo, {restr:restrAlm}); }catch(e){ _logFalhaGrav('restrição do cadastro novo no almoço', e); } }
       // A ficha nasceu do pré-cadastro do avulso: ele sai da fila e passa a apontar para ela.
       // Marcado DEPOIS de a ficha existir — nunca antes, senão a fila perderia quem ainda falta.
       if(preCad){ try{ preCadMarcarPromovido(preCad, key); }catch(e){ _logFalhaGrav('marcar o pré-cadastro como promovido', e); } }
-      NA_AFAZER={};
       if(typeof audit==='function') audit('cadastro-novo', nome+' ('+raca+') — tutor '+tutor+' · '+tel, Object.assign({pet:nome}, corrQuemMeta(quemNA)));
       if(prevManual.length && typeof audit==='function') audit('prevencao-proxima-manual',
         nome+': no cadastro novo, '+prevManual.join(' · ')+' — digitado à mão',
         Object.assign({pet:nome, campo:'cadastro-novo', de:'', para:prevManual.join(' · ')}, corrQuemMeta(quemNA)));
+      NA_S=null;
       fecharNovoAluno();
       renderPel();
       const idx=PELUDINHOS.findIndex(p=>pelKey(p)===key);
-      if(idx>=0){ pelOrigem='peludinhos'; abrirPeludinho(idx); }
+      if(idx>=0){
+        pelOrigem='peludinhos'; abrirPeludinho(idx);
+        // O plano escolhido fica de RASCUNHO na aba Plano: o «Confirmar» de sempre faz a conta e grava.
+        if(planoRasc && naVePlano()){
+          try{ renovRascunho=Object.assign({_k:renovRascKey()}, planoRasc); if(!renovRascunho.inicio) delete renovRascunho.inicio; irParaAbaPlano(); }
+          catch(e){ _logFalhaGrav('deixar o plano do cadastro novo de rascunho', e); }
+        }
+      }
     };
     if(!DB){
       _logFalhaGrav('daycare/cadastro/ (criarAluno, banco reconectando)', new Error('banco reconectando'));
       if(w) w.textContent='O cadastro NÃO foi salvo: este aparelho está sem ligação com o sistema. Tente de novo em instantes.';
       if(typeof zAlertao==='function') zAlertao('O CADASTRO NÃO FOI SALVO', [nome+': este aparelho está sem ligação com o sistema agora.',
-        'O que você digitou continua no formulário: tente de novo em instantes.'], {botao:'Entendi'});
+        'O que você digitou continua no cadastro: tente de novo em instantes.'], {botao:'Entendi'});
       return;
     }
     if(NA_SALVANDO[key]){ if(w) w.textContent='O cadastro de '+nome+' já está sendo salvo: espere a confirmação do banco.'; return; }
@@ -50604,7 +51117,7 @@ return { criar };
     }
     if(w) w.textContent='O cadastro NÃO foi salvo: '+zErroFrase(zErroMotivo(rA&&rA.erro, 'banco', '', {agora:true}));
     if(typeof zAlertao==='function') zAlertao('O CADASTRO NÃO FOI SALVO', [nome+': '+zErroFrase(zErroMotivo(rA&&rA.erro, 'banco', '', {agora:true})),
-      'O que você digitou continua no formulário: confira a internet e toque em «Criar e abrir a ficha» de novo.'], {botao:'Entendi'});
+      'O que você digitou continua no cadastro: confira a internet e toque em «Cadastrar e abrir a ficha» de novo.'], {botao:'Entendi'});
   }
   // Excluir cadastro DE VERDADE — só Diretoria (ver ehDiretoriaRole/botão em camposSaidaFicha).
   // Diferente de inativar: aqui o registro some do sistema. Por segurança: 2 confirmações
@@ -102024,14 +102537,14 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',tentar,{once:true});else tentar();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
-<script src="agenda-marcia/dados.js?v=2026-11-10-03"></script>
-<script src="agenda-marcia/entrevistas.js?v=2026-11-10-03"></script>
-<script src="agenda-marcia/composta.js?v=2026-11-10-03"></script>
-<script src="agenda-marcia/painel.js?v=2026-11-10-03"></script>
-<script src="marcia129/painel.js?v=2026-11-10-03"></script>
-<script src="marcia129/dados.js?v=2026-11-10-03"></script>
-<script src="marcia129/app.js?v=2026-11-10-03"></script>
-<script src="agenda-marcia/app.js?v=2026-11-10-03"></script>
+<script src="agenda-marcia/dados.js?v=2026-11-12-01"></script>
+<script src="agenda-marcia/entrevistas.js?v=2026-11-12-01"></script>
+<script src="agenda-marcia/composta.js?v=2026-11-12-01"></script>
+<script src="agenda-marcia/painel.js?v=2026-11-12-01"></script>
+<script src="marcia129/painel.js?v=2026-11-12-01"></script>
+<script src="marcia129/dados.js?v=2026-11-12-01"></script>
+<script src="marcia129/app.js?v=2026-11-12-01"></script>
+<script src="agenda-marcia/app.js?v=2026-11-12-01"></script>
 <script id="menu-contadores171">'use strict';
 /* 30/out/2026 — contadores vermelhos no menu (maquete aprovada pela Adriana).
    «Márcia Gestão»: cuidados das avaliações de HOJE ainda não revisados + alertas de reação ainda sem «Tutor avisado».
