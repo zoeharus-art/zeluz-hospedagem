@@ -171,14 +171,17 @@ function makeSandbox() {
 
 // -------------------------------------------------- extrair o <script> principal
 function extractMainScript(html) {
-  // pega o ÚLTIMO bloco <script>...</script> sem src (o gigante inline)
   const re = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi;
-  let m, last = null;
+  let m, last = null, k = -1;
+  const todos = [];
   while ((m = re.exec(html)) !== null) {
-    if (m[1] && m[1].length > (last ? last.length : 0)) last = m[1];
+    todos.push(m[1] || '');
+    if (m[1] && m[1].length > (last ? last.length : 0)) { last = m[1]; k = todos.length - 1; }
   }
   if (!last) throw new Error('Não achei o <script> inline principal');
-  return last;
+  // os <script> inline que vêm ANTES do principal (ex.: o ZeluzCadastroLinha115) entram junto — o principal
+  // os usa ao carregar (mesmo conserto do tests/ficha-abas162.test.js)
+  return todos.slice(0, k).join('\n;\n') + '\n;\n' + last;
 }
 
 // -------------------------------------------------- bytes de um Blob (PDF)
@@ -18825,19 +18828,21 @@ async function main() {
           };
           try {
             ctx.preCadPromover('cadu__rebeca-azevedo');
+            // Cadastro em 7 passos (11/nov/2026): o pré-cadastro preenche o estado do cadastro (NA_S), e o 1º passo o desenha
+            const S39 = ctx.NA_S || { p: {} };
             check('v-39 · "Promover a cadastro" abre o cadastro de sempre com nome, raça, tutor e telefone',
-              pega39('naNome').value === 'Cadu' && pega39('naRaca').value === 'Spitz'
-              && pega39('naTutor').value === 'Rebeca Azevedo' && pega39('naTel').value === '(31) 99999-0000',
-              JSON.stringify({ n: pega39('naNome').value, r: pega39('naRaca').value,
-                t: pega39('naTutor').value, f: pega39('naTel').value }));
-            check('v-39 · a prevenção com data já vem preenchida na tela do cadastro',
-              pega39('naP_vac_mult').value === '2026-05-10' && pega39('naP_ecto').value === '2026-09-25',
-              JSON.stringify([pega39('naP_vac_mult').value, pega39('naP_ecto').value]));
+              S39.nome === 'Cadu' && S39.raca === 'Spitz'
+              && S39.t1 === 'Rebeca Azevedo' && S39.t1tel === '(31) 99999-0000'
+              && pega39('naCad').innerHTML.indexOf('value="Cadu"') > 0,
+              JSON.stringify({ n: S39.nome, r: S39.raca, t: S39.t1, f: S39.t1tel }));
+            check('v-39 · a prevenção com data já vem preenchida no cadastro',
+              (S39.p.vac_mult || {}).d === '2026-05-10' && (S39.p.ecto || {}).d === '2026-09-25',
+              JSON.stringify([(S39.p.vac_mult || {}).d, (S39.p.ecto || {}).d]));
             check('v-39 · e o que foi marcado só como "em dia" é COBRADO em português, não inventa data',
-              pega39('naP_verm').value === ''
-              && pega39('naPreAviso').innerHTML.indexOf('Vermífugo') > 0
-              && pega39('naPreAviso').innerHTML.indexOf('peça a data da carteirinha') > 0,
-              pega39('naPreAviso').innerHTML.slice(0, 400));
+              (S39.p.verm || {}).d === ''
+              && String(ctx.NA_PRE_AVISO).indexOf('Vermífugo') > 0
+              && pega39('naCad').innerHTML.indexOf('peça a data da carteirinha') > 0,
+              String(ctx.NA_PRE_AVISO).slice(0, 400));
             check('v-39 · o modal lembra de qual pré-cadastro veio, para marcá-lo promovido depois',
               ctx.NA_PRE_CAD === 'cadu__rebeca-azevedo', JSON.stringify(ctx.NA_PRE_CAD));
             await ctx.preCadMarcarPromovido('cadu__rebeca-azevedo', 'cadu__rebeca azevedo');

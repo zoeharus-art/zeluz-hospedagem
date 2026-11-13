@@ -85,12 +85,16 @@ function makeSandbox() {
 }
 function extractMainScript(html) {
   const re = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi;
-  let m, last = null;
+  let m, last = null, k = -1;
+  const todos = [];
   while ((m = re.exec(html)) !== null) {
-    if (m[1] && m[1].length > (last ? last.length : 0)) last = m[1];
+    todos.push(m[1] || '');
+    if (m[1] && m[1].length > (last ? last.length : 0)) { last = m[1]; k = todos.length - 1; }
   }
   if (!last) throw new Error('Não achei o <script> inline principal');
-  return last;
+  // os <script> inline que vêm ANTES do principal (ex.: o ZeluzCadastroLinha115) entram junto — o principal
+  // os usa ao carregar (mesmo conserto do tests/ficha-abas162.test.js)
+  return todos.slice(0, k).join('\n;\n') + '\n;\n' + last;
 }
 
 // ------------------------------------------------ a rodada
@@ -29917,7 +29921,7 @@ const ARMA657 = `__bk657={db:DB, au:audit, za:zAlertao, ze:zEscolha, zp:zPergunt
     ocl:orcCarregarLista, otp:orcTirarDaPlanilha, olc:ORC_LISTA_CACHE, pa2:PEND_ABERTAS, dd:DASH_DADOS, dsel:DASH_DIA_SEL, ch2:currentHosp,
     ca:__cadAberto, ckf:__cadKeyFixa, cfl:cadFormLer, ah:atualizarHeader, rr2:renovRascunho, zf:zFalta, zl:zLimparFalta, mm:mmBlocoHTML, ipa:irParaAbaPlano,
     pc:planosCfg, fc:FOTO_CONF, fca:FOTO_CONF_AGORA, ft:FOTOS, ma:MESA_ATENCAO, hm:HOSP_MESMO, gd:(typeof gdCarregar==='function'?gdCarregar:null),
-    algr:ALG_RESP, algc:algCur, algp:algPelDe, alge:algEntrevistaReg, alga:algAvisarGestao, nap:NA_PRE_CAD, naf:NA_AFAZER,
+    algr:ALG_RESP, algc:algCur, algp:algPelDe, alge:algEntrevistaReg, alga:algAvisarGestao, nap:NA_PRE_CAD, naf:NA_S,
     lte:LT_ESTADO, ltd:LT_DADOS, ltdia:LT_DIA, irv:irParaView,
     ss:(typeof sessionStorage!=='undefined'?sessionStorage:undefined), ca2:(typeof CORR_ATUAL!=='undefined'?CORR_ATUAL:undefined)};
   __db657={}; __esc657=[]; __n657=0; __au657=[]; __za657=[]; __ze657=[]; __al657=[]; __tm657=[]; __recusa657=null; __pendura657=null; __pend657=[];
@@ -29966,7 +29970,7 @@ const ARMA657 = `__bk657={db:DB, au:audit, za:zAlertao, ze:zEscolha, zp:zPergunt
   dashRemoverDaPlanilha=function(){ return Promise.resolve(); }; orcCarregarLista=function(){}; orcTirarDaPlanilha=function(){}; ORC_LISTA_CACHE={};
   atualizarHeader=function(){}; zFalta=function(l){ __za657.push(['zFalta', l]); return true; }; zLimparFalta=function(){}; mmBlocoHTML=function(){ return ''; };
   irParaAbaPlano=function(){}; irParaView=function(){}; if(typeof gdCarregar==='function') gdCarregar=function(){};
-  FOTO_CONF={}; FOTO_CONF_AGORA={}; FOTOS={}; MESA_ATENCAO={}; HOSP_MESMO={}; NA_PRE_CAD=''; NA_AFAZER={};`;
+  FOTO_CONF={}; FOTO_CONF_AGORA={}; FOTOS={}; MESA_ATENCAO={}; HOSP_MESMO={}; NA_PRE_CAD=''; NA_S=null;`;
 const SOLTA657 = `DB=__bk657.db; audit=__bk657.au; zAlertao=__bk657.za; zEscolha=__bk657.ze; zPergunta=__bk657.zp; zTexto=__bk657.zt; alert=__bk657.al;
   setTimeout=__bk657.st; senhasRuntime=__bk657.sr; MONITORES=__bk657.mo; document.body.dataset.role=__bk657.ro; document.getElementById=__bk657.ge;
   document.querySelector=__bk657.qs; PELUDINHOS=__bk657.P; pelCadCache=__bk657.pcc; localStorage=__bk657.ls; zHojeISO=__bk657.hz; hojeISO=__bk657.hj;
@@ -29977,7 +29981,7 @@ const SOLTA657 = `DB=__bk657.db; audit=__bk657.au; zAlertao=__bk657.za; zEscolha
   cadFormLer=__bk657.cfl; atualizarHeader=__bk657.ah; renovRascunho=__bk657.rr2; zFalta=__bk657.zf; zLimparFalta=__bk657.zl; mmBlocoHTML=__bk657.mm;
   irParaAbaPlano=__bk657.ipa; planosCfg=__bk657.pc; FOTO_CONF=__bk657.fc; FOTO_CONF_AGORA=__bk657.fca; FOTOS=__bk657.ft; MESA_ATENCAO=__bk657.ma; HOSP_MESMO=__bk657.hm;
   if(__bk657.gd) gdCarregar=__bk657.gd; ALG_RESP=__bk657.algr; algCur=__bk657.algc; algPelDe=__bk657.algp; algEntrevistaReg=__bk657.alge; algAvisarGestao=__bk657.alga;
-  NA_PRE_CAD=__bk657.nap; NA_AFAZER=__bk657.naf; LT_ESTADO=__bk657.lte; LT_DADOS=__bk657.ltd; LT_DIA=__bk657.ltdia; irParaView=__bk657.irv;
+  NA_PRE_CAD=__bk657.nap; NA_S=__bk657.naf; LT_ESTADO=__bk657.lte; LT_DADOS=__bk657.ltd; LT_DIA=__bk657.ltdia; irParaView=__bk657.irv;
   if(__bk657.ss===undefined){ try{ delete globalThis.sessionStorage; }catch(e){ sessionStorage=undefined; } } else sessionStorage=__bk657.ss;
   if(typeof CORR_ATUAL!=='undefined') CORR_ATUAL=__bk657.ca2;`;
 const espera657 = async (n) => { for (let i = 0; i < (n || 400); i++) await Promise.resolve(); };
@@ -30395,8 +30399,12 @@ provaAsync('6.57 P19 (AC3.3) — «Desfazer a última renovação» com o banco 
 });
 const novoAluno657 = () => {
   run(`document.body.dataset.role='consultora'; __login657={nome:'Bia Consultora Teste', role:'consultora'};
-    __el657.naNome={value:'Pipoca'}; __el657.naRaca={value:'SRD'}; __el657.naTutor={value:'Lia Teste'}; __el657.naTel={value:'31999990000'};
-    __el657.naWarn={textContent:'', innerHTML:''}; NA_AFAZER={}; NA_PREV.forEach(function(it){ NA_AFAZER[it.k]=true; __el657['naP_'+it.k]={value:''}; });`);
+    __el657.naWarn={textContent:'', innerHTML:''}; __el657.naCad={innerHTML:''}; __el657.naFaltas={innerHTML:'', hidden:true};
+    NA_PASSO=7; NA_MAX=7; NA_TENTOU={}; NA_S=naEstadoNovo();
+    Object.assign(NA_S, {nome:'Pipoca', raca:'SRD', sexo:'Fêmea', castrado:'Sim', nasc:'2023-04-10', peso:'7,5', chip:'Não tem',
+      t1:'Lia Teste', t1tel:'31999990000', seresto:'Não usa', alergia:'Não tem', saude:'Não', refs:['Almoço'],
+      outros:'Se dá bem', pessoas:'Se dá bem', atacou:'Não', eaNao:true, plano:'Avulso · diária'});
+    NA_PREV.forEach(function(it){ NA_S.p[it.k].af=true; });`);
 };
 provaAsync('6.57 P20 (AC3.4) — «Criar e abrir a ficha» com o banco recusando: a ficha não abre, a lista fica igual, o formulário mantém o digitado, «O CADASTRO NÃO FOI SALVO» e sem rastro «cadastro-novo»; aceitando, abre', async () => {
   run(ARMA657);
@@ -30404,7 +30412,7 @@ provaAsync('6.57 P20 (AC3.4) — «Criar e abrir a ficha» com o banco recusando
     novoAluno657();
     run(`__recusa657='^daycare/cadastro';`);
     await run('criarAluno()'); await espera657();
-    igual([run('PELUDINHOS.length'), J630('__ab657').length, run('__fna657'), run('__el657.naNome.value'), aud657('cadastro-novo').length], [1, 0, 0, 'Pipoca', 0]);
+    igual([run('PELUDINHOS.length'), J630('__ab657').length, run('__fna657'), run('NA_S && NA_S.nome'), aud657('cadastro-novo').length], [1, 0, 0, 'Pipoca', 0]);
     assert.ok(J630('__za657').some((z) => z[0] === 'O CADASTRO NÃO FOI SALVO'), JSON.stringify(run('__za657')));
     igual(run(`__ls657['zeluz_pel_pipoca__lia teste']===undefined`), true, 'nem a cópia deste aparelho');
     // aceitando
@@ -33974,7 +33982,8 @@ prova('6.59 P10 (AC1.4, varredura) — todo leitor de `pesos` no app usa a lista
     if (/^\s*\/\//.test(l)) return;
     if (/\.pesos\b(?!_)|\bpesosDe\(/.test(l.replace(/\/\/ .*$/, ''))) onde[fn] = (onde[fn] || 0) + 1; });
   // zPdfDocBlob: `t.pesos` é a largura das colunas das tabelas do PDF (não é peso de FILHOt)
-  igual(Object.keys(onde).sort(), ['blocoPeso', 'pesoCorrAbrir', 'pesoGravar', 'pesoHistHTML', 'pesoSeguinte', 'pesosDe', 'pesosValidos', 'renderPesoTela', 'zPdfDocBlob'].sort(), JSON.stringify(onde));
+  // naMontarRegistro (cadastro em 7 passos, 11/nov/2026): GRAVA a 1ª pesagem do FILHOt novo (reg.pesos=[…]) — não lê lista nenhuma
+  igual(Object.keys(onde).sort(), ['blocoPeso', 'naMontarRegistro', 'pesoCorrAbrir', 'pesoGravar', 'pesoHistHTML', 'pesoSeguinte', 'pesosDe', 'pesosValidos', 'renderPesoTela', 'zPdfDocBlob'].sort(), JSON.stringify(onde));
   // os leitores de verdade passam pela lista corrigida
   const corpo = (n) => run(n + '.toString()');
   assert.ok(/pesosValidos\(/.test(corpo('ultimoPeso')) && /pesosValidos\(/.test(corpo('ultimoPesoDe')), 'ultimoPeso e ultimoPesoDe');
