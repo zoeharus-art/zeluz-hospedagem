@@ -1,0 +1,36 @@
+services:
+  proxy-rh151:
+    image: "@@NGINX_IMAGE_DIGEST@@"
+    entrypoint: ["/usr/sbin/nginx"]
+    command: ["-g", "daemon off; pid /tmp/nginx.pid;"]
+    restart: unless-stopped
+    read_only: true
+    user: "@@PROXY_UID@@:@@SOCKET_GID@@"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 64
+    tmpfs:
+      - /var/cache/nginx:rw,noexec,nosuid,nodev,size=8m
+      - /var/run:rw,noexec,nosuid,nodev,size=1m
+      - /tmp:rw,noexec,nosuid,nodev,size=1m
+    volumes:
+      - "@@NGINX_CONFIG_ABSOLUTA@@:/etc/nginx/conf.d/default.conf:ro"
+      - "/run/zeluz-rh151:/run/zeluz-rh151:ro"
+    networks:
+      - proxy_existente
+    expose:
+      - "8080"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.rh151.rule: "Host(`@@HOST_EXISTENTE@@`) && PathPrefix(`/rh151`)"
+      traefik.http.routers.rh151.entrypoints: "@@ENTRYPOINT_HTTPS_EXISTENTE@@"
+      traefik.http.routers.rh151.tls: "true"
+      traefik.http.routers.rh151.priority: "@@PRIORIDADE_RH151@@"
+      traefik.http.services.rh151.loadbalancer.server.port: "8080"
+
+networks:
+  proxy_existente:
+    external: true
+    name: "@@REDE_TRAEFIK_EXISTENTE@@"
