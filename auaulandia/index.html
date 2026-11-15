@@ -2038,6 +2038,17 @@
     font-size:14.5px;cursor:pointer;border:none}
   .rep-cancel{background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)}
   .rep-ok{background:var(--z-blue);color:var(--z-cream)}
+  /* ===== PERNOITES (Recepção › Hotel, 14/nov/2026): mesmo desenho das Reposições; só o que é da tela nova fica aqui ===== */
+  #pnModal,#pnMudarModal{display:none;position:fixed;inset:0;background:rgba(26,58,79,.55);z-index:120;
+    align-items:center;justify-content:center;padding:18px;overflow-y:auto}
+  #pnModal.on,#pnMudarModal.on{display:flex}
+  #v-pernoites .troca-dias{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+  #v-pernoites .troca-dia{cursor:pointer;padding:9px 10px}
+  #v-pernoites .troca-dia.on{border-color:var(--z-gold);background:var(--z-cream)}
+  #v-pernoites .troca-dh{margin-bottom:3px}
+  #v-pernoites .pn-riscado{text-decoration:line-through;color:var(--muted)}
+  #v-pernoites details.pn-tiradas{margin-top:8px;font-size:13px;color:var(--muted)}
+  #v-pernoites details.pn-tiradas summary{cursor:pointer;font-weight:700;color:var(--z-blue)}
   .rep-row{display:flex;align-items:center;gap:13px;background:var(--z-white);border:1px solid var(--line);
     border-radius:14px;padding:13px 15px;margin-bottom:9px;box-shadow:var(--shadow)}
   .rep-row .rp-n{font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--z-gold-deep);min-width:38px;
@@ -2923,8 +2934,8 @@
 .z-painel44{--p44-blue:#234d67;--p44-soft:#3a6a85;--p44-cream:#fffdf6;--p44-warm:#faf5e9;--p44-gold:#deb428;--p44-line:#e7e0d2;--p44-muted:#7c8a93;box-sizing:border-box;max-width:1160px;padding:24px 38px 52px;background:var(--p44-cream);color:var(--p44-blue);font-family:Inter,Poppins,system-ui,sans-serif}.z-painel44 *{box-sizing:border-box}.z-painel44 [hidden]{display:none!important}.z-painel44 button{font:inherit}.z-painel44 button:focus-visible{outline:3px solid rgba(222,180,40,.55);outline-offset:3px}.z-painel44__topo{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.z-painel44__saudacao .pm-saud1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.12;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2{margin:8px 0 0;font-size:16px;font-weight:600;line-height:1.45;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2 b{font-size:21px;font-weight:800;color:#a57a00}.z-painel44__saudacao .pm-saud3{max-width:54ch;margin:5px 0 0;color:var(--p44-soft);font-size:15px;font-weight:500;font-style:italic;line-height:1.5}.z-painel44__saudacao .pm-traco{display:block;width:40px;height:3px;margin-top:13px;border-radius:2px;background:linear-gradient(90deg,var(--p44-gold),#a57a00)}.z-painel44__saudacao .pm-data{margin-top:14px;color:var(--p44-muted);font-size:12px;font-weight:600}.z-painel44__selo{flex:0 0 auto;padding:8px 11px;border:1px solid var(--p44-line);border-radius:999px;background:#fff;color:var(--p44-blue);font-size:12px;font-weight:700}.z-painel44__selo:before{content:'•';margin-right:5px;color:var(--p44-gold);font-size:18px}.z-painel44__sticker{display:block;width:62px;max-width:90px;height:68px;max-height:80px;object-fit:contain;margin:4px auto 0}.z-painel44__bem-estar{display:block;width:100%;margin-bottom:18px}.z-painel44__bem-estar>*{width:100%}.z-painel44__abas{display:flex;gap:7px;margin:0 0 16px}.z-painel44__abas button{padding:10px 14px;border:1px solid var(--p44-line);border-radius:10px;background:#fff;color:var(--p44-blue);font-size:14px;font-weight:700;cursor:pointer}.z-painel44__abas button[aria-selected=true]{border-color:var(--p44-blue);background:var(--p44-blue);color:var(--p44-cream)}.z-painel44__intro{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:12px 0}.z-painel44__intro h2,.z-painel44__equipe h2{margin:0;font-size:20px}.z-painel44__intro p,.z-painel44__equipe>p{margin:5px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__contagem{color:var(--p44-muted);font-size:12px;font-weight:700}.z-painel44__temas{display:grid;gap:9px}.z-painel44__tema{overflow:hidden;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__tema-cabeca{display:grid;grid-template-columns:36px 1fr auto 20px;align-items:center;gap:10px;width:100%;padding:14px 15px;border:0;background:transparent;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__tema-icone{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--p44-warm);font-size:17px}.z-painel44__tema-titulo,.z-painel44__tema-passo{display:block}.z-painel44__tema-titulo{font-size:15px;font-weight:800}.z-painel44__tema-passo{margin-top:3px;color:var(--p44-muted);font-size:12px}.z-painel44__pill{padding:4px 8px;border-radius:999px;background:#e9f5f7;color:#226477;font-size:11px;font-weight:800}.z-painel44__seta{color:var(--p44-soft);font-size:18px;transition:transform .16s}.z-painel44__tema.aberto .z-painel44__seta{transform:rotate(90deg)}.z-painel44__tema-corpo{margin:0 12px 12px;padding:14px 15px;border-top:1px solid var(--p44-line);background:var(--p44-warm)}.z-painel44__equipe{padding:18px;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__pessoas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}.z-painel44__pessoa{display:flex;align-items:center;gap:11px;width:100%;padding:13px;border:1px solid var(--p44-line);border-radius:12px;background:#fff;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__avatar{display:grid;place-items:center;width:39px;height:39px;flex:0 0 auto;border-radius:50%;background:var(--p44-blue);color:var(--p44-cream);font-size:12px;font-weight:800}.z-painel44__pessoa-info{min-width:0}.z-painel44__pessoa strong,.z-painel44__pessoa small{display:block}.z-painel44__pessoa strong{font-size:14px}.z-painel44__pessoa small{overflow:hidden;margin-top:3px;color:var(--p44-muted);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.z-painel44__pessoa-seta{margin-left:auto;color:#a57a00;font-size:18px}.z-painel44__pessoa-detalhe{margin-top:15px}.z-painel44__pessoa-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__pessoa-secao h3{margin:0;font-size:14px}.z-painel44__pessoa-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}.z-painel44__vazio{margin:15px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__zelozinha{display:block;width:100%;margin-top:16px;padding:12px;border:1px dashed var(--p44-gold);border-radius:11px;background:var(--p44-warm);color:#805d00;text-align:left;cursor:pointer}.z-painel44__zelozinha-titulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.z-painel44__canal{padding:3px 7px;border-radius:999px;background:#fff;color:var(--p44-muted);font-size:11px}.z-painel44__zelozinha-aviso{display:block;margin-top:7px;font-size:12px;line-height:1.45}.z-painel44__perfil{margin-top:15px}.z-painel44__voltar{margin-bottom:12px;padding:8px 11px;border:1px solid var(--p44-line);border-radius:9px;background:#fff;color:var(--p44-blue);font-size:13px;font-weight:700;cursor:pointer}.z-painel44__perfil-subtitulo{margin:4px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__perfil-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__perfil-secao h3{margin:0;font-size:14px}.z-painel44__perfil-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}@media(max-width:760px){.z-painel44{padding:18px}.z-painel44__topo,.z-painel44__intro{display:block}.z-painel44__selo{display:inline-block;margin-top:13px}.z-painel44__contagem{display:block;margin-top:8px}.z-painel44__tema-cabeca{grid-template-columns:32px 1fr auto 16px;padding:12px}.z-painel44__tema-corpo{margin:0 8px 8px;padding:12px}.z-painel44__pessoas,.z-painel44__perfil-conteudo,.z-painel44__pessoa-conteudo{grid-template-columns:1fr}}
 
 </style>
-<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-12-02">
-<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-12-02">
+<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-14-02">
+<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-14-02">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -3113,6 +3124,9 @@
           <a class="grp grp-sub nav-parent" data-acc-toggle="c-auaulandia"><span>Hotel — AuAulândia</span><span class="acc-caret" aria-hidden="true"></span></a>
           <div class="acc-panel">
           <a data-v="checkin" title="O tutor chega: entrada, alimentação, medicação, assinatura (1º passo)."><span data-icon="login"></span><span>Check-in</span></a>
+          <!-- PERNOITES (Adriana, 12 e 14/nov/2026): a recepção lança; monitor e plantonista só veem.
+               Nasce escondido e a tabela PERM ('ver-pernoites') o revela, como o Histórico de hospedagens. -->
+          <a data-v="pernoites" style="display:none" title="Aulunos que dormem aqui por uma noite: quem o tutor deixou ou não vai buscar."><span data-icon="cal"></span><span>Pernoites</span></a>
           <a data-v="historicocheckins" style="display:none" title="Consulte a hospedagem e os responsáveis pela entrada e pela saída."><span data-icon="search"></span><span>Histórico de hospedagens</span></a>
           <a data-v="checkoutconf" class="so-conf-saida" title="Quem vai embora hoje — recepção: conferir e assinar (2º passo)."><span data-icon="door-out"></span><span>Quem vai embora hoje</span></a>
           <a data-v="recepcao" class="so-recepcao" title="Ração acabando, remédio faltando, algo que ficou."><span data-icon="message"></span><span>Pendências com o tutor</span></a>
@@ -5352,6 +5366,79 @@
     </div>
   </div>
 
+  <!-- ===== PERNOITES — Recepção › Hotel (Adriana, 12 e 14/nov/2026) ====================
+       "Tem tutores que já deixam e avisam que o pequeno irá ficar de pernoite. São os Aulunos.
+        A recepcionista lança e já vai para o painel. Tem gente que avisa com antecedência."
+       "NÃO precisa de noites seguidas — noites seguidas é hospedagem, não pernoite. Poucos cliques
+        e já marca. Somente os Aulunos ficam com pernoite." Mesmo desenho das Reposições. -->
+  <section class="view" id="v-pernoites">
+    <div class="role-note"><span data-icon="cal"></span><span>Só Aulunos do Day Care. Hóspede que sai depois do horário paga meia diária, não pernoite.</span></div>
+    <div class="card" id="pnQuadro">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <h2 style="font-size:20px;margin:0">Próximas 14 noites</h2>
+          <div class="hint" style="margin-top:2px">Toque numa noite para ver só ela. Toque de novo para ver todas.</div>
+        </div>
+        <button class="btn btn-gold" id="pnBotaoLancar" style="padding:10px 18px" onclick="pnAbrirLancar()">+ Lançar pernoite</button>
+      </div>
+      <div id="pnMsg" style="margin-top:10px"></div>
+      <div id="pnDias" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h2 style="font-size:20px;margin:0 0 10px">Quem dorme aqui</h2>
+      <div id="pnLista"></div>
+    </div>
+  </section>
+
+  <!-- Modal: lançar pernoite (poucos cliques: o FILHOt, as noites e o motivo) -->
+  <div id="pnModal" onclick="if(event.target===this)pnFechar()">
+    <div class="rep-card">
+      <div class="rep-tit">Lançar pernoite</div>
+      <div class="rep-sub">O tutor avisou que o Auluno dorme aqui. A pernoite entra nos Lançamentos do dia daquela noite e na fila do Check-in.</div>
+
+      <label class="rep-lb">Qual Auluno?</label>
+      <input class="rep-in" id="pnBusca" placeholder="Digite o nome do FILHOt ou do tutor…" autocomplete="off" oninput="pnBuscar()">
+      <div class="rep-results" id="pnResultados"></div>
+      <div class="rep-escolhido" id="pnEscolhido" style="display:none"></div>
+
+      <div id="pnFormulario" style="display:none">
+        <label class="rep-lb">Em quais noites? <span style="font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0">(pode marcar mais de uma, em datas separadas)</span></label>
+        <div class="seg gold" id="pnNoites"></div>
+
+        <label class="rep-lb">Por quê?</label>
+        <div class="seg gold" data-single id="pnMotivo">
+          <button class="on" data-v="TUTOR AVISOU" onclick="pick(this);pnMotivoSel('TUTOR AVISOU')">Tutor avisou</button>
+          <button data-v="TUTOR NÃO VEIO BUSCAR" onclick="pick(this);pnMotivoSel('TUTOR NÃO VEIO BUSCAR')">Tutor não veio buscar</button>
+        </div>
+
+        <label class="rep-lb">Observação <span style="font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0">(opcional)</span></label>
+        <input class="rep-in" id="pnObs" maxlength="80" placeholder="ex.: viagem, cirurgia" autocomplete="off">
+
+        <div class="rep-warn" id="pnAviso"></div>
+        <div class="rep-btns">
+          <button class="rep-cancel" onclick="pnFechar()">Cancelar</button>
+          <button class="rep-ok" id="pnOk" onclick="pnLancar()">Lançar pernoite</button>
+        </div>
+      </div>
+      <div id="pnSemForm" class="rep-btns"><button class="rep-cancel" onclick="pnFechar()">Cancelar</button></div>
+    </div>
+  </div>
+
+  <!-- Modal: mudar a noite de uma pernoite que ainda espera o check-in -->
+  <div id="pnMudarModal" onclick="if(event.target===this)pnMudarFechar()">
+    <div class="rep-card">
+      <div class="rep-tit" id="pnMudarTitulo">Mudar o dia</div>
+      <div class="rep-sub" id="pnMudarSub"></div>
+      <label class="rep-lb">Para qual noite?</label>
+      <div class="seg gold" data-single id="pnMudarNoites"></div>
+      <div class="rep-warn" id="pnMudarAviso"></div>
+      <div class="rep-btns">
+        <button class="rep-cancel" onclick="pnMudarFechar()">Cancelar</button>
+        <button class="rep-ok" id="pnMudarOk" onclick="pnMudarConfirmar()">Mudar a pernoite</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Extrato de um peludinho -->
   <div id="repExtratoModal" onclick="if(event.target===this)repFecharExtrato()">
     <div class="rep-card">
@@ -5612,7 +5699,7 @@
 <script src="autoria-logica.js?v=2026-10-15-02"></script>
 <script src="navegacao-inicio.js?v=2026-10-15-02"></script>
 <script src="hospedes-atividades.js?v=2026-10-16-01"></script>
-<script src="alimentacao-hospede.js?v=2026-11-12-02"></script>
+<script src="alimentacao-hospede.js?v=2026-11-14-02"></script>
 <script src="cafe-operacional.js?v=2026-10-16-02"></script>
 <script src="cafe-aluno-logica.js?v=2026-10-16-06"></script>
 <script src="presenca-logica.js?v=2026-10-16-02"></script>
@@ -8520,6 +8607,7 @@ return { criar };
   const titles={inicio:['Início','Escolha a área do seu dia.'],ficha:['Cadastro de Peludinhos','Um cadastro só, para Day Care e AuAulândia — tudo começa aqui.'],inativos:['Inativos','Peludinhos que saíram do Day Care'],
     renovacao:['Renovação de planos','Quem está no fim do plano.'],adaptacao:['Adaptação · 45 dias','Como está se adaptando'],
     reposicao:['Reposições','Reposições por falta avisada.'],
+    pernoites:['Pernoites','Aulunos que dormem aqui por uma noite: quem o tutor deixou ou não vai buscar.'],
     daycare:['Day Care','Chamada, almoço, atividades, EA.'],hospedagem:['Plantão da noite','O relatório de cada hóspede, turno a turno.'],
     gestdia:['Conferência do dia','Medicações por horário, problemas e os três tempos do plantão.'],
     aulunos:['Aulunos','A turma do dia.'],dashdc:['Lançamentos do dia','A planilha do Day Care, item por item.'],
@@ -8659,6 +8747,8 @@ return { criar };
     if(v==='gestaomarcia'){ if(typeof marcia129Abrir==='function') marcia129Abrir(); }
     if(v==='planodia'){ if(typeof pdAbrir==='function') pdAbrir(); }
     if(v==='reposicao'){ if(typeof renderReposicao==='function') renderReposicao(); }
+    if(v!=='pernoites'){ if(typeof pnParar==='function') pnParar(); }
+    if(v==='pernoites'){ if(typeof pnAbrir==='function') pnAbrir(); }
     if(v==='eahist'){ if(typeof eaHistInit==='function') eaHistInit(); }
     if(v==='alergia'){ if(typeof algCarregar==='function') algCarregar(); }
     if(v==='peso'){ if(typeof renderPesoTela==='function') renderPesoTela(); }
@@ -8717,6 +8807,10 @@ return { criar };
   // dependem de mais do que o papel (ex.: ehDiretoriaRole usa 'souAdriana').
   const PERM={
     'historico-checkins': ['gestao','diretoria','consultora'],
+    // PERNOITES (14/nov/2026): ver a lista (e o quadro das noites) é de quem precisa saber quem dorme aqui — a recepção, a
+    // chefia, o monitor e a plantonista. Lançar, mudar o dia e tirar é só da recepção e da chefia.
+    'ver-pernoites':    ['consultora','supervisor','gestao','diretoria','monitor','plantonista'],
+    'lancar-pernoite':  ['consultora','supervisor','gestao','diretoria'],
     'ver-senhas':               ['gestao','diretoria'],
     'lancar-reposicao':         ['consultora','gestao','supervisor','diretoria'],
     'decidir-troca':            ['gestao','diretoria'],
@@ -8917,7 +9011,7 @@ return { criar };
   // Nenhum dos dois entra em NAV_PAGINAS_ALL de propósito: "Meu Painel" é a fatia da
   // própria pessoa (não se concede a ninguém, é dela), e a escala é ajuste da Gestão —
   // mesma razão pela qual "Senhas" e "Configurações" também ficam fora daquela lista.
-  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['gestaomarcia','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras'],['painel-amanda','painel-amanda'],['pendencias','pendencias-prevencao'],['vencimentos','vencimentos-amanha'],['hoje','hoje-na-casa'],['contatos','hoje-na-casa'],['historicocheckins','historico-checkins'],['painel-diretoria','painel-diretoria']];
+  const PERM_MENU=[['painelmeu','painel-monitor'],['paineloperacao','painel-operacao'],['gestaomarcia','painel-operacao'],['planodia','definir-plano-do-dia'],['consultoras','painel-consultoras'],['painel-amanda','painel-amanda'],['pendencias','pendencias-prevencao'],['vencimentos','vencimentos-amanha'],['hoje','hoje-na-casa'],['contatos','hoje-na-casa'],['historicocheckins','historico-checkins'],['pernoites','ver-pernoites'],['painel-diretoria','painel-diretoria']];
   // 18/set/2026: 'lancar-pagamento' saiu desta tabela junto com o item do menu (Adriana:
   // "delete lançar pagamentos.. inútil"). A capacidade continua na tabela PERM — tirá-la de
   // lá mudaria o que podePapel() responde a quem ainda pergunta, e isso não foi pedido.
@@ -31571,7 +31665,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-11-12-02';
+  const APP_VERSAO='2026-11-14-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -76117,6 +76211,415 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
     }).catch(function(e){ _logFalhaGrav('retirar a pernoite da fila', e); return false; });
   }
 
+  /* pernoites-recepcao183:ini */
+  /* ====================================================================================
+   * A ÁREA «PERNOITES» DA RECEPÇÃO (Adriana, 12 e 14/nov/2026)
+   * "Tem tutores que já deixam e avisam que o pequeno irá ficar de pernoite. São os
+   *  Aulunos. A recepcionista lança e já vai para o painel. Tem gente que avisa com
+   *  antecedência (fica de hoje para amanhã e de novo do dia 26 para 27)." E: "NÃO precisa
+   *  de noites seguidas — noites seguidas é hospedagem, não pernoite. Poucos cliques e já
+   *  marca. Somente os Aulunos ficam com pernoite."
+   *
+   * Nada aqui cria um caminho novo: cada noite lançada grava o MESMO item dos Lançamentos do
+   * dia (daycare/dashboard/{dia}/pernoite) e entra na MESMA fila (pernGravarDoLancamento) —
+   * por isso cai sozinha no cartão do Check-in, no Painel da Gestão e na mesa. O check-in
+   * (que vira a estadia, com comida e remédio para a plantonista) continua sendo o de sempre.
+   *
+   * QUEM É AULUNO: o critério do app (pelCategoria, a categoria da ficha). Entram «Auluno»
+   * (Day Care com plano) e «Auluno Avulso»; ficam de fora o hóspede (AuAulândia), o morador e
+   * o inativo. É a mesma régua da escova (escovaEhAuluno), que também fala de Aulunos.
+   * ================================================================================== */
+  var PN_DIAS=14;                       // hoje + 13 noites
+  var PN_LIDO=null;                     // null = conferindo · true = li · false = NÃO consegui ler
+  var PN_DADOS={};                      // {dia:{chave:registro}} — o que a leitura ao vivo trouxe
+  var PN_REF=null, PN_REF_FN=null;      // a consulta aberta (para fechar ao sair da tela)
+  var PN_FILTRO='';                     // '' = todas as noites · 'AAAA-MM-DD' = só aquela
+  var PN_PEL=null, PN_NOITES=[], PN_MOTIVO='TUTOR AVISOU', PN_LANCANDO=false;
+  var PN_MUDAR=null, PN_MUDANDO=false;  // {dia, chave, nome, para}
+  function pnPodeMexer(){ try{ return !!(typeof podePapel==='function' && podePapel('lancar-pernoite')); }catch(e){ return false; } } /* silencioso de propósito: sem papel legível a tela fica só para leitura */
+  function pnPodeVer(){ try{ return !!(typeof podePapel==='function' && podePapel('ver-pernoites')); }catch(e){ return false; } } /* silencioso de propósito: sem papel legível a tela não abre */
+  function pnNoites(){ var h=pernHoje(), o=[]; for(var i=0;i<PN_DIAS;i++){ var d=addDiasISO(h,i); if(d) o.push(d); } return o; }
+  function pnDiaCurto(dia){ return String(((typeof fmtBR==='function')?fmtBR(dia):dia)||dia).slice(0,5); }
+  var PN_SEMANA_CURTA=['dom','seg','ter','qua','qui','sex','sáb'];
+  var PN_SEMANA_LONGA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+  function pnSemana(dia, longa){ var w=-1; try{ w=new Date(dia+'T12:00:00').getDay(); }catch(e){ w=-1; } /* silencioso de propósito: sem o dia da semana vale só a data */ return w<0?'':(longa?PN_SEMANA_LONGA:PN_SEMANA_CURTA)[w]; }
+  function pnNoiteRotulo(dia){ return pnSemana(dia,false)+' '+pnDiaCurto(dia); }
+  function pnNoiteTitulo(dia){
+    var h=pernHoje(), s=pnSemana(dia,true)+' · '+pnDiaCurto(dia);
+    if(dia===h) return s+' — hoje';
+    if(addDiasISO(h,1)===dia) return s+' — amanhã';
+    return s;
+  }
+  function pnEhViva(r){ var st=String((r&&r.status)||'aguardando'); return st==='aguardando' || st==='checkin_feito'; }
+  function pnVivas(dia){ var o=PN_DADOS[dia]||{}; return Object.keys(o).map(function(k){ return Object.assign({_chave:k}, o[k]||{}); }).filter(pnEhViva).sort(function(a,b){ return (a.ts||0)-(b.ts||0); }); }
+  function pnTiradas(dia){ var o=PN_DADOS[dia]||{}; return Object.keys(o).map(function(k){ return Object.assign({_chave:k}, o[k]||{}); }).filter(function(r){ return String(r.status||'')==='cancelado'; }).sort(function(a,b){ return (a.cancel_ts||0)-(b.cancel_ts||0); }); }
+  // Só Auluno entra na busca. Hóspede, morador e inativo ficam de fora.
+  function pnEhAuluno(p){
+    try{
+      if(!p) return false;
+      if(typeof pelInativo==='function' && pelInativo(p)) return false;
+      var c=(typeof pelCategoria==='function')?pelCategoria(p):'';
+      return c==='auluno' || c==='avulso';
+    }catch(e){ return false; } /* silencioso de propósito: ficha ilegível não entra na busca */
+  }
+  // ---- a leitura: só as 14 noites, ao vivo enquanto a tela está aberta ---------------
+  function pnParar(){
+    if(PN_REF && PN_REF_FN){ try{ PN_REF.off('value', PN_REF_FN); }catch(e){} /* silencioso de propósito: fechar uma consulta que já caiu não pode travar a saída da tela */ }
+    PN_REF=null; PN_REF_FN=null;
+  }
+  function pnAbrir(){
+    pnParar();
+    PN_LIDO=null; PN_DADOS={}; PN_FILTRO='';
+    try{ pnFechar(); pnMudarFechar(); }catch(e){} /* silencioso de propósito: os modais podem não existir ainda */
+    pnMensagem('');
+    pnRender();
+    if(!DB){ PN_LIDO=false; pnRender(); return; }
+    var h=pernHoje(), ate=addDiasISO(h, PN_DIAS-1);
+    try{
+      PN_REF=DB.ref('daycare/pernoites').orderByKey().startAt(h).endAt(ate);
+      PN_REF_FN=function(s){ PN_DADOS=(s&&typeof s.val==='function'?s.val():null)||{}; PN_LIDO=true; pnRender(); };
+      PN_REF.on('value', PN_REF_FN, function(e){
+        // Erro de leitura NUNCA vira «nenhuma pernoite»: a tela diz que não leu.
+        PN_LIDO=false; _logLeituraFalhou('daycare/pernoites (área Pernoites)', e); pnRender();
+      });
+    }catch(e){
+      PN_LIDO=false; _logLeituraFalhou('daycare/pernoites (área Pernoites)', e); pnRender();
+    }
+  }
+  function pnMensagem(txt){ var el=document.getElementById('pnMsg'); if(el) el.innerHTML=txt?('<div class="rep-previa">'+escAttr(txt)+'</div>'):''; }
+  // ---- o desenho ---------------------------------------------------------------------
+  function pnRender(){
+    var box=document.getElementById('pnDias'), lista=document.getElementById('pnLista');
+    if(!box||!lista) return;
+    var bt=document.getElementById('pnBotaoLancar'); if(bt) bt.style.display=pnPodeMexer()?'':'none';
+    if(!pnPodeVer()){
+      box.innerHTML='';
+      lista.innerHTML='<div class="hint">Esta tela é da Central Zêluz, do monitor e da plantonista.</div>';
+      return;
+    }
+    var noites=pnNoites();
+    box.innerHTML='<div class="troca-dias">'+noites.map(function(d){
+      var n=pnVivas(d).length, on=(PN_FILTRO===d);
+      var conta=(PN_LIDO===null)?'<span class="troca-tp">conferindo…</span>'
+               :(PN_LIDO===false?'<span class="troca-tp">sem leitura</span>'
+               :(n?('<span class="troca-vagas">'+n+' pernoite'+(n===1?'':'s')+'</span>'):'<span class="troca-tp">nenhuma</span>'));
+      return '<div class="troca-dia'+(on?' on':'')+'" role="button" tabindex="0" data-dia="'+escAttr(d)+'" onclick="pnFiltrar(this.dataset.dia)">'
+        +'<div class="troca-dh"><span class="troca-data">'+escAttr(pnDiaCurto(d))+'</span><span class="troca-sem">'+escAttr(pnSemana(d,false))+'</span></div>'
+        +conta+'</div>';
+    }).join('')+'</div>';
+    if(PN_LIDO===null){ lista.innerHTML='<div class="hint">conferindo…</div>'; return; }
+    if(PN_LIDO===false){
+      lista.innerHTML='<div class="dc-faltas"><strong>Não consegui ler as pernoites agora.</strong>'
+        +'<div style="margin-top:4px;font-weight:600">Isto não quer dizer que não há nenhuma. Confira a internet e toque em «Tentar de novo».</div></div>'
+        +'<button class="btn" style="margin-top:10px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="pnAbrir()">Tentar de novo</button>';
+      return;
+    }
+    var mexe=pnPodeMexer(), h='', mostradas=0;
+    (PN_FILTRO?[PN_FILTRO]:noites).forEach(function(d){
+      var V=pnVivas(d), T=pnTiradas(d);
+      if(!V.length && !T.length && !PN_FILTRO) return;
+      mostradas++;
+      h+='<div class="he-grp">'+escAttr(pnNoiteTitulo(d))+'</div>';
+      if(!V.length) h+='<div class="troca-vazio" style="margin-bottom:6px">Nenhuma pernoite nesta noite.</div>';
+      V.forEach(function(r){
+        var feito=(String(r.status||'aguardando')==='checkin_feito');
+        var sub=[r.motivo||'motivo não declarado'];
+        if(r.obs) sub.push(r.obs);
+        if(r.quem && r.quem!=='-') sub.push('lançada por '+r.quem);
+        if(r.veio_de) sub.push('veio de '+pnDiaCurto(r.veio_de));
+        h+='<div class="hosp-est"><div class="he-main"><div class="he-nome">'+escAttr(pernNomeLimpo(r.nome||''))
+          +'<span class="he-tag '+(feito?'agora':'achegar')+'">'+(feito?'check-in feito':'aguardando o check-in')+'</span></div>'
+          +'<div class="he-sub">'+escAttr(sub.join(' · '))+'</div></div>'
+          +((mexe && !feito)
+            ?('<div class="he-acoes"><button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" data-dia="'+escAttr(d)+'" data-chave="'+escAttr(r._chave)+'" onclick="pnMudarAbrir(this.dataset.dia,this.dataset.chave)">Mudar o dia</button>'
+              +'<button type="button" class="btn" style="background:var(--z-cream);border:1.5px solid var(--crm-critico);color:var(--crm-critico);font-weight:800" data-dia="'+escAttr(d)+'" data-chave="'+escAttr(r._chave)+'" onclick="pnTirar(this.dataset.dia,this.dataset.chave)">Tirar</button></div>')
+            :'')
+          +'</div>';
+      });
+      if(T.length){
+        h+='<details class="pn-tiradas"><summary>Tiradas ('+T.length+')</summary>'
+          +T.map(function(r){
+            var por=(r.cancel_quem && r.cancel_quem!=='-')?(' · por '+r.cancel_quem):'';
+            return '<div class="he-sub" style="margin-top:5px"><span class="pn-riscado">'+escAttr(pernNomeLimpo(r.nome||''))+'</span> — '
+              +escAttr(r.cancel_motivo||'sem motivo escrito')+escAttr(por)+'</div>';
+          }).join('')+'</details>';
+      }
+    });
+    if(!mostradas) h='<div class="troca-vazio">Nenhuma pernoite lançada para as próximas 14 noites.</div>';
+    lista.innerHTML=h;
+  }
+  function pnFiltrar(dia){ PN_FILTRO=(PN_FILTRO===dia)?'':dia; pnRender(); }
+  // ---- o que cada gravação deixa em cache --------------------------------------------
+  function pnCacheDash(dia, id, reg){
+    try{
+      if(typeof dashDia==='function' && dashDia()===dia && typeof DASH_DADOS_DE!=='undefined' && DASH_DADOS_DE && DASH_DADOS_DE.dia===dia){
+        DASH_DADOS.pernoite=DASH_DADOS.pernoite||{};
+        if(reg) DASH_DADOS.pernoite[id]=reg; else delete DASH_DADOS.pernoite[id];
+        if(typeof renderDash==='function') renderDash();
+      }
+    }catch(e){} /* silencioso de propósito: a lista do dia se acerta na próxima leitura */
+  }
+  function pnFilaCache(dia, chave, up){
+    try{ if(PERN_FILA_DIA===dia && PERN_FILA[chave]) Object.assign(PERN_FILA[chave], up); pernCartaoRender(); }
+    catch(e){} /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+  }
+  // ---- gravar UMA noite: o item dos Lançamentos do dia + a fila ----------------------
+  // Devolve {ok} | {ja, status} | {erro}. Não duplica: noite «aguardando» ou com check-in feito
+  // do mesmo FILHOt (a chave é a da ficha) volta como «já está lançada».
+  function pnGravarNoite(o){
+    var no=pernNo(o.dia)+'/'+o.chave, base='daycare/dashboard/'+o.dia+'/pernoite';
+    return DB.ref(no).once('value').then(function(s){
+      var atual=s.val()||null, st=atual?String(atual.status||'aguardando'):'';
+      if(atual && (st==='aguardando' || st==='checkin_feito')) return {ja:true, status:st};
+      var foiCancelada=!!atual;
+      return DB.ref(base).once('value').then(function(sd){
+        var lista=sd.val()||{}, id='';
+        Object.keys(lista).forEach(function(k){ if(!id && String((lista[k]||{}).chave||'')===o.chave) id=k; });
+        var det={motivo:o.motivo}; if(o.obs) det.obs=o.obs;
+        // O MESMO formato do lançamento da tela de Lançamentos do dia: o nome da planilha e o
+        // detalhe entre parênteses, a chave da ficha e o detalhe em partes.
+        var reg={valor:o.rot+' ('+o.motivo+(o.obs?(' · '+o.obs):'')+')', quem:(typeof quemSou==='function'?quemSou():'-'), ts:Date.now(), chave:o.chave, det:det};
+        var ref=id?DB.ref(base+'/'+id):DB.ref(base).push();
+        return ref.set(reg).then(function(){
+          pnCacheDash(o.dia, ref.key||id, reg);
+          try{ if(typeof audit==='function') audit('dashboard-daycare','lançou '+reg.valor+' em Pernoite (área Pernoites)',{pet:o.rot}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+          return pernGravarDoLancamento(o.rot, reg, o.dia);
+        }).then(function(okFila){
+          if(!okFila) return {erro:true};
+          var extra={};
+          if(foiCancelada){ extra.cancel_motivo=null; extra.cancel_quem=null; extra.cancel_ts=null; extra.mudou_para=null; }
+          if(o.veioDe) extra.veio_de=o.veioDe;
+          if(!Object.keys(extra).length) return {ok:true};
+          return DB.ref(no).update(extra).then(function(){ return {ok:true}; });
+        });
+      });
+    }).catch(function(e){
+      _logFalhaGrav('lançar a pernoite de '+o.rot+' ('+o.dia+')', e);
+      return {erro:true};
+    });
+  }
+  // Tira o item (ou os itens) daquele FILHOt dos Lançamentos daquela noite.
+  function pnRetirarItens(dia, chave, nome){
+    var base='daycare/dashboard/'+dia+'/pernoite';
+    return DB.ref(base).once('value').then(function(s){
+      var lista=s.val()||{};
+      var ids=Object.keys(lista).filter(function(k){
+        var r=lista[k]||{};
+        if(r.chave) return String(r.chave)===String(chave);
+        return jsNorm(pernNomeLimpo(r.valor||''))===jsNorm(pernNomeLimpo(nome||''));
+      });
+      return Promise.all(ids.map(function(k){ return DB.ref(base+'/'+k).remove().then(function(){ pnCacheDash(dia, k, null); }); }))
+        .then(function(){ return ids.length; });
+    });
+  }
+  // Cancela SÓ se ainda estiver «aguardando» (transação): outro aparelho pode ter feito o
+  // check-in no meio, e o «cancelado» não pode cair por cima de uma noite que tem ficha e valor.
+  function pnCancelarSeAguardando(dia, chave, up){
+    return DB.ref(pernNo(dia)+'/'+chave).transaction(function(cur){
+      if(cur===null) return null;   // «ainda não sei»: o banco responde com o valor de verdade
+      if(String(cur.status||'aguardando')!=='aguardando') return;
+      return Object.assign({}, cur, up);
+    }).then(function(res){
+      var v=(res && res.snapshot && typeof res.snapshot.val==='function')?res.snapshot.val():null;
+      return !!(res && res.committed && v && v.status==='cancelado');
+    });
+  }
+  // ---- «+ Lançar pernoite» -----------------------------------------------------------
+  function pnAbrirLancar(){
+    if(!pnPodeMexer()){ if(typeof zAlertao==='function') zAlertao('Só a recepção e a chefia lançam pernoite',['O monitor e a plantonista veem a lista, mas não lançam.'],{botao:'Entendi'}); return; }
+    PN_PEL=null; PN_NOITES=[]; PN_MOTIVO='TUTOR AVISOU'; PN_LANCANDO=false;
+    var m=document.getElementById('pnModal'); if(!m) return;
+    m.classList.add('on');
+    document.getElementById('pnBusca').value='';
+    document.getElementById('pnResultados').innerHTML='';
+    document.getElementById('pnObs').value='';
+    document.getElementById('pnAviso').textContent='';
+    document.getElementById('pnEscolhido').style.display='none';
+    document.getElementById('pnFormulario').style.display='none';
+    document.getElementById('pnSemForm').style.display='flex';
+    document.querySelectorAll('#pnMotivo button').forEach(function(b,i){ b.classList.toggle('on', i===0); });
+    var ok=document.getElementById('pnOk'); if(ok){ ok.disabled=false; ok.textContent='Lançar pernoite'; }
+    setTimeout(function(){ try{ document.getElementById('pnBusca').focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco) — falhar não muda dado nenhum */ },120);
+  }
+  function pnFechar(){ var m=document.getElementById('pnModal'); if(m) m.classList.remove('on'); }
+  function pnBuscar(){
+    var q=jsNorm((document.getElementById('pnBusca')||{}).value||''), box=document.getElementById('pnResultados');
+    if(!box) return;
+    if(q.length<2){ box.innerHTML=''; return; }
+    var achados=(PELUDINHOS||[]).filter(function(p){
+      return pnEhAuluno(p) && jsNorm([pelNome(p), pelGet(p,'tutor'), pelGet(p,'raca')].join(' ')).indexOf(q)>=0;
+    }).slice(0,8);
+    box.innerHTML=achados.length?achados.map(function(p){
+      return '<div class="rep-res-item" onclick="pnEscolher('+PELUDINHOS.indexOf(p)+')"><div><div class="rep-res-nome">'+escAttr(pelNome(p))+'</div>'
+        +'<div class="rep-res-sub">'+escAttr(pelGet(p,'raca')||'—')+' · '+escAttr(pelGet(p,'tutor')||'sem tutor')+'</div></div></div>';
+    }).join(''):'<div class="rep-res-sub" style="padding:8px 2px">Nenhum Auluno com esse nome. Hóspede não tem pernoite.</div>';
+  }
+  function pnJaVivaNaNoite(p, dia){
+    var ch=''; try{ ch=dcKey(p.n,p.tutor); }catch(e){ ch=''; } /* silencioso de propósito: sem chave a conferência do banco, ao lançar, é que decide */
+    return !!(ch && (PN_DADOS[dia]||{})[ch] && pnEhViva((PN_DADOS[dia]||{})[ch]));
+  }
+  function pnEscolher(i){
+    var p=PELUDINHOS[i];
+    if(!pnEhAuluno(p)) return;
+    PN_PEL=p;
+    var hoje=pernHoje();
+    PN_NOITES=pnJaVivaNaNoite(p, hoje)?[]:[hoje];     // hoje já vem marcado
+    var el=document.getElementById('pnEscolhido');
+    el.style.display='block';
+    el.innerHTML=escAttr(pelNome(p))+' <span style="font-weight:500;color:var(--muted);font-size:13px">· '+escAttr(pelGet(p,'tutor')||'sem tutor')+'</span>';
+    document.getElementById('pnResultados').innerHTML='';
+    document.getElementById('pnBusca').value='';
+    document.getElementById('pnFormulario').style.display='block';
+    document.getElementById('pnSemForm').style.display='none';
+    document.getElementById('pnAviso').textContent='';
+    pnPintarNoites();
+  }
+  function pnPintarNoites(){
+    var box=document.getElementById('pnNoites'); if(!box) return;
+    box.innerHTML=pnNoites().map(function(d){
+      var ja=PN_PEL?pnJaVivaNaNoite(PN_PEL, d):false;
+      return '<button type="button" class="'+(PN_NOITES.indexOf(d)>=0?'on':'')+'" data-dia="'+escAttr(d)+'" onclick="pnNoiteAlternar(this.dataset.dia)">'
+        +escAttr((d===pernHoje()?'hoje ':'')+pnNoiteRotulo(d))+(ja?' (já lançada)':'')+'</button>';
+    }).join('');
+    var n=PN_NOITES.length, ok=document.getElementById('pnOk');
+    if(ok && !PN_LANCANDO) ok.textContent=(n>1)?('Lançar '+n+' pernoites'):'Lançar pernoite';
+  }
+  function pnNoiteAlternar(dia){
+    var i=PN_NOITES.indexOf(dia);
+    if(i>=0) PN_NOITES.splice(i,1); else PN_NOITES.push(dia);
+    pnPintarNoites();
+  }
+  function pnMotivoSel(m){ PN_MOTIVO=m; }
+  function pnLancar(){
+    var av=document.getElementById('pnAviso');
+    if(!pnPodeMexer()){ av.textContent='Só a recepção e a chefia lançam pernoite.'; return Promise.resolve(false); }
+    if(PN_LANCANDO) return Promise.resolve(false);
+    av.textContent='';
+    if(!PN_PEL){ av.textContent='Escolha o Auluno.'; return Promise.resolve(false); }
+    if(!pnEhAuluno(PN_PEL)){ av.textContent='Só Aulunos do Day Care têm pernoite.'; return Promise.resolve(false); }
+    if(!PN_NOITES.length){ av.textContent='Marque pelo menos uma noite.'; return Promise.resolve(false); }
+    if(!DB){ av.textContent='Sem conexão com o banco agora. Tente de novo em instantes.'; return Promise.resolve(false); }
+    var p=PN_PEL, chave=dcKey(p.n,p.tutor), rot=dashNomePlanilha(p), noites=PN_NOITES.slice().sort();
+    var obs=dashDetTextoLimpo((document.getElementById('pnObs')||{}).value);
+    var ok=document.getElementById('pnOk');
+    PN_LANCANDO=true; if(ok){ ok.disabled=true; ok.textContent='Lançando…'; }
+    var feitas=[], ja=[], erros=[];
+    return noites.reduce(function(prev,dia){
+      return prev.then(function(){
+        return pnGravarNoite({rot:rot, chave:chave, dia:dia, motivo:PN_MOTIVO, obs:obs}).then(function(r){
+          if(r.ok) feitas.push(dia); else if(r.ja) ja.push(dia); else erros.push(dia);
+        });
+      });
+    }, Promise.resolve()).then(function(){
+      PN_LANCANDO=false; if(ok){ ok.disabled=false; }
+      pnPintarNoites();
+      var lista=function(L){ return L.map(pnNoiteRotulo).join(', '); };
+      if(erros.length){
+        av.textContent=(feitas.length?('Lançada: '+lista(feitas)+'. '):'')+'NÃO consegui lançar: '+lista(erros)+'. Toque em lançar de novo para tentar só estas.'
+          +(ja.length?(' Já estava lançada: '+lista(ja)+'.'):'');
+        PN_NOITES=erros.slice(); pnPintarNoites();
+        return false;
+      }
+      if(!feitas.length){
+        av.textContent='Já está lançada: '+lista(ja)+'. Nada foi duplicado.';
+        return false;
+      }
+      pnFechar();
+      pnMensagem(pelNome(p)+': pernoite lançada para '+lista(feitas)+'.'+(ja.length?(' Já estava lançada: '+lista(ja)+'.'):''));
+      return true;
+    });
+  }
+  // ---- «Tirar» -----------------------------------------------------------------------
+  function pnAvisoTela(titulo, linhas){ if(typeof zAlertao==='function') zAlertao(titulo, linhas, {botao:'Entendi'}); }
+  function pnTirar(dia, chave){
+    if(!pnPodeMexer()) return Promise.resolve(false);
+    var r=(PN_DADOS[dia]||{})[chave]; if(!r) return Promise.resolve(false);
+    var nome=pernNomeLimpo(r.nome||'');
+    if(String(r.status||'aguardando')!=='aguardando'){ pnAvisoTela('ESTA PERNOITE JÁ TEVE O CHECK-IN',['Não dá para tirar daqui uma noite que já virou estadia.']); return Promise.resolve(false); }
+    return zTexto('Tirar a pernoite de '+nome+' ('+pnNoiteRotulo(dia)+')?',
+      ['O tutor desistiu, buscou ou a pernoite não vai acontecer? Escreva o que houve.',
+       'Ela sai dos Lançamentos do dia e deixa de esperar o check-in.'],
+      {rotulo:'O que houve', dica:'Ex.: a tutora vai buscar às 18h', minimo:4,
+       botao:'Tirar a pernoite', botaoNao:'Voltar — não mexer em nada',
+       erro:'Escreva pelo menos 4 letras dizendo o que houve.'})
+    .then(function(motivo){
+      if(motivo===null || !DB) return false;
+      var up={status:'cancelado', cancel_motivo:String(motivo||'').trim(), cancel_quem:(typeof quemSou==='function'?quemSou():'-'), cancel_ts:Date.now()};
+      return pnCancelarSeAguardando(dia, chave, up).then(function(ok){
+        if(!ok){ pnAvisoTela('ESTA NOITE JÁ FOI RESOLVIDA',['Outro aparelho resolveu a noite de '+pnNoiteRotulo(dia)+' enquanto você escrevia. Nada foi tirado.']); return false; }
+        pnFilaCache(dia, chave, up);
+        return pnRetirarItens(dia, chave, r.nome).then(function(){
+          try{ if(typeof audit==='function') audit('pernoite-daycare','tirou a pernoite de '+nome+' de '+dia+' — '+up.cancel_motivo,{pet:nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+          pnMensagem('Pernoite de '+nome+' tirada de '+pnNoiteRotulo(dia)+'.');
+          return true;
+        });
+      });
+    }).catch(function(e){
+      _logFalhaGrav('tirar a pernoite de '+nome, e);
+      pnAvisoTela('NÃO CONSEGUI TIRAR A PERNOITE',['Tente de novo em instantes. Se a pernoite continuar na lista, avise a Gestão.']);
+      return false;
+    });
+  }
+  // ---- «Mudar o dia» (como na Reposição) ---------------------------------------------
+  function pnMudarAbrir(dia, chave){
+    if(!pnPodeMexer()) return;
+    var r=(PN_DADOS[dia]||{})[chave];
+    if(!r || String(r.status||'aguardando')!=='aguardando') return;
+    PN_MUDAR={dia:dia, chave:chave, nome:pernNomeLimpo(r.nome||''), para:''};
+    document.getElementById('pnMudarTitulo').textContent='Mudar o dia da pernoite de '+PN_MUDAR.nome;
+    document.getElementById('pnMudarSub').textContent='Ela está em '+pnNoiteRotulo(dia)+'. A noite antiga fica como «mudou para…» e a nova entra nos Lançamentos daquele dia.';
+    document.getElementById('pnMudarAviso').textContent='';
+    var ok=document.getElementById('pnMudarOk'); if(ok){ ok.disabled=false; ok.textContent='Mudar a pernoite'; }
+    document.getElementById('pnMudarNoites').innerHTML=pnNoites().filter(function(d){ return d!==dia; }).map(function(d){
+      var tem=!!((PN_DADOS[d]||{})[chave] && pnEhViva((PN_DADOS[d]||{})[chave]));
+      return '<button type="button"'+(tem?' disabled':'')+' data-dia="'+escAttr(d)+'" onclick="pick(this);pnMudarSel(this.dataset.dia)">'
+        +escAttr(pnNoiteRotulo(d))+(tem?' (já tem)':'')+'</button>';
+    }).join('');
+    document.getElementById('pnMudarModal').classList.add('on');
+  }
+  function pnMudarFechar(){ var m=document.getElementById('pnMudarModal'); if(m) m.classList.remove('on'); PN_MUDAR=null; }
+  function pnMudarSel(dia){ if(PN_MUDAR) PN_MUDAR.para=dia; }
+  function pnMudarConfirmar(){
+    var m=PN_MUDAR, av=document.getElementById('pnMudarAviso');
+    if(!pnPodeMexer() || !m || PN_MUDANDO) return Promise.resolve(false);
+    if(!m.para){ av.textContent='Escolha a nova noite.'; return Promise.resolve(false); }
+    if(!DB){ av.textContent='Sem conexão com o banco agora. Tente de novo em instantes.'; return Promise.resolve(false); }
+    av.textContent='';
+    var ok=document.getElementById('pnMudarOk'); PN_MUDANDO=true; if(ok){ ok.disabled=true; ok.textContent='Mudando…'; }
+    var fim=function(){ PN_MUDANDO=false; if(ok){ ok.disabled=false; ok.textContent='Mudar a pernoite'; } };
+    return DB.ref(pernNo(m.dia)+'/'+m.chave).once('value').then(function(s){
+      var atual=s.val()||null;
+      if(!atual || String(atual.status||'aguardando')!=='aguardando'){
+        av.textContent='Esta pernoite já foi resolvida em outro aparelho. Nada mudou.'; return false;
+      }
+      var i=pernFichaIndiceDe(Object.assign({_chave:m.chave}, atual)), rot=pernNomeLimpo(atual.nome||'');
+      try{ if(i>=0) rot=dashNomePlanilha(PELUDINHOS[i])||rot; }catch(e){} /* silencioso de propósito: sem a ficha vale o nome gravado na fila */
+      return pnGravarNoite({rot:rot, chave:m.chave, dia:m.para, motivo:String(atual.motivo||'TUTOR AVISOU'), obs:String(atual.obs||''), veioDe:m.dia}).then(function(r){
+        if(r.ja){ av.textContent='Ele já tem pernoite em '+pnNoiteRotulo(m.para)+'. Nada mudou.'; return false; }
+        if(!r.ok){ av.textContent='Não consegui lançar a nova noite. A antiga continua como estava.'; return false; }
+        var up={status:'cancelado', cancel_motivo:'mudou para '+pnDiaCurto(m.para), cancel_quem:(typeof quemSou==='function'?quemSou():'-'), cancel_ts:Date.now(), mudou_para:m.para};
+        return pnCancelarSeAguardando(m.dia, m.chave, up).then(function(cancelou){
+          if(!cancelou){
+            pnAvisoTela('A NOVA NOITE ENTROU, A ANTIGA CONTINUA',['A pernoite de '+m.nome+' já está em '+pnNoiteRotulo(m.para)+', mas não consegui cancelar a de '+pnNoiteRotulo(m.dia)+'.','Toque em «Tirar» na noite antiga.']);
+            pnMudarFechar(); return false;
+          }
+          pnFilaCache(m.dia, m.chave, up);
+          return pnRetirarItens(m.dia, m.chave, atual.nome).then(function(){
+            try{ if(typeof audit==='function') audit('pernoite-daycare','mudou a pernoite de '+m.nome+' de '+m.dia+' para '+m.para,{pet:m.nome}); }catch(e){} /* silencioso de propósito: o audit() tem bolso próprio e reenvia sozinho */
+            var nova=m.para; pnMudarFechar();
+            pnMensagem('Pernoite de '+m.nome+' mudou de '+pnNoiteRotulo(m.dia)+' para '+pnNoiteRotulo(nova)+'.');
+            return true;
+          });
+        });
+      });
+    }).then(function(r){ fim(); return r; }, function(e){
+      fim(); _logFalhaGrav('mudar o dia da pernoite de '+m.nome, e);
+      av.textContent='Não consegui mudar agora. Confira o que ficou na lista antes de tentar de novo.';
+      return false;
+    });
+  }
+  /* pernoites-recepcao183:fim */
+
   // ---- o cartão no topo do Check-in da hospedagem ----------------------------------
   // "Ele precisa chegar até o check-in de hospedagem." Este é o lugar onde ele chega.
   // Fica no ALTO da tela de escolha: quem abre o Check-in vê a fila antes de buscar nome
@@ -102539,14 +103042,14 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',tentar,{once:true});else tentar();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
-<script src="agenda-marcia/dados.js?v=2026-11-12-02"></script>
-<script src="agenda-marcia/entrevistas.js?v=2026-11-12-02"></script>
-<script src="agenda-marcia/composta.js?v=2026-11-12-02"></script>
-<script src="agenda-marcia/painel.js?v=2026-11-12-02"></script>
-<script src="marcia129/painel.js?v=2026-11-12-02"></script>
-<script src="marcia129/dados.js?v=2026-11-12-02"></script>
-<script src="marcia129/app.js?v=2026-11-12-02"></script>
-<script src="agenda-marcia/app.js?v=2026-11-12-02"></script>
+<script src="agenda-marcia/dados.js?v=2026-11-14-02"></script>
+<script src="agenda-marcia/entrevistas.js?v=2026-11-14-02"></script>
+<script src="agenda-marcia/composta.js?v=2026-11-14-02"></script>
+<script src="agenda-marcia/painel.js?v=2026-11-14-02"></script>
+<script src="marcia129/painel.js?v=2026-11-14-02"></script>
+<script src="marcia129/dados.js?v=2026-11-14-02"></script>
+<script src="marcia129/app.js?v=2026-11-14-02"></script>
+<script src="agenda-marcia/app.js?v=2026-11-14-02"></script>
 <script id="menu-contadores171">'use strict';
 /* 30/out/2026 — contadores vermelhos no menu (maquete aprovada pela Adriana).
    «Márcia Gestão»: cuidados das avaliações de HOJE ainda não revisados + alertas de reação ainda sem «Tutor avisado».
