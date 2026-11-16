@@ -48,6 +48,7 @@ auaulandia/marcia129/app.js
 auaulandia/hospedes-atividades.js
 auaulandia/alimentacao-hospede.js
 auaulandia/cafe-operacional.js
+auaulandia/plantao-turno.js
 auaulandia/cafe-aluno-logica.js
 auaulandia/presenca-logica.js
 auaulandia/historico-checkins.js
