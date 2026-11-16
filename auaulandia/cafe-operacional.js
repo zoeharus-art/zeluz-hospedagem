@@ -1,4 +1,6 @@
-/* Leitura pura do cafe do hotel. Nao consulta nem grava banco. */
+/* Leitura pura do cafe do hotel. Nao consulta nem grava banco.
+   15/nov/2026: a mesma leitura serve ao almoco e ao jantar da tela Plantao (portas.refeicao).
+   Sem refeicao informada, continua sendo o cafe, exatamente como antes. */
 (function(root,factory){
   var api=factory(root&&root.ZeluzAlimentacaoHospede);
   if(typeof module==='object'&&module.exports) module.exports=api;
@@ -18,32 +20,33 @@
     if(sai&&!iso(sai)) return false;
     return !sai||sai>=dia;
   }
-  function cafeBruto(e){
-    return e&&e.ficha&&e.ficha.alim&&e.ficha.alim.refs&&e.ficha.alim.refs.fixas&&e.ficha.alim.refs.fixas.cafe;
+  function tipoRefeicao(t){ return (t==='almoco'||t==='jantar')?t:'cafe'; }
+  function cafeBruto(e,tipo){
+    return e&&e.ficha&&e.ficha.alim&&e.ficha.alim.refs&&e.ficha.alim.refs.fixas&&e.ficha.alim.refs.fixas[tipoRefeicao(tipo)];
   }
-  function aplicarDia(plano,e,dia){
-    var alim=e&&e.ficha&&e.ficha.alim, marcacoes=[];
+  function aplicarDia(plano,e,dia,tipo){
+    var alim=e&&e.ficha&&e.ficha.alim, marcacoes=[], t=tipoRefeicao(tipo);
     if(!alim) return plano;
     var entra=texto(e.entrada)===dia, sai=texto(e.saida)===dia;
     // Entrada e saída no mesmo dia são instruções independentes. Se uma delas
     // não foi registrada, ou se elas discordam, a operação para para conferência.
-    if(entra&&(!alim.entrada||typeof alim.entrada.cafe!=='boolean')) return Object.assign({},plano,{estado:'conferir-dia'});
-    if(sai&&(!alim.saida||typeof alim.saida.cafe!=='boolean')) return Object.assign({},plano,{estado:'conferir-dia'});
-    if(entra) marcacoes.push(alim.entrada.cafe);
-    if(sai) marcacoes.push(alim.saida.cafe);
+    if(entra&&(!alim.entrada||typeof alim.entrada[t]!=='boolean')) return Object.assign({},plano,{estado:'conferir-dia'});
+    if(sai&&(!alim.saida||typeof alim.saida[t]!=='boolean')) return Object.assign({},plano,{estado:'conferir-dia'});
+    if(entra) marcacoes.push(alim.entrada[t]);
+    if(sai) marcacoes.push(alim.saida[t]);
     if(marcacoes.indexOf(true)>=0&&marcacoes.indexOf(false)>=0) return Object.assign({},plano,{estado:'conferir-dia'});
     if(marcacoes.indexOf(false)>=0) return Object.assign({},plano,{estado:'nao-oferecer-no-dia'});
     return plano;
   }
-  function planoDaEstadia(e,dia){
-    var bruto=cafeBruto(e);
+  function planoDaEstadia(e,dia,tipo){
+    var t=tipoRefeicao(tipo), bruto=cafeBruto(e,t);
     // "on" ausente não significa que o hóspede não toma café. A tela precisa pedir
     // conferência, porque a omissão no check-in não autoriza servir nem esconder a pessoa.
-    if(!bruto||typeof bruto!=='object') return {estado:'conferir-refeicao',origem:'cafe-sem-registro'};
+    if(!bruto||typeof bruto!=='object') return {estado:'conferir-refeicao',origem:t+'-sem-registro'};
     if(bruto.on===false) return {estado:'nao-oferecer',origem:'checkin-hotel'};
-    if(bruto.on!==true) return {estado:'conferir-refeicao',origem:'cafe-sem-confirmacao'};
+    if(bruto.on!==true) return {estado:'conferir-refeicao',origem:t+'-sem-confirmacao'};
     if(!Alim||typeof Alim.refeicaoDaEstadia!=='function') return {estado:'carregando',origem:'modulo-alimentacao-ausente'};
-    return aplicarDia(Alim.refeicaoDaEstadia(e,'cafe'),e,dia);
+    return aplicarDia(Alim.refeicaoDaEstadia(e,t),e,dia,t);
   }
   function unidadeRacao(v){ v=texto(v); return /^gramas?$/i.test(v)?'g':v; }
   function porcao(plano){
@@ -65,7 +68,7 @@
     portas=portas||{};
     function ler(){
       if(portas.pronto!==true) return {pronto:false,participantes:[],conferencias:[{estado:'estadias-carregando'}]};
-      var dia=typeof portas.hoje==='function'?texto(portas.hoje()):texto(portas.hoje);
+      var dia=typeof portas.hoje==='function'?texto(portas.hoje()):texto(portas.hoje), tipo=tipoRefeicao(portas.refeicao);
       if(!iso(dia)) return {pronto:false,participantes:[],conferencias:[{estado:'dia-invalido'}]};
       var T=portas.estadias||{}, todos=typeof portas.hospedes==='function'?(portas.hospedes()||[]):[], grupos={}, conferencias=[], participantes=[];
       Object.keys(T).forEach(function(id){
@@ -77,7 +80,7 @@
       Object.keys(grupos).forEach(function(k){
         var g=grupos[k];
         if(g.length!==1){ conferencias.push({estado:'estadias-ativas-duplicadas',refKey:k,quantidade:g.length,nome:texto(g[0].e.nome),tutor:texto(g[0].e.tutor)}); return; }
-        var o=g[0], plano=planoDaEstadia(o.e,dia);
+        var o=g[0], plano=planoDaEstadia(o.e,dia,tipo);
         if(!plano||plano.estado==='nao-oferecer'||plano.estado==='nao-oferecer-no-dia') return;
         if(plano.estado==='carregando'||String(plano.estado||'').indexOf('conferir-')===0){
           conferencias.push({estado:plano.estado||'alimentacao-a-conferir',refKey:k,estadiaId:texto(o.id),nome:texto(o.e.nome),tutor:texto(o.e.tutor)}); return;
