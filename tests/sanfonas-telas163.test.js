@@ -264,7 +264,8 @@ prova('Pendências com o tutor: nenhuma função de lista mudou o que escreve na
 // ------------------------------------------------------------------------- 2. Plantão da noite: Protocolo e Café
 prova('Plantão da noite: «Protocolo do Plantão» e «Café da manhã» são sanfonas, com tudo de antes dentro (ids, botões, listas)', () => {
   const tela = telaHtml('v-hospedagem');
-  assert.deepStrictEqual(idsDe(tela).filter((i) => /^plantao-/.test(i)), ['plantao-protocolo', 'plantao-cafe']);
+  // 15/nov/2026: o Almoço (plantão diurno) e o Jantar (plantão noturno) entraram depois do Café, no mesmo molde.
+  assert.deepStrictEqual(idsDe(tela).filter((i) => /^plantao-/.test(i)), ['plantao-protocolo', 'plantao-cafe', 'plantao-almoco', 'plantao-jantar']);
   const p = sanfonaEstatica('plantao-protocolo'), c = sanfonaEstatica('plantao-cafe');
   assert.ok(/<span class="prev-sec-nome">Protocolo do Plantão<\/span>/.test(p) && /<span class="prev-sec-nome">Café da manhã<\/span>/.test(c));
   assert.ok(aberta(p) && aberta(c), 'no HTML nascem abertas (a conta e o aparelho decidem em seguida)');
@@ -487,7 +488,7 @@ prova('ids das sanfonas: cada tela tem o seu prefixo, nenhum se repete e nenhum 
   assert.strictEqual(new Set(todos).size, todos.length, 'nenhum id repetido entre as telas: ' + todos.filter((x, i) => todos.indexOf(x) !== i).join(', '));
   ['conf-sem-checkin', 'venc-pend'].forEach((id) => assert.ok(dinamicos.indexOf(id) >= 0, id));
   // prefixos por tela
-  assert.ok(estaticos.filter((i) => /^rcp-/.test(i)).length === 5 && estaticos.filter((i) => /^plantao-/.test(i)).length === 2);
+  assert.ok(estaticos.filter((i) => /^rcp-/.test(i)).length === 5 && estaticos.filter((i) => /^plantao-/.test(i)).length === 4);
   // os de antes continuam existindo
   ['resumo'].forEach((id) => assert.ok(estaticos.indexOf(id) >= 0, id));
   ['checkup', 'atualizados', 'coleira', 'escova-treino', 'escova-kit', 'hospedes', 'tabela', 'hosp-pares'].forEach((id) => assert.ok(dinamicos.indexOf(id) >= 0, id));

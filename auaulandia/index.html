@@ -310,13 +310,13 @@
   .pets-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:16px}
   /* AuAulândia: a plantonista identifica o FILHOt pela FOTO — ela não convive com eles.
      Card e retrato maiores só aqui e na atividade de foto (Adriana, 28/ago/2026). */
-  #hospGrid.pets-grid, #cafeGrid.pets-grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
-  #hospGrid .pet .ph, #cafeGrid .pet .ph{width:132px;height:132px;font-size:46px;margin-bottom:12px;overflow:hidden}
+  #hospGrid.pets-grid, #cafeGrid.pets-grid, #plAlmocoGrid.pets-grid, #plJantarGrid.pets-grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+  #hospGrid .pet .ph, #cafeGrid .pet .ph, #plAlmocoGrid .pet .ph, #plJantarGrid .pet .ph{width:132px;height:132px;font-size:46px;margin-bottom:12px;overflow:hidden}
   #genGrid.foto-grande{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
   #genGrid.foto-grande .pet .ph{width:140px;height:140px;font-size:48px;margin-bottom:10px}
   @media(max-width:520px){
-    #hospGrid.pets-grid, #cafeGrid.pets-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
-    #hospGrid .pet .ph, #cafeGrid .pet .ph{width:112px;height:112px;font-size:40px}
+    #hospGrid.pets-grid, #cafeGrid.pets-grid, #plAlmocoGrid.pets-grid, #plJantarGrid.pets-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+    #hospGrid .pet .ph, #cafeGrid .pet .ph, #plAlmocoGrid .pet .ph, #plJantarGrid .pet .ph{width:112px;height:112px;font-size:40px}
     #genGrid.foto-grande{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
     #genGrid.foto-grande .pet .ph{width:118px;height:118px;font-size:42px}
   }
@@ -681,6 +681,17 @@
      mas não acrescenta, edita nem remove item (isso é da Consultora/Gestão/Supervisão/Vet). Guarda dupla:
      CSS aqui (visual + trava de clique) + JS nas funções (salvarMedAgenda/magAddNovoItem/magRemoverItem). */
   body:not([data-role="plantonista"]) #magSoLeituraAviso{display:none !important}
+  /* TURNO DO PLANTÃO (Adriana, 15/nov/2026): o diurno (07h–19h, só em domingo, feriado e recesso) dá café e
+     almoço; o noturno (19h–07h) só o jantar; de dia, em dia útil, é o turno dos monitores. O turno vem de
+     plantaoTurnoAplicar() em body[data-plantao-turno]. Quem não é plantonista continua vendo o café como antes. */
+  body:not([data-role="plantonista"]) #plantaoTurnoCard{display:none !important}
+  body[data-role="plantonista"]:not([data-plantao-turno="diurno"]) #prevSec_plantao-cafe,
+  body:not([data-plantao-turno="diurno"]) #prevSec_plantao-almoco,
+  body:not([data-plantao-turno="noturno"]) #prevSec_plantao-jantar,
+  body[data-role="plantonista"][data-plantao-turno="fora"] #cardFecharTurno,
+  body[data-role="plantonista"][data-plantao-turno="fora"] #prevSec_plantao-protocolo,
+  body[data-role="plantonista"]:not([data-plantao-turno="noturno"]) #card-inicio,
+  body[data-role="plantonista"]:not([data-plantao-turno="noturno"]) .hb-jantar{display:none !important}
   body[data-role="plantonista"] #magItens{pointer-events:none;opacity:.72}
   /* Foto (trocar/salvar): Gestão, Supervisão e Monitor podem. Plantonista e tutor NÃO (só recebem).
      !important vence o style inline display:flex. */
@@ -2934,8 +2945,8 @@
 .z-painel44{--p44-blue:#234d67;--p44-soft:#3a6a85;--p44-cream:#fffdf6;--p44-warm:#faf5e9;--p44-gold:#deb428;--p44-line:#e7e0d2;--p44-muted:#7c8a93;box-sizing:border-box;max-width:1160px;padding:24px 38px 52px;background:var(--p44-cream);color:var(--p44-blue);font-family:Inter,Poppins,system-ui,sans-serif}.z-painel44 *{box-sizing:border-box}.z-painel44 [hidden]{display:none!important}.z-painel44 button{font:inherit}.z-painel44 button:focus-visible{outline:3px solid rgba(222,180,40,.55);outline-offset:3px}.z-painel44__topo{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.z-painel44__saudacao .pm-saud1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.12;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2{margin:8px 0 0;font-size:16px;font-weight:600;line-height:1.45;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2 b{font-size:21px;font-weight:800;color:#a57a00}.z-painel44__saudacao .pm-saud3{max-width:54ch;margin:5px 0 0;color:var(--p44-soft);font-size:15px;font-weight:500;font-style:italic;line-height:1.5}.z-painel44__saudacao .pm-traco{display:block;width:40px;height:3px;margin-top:13px;border-radius:2px;background:linear-gradient(90deg,var(--p44-gold),#a57a00)}.z-painel44__saudacao .pm-data{margin-top:14px;color:var(--p44-muted);font-size:12px;font-weight:600}.z-painel44__selo{flex:0 0 auto;padding:8px 11px;border:1px solid var(--p44-line);border-radius:999px;background:#fff;color:var(--p44-blue);font-size:12px;font-weight:700}.z-painel44__selo:before{content:'•';margin-right:5px;color:var(--p44-gold);font-size:18px}.z-painel44__sticker{display:block;width:62px;max-width:90px;height:68px;max-height:80px;object-fit:contain;margin:4px auto 0}.z-painel44__bem-estar{display:block;width:100%;margin-bottom:18px}.z-painel44__bem-estar>*{width:100%}.z-painel44__abas{display:flex;gap:7px;margin:0 0 16px}.z-painel44__abas button{padding:10px 14px;border:1px solid var(--p44-line);border-radius:10px;background:#fff;color:var(--p44-blue);font-size:14px;font-weight:700;cursor:pointer}.z-painel44__abas button[aria-selected=true]{border-color:var(--p44-blue);background:var(--p44-blue);color:var(--p44-cream)}.z-painel44__intro{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:12px 0}.z-painel44__intro h2,.z-painel44__equipe h2{margin:0;font-size:20px}.z-painel44__intro p,.z-painel44__equipe>p{margin:5px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__contagem{color:var(--p44-muted);font-size:12px;font-weight:700}.z-painel44__temas{display:grid;gap:9px}.z-painel44__tema{overflow:hidden;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__tema-cabeca{display:grid;grid-template-columns:36px 1fr auto 20px;align-items:center;gap:10px;width:100%;padding:14px 15px;border:0;background:transparent;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__tema-icone{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--p44-warm);font-size:17px}.z-painel44__tema-titulo,.z-painel44__tema-passo{display:block}.z-painel44__tema-titulo{font-size:15px;font-weight:800}.z-painel44__tema-passo{margin-top:3px;color:var(--p44-muted);font-size:12px}.z-painel44__pill{padding:4px 8px;border-radius:999px;background:#e9f5f7;color:#226477;font-size:11px;font-weight:800}.z-painel44__seta{color:var(--p44-soft);font-size:18px;transition:transform .16s}.z-painel44__tema.aberto .z-painel44__seta{transform:rotate(90deg)}.z-painel44__tema-corpo{margin:0 12px 12px;padding:14px 15px;border-top:1px solid var(--p44-line);background:var(--p44-warm)}.z-painel44__equipe{padding:18px;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__pessoas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}.z-painel44__pessoa{display:flex;align-items:center;gap:11px;width:100%;padding:13px;border:1px solid var(--p44-line);border-radius:12px;background:#fff;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__avatar{display:grid;place-items:center;width:39px;height:39px;flex:0 0 auto;border-radius:50%;background:var(--p44-blue);color:var(--p44-cream);font-size:12px;font-weight:800}.z-painel44__pessoa-info{min-width:0}.z-painel44__pessoa strong,.z-painel44__pessoa small{display:block}.z-painel44__pessoa strong{font-size:14px}.z-painel44__pessoa small{overflow:hidden;margin-top:3px;color:var(--p44-muted);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.z-painel44__pessoa-seta{margin-left:auto;color:#a57a00;font-size:18px}.z-painel44__pessoa-detalhe{margin-top:15px}.z-painel44__pessoa-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__pessoa-secao h3{margin:0;font-size:14px}.z-painel44__pessoa-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}.z-painel44__vazio{margin:15px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__zelozinha{display:block;width:100%;margin-top:16px;padding:12px;border:1px dashed var(--p44-gold);border-radius:11px;background:var(--p44-warm);color:#805d00;text-align:left;cursor:pointer}.z-painel44__zelozinha-titulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.z-painel44__canal{padding:3px 7px;border-radius:999px;background:#fff;color:var(--p44-muted);font-size:11px}.z-painel44__zelozinha-aviso{display:block;margin-top:7px;font-size:12px;line-height:1.45}.z-painel44__perfil{margin-top:15px}.z-painel44__voltar{margin-bottom:12px;padding:8px 11px;border:1px solid var(--p44-line);border-radius:9px;background:#fff;color:var(--p44-blue);font-size:13px;font-weight:700;cursor:pointer}.z-painel44__perfil-subtitulo{margin:4px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__perfil-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__perfil-secao h3{margin:0;font-size:14px}.z-painel44__perfil-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}@media(max-width:760px){.z-painel44{padding:18px}.z-painel44__topo,.z-painel44__intro{display:block}.z-painel44__selo{display:inline-block;margin-top:13px}.z-painel44__contagem{display:block;margin-top:8px}.z-painel44__tema-cabeca{grid-template-columns:32px 1fr auto 16px;padding:12px}.z-painel44__tema-corpo{margin:0 8px 8px;padding:12px}.z-painel44__pessoas,.z-painel44__perfil-conteudo,.z-painel44__pessoa-conteudo{grid-template-columns:1fr}}
 
 </style>
-<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-14-03">
-<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-14-03">
+<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-15-01">
+<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-15-01">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -3521,7 +3532,9 @@
       <div class="role-note"><span data-icon="moon"></span><span>Selecione o peludinho hospedado para registrar a <strong>passagem de plantão</strong>. Turnos: Diurno 07h–19h · Noturno 19h–07h.</span></div>
       <!-- Fecha o turno INTEIRO e manda o resumo à Gestão. A passagem de plantão continua
            sendo por FILHOt; isto é o fecho de tudo, no fim (Adriana, 15/ago/2026). -->
-      <div class="card" style="margin-bottom:18px;border-left:4px solid var(--z-gold)">
+      <!-- TURNO DO PLANTÃO (15/nov/2026): diurno, noturno ou turno dos monitores. Só a plantonista vê. -->
+      <div id="plantaoTurnoCard"></div>
+      <div class="card" id="cardFecharTurno" style="margin-bottom:18px;border-left:4px solid var(--z-gold)">
         <h2 style="font-size:18px">Terminou o seu turno?</h2>
         <div class="hint">Passe o plantão de cada peludinho primeiro. Depois toque aqui: eu monto o resumo do turno, mostro para você conferir e mando ao grupo da Gestão.</div>
         <button id="btnFecharTurno" class="btn btn-primary" style="width:100%;margin-top:12px" onclick="fecharTurnoEAvisar()">Fechar o turno e avisar a Gestão</button>
@@ -3554,6 +3567,27 @@
         <div id="cafeBarraTempo"></div>
         <div id="cafeResumo"></div>
         <div class="pets-grid" id="cafeGrid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))"></div>
+      </div>
+      </div></details>
+      <!-- ===== ALMOÇO E JANTAR DOS HÓSPEDES (Adriana, 15/nov/2026) ==========================
+           O almoço aparece no plantão diurno (domingo, feriado e recesso, 07h–19h); o jantar no noturno
+           (19h–07h). Mesmo cartão do café: Comeu / Metade / Não comeu e o Iniciar/Encerrar. -->
+      <details class="prev-sec" id="prevSec_plantao-almoco" open ontoggle="prevSecVirar('plantao-almoco',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Almoço</span><span class="prev-sec-contas" id="prevConta_plantao-almoco"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
+      <div class="card" id="card-almoco-hosp">
+        <h2 style="font-size:19px">Almoço</h2>
+        <div class="hint">Cada um come <strong>o que está na ficha dele</strong> — nenhuma alimentação pode ser trocada. Marque conforme for servindo.</div>
+        <div id="plAlmocoBarra"></div>
+        <div id="plAlmocoResumo"></div>
+        <div class="pets-grid" id="plAlmocoGrid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))"></div>
+      </div>
+      </div></details>
+      <details class="prev-sec" id="prevSec_plantao-jantar" open ontoggle="prevSecVirar('plantao-jantar',this.open,this.dataset.padrao==='1')"><summary><span class="prev-sec-nome">Jantar</span><span class="prev-sec-contas" id="prevConta_plantao-jantar"></span><span class="prev-sec-seta" aria-hidden="true">⌄</span></summary><div class="prev-sec-corpo">
+      <div class="card" id="card-jantar-hosp">
+        <h2 style="font-size:19px">Jantar</h2>
+        <div class="hint">Cada um come <strong>o que está na ficha dele</strong> — nenhuma alimentação pode ser trocada. Marque conforme for servindo.</div>
+        <div id="plJantarBarra"></div>
+        <div id="plJantarResumo"></div>
+        <div class="pets-grid" id="plJantarGrid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))"></div>
       </div>
       </div></details>
       <div class="pets-grid" id="hospGrid"></div>
@@ -5699,8 +5733,9 @@
 <script src="autoria-logica.js?v=2026-10-15-02"></script>
 <script src="navegacao-inicio.js?v=2026-10-15-02"></script>
 <script src="hospedes-atividades.js?v=2026-10-16-01"></script>
-<script src="alimentacao-hospede.js?v=2026-11-14-03"></script>
-<script src="cafe-operacional.js?v=2026-10-16-02"></script>
+<script src="alimentacao-hospede.js?v=2026-11-15-01"></script>
+<script src="cafe-operacional.js?v=2026-11-15-01"></script>
+<script src="plantao-turno.js?v=2026-11-15-01"></script>
 <script src="cafe-aluno-logica.js?v=2026-10-16-06"></script>
 <script src="presenca-logica.js?v=2026-10-16-02"></script>
 <script src="historico-checkins.js?v=2026-10-15-02"></script>
@@ -18190,7 +18225,221 @@ return { criar };
         +'" '+(pendente?'disabled aria-disabled="true"':'')+' onclick="marcarCafe('+cafeChaveAcao(k)+','+cafeChaveAcao('naochegou')+')">Não chegou ainda</button></div></div>';
     }).join('');
   }
+  // ================= TURNO DO PLANTÃO + ALMOÇO E JANTAR DOS HÓSPEDES (Adriana, 15/nov/2026) =================
+  // «O plantão noturno — 19h às 7h — continua somente com o jantar; o diurno, de 7h às 19h, precisa estar
+  //  com o café e o almoço.» O diurno só existe em dia que a Zêluz não abre: domingo, feriado e recesso
+  // (orcFechado: a mesma lista de Configurações › Valores da hospedagem). Fora disso, de dia, é o turno dos
+  // monitores. A regra mora em plantao-turno.js (ZeluzPlantaoTurno); aqui só se lê a hora de São Paulo.
+  // Almoço e jantar seguem o molde do café acima: cada um come o que está no check-in desta estadia
+  // (ZeluzCafeOperacional com a refeição pedida), as marcas gravam em auaulandia/<almoco|jantar>/<dia>/<FILHOt>
+  // e o Iniciar/Encerrar em auaulandia/<almoco|jantar>-turno/<dia>. O jantar da madrugada pertence ao dia em
+  // que o plantão começou. Só se lê o banco da refeição do turno que está na tela.
+  var PL_REF_ROT={almoco:'Almoço',jantar:'Jantar'}, PL_REF_ID={almoco:'plAlmoco',jantar:'plJantar'};
+  var PL_REF={almoco:{marcas:{},tempo:{},pend:{},leitura:{dia:'',ger:0,estado:'nao-lido',promessa:null}},
+              jantar:{marcas:{},tempo:{},pend:{},leitura:{dia:'',ger:0,estado:'nao-lido',promessa:null}}};
+  var PL_TURNO_ULT='', PL_FER_PEDIDO=false;
+  function plTurnoAgora(){
+    var p=cafePartesSP(), hoje=p.year+'-'+p.month+'-'+p.day, hh=p.hour+':'+p.minute;
+    var fechado=(typeof orcFechado==='function')?String(orcFechado(hoje)||''):'';
+    var turno=(typeof ZeluzPlantaoTurno!=='undefined')?ZeluzPlantaoTurno.turno(!!fechado,hh):'fora';
+    return {hoje:hoje, hora:hh, fechado:fechado, turno:turno};
+  }
+  function plRefDia(tipo){
+    var a=plTurnoAgora();
+    if(tipo!=='jantar'||typeof ZeluzPlantaoTurno==='undefined') return a.hoje;
+    return ZeluzPlantaoTurno.diaDoJantar(a.hoje, orcMaisDias(a.hoje,-1), a.hora);
+  }
+  function plantaoTurnoCardHTML(a){
+    if(a.turno==='diurno'){
+      var nome=a.fechado==='domingo'?'Domingo':a.fechado, dm=a.hoje.slice(8,10)+'/'+a.hoje.slice(5,7);
+      return '<div class="card" style="margin-bottom:18px;border-left:4px solid var(--z-gold)"><h2 style="font-size:18px">Plantão diurno · 07h às 19h</h2>'
+        +'<div class="hint" style="margin-bottom:0">'+escAttr(nome)+', '+dm+': a Zêluz não abre hoje. Você dá o <strong>café da manhã</strong> e o <strong>almoço</strong>. O jantar aparece às 19h.</div></div>';
+    }
+    if(a.turno==='noturno') return '<div class="card" style="margin-bottom:18px;border-left:4px solid var(--z-blue)"><h2 style="font-size:18px">Plantão noturno · 19h às 07h</h2>'
+      +'<div class="hint" style="margin-bottom:0">Você dá o <strong>jantar</strong> e faz o relatório da noite. Café e almoço não fazem parte do plantão noturno.</div></div>';
+    return '<div class="card" style="margin-bottom:18px;border-left:4px solid var(--z-blue-soft)"><h2 style="font-size:18px">Agora é o turno do time de monitores</h2>'
+      +'<div class="hint" style="margin-bottom:0">O seu plantão começa às 19h. Até lá, as refeições ficam com os monitores.</div></div>';
+  }
+  // Marca o turno no <body> (o CSS mostra e esconde os blocos) e redesenha o cartão do turno.
+  function plantaoTurnoAplicar(){
+    var a; try{ a=plTurnoAgora(); }catch(e){ return {turno:'',mudou:false}; } /* silencioso de propósito: sem a hora, a tela fica como estava */
+    if(document.body) document.body.dataset.plantaoTurno=a.turno;
+    var card=document.getElementById('plantaoTurnoCard'); if(card) card.innerHTML=plantaoTurnoCardHTML(a);
+    var mudou=!!PL_TURNO_ULT&&PL_TURNO_ULT!==a.turno; PL_TURNO_ULT=a.turno;
+    if(!PL_FER_PEDIDO&&typeof orcFeriadosGarantir==='function'){
+      PL_FER_PEDIDO=true;
+      orcFeriadosGarantir().then(function(){ var r=plantaoTurnoAplicar(); if(r.mudou){ try{ renderHosp(); }catch(e){} } }); /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
+    }
+    return {turno:a.turno, mudou:mudou};
+  }
+  function plRefCarregar(tipo){
+    var R=PL_REF[tipo]; if(!R) return Promise.resolve(null);
+    var dia=plRefDia(tipo);
+    if(R.leitura.dia===dia&&R.leitura.promessa) return R.leitura.promessa;
+    if(R.leitura.dia===dia&&R.leitura.estado==='ok'&&Date.now()-(R.leitura.em||0)<15000) return Promise.resolve(R.leitura);
+    if(R.leitura.dia!==dia){ R.marcas={}; R.tempo={}; R.pend={}; }
+    var ger=(R.leitura.ger||0)+1;
+    R.leitura={dia:dia,ger:ger,estado:'lendo',promessa:null};
+    if(!DB){ R.leitura.estado='falha'; plRefRender(tipo); return Promise.resolve(R.leitura); }
+    function ler(c){ return DB.ref(c).once('value').then(function(s){ return {ok:true,v:s.val()||{}}; },function(e){ _logLeituraFalhou(c+' (plRefCarregar)', e); return {ok:false,e:e}; }); }
+    var p=Promise.all([ler('auaulandia/'+tipo+'/'+dia),ler('auaulandia/'+tipo+'-turno/'+dia)]).then(function(r){
+      if(R.leitura.ger!==ger||R.leitura.dia!==dia) return R.leitura;
+      R.leitura.estado=(r[0].ok&&r[1].ok)?'ok':'falha';
+      if(r[0].ok) R.marcas=r[0].v;
+      if(r[1].ok) R.tempo=r[1].v;
+      R.leitura.promessa=null; R.leitura.em=Date.now(); plRefRender(tipo); return R.leitura;
+    });
+    R.leitura.promessa=p; plRefRender(tipo); return p;
+  }
+  function plRefParticipantes(tipo){
+    if(typeof ZeluzCafeOperacional==='undefined') return {pronto:false,participantes:[],conferencias:[{estado:'modulo-cafe-ausente'}]};
+    var dia=plRefDia(tipo);
+    return ZeluzCafeOperacional.criar({refeicao:tipo, pronto:(typeof CF_ESTADIAS_LIDO!=='undefined'&&CF_ESTADIAS_LIDO===true),
+      estadias:(typeof EST_TODAS!=='undefined'&&EST_TODAS)||{}, hospedes:function(){ return (typeof hospedes!=='undefined'&&hospedes)||[]; },
+      hoje:function(){ return dia; }}).ler();
+  }
+  function plRefEstado(tipo,k){ var v=(PL_REF[tipo].marcas||{})[k]; return (v&&v.estado)||(typeof v==='string'?v:''); }
+  function plRefPodeOperar(tipo){
+    var R=PL_REF[tipo], rot=(PL_REF_ROT[tipo]||'').toLowerCase();
+    if(!(R.leitura.estado==='ok'&&R.leitura.dia===plRefDia(tipo))) return {ok:false,mensagem:R.leitura.estado==='falha'?'Não foi possível confirmar as marcas e o horário do '+rot+'. Verifique a conexão e tente novamente.':'Ainda estou lendo as marcas confirmadas do '+rot+'.'};
+    if(!DB) return {ok:false,mensagem:'Sem conexão com o registro do '+rot+'. Nenhuma marcação foi gravada.'};
+    if(!cafeAutor()) return {ok:false,mensagem:'Não identifiquei quem está operando o '+rot+'. Entre novamente antes de registrar.'};
+    return {ok:true,mensagem:''};
+  }
+  function marcarRefeicaoHosp(tipo,k,val){
+    var R=PL_REF[tipo]; if(!R) return false;
+    var rot=PL_REF_ROT[tipo].toLowerCase(), guarda=plRefPodeOperar(tipo);
+    if(!guarda.ok){ alert(guarda.mensagem); return false; }
+    if(R.pend[k]){ alert('Esta marcação ainda está sendo confirmada. Aguarde antes de registrar outra.'); return false; }
+    var leitura=plRefParticipantes(tipo), seguro=(leitura.participantes||[]).some(function(o){ return cafeKey(o.hospede||{})===k; });
+    if(!leitura.pronto||!seguro){ alert('Este hóspede precisa de conferência antes de registrar o '+rot+'.'); return false; }
+    var dia=R.leitura.dia, cur=plRefEstado(tipo,k), nx=(cur===val)?'':val, quem=cafeAutor(), hora=cafeHoraSP();
+    var pend={estado:nx,quem:quem,hora:hora}, antes=null, estado='';
+    R.pend[k]=pend; plRefRender(tipo);
+    DB.ref('auaulandia/'+tipo+'/'+dia+'/'+k).transaction(function(atual){
+      antes=cafeAntesDoValor(atual); estado='ok';
+      if((antes?antes.estado:'')===nx){ estado='igual'; return (atual===null||atual===undefined)?null:undefined; }
+      var reg=nx?{estado:nx,quem:quem,hora:hora}:null;
+      if(antes){ reg=reg||{estado:'',quem:quem,hora:hora,limpo:true}; reg.antes=antes; }
+      return reg;
+    }).then(function(res){
+      if(R.pend[k]!==pend) return;
+      delete R.pend[k];
+      var v=(res&&res.snapshot&&res.snapshot.val)?res.snapshot.val():null;
+      if(v!==null&&v!==undefined) R.marcas[k]=v; else delete R.marcas[k];
+      plRefRender(tipo);
+      if(!res||!res.committed||estado!=='ok') return;
+      if(typeof audit==='function') audit(tipo, nx?(nx==='tudo'?'comeu o '+rot+' todo':(nx==='metade'?'comeu metade do '+rot:(nx==='naochegou'?'ainda não tinha chegado ('+rot+')':'não comeu o '+rot))):('desmarcou o '+rot), {alvo:k, antes:antes, depois:nx});
+    }).catch(function(e){
+      if(R.pend[k]===pend) delete R.pend[k];
+      plRefRender(tipo); _logFalhaGrav('auaulandia/'+tipo+'/ (marcarRefeicaoHosp)', e);
+      alert('Não consegui confirmar esta marcação do '+rot+'. O estado anterior foi preservado.');
+    });
+    return true;
+  }
+  async function plRefTrocarTurno(tipo,campo,campoQuem,rotulo,adicionais){
+    var R=PL_REF[tipo], dia=R.leitura.dia, h=cafeHoraSP(), q=cafeAutor(), atual=(R.tempo||{})[campo], quemAtual=(R.tempo||{})[campoQuem], caminho='auaulandia/'+tipo+'-turno/'+dia;
+    if(atual){
+      if(!await zPergunta(rotulo+' JÁ foi registrado às '+atual+(quemAtual?' por '+quemAtual:''),['Se continuar, o horário passa a ser o seu ('+h+') e o de '+(quemAtual||'quem registrou')+' sai do relatório.','Quer mesmo trocar?'],{sim:'Trocar o horário', nao:'Manter como está'})) return null;
+    }
+    if(!plRefPodeOperar(tipo).ok||R.leitura.dia!==dia||cafeAutor()!==q){ alert('O contexto mudou durante a confirmação. Atualize e tente novamente.'); return null; }
+    try{
+      var remoto=(await DB.ref(caminho).once('value')).val()||{};
+      if(String(remoto[campo]||'')!==String(atual||'')){ alert('O horário foi atualizado em outro aparelho. A tela foi preservada para conferência.'); R.leitura.em=0; plRefCarregar(tipo); return null; }
+      if(atual) await DB.ref(caminho+'/historico').push({campo:campo,era:atual,eraQuem:(quemAtual||'-'),virou:h,virouQuem:q,ts:Date.now()});
+      var patch={}; patch[campo]=h; patch[campoQuem]=q; Object.keys(adicionais||{}).forEach(function(k){ patch[k]=adicionais[k]; });
+      await DB.ref(caminho).update(patch);
+      R.tempo=Object.assign({},R.tempo,patch);
+      return {h:h};
+    }catch(e){ _logFalhaGrav('plRefTrocarTurno '+tipo,e); alert('Não consegui confirmar o horário. Nada foi concluído nesta tela.'); return null; }
+  }
+  async function iniciarRefeicaoHosp(tipo){
+    if(!PL_REF[tipo]) return;
+    var guarda=plRefPodeOperar(tipo), leitura=plRefParticipantes(tipo);
+    if(!guarda.ok||!leitura.pronto){ alert(guarda.mensagem||'Ainda estou lendo os check-ins. Nada foi iniciado.'); return; }
+    var r=await plRefTrocarTurno(tipo,'inicio','quemInicio','O início do '+PL_REF_ROT[tipo].toLowerCase(),{caes:leitura.participantes.length}); if(!r) return;
+    if(typeof audit==='function') audit(tipo+'_ini','iniciou o '+PL_REF_ROT[tipo].toLowerCase()+' às '+r.h); plRefRender(tipo);
+  }
+  async function encerrarRefeicaoHosp(tipo){
+    if(!PL_REF[tipo]) return;
+    var guarda=plRefPodeOperar(tipo); if(!guarda.ok){ alert(guarda.mensagem); return; }
+    var r=await plRefTrocarTurno(tipo,'fim','quemFim','O fim do '+PL_REF_ROT[tipo].toLowerCase()); if(!r) return;
+    if(typeof audit==='function') audit(tipo+'_fim','encerrou o '+PL_REF_ROT[tipo].toLowerCase()+' às '+r.h); plRefRender(tipo);
+  }
+  function plRefAvisos(tipo,leitura){
+    var rot=PL_REF_ROT[tipo], out='';
+    var conf=(leitura.conferencias||[]);
+    if(conf.length){
+      var motivos={'conferir-dia':'as refeições do dia de entrada ou de saída precisam ser conferidas','conferir-refeicao':'o check-in não confirma esta refeição','conferir-quantidade':'a quantidade precisa ser confirmada','conferir-unidade-racao':'a unidade da ração precisa ser confirmada','identidade-a-confirmar':'a identidade do hóspede precisa ser confirmada','estadias-ativas-duplicadas':'há mais de uma estadia ativa para este hóspede','carregando':'o plano alimentar ainda está carregando'};
+      out+='<details class="hint" style="grid-column:1/-1"><summary><strong>'+rot+' a conferir:</strong> '+conf.length+' hospedagem(ns) precisa(m) de conferência antes de servir.</summary><ul style="margin:8px 0 0 18px">'
+        +conf.map(function(c){ var nome=String(c.nome||c.refKey||c.estadiaId||'Hóspede sem identificação'), tutor=String(c.tutor||'').trim(); return '<li><strong>'+escAttr(nome)+'</strong>'+(tutor?' · '+escAttr(tutor):'')+' — '+escAttr(motivos[c.estado]||'dados da alimentação precisam ser conferidos')+'.</li>'; }).join('')+'</ul></details>';
+    }
+    // Pernoite de aluno do Day Care não tem check-in de hotel: não entra na lista, e a plantonista precisa saber disso.
+    var dentro={}; (leitura.participantes||[]).forEach(function(o){ dentro[cafeKey(o.hospede||{})]=1; });
+    var fora=((typeof hospedes!=='undefined'&&hospedes)||[]).filter(function(h){ return h&&h.pernoite&&!h.hospede&&!h.mascote&&!dentro[cafeKey(h)]; });
+    if(fora.length) out+='<div class="hint" style="grid-column:1/-1"><strong>Pernoite do Day Care:</strong> '+fora.map(function(h){ return escAttr(h.nome||''); }).join(', ')+'. Não tem check-in de hotel, então não entra nesta lista: a comida dele está no cartão do peludinho, logo abaixo.</div>';
+    return out;
+  }
+  function plRefRender(tipo){
+    var id=PL_REF_ID[tipo], grid=document.getElementById(id+'Grid'); if(!grid) return;
+    var R=PL_REF[tipo], rot=PL_REF_ROT[tipo], barra=document.getElementById(id+'Barra'), rz=document.getElementById(id+'Resumo');
+    var leitura=plRefParticipantes(tipo), guarda=plRefPodeOperar(tipo), t=R.tempo||{};
+    var itens=leitura.participantes||[], dur=diffMin(t.inicio,t.fim), n=itens.length, dis=guarda.ok?'':'disabled aria-disabled="true" ';
+    if(barra) barra.innerHTML='<div class="alm-turno" style="margin-bottom:10px">'
+      +'<div><div class="tb-lab">'+rot+'</div>'
+      +'<div style="font-size:13px;margin-top:3px">Início: <strong>'+escAttr(t.inicio||'-')+'</strong>'+(t.quemInicio?(' ('+escAttr(t.quemInicio)+')'):'')
+      +' · Fim: <strong>'+escAttr(t.fim||'-')+'</strong>'+(dur!=null?(' · '+fmtDur(dur)):'')
+      +(dur!=null&&n?(' · <strong>'+(dur/n).toFixed(1).replace('.',',')+' min por FILHOt</strong>'):'')+'</div></div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +'<button type="button" class="btn btn-gold" '+dis+'onclick="iniciarRefeicaoHosp(\''+tipo+'\')">&#9654; Iniciar</button>'
+      +'<button type="button" class="btn" '+dis+'style="background:rgba(255,255,255,.14);color:var(--z-cream);border:1px solid rgba(255,255,255,.25)" onclick="encerrarRefeicaoHosp(\''+tipo+'\')">&#9632; Encerrar</button>'
+      +'</div></div>';
+    var san=function(servidos,faltam){ prevSecSincronizar('plantao-'+tipo, faltam>0?('<span class="prev-sec-conta prev-sec-venc">'+faltam+' faltam</span>'):(servidos>0?'<span class="prev-sec-conta">tudo servido</span>':'<span class="prev-sec-conta">0</span>'), faltam>0); };
+    if(R.leitura.estado==='falha'){ grid.innerHTML='<div class="hint" style="grid-column:1/-1"><strong>Não foi possível confirmar os registros do '+rot.toLowerCase()+'.</strong> Nada pode ser registrado até uma nova leitura bem-sucedida. Confira a internet.</div>'; if(rz) rz.innerHTML=''; return; }
+    if(R.leitura.estado!=='ok'||!leitura.pronto){ grid.innerHTML='<div class="hint" style="grid-column:1/-1">Ainda lendo os check-ins e os registros confirmados do '+rot.toLowerCase()+'. Não vou montar a lista no escuro.</div>'; if(rz) rz.innerHTML=''; return; }
+    var avisos=plRefAvisos(tipo,leitura);
+    if(!itens.length){ grid.innerHTML=avisos+'<div class="hint" style="grid-column:1/-1">Nenhum hóspede com '+rot.toLowerCase()+' confirmado no check-in para hoje.</div>'; if(rz) rz.innerHTML=''; san(0,0); return; }
+    var est=itens.map(function(o){ return plRefEstado(tipo,cafeKey(o.hospede)); });
+    var naochegou=est.filter(function(e){ return e==='naochegou'; }).length, servidos=est.filter(function(e){ return e&&e!=='naochegou'; }).length, faltam=itens.length-servidos-naochegou;
+    if(rz) rz.innerHTML='<div class="dc-resumo"><div class="dc-stat ok"><b>'+servidos+'</b>servidos</div><div class="dc-stat pend"><b>'+faltam+'</b>faltam</div>'+(naochegou?'<div class="dc-stat"><b>'+naochegou+'</b>não chegou ainda</div>':'')+'</div>';
+    san(servidos,faltam);
+    var acao=function(k,v){ return 'marcarRefeicaoHosp(\''+tipo+'\','+cafeChaveAcao(k)+','+cafeChaveAcao(v)+')'; };
+    grid.innerHTML=avisos+itens.map(function(o){
+      var h=o.hospede||{}, plano=o.plano||{}, por=o.porcao||{}, k=cafeKey(h), m=plRefEstado(tipo,k), pendente=!!R.pend[k], rf=alimRestricaoDaFicha(h).join(' · '), obsCi=alimObsCheckinCartao(rf, plano.restricao);
+      var trava=pendente?'disabled aria-disabled="true" ':'';
+      var foto=(typeof fotoDe==='function')?fotoDe(h):'';
+      var ph=foto?'<div class="ph" style="background-image:url(\''+foto+'\');background-size:cover;background-position:center"></div>'
+                 :'<div class="ph" style="background:'+(h.cor||'#234D67')+'">'+escAttr(h.ini||((h.nome||'?')[0]||'?').toUpperCase())+'</div>';
+      var linha='';
+      if(por.semRacao) linha='<div class="alm-restr">'+escAttr(por.texto)+'</div>';
+      else {
+        if(por.texto) linha+='<div class="alm-info"><div class="alm-line"><span>'+rot+'</span><b>'+escAttr(por.texto)+'</b></div></div>';
+        if(por.extra) linha+='<div class="alm-info"><div class="alm-line"><span>Complemento</span><b>'+escAttr(por.extra)+'</b></div></div>';
+        if(por.pendente) linha+='<div class="alm-restr">⚠ '+escAttr(por.pendente)+'</div>';
+      }
+      var reg='';
+      if(pendente) reg='<div class="hint" style="margin-top:7px;font-size:11px">Registrando… aguarde a confirmação.</div>';
+      else { var r=(R.marcas||{})[k]; if(r&&typeof r==='object'&&(r.quem||r.hora)) reg='<div class="hint" style="margin-top:7px;font-size:11px">Registrado'+(r.quem?' por '+escAttr(r.quem):'')+(r.hora?' às '+escAttr(r.hora):'')+'.</div>'; }
+      return '<div class="pet alm-card '+(m||'')+'">'+ph
+        +'<div class="nm">'+escAttr(h.nome||'')+alergiaSeloHTML(h)+'</div>'
+        +'<div class="br">'+escAttr(h.raca||(typeof racaDe==='function'?(racaDe(h)||''):''))+'</div>'
+        +(obsCi.restr?'<div class="alm-restr">&#9888; '+escAttr((rf&&!/restri/i.test(obsCi.restr)?'RESTRIÇÃO: ':'')+obsCi.restr)+'</div>':'')
+        +linha
+        +(plano.marca?'<div class="alm-info"><div class="alm-line"><span>Ração</span><b>'+escAttr(plano.marca)+'</b></div></div>':'')
+        +reg+obsCi.faixa
+        +'<div class="alm-actions"><div class="alm-seg">'
+        +'<button type="button" class="alm-btn tudo '+(m==='tudo'?'on':'')+'" '+trava+'onclick="'+acao(k,'tudo')+'">Comeu</button>'
+        +'<button type="button" class="alm-btn metade '+(m==='metade'?'on':'')+'" '+trava+'onclick="'+acao(k,'metade')+'">Metade</button>'
+        +'<button type="button" class="alm-btn nao '+(m==='nao'?'on':'')+'" '+trava+'onclick="'+acao(k,'nao')+'">Não comeu</button>'
+        +'</div><button type="button" class="alm-btn'+(m==='naochegou'?' on':'')+'" style="width:100%;margin-top:6px;'
+        +(m==='naochegou'?'background:var(--z-blue);color:var(--z-cream);border-color:var(--z-blue)':'')
+        +'" '+trava+'onclick="'+acao(k,'naochegou')+'">Não chegou ainda</button></div></div>';
+    }).join('');
+  }
+  // A hora vira sozinha: às 07h e às 19h a tela troca de turno sem sair e entrar de novo.
+  setInterval(function(){ var r=plantaoTurnoAplicar(); if(r.mudou){ try{ renderHosp(); }catch(e){} } }, 60000); /* silencioso de propósito: redesenho de tela — falhar não pode derrubar quem chamou */
   function renderHosp(){
+    try{ var _plT=plantaoTurnoAplicar(); if(_plT.turno==='diurno') plRefCarregar('almoco'); else if(_plT.turno==='noturno') plRefCarregar('jantar'); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     try{ cafeCarregar(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     // Junta o que a planilha e o app dizem do mesmo FILHOt (quando alguém já confirmou)
     // e marca as suspeitas que ainda esperam resposta. Sem isto, o Nelson do check-in e
@@ -25145,10 +25394,20 @@ return { criar };
     if(!F){ var ano=+s.slice(0,4); if(!(ano>0)) return ''; F=orcFeriadosDoAno(ano); }
     return F[s]||'';
   }
+  // RECESSO DE FIM DE ANO (Adriana, 15/nov/2026): 24/12 e 31/12 não são feriado, mas a Zêluz não trabalha e
+  // quem fica é a plantonista. Entram sozinhos todo ano, junto dos feriados; a Gestão pode tirar um deles num
+  // ano (fica gravado como false na lista dela, só naquela data).
+  const ORC_RECESSO_FIXO={'12-24':'Recesso de Natal','12-31':'Recesso de Ano-Novo'};
+  function orcRecessoDe(iso){
+    var s=(typeof iso==='string')?iso:String(iso||'');
+    if(s.length!==10||s.charCodeAt(4)!==45||s.charCodeAt(7)!==45) return '';
+    return ORC_RECESSO_FIXO[s.slice(5)]||'';
+  }
+  function orcRecessoDoAno(ano){ var F={}; Object.keys(ORC_RECESSO_FIXO).forEach(function(md){ F[ano+'-'+md]=ORC_RECESSO_FIXO[md]; }); return F; }
   let orcFeriadosCfg=null;
   let orcSheetsCfg=null;   // {url, token} — a ponte com a planilha de Hospedagem
   function orcFeriados(){ return orcFeriadosCfg||ORC_FERIADOS_PADRAO; }
-  function orcEhFeriado(iso){ return orcFeriados()[iso]||orcFeriadoDoCalendario(iso)||''; }
+  function orcEhFeriado(iso){ var v=orcFeriados()[iso]; if(v===false) return orcFeriadoDoCalendario(iso)||''; return v||orcFeriadoDoCalendario(iso)||orcRecessoDe(iso)||''; }
   function orcEhDomingo(iso){ return orcDiaSemana(iso)==='dom'; }
   function orcFechado(iso){ return orcEhDomingo(iso) ? 'domingo' : (orcEhFeriado(iso)||''); }
   const ORC_DIAW=['dom','seg','ter','qua','qui','sex','sab'];
@@ -28828,7 +29087,10 @@ return { criar };
     var campo=function(id,lb,v){ return '<div><label class="cad-lb">'+lb+'</label><input class="cad-in" id="'+id+'" value="'+(v/100).toFixed(2).replace('.',',')+'" inputmode="decimal"></div>'; };
     var F=orcFeriados();
     var hoje=(typeof hojeISO==='function')?hojeISO():'';
-    var futuros=Object.keys(F).filter(function(d){ return !hoje||d>=hoje; }).sort();
+    // O recesso de fim de ano entra na lista deste ano e do próximo, a não ser que a Gestão o tenha tirado (false).
+    var anoH=+String(hoje||'').slice(0,4)||new Date().getFullYear();
+    F=Object.assign({}, orcRecessoDoAno(anoH), orcRecessoDoAno(anoH+1), F);
+    var futuros=Object.keys(F).filter(function(d){ return F[d]&&(!hoje||d>=hoje); }).sort();
     var txt=function(id,lb,v,ph){ return '<div><label class="cad-lb">'+lb+'</label><input class="cad-in" id="'+id+'" value="'+escAttr(v||'')+'" placeholder="'+escAttr(ph||'')+'" inputmode="numeric"></div>'; };
     el.innerHTML='<div class="cad-grid2">'
       +campo('orcPvBaixa','Pernoite — baixa temporada',P.pernoite.baixa)
@@ -28996,7 +29258,7 @@ return { criar };
   }
   function orcDelFeriado(d){
     if(orcFeriadoDoCalendario(d)){ alert(orcBR(d)+' é '+orcFeriadoDoCalendario(d)+': feriado nacional ou de BH não tem Day Care e não sai da lista.'); return; }
-    var F=Object.assign({},orcFeriados()); delete F[d];
+    var F=Object.assign({},orcFeriados()); if(orcRecessoDe(d)) F[d]=false; else delete F[d];
     if(!DB){ orcFeriadosCfg=F; orcRenderConfig(); orcCalcular(); return; }
     DB.ref('auaulandia/config/orcamento/feriados').set(F).then(function(){ orcFeriadosCfg=F; orcRenderConfig(); orcCalcular(); }).catch(function(e){ _logFalhaGrav('auaulandia/config/orcamento/feriados (orcDelFeriado)', e); });
   }
@@ -31672,7 +31934,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-11-14-03';
+  const APP_VERSAO='2026-11-15-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -36797,8 +37059,11 @@ return { criar };
   // (feriado não tem Day Care em ano nenhum, mesmo fora da lista salva pela Gestão) mais a lista da Gestão.
   function mmFeriadosDoMes(iniISO){
     var ano=/^\d{4}-/.test(String(iniISO||''))?+String(iniISO).slice(0,4):0;
-    return Object.assign({}, (ano&&typeof orcFeriadosDoAno==='function')?orcFeriadosDoAno(ano):{},
+    var F=Object.assign({}, (ano&&typeof orcFeriadosDoAno==='function')?orcFeriadosDoAno(ano):{},
+      (ano&&typeof orcRecessoDoAno==='function')?orcRecessoDoAno(ano):{},
       (typeof orcFeriados==='function')?orcFeriados():{});
+    Object.keys(F).forEach(function(d){ if(F[d]===false) delete F[d]; });   // recesso que a Gestão tirou
+    return F;
   }
   function mmDados(p){
     const ini=mmInicioDaTela();
@@ -103050,14 +103315,14 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',tentar,{once:true});else tentar();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
-<script src="agenda-marcia/dados.js?v=2026-11-14-03"></script>
-<script src="agenda-marcia/entrevistas.js?v=2026-11-14-03"></script>
-<script src="agenda-marcia/composta.js?v=2026-11-14-03"></script>
-<script src="agenda-marcia/painel.js?v=2026-11-14-03"></script>
-<script src="marcia129/painel.js?v=2026-11-14-03"></script>
-<script src="marcia129/dados.js?v=2026-11-14-03"></script>
-<script src="marcia129/app.js?v=2026-11-14-03"></script>
-<script src="agenda-marcia/app.js?v=2026-11-14-03"></script>
+<script src="agenda-marcia/dados.js?v=2026-11-15-01"></script>
+<script src="agenda-marcia/entrevistas.js?v=2026-11-15-01"></script>
+<script src="agenda-marcia/composta.js?v=2026-11-15-01"></script>
+<script src="agenda-marcia/painel.js?v=2026-11-15-01"></script>
+<script src="marcia129/painel.js?v=2026-11-15-01"></script>
+<script src="marcia129/dados.js?v=2026-11-15-01"></script>
+<script src="marcia129/app.js?v=2026-11-15-01"></script>
+<script src="agenda-marcia/app.js?v=2026-11-15-01"></script>
 <script id="menu-contadores171">'use strict';
 /* 30/out/2026 — contadores vermelhos no menu (maquete aprovada pela Adriana).
    «Márcia Gestão»: cuidados das avaliações de HOJE ainda não revisados + alertas de reação ainda sem «Tutor avisado».
