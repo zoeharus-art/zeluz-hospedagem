@@ -1991,6 +1991,50 @@
   .he-tag.achegar{background:rgba(222,180,40,.2);color:var(--z-gold-deep)}
   .he-tag.saiu{background:var(--z-cream-warm);color:var(--muted)}
   .he-grp{font-size:13px;font-weight:800;color:var(--z-blue);margin:18px 0 9px;letter-spacing:.02em}
+  /* ===== CALENDÁRIO DEZ/JAN (Adriana, 16/nov/2026 — maquete respondida) =====
+     A grade da maquete aprovada: número grande = peludinhos que dormem; a faixa de baixo é a cor do dia.
+     Fora da grade, só classes que o app já tem (card, seg gold, kpis, hosp-est, he-tag, dc-faltas). */
+  .cv-legenda{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 14px;font-size:12px;font-weight:600;color:var(--z-blue)}
+  .cv-legenda span{display:inline-flex;align-items:center;gap:6px}
+  .cv-lg{width:12px;height:12px;border-radius:50%;flex:none;display:inline-block}
+  .cv-lg.ok{background:var(--crm-ok)} .cv-lg.at{background:var(--crm-atencao)} .cv-lg.lot{background:var(--crm-critico)}
+  .cv-lg.mais{background:var(--z-blue);border:2px solid var(--z-gold)}
+  .cv-lg.fer{width:6px;height:6px;background:var(--z-gold-deep);margin:0 3px}
+  .cv-grade{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;max-width:420px;margin-bottom:16px}
+  .cv-grade .cv-sem{font-size:10.5px;font-weight:800;color:var(--muted);text-align:center;padding:2px 0}
+  .cv-dia{position:relative;height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:10px;background:var(--z-white);color:var(--z-blue);font-family:var(--font-ui);cursor:pointer;overflow:hidden;padding:13px 0 7px;line-height:1.1}
+  .cv-dia .dn{position:absolute;top:3px;left:5px;font-size:9.5px;font-weight:700;color:var(--muted)}
+  .cv-dia .pt{position:absolute;top:5px;right:5px;width:5px;height:5px;border-radius:50%;background:var(--z-gold-deep)}
+  .cv-dia b{font-size:16px;font-weight:800;letter-spacing:-.02em}
+  .cv-dia em{font-style:normal;font-size:8px;font-weight:600;color:var(--muted)}
+  .cv-dia .cv-sai{font-size:8px;font-weight:800;color:var(--crm-ok)}
+  .cv-dia .fx{position:absolute;left:0;right:0;bottom:0;height:4px}
+  .cv-dia.n-ok .fx{background:var(--crm-ok)} .cv-dia.n-at .fx{background:var(--crm-atencao)} .cv-dia.n-lot .fx{background:var(--crm-critico)} .cv-dia.n-mais .fx{background:var(--z-gold)}
+  .cv-dia.n-mais{background:var(--z-blue);color:var(--z-cream);border:2px solid var(--z-gold)}
+  .cv-dia.n-mais .dn,.cv-dia.n-mais em,.cv-dia.n-mais .cv-sai{color:var(--z-cream)}
+  .cv-dia.sel{box-shadow:0 0 0 2px var(--z-blue)}
+  .cv-dia.n-mais.sel{box-shadow:0 0 0 2px var(--z-gold)}
+  .cv-dia:focus-visible{outline:3px solid var(--z-gold);outline-offset:2px}
+  .cv-vazio{visibility:hidden}
+  @media(min-width:720px){
+    .cv-grade{max-width:none;gap:6px}
+    .cv-dia{aspect-ratio:auto;height:104px;padding:20px 6px 12px}
+    .cv-dia .dn{top:7px;left:9px;font-size:12px}
+    .cv-dia .pt{top:10px;right:10px;width:7px;height:7px}
+    .cv-dia b{font-size:24px;line-height:1}
+    .cv-dia em{font-size:11.5px;margin-top:2px}
+    .cv-dia .cv-sai{font-size:11px;margin-top:2px}
+  }
+  .cv-caixa{border:1.5px solid var(--line);background:var(--z-cream);border-radius:12px;padding:12px 14px;font-size:13.5px;font-weight:700;color:var(--z-blue);margin-top:12px}
+  .cv-caixa.crit{border-color:var(--crm-critico)}
+  .cv-det-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .cv-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:0 8px}
+  .cv-det .hosp-est{padding:7px 11px;margin-bottom:5px;gap:2px}
+  .cv-det .hosp-est .he-nome{font-size:14px}
+  .cv-det .hosp-est .he-sub{font-size:12px;margin-top:1px}
+  #cvKpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px}
+  @media(min-width:720px){ #cvKpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px} }
+  .cv-det summary{cursor:pointer;font-size:13px;font-weight:800;color:var(--z-blue);margin:16px 0 8px;min-height:24px}
   .he-edit{border-color:var(--z-gold);background:var(--z-cream)}
   .nav a.so-conferencia{display:none}
   body[data-role="conferencia"] .nav a.so-conferencia,
@@ -2945,8 +2989,8 @@
 .z-painel44{--p44-blue:#234d67;--p44-soft:#3a6a85;--p44-cream:#fffdf6;--p44-warm:#faf5e9;--p44-gold:#deb428;--p44-line:#e7e0d2;--p44-muted:#7c8a93;box-sizing:border-box;max-width:1160px;padding:24px 38px 52px;background:var(--p44-cream);color:var(--p44-blue);font-family:Inter,Poppins,system-ui,sans-serif}.z-painel44 *{box-sizing:border-box}.z-painel44 [hidden]{display:none!important}.z-painel44 button{font:inherit}.z-painel44 button:focus-visible{outline:3px solid rgba(222,180,40,.55);outline-offset:3px}.z-painel44__topo{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.z-painel44__saudacao .pm-saud1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.12;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2{margin:8px 0 0;font-size:16px;font-weight:600;line-height:1.45;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2 b{font-size:21px;font-weight:800;color:#a57a00}.z-painel44__saudacao .pm-saud3{max-width:54ch;margin:5px 0 0;color:var(--p44-soft);font-size:15px;font-weight:500;font-style:italic;line-height:1.5}.z-painel44__saudacao .pm-traco{display:block;width:40px;height:3px;margin-top:13px;border-radius:2px;background:linear-gradient(90deg,var(--p44-gold),#a57a00)}.z-painel44__saudacao .pm-data{margin-top:14px;color:var(--p44-muted);font-size:12px;font-weight:600}.z-painel44__selo{flex:0 0 auto;padding:8px 11px;border:1px solid var(--p44-line);border-radius:999px;background:#fff;color:var(--p44-blue);font-size:12px;font-weight:700}.z-painel44__selo:before{content:'•';margin-right:5px;color:var(--p44-gold);font-size:18px}.z-painel44__sticker{display:block;width:62px;max-width:90px;height:68px;max-height:80px;object-fit:contain;margin:4px auto 0}.z-painel44__bem-estar{display:block;width:100%;margin-bottom:18px}.z-painel44__bem-estar>*{width:100%}.z-painel44__abas{display:flex;gap:7px;margin:0 0 16px}.z-painel44__abas button{padding:10px 14px;border:1px solid var(--p44-line);border-radius:10px;background:#fff;color:var(--p44-blue);font-size:14px;font-weight:700;cursor:pointer}.z-painel44__abas button[aria-selected=true]{border-color:var(--p44-blue);background:var(--p44-blue);color:var(--p44-cream)}.z-painel44__intro{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:12px 0}.z-painel44__intro h2,.z-painel44__equipe h2{margin:0;font-size:20px}.z-painel44__intro p,.z-painel44__equipe>p{margin:5px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__contagem{color:var(--p44-muted);font-size:12px;font-weight:700}.z-painel44__temas{display:grid;gap:9px}.z-painel44__tema{overflow:hidden;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__tema-cabeca{display:grid;grid-template-columns:36px 1fr auto 20px;align-items:center;gap:10px;width:100%;padding:14px 15px;border:0;background:transparent;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__tema-icone{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--p44-warm);font-size:17px}.z-painel44__tema-titulo,.z-painel44__tema-passo{display:block}.z-painel44__tema-titulo{font-size:15px;font-weight:800}.z-painel44__tema-passo{margin-top:3px;color:var(--p44-muted);font-size:12px}.z-painel44__pill{padding:4px 8px;border-radius:999px;background:#e9f5f7;color:#226477;font-size:11px;font-weight:800}.z-painel44__seta{color:var(--p44-soft);font-size:18px;transition:transform .16s}.z-painel44__tema.aberto .z-painel44__seta{transform:rotate(90deg)}.z-painel44__tema-corpo{margin:0 12px 12px;padding:14px 15px;border-top:1px solid var(--p44-line);background:var(--p44-warm)}.z-painel44__equipe{padding:18px;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__pessoas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}.z-painel44__pessoa{display:flex;align-items:center;gap:11px;width:100%;padding:13px;border:1px solid var(--p44-line);border-radius:12px;background:#fff;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__avatar{display:grid;place-items:center;width:39px;height:39px;flex:0 0 auto;border-radius:50%;background:var(--p44-blue);color:var(--p44-cream);font-size:12px;font-weight:800}.z-painel44__pessoa-info{min-width:0}.z-painel44__pessoa strong,.z-painel44__pessoa small{display:block}.z-painel44__pessoa strong{font-size:14px}.z-painel44__pessoa small{overflow:hidden;margin-top:3px;color:var(--p44-muted);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.z-painel44__pessoa-seta{margin-left:auto;color:#a57a00;font-size:18px}.z-painel44__pessoa-detalhe{margin-top:15px}.z-painel44__pessoa-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__pessoa-secao h3{margin:0;font-size:14px}.z-painel44__pessoa-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}.z-painel44__vazio{margin:15px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__zelozinha{display:block;width:100%;margin-top:16px;padding:12px;border:1px dashed var(--p44-gold);border-radius:11px;background:var(--p44-warm);color:#805d00;text-align:left;cursor:pointer}.z-painel44__zelozinha-titulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.z-painel44__canal{padding:3px 7px;border-radius:999px;background:#fff;color:var(--p44-muted);font-size:11px}.z-painel44__zelozinha-aviso{display:block;margin-top:7px;font-size:12px;line-height:1.45}.z-painel44__perfil{margin-top:15px}.z-painel44__voltar{margin-bottom:12px;padding:8px 11px;border:1px solid var(--p44-line);border-radius:9px;background:#fff;color:var(--p44-blue);font-size:13px;font-weight:700;cursor:pointer}.z-painel44__perfil-subtitulo{margin:4px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__perfil-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__perfil-secao h3{margin:0;font-size:14px}.z-painel44__perfil-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}@media(max-width:760px){.z-painel44{padding:18px}.z-painel44__topo,.z-painel44__intro{display:block}.z-painel44__selo{display:inline-block;margin-top:13px}.z-painel44__contagem{display:block;margin-top:8px}.z-painel44__tema-cabeca{grid-template-columns:32px 1fr auto 16px;padding:12px}.z-painel44__tema-corpo{margin:0 8px 8px;padding:12px}.z-painel44__pessoas,.z-painel44__perfil-conteudo,.z-painel44__pessoa-conteudo{grid-template-columns:1fr}}
 
 </style>
-<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-15-01">
-<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-15-01">
+<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-17-01">
+<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-17-01">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -3145,6 +3189,8 @@
                tutor sobre o que viu no corpo do FILHOt. -->
           <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="stethoscope"></span><span>Cuidado Vet</span></a>
           <a data-v="orcamento" class="so-recepcao" title="Monte e envie o orçamento ao tutor."><span data-icon="dollar"></span><span>Orçamento de hospedagem</span></a>
+          <!-- CALENDÁRIO DEZ/JAN (Adriana, 16/nov/2026): quem vê o Orçamento vê o calendário. -->
+          <a data-v="calendariovagas" class="so-recepcao" title="Quantos peludinhos dormem em cada noite de dezembro e janeiro — no máximo 30."><span data-icon="cal"></span><span>Calendário Dez/Jan</span></a>
           </div>
         </div>
         <!-- DAY CARE — o dia do auluno visto pela Central. "Planos e cobranças" deixou de
@@ -5213,6 +5259,7 @@
       </div>
       <div class="hint" style="margin-top:6px">Toque no campo e escolha no calendário — não dá para digitar, é assim que o ano errado não passa.</div>
       <div id="orcAvisoData"></div>
+      <div id="orcVagasAviso" role="status" aria-live="polite"></div>
       <div style="margin-top:14px">
         <label class="cad-lb">Temporada</label>
         <div id="orcTemporada" class="orc-temp"></div>
@@ -5263,6 +5310,32 @@
     <div class="card">
       <div class="hint">Os <strong>valores da hospedagem</strong>, os feriados e a ponte com a planilha agora moram em <strong>Configurações &rsaquo; Valores da hospedagem</strong>. Só a Gestão altera; os orçamentos já salvos guardam o preço da época.</div>
       <button type="button" class="btn btn-gold so-master" style="margin-top:9px" onclick="abrirItemDoMenu('config')">Abrir Configurações &rsaquo; Valores da hospedagem</button>
+    </div>
+  </section>
+
+  <!-- CALENDÁRIO DEZ/JAN (Adriana, 16/nov/2026): «Dezembro e janeiro ficam imensos, precisamos
+       conseguir visualizar as vagas. São no máximo 30 vagas por dia; além disso, só com autorização
+       da Márcia.» Conta noite por noite os orçamentos FECHADOS, quem já fez check-in e as pernoites
+       do Day Care. A conta é do módulo calendario-vagas.js; aqui fica só o desenho. -->
+  <section class="view" id="v-calendariovagas">
+    <div class="role-note"><span data-icon="cal"></span><span><strong>Cada noite comporta 30 peludinhos.</strong> Entram sozinhos os orçamentos fechados, quem já fez check-in e as pernoites do Day Care. Quem sai num dia libera a vaga daquela noite. Acima de 30, só com autorização da Márcia.</span></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <div class="seg gold" id="cvMeses" role="group" aria-label="Mês"></div>
+        <button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="cvAbrir(true)">Atualizar</button>
+      </div>
+      <div id="cvMsg"></div>
+      <div class="kpis" id="cvKpis" aria-live="polite"></div>
+      <div class="cv-legenda" aria-label="Legenda de cores">
+        <span><i class="cv-lg ok"></i>Com folga (até 24)</span>
+        <span><i class="cv-lg at"></i>Enchendo (25 a 29)</span>
+        <span><i class="cv-lg lot"></i>Lotado (30)</span>
+        <span><i class="cv-lg mais"></i>Acima de 30 (só com a Márcia)</span>
+        <span><i class="cv-lg fer"></i>Casa fechada (domingo, feriado ou recesso)</span>
+      </div>
+      <div class="hint" style="margin:-6px 0 10px">Toque num dia para ver quem dorme. Toque de novo para esconder.</div>
+      <div class="cv-grade" id="cvGrade" role="group" aria-label="Noites do mês"></div>
+      <div id="cvDetalhe" class="cv-det"></div>
     </div>
   </section>
 
@@ -5733,9 +5806,10 @@
 <script src="autoria-logica.js?v=2026-10-15-02"></script>
 <script src="navegacao-inicio.js?v=2026-10-15-02"></script>
 <script src="hospedes-atividades.js?v=2026-10-16-01"></script>
-<script src="alimentacao-hospede.js?v=2026-11-15-01"></script>
-<script src="cafe-operacional.js?v=2026-11-15-01"></script>
-<script src="plantao-turno.js?v=2026-11-15-01"></script>
+<script src="alimentacao-hospede.js?v=2026-11-17-01"></script>
+<script src="cafe-operacional.js?v=2026-11-17-01"></script>
+<script src="plantao-turno.js?v=2026-11-17-01"></script>
+<script src="calendario-vagas.js?v=2026-11-17-01"></script>
 <script src="cafe-aluno-logica.js?v=2026-10-16-06"></script>
 <script src="presenca-logica.js?v=2026-10-16-02"></script>
 <script src="historico-checkins.js?v=2026-10-15-02"></script>
@@ -8657,6 +8731,7 @@ return { criar };
     checkin:['Check-in','O tutor chega: entrada, alimentação, medicação, assinatura (1º passo).'],
     conferencia:['Conferência do check-in','O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz).'],
     orcamento:['Orçamento de hospedagem','Monte e envie o orçamento ao tutor.'],
+    calendariovagas:['Calendário Dez/Jan','Quantos peludinhos dormem em cada noite — no máximo 30.'],
     alergia:['Conhecer a família','Conheça a família: envie, registre a resposta e atualize a ficha.'],
     peso:['Peso','Pesar qualquer FILHOt: recepção, veterinária e gestão.'],
     eahist:['Enriquecimento Ambiental','O que foi feito e quem não participou.'],
@@ -8791,6 +8866,7 @@ return { criar };
     if(v==='lancar-pagamento'){ if(typeof lpAbrir==='function') lpAbrir(); }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
     if(v==='orcamento'){ if(typeof orcInit==='function') orcInit(); }
+    if(v==='calendariovagas'){ if(typeof cvAbrir==='function') cvAbrir(false); }
     if(v==='relatorios'){ if(typeof renderRelatorios==='function') renderRelatorios(); if(typeof orcCarregarLista==='function') orcCarregarLista(); }
     if(v==='config'){ if(typeof configCarregar==='function') configCarregar(); if(typeof cfgLoginsCarregar==='function') cfgLoginsCarregar(); if(typeof protoCarregar==='function') protoCarregar(); if(typeof orcAbrirConfig==='function') orcAbrirConfig(); }
     if(v==='linhadotempo'){ if(typeof ltAbrir==='function') ltAbrir(); }
@@ -25791,6 +25867,7 @@ return { criar };
   function orcCalcular(){
     var cardR=document.getElementById('orcCardResultado'), cardM=document.getElementById('orcCardMsg');
     var av=document.getElementById('orcAvisoData'); if(av) av.innerHTML='';
+    var avV=document.getElementById('orcVagasAviso'); if(avV) avV.innerHTML='';   // as vagas de dez/jan (Calendário Dez/Jan)
     orcAutoTemporada();
     var temp=ORC_TEMP, alta=(temp==='alta');
     var PT=orcPrecoDe(temp);
@@ -25840,6 +25917,8 @@ return { criar };
     // Noite a noite: a noite do dia D vai de D para D+1. A última noite começa no dia anterior à saída.
     var noites=[], d=ent, guarda=0;
     while(d<saiReal&&guarda<400){ noites.push({iso:d, dw:orcDiaSemana(d)}); d=orcMaisDias(d,1); guarda++; }
+    // CALENDÁRIO DEZ/JAN (16/nov/2026): cabe nas 30 vagas? Só avisa, não trava (resposta da Adriana).
+    try{ if(typeof cvAvisoOrcamento==='function') cvAvisoOrcamento(ent, saiReal); }catch(e){} /* silencioso de propósito: o aviso de vagas é extra — falhar não pode derrubar a conta */
     var pets=ORC_SEL.map(function(s,i){
       var ordem=i+1, off=orcDescontoDe(s,ordem);
       // Dias EFETIVOS: se a tutora trocou a quinta pela sexta nesta hospedagem, é a sexta que
@@ -29294,6 +29373,187 @@ return { criar };
     orcRenderTipo(); orcRenderTemporada(); orcRenderSel(); orcCalcular();
   }
 
+  // ===== CALENDÁRIO DEZ/JAN (Adriana, 16/nov/2026 — maquete respondida no mesmo dia) ==========
+  // «Dezembro e janeiro ficam imensos, precisamos conseguir visualizar as vagas. Todos que forem
+  //  fechando coloque no calendário. São no máximo 30 vagas por dia; além disso, só com
+  //  autorização da Márcia.» As respostas dela: o número grande é quantos DORMEM; pernoite do Day
+  // Care ocupa vaga; acima de 30 só avisa, não trava; o orçamento sem confirmar aparece à parte, sem
+  // ocupar vaga; quem SAI no dia libera a vaga daquela noite e isso fica à vista; o detalhe do dia
+  // se esconde com um toque. A conta mora em calendario-vagas.js (ZeluzCalendarioVagas); aqui ficam
+  // a leitura das três fontes e o desenho.
+  // NUNCA «vaga» sem leitura: se os orçamentos ou as estadias não vieram, a tela diz que não leu.
+  var CV={lido:null, falhou:'', avisoPern:'', oc:null, temp:null, mes:'', sel:'', quando:0, lendo:null, pedido:null};
+  var CV_PRAZO=3*60*1000;
+  var CV_SEM_CURTA=['dom','seg','ter','qua','qui','sex','sáb'];
+  var CV_SEM_LONGA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+  var CV_MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  function cvMod(){ return (typeof ZeluzCalendarioVagas!=='undefined' && ZeluzCalendarioVagas)?ZeluzCalendarioVagas:null; }
+  function cvEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function cvBR(d){ d=String(d||''); return d.slice(8,10)+'/'+d.slice(5,7); }
+  function cvSemana(d){ var p=String(d||'').split('-'); var w=new Date(Date.UTC(+p[0], +p[1]-1, +p[2])).getUTCDay(); return isNaN(w)?0:w; }
+  function cvMesRotulo(mes){ var t=CV_MESES[Number(String(mes).slice(5,7))-1]||''; return t.charAt(0).toUpperCase()+t.slice(1)+' '+String(mes).slice(0,4); }
+  function cvFechado(d){ try{ return (typeof orcFechado==='function')?String(orcFechado(d)||''):''; }catch(e){ return ''; } } /* silencioso de propósito: o pontinho do feriado é enfeite — sem ele o dia continua certo */
+  function cvComPrazo(pr, ms){
+    return new Promise(function(res){
+      var t=setTimeout(function(){ res({ok:false, prazo:true}); }, ms);
+      Promise.resolve(pr).then(function(v){ clearTimeout(t); res(v); }, function(){ clearTimeout(t); res({ok:false}); });
+    });
+  }
+  // Lê orçamentos (a coleção inteira), estadias e pernoites da temporada; devolve a ocupação ou null.
+  function cvCarregar(forcar){
+    var M=cvMod(); if(!M){ CV.lido=false; CV.falhou='O módulo do calendário não carregou. Feche e abra o app de novo.'; return Promise.resolve(null); }
+    var hoje=orcHojeISO(), T=M.temporada(hoje);
+    if(!forcar && CV.lido===true && CV.temp && CV.temp.inicio===T.inicio && (Date.now()-CV.quando)<CV_PRAZO) return Promise.resolve(CV.oc);
+    if(CV.lendo) return CV.lendo;
+    if(!DB){ CV.lido=false; CV.falhou='Sem conexão com o banco.'; return Promise.resolve(null); }
+    var pOrc=cvComPrazo(orcLerVivos(!!forcar), 20000);
+    var pEst=cvComPrazo((typeof zMapaUma==='function')
+      ? zMapaUma('auaulandia/estadias').then(function(v){ return {ok:true, v:v||{}}; })
+      : Promise.resolve({ok:false}), 20000);
+    var pPern;
+    try{
+      pPern=cvComPrazo(DB.ref('daycare/pernoites').orderByKey().startAt(T.inicio).endAt(T.fim).once('value').then(function(s){
+        return {ok:true, v:((s && typeof s.val==='function')?s.val():null)||{}};
+      }, function(e){ _logLeituraFalhou('daycare/pernoites (Calendário Dez/Jan)', e); return {ok:false}; }), 20000);
+    }catch(e){ pPern=Promise.resolve({ok:false}); _logLeituraFalhou('daycare/pernoites (Calendário Dez/Jan)', e); }
+    CV.lendo=Promise.all([pOrc, pEst, pPern]).then(function(r){
+      CV.lendo=null;
+      if(!(r[0] && r[0].ok)){ CV.lido=false; CV.falhou='Não consegui ler os orçamentos.'; return null; }
+      if(!(r[1] && r[1].ok)){ CV.lido=false; CV.falhou='Não consegui ler quem já fez check-in.'; return null; }
+      var orcs=Object.assign({}, r[0].todos||{}, (typeof ORC_LISTA_CACHE==='object' && ORC_LISTA_CACHE)||{});
+      var pernOk=!!(r[2] && r[2].ok);
+      CV.avisoPern=pernOk?'':'Não consegui ler as pernoites do Day Care: as noites podem ter mais peludinhos do que mostram. Toque em «Atualizar».';
+      CV.oc=M.ocupacao({orcamentos:orcs, estadias:r[1].v, pernoites:pernOk?r[2].v:{}, hoje:hoje,
+        diaDoTs:(typeof faltaDiaLocal==='function')?faltaDiaLocal:null}, T.inicio, T.fim);
+      CV.temp=T; CV.lido=true; CV.falhou=''; CV.quando=Date.now();
+      return CV.oc;
+    }).catch(function(e){
+      CV.lendo=null; CV.lido=false; CV.falhou='Não consegui ler os dados agora.';
+      _logLeituraFalhou('Calendário Dez/Jan', e); return null;
+    });
+    return CV.lendo;
+  }
+  function cvAbrir(forcar){
+    var M=cvMod(); var T=M?M.temporada(orcHojeISO()):null;
+    if(T && CV.mes!==T.dez && CV.mes!==T.jan){ CV.mes=(String(orcHojeISO()).slice(5,7)==='01')?T.jan:T.dez; CV.sel=''; }
+    if(forcar || CV.lido!==true) CV.lido=null;
+    cvRender();
+    return cvCarregar(!!forcar).then(function(){ cvRender(); });
+  }
+  function cvMes(m){ CV.mes=String(m||''); CV.sel=''; cvRender(); }
+  function cvDia(d){
+    CV.sel=(CV.sel===d)?'':String(d||'');
+    cvRender();
+    if(CV.sel){ try{ var el=document.getElementById('cvDetalhe'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){} } /* silencioso de propósito: rolar a tela é conforto */
+  }
+  function cvLinha(p){
+    var tags={hospedado:['agora','hospedado'], reserva:['achegar','reserva fechada'], pernoite:['saiu','pernoite Day Care'], aConfirmar:['saiu','sem confirmar']};
+    var tg=tags[p.origem]||['saiu',''];
+    var sub=[];
+    if(p.tutor) sub.push(p.tutor);
+    if(p.raca) sub.push(p.raca);
+    sub.push(p.origem==='pernoite'?('noite de '+cvBR(p.entrada)):('entra '+cvBR(p.entrada)+' · sai '+cvBR(p.saida)));
+    return '<div class="hosp-est"><div class="he-main"><div class="he-nome">'+cvEsc(p.nome)+'<span class="he-tag '+tg[0]+'">'+cvEsc(tg[1])+'</span></div>'
+      +'<div class="he-sub">'+cvEsc(sub.join(' · '))+'</div></div></div>';
+  }
+  // Cada grupo do dia é uma gaveta: «saem» e «chegam» abertas; «quem dorme» fechada — a noite de
+  // sábado com 30 nomes não pode virar a página inteira (Adriana, 16/nov/2026).
+  function cvGrupo(titulo, lista, aberto){
+    return '<details'+(aberto?' open':'')+'><summary>'+cvEsc(titulo)+'</summary><div class="cv-lista">'+lista.map(cvLinha).join('')+'</div></details>';
+  }
+  function cvDetalheHtml(d){
+    var M=cvMod(), x=((CV.oc||{}).dias||{})[d]; if(!M || !x) return '';
+    var n=x.dormem.length, L=M.LIMITE, w=cvSemana(d), fch=cvFechado(d);
+    var resumo=[n+(n===1?' dorme':' dormem'), (n>L?((n-L)+' acima de '+L):(M.vagas(n)+(M.vagas(n)===1?' vaga':' vagas')))];
+    if(x.chegam.length) resumo.push(x.chegam.length+(x.chegam.length===1?' chega':' chegam'));
+    if(x.saem.length) resumo.push(x.saem.length+(x.saem.length===1?' sai':' saem'));
+    var h='<div class="cv-det-topo"><div><div class="he-grp" style="margin:6px 0 2px;font-size:16px">'+cvEsc(CV_SEM_LONGA[w]+' · '+cvBR(d))+'</div>'
+      +'<div class="hint">'+cvEsc(resumo.join(' · '))+(fch?(' · '+cvEsc(fch)+': a casa não recebe nem entrega'):'')+'</div></div>'
+      +'<button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="cvDia(\'\')">Esconder</button></div>';
+    if(n>L) h+='<div class="dc-faltas" style="margin-top:10px">Passou de '+L+': '+n+' peludinhos nesta noite. Acima de '+L+', só com autorização da Márcia.</div>';
+    if(x.saem.length) h+=cvGrupo('Saem neste dia — a vaga desta noite fica livre ('+x.saem.length+')', x.saem, true);
+    if(x.chegam.length) h+=cvGrupo('Chegam neste dia ('+x.chegam.length+')', x.chegam, true);
+    h+=n?cvGrupo('Quem dorme nesta noite ('+n+') — toque para ver', x.dormem, false):'<div class="troca-vazio" style="margin-top:14px">Ninguém dorme aqui nesta noite.</div>';
+    if(x.aConfirmar.length) h+=cvGrupo('Com orçamento, sem confirmar ('+x.aConfirmar.length+') — não ocupam vaga', x.aConfirmar, false);
+    return h;
+  }
+  function cvRender(){
+    var M=cvMod();
+    var elMes=document.getElementById('cvMeses'), elMsg=document.getElementById('cvMsg'), elK=document.getElementById('cvKpis'),
+        elG=document.getElementById('cvGrade'), elD=document.getElementById('cvDetalhe');
+    if(!elG) return;
+    var T=M?M.temporada(orcHojeISO()):null;
+    if(elMes && T) elMes.innerHTML=[T.dez, T.jan].map(function(m){
+      var on=(m===CV.mes);
+      return '<button type="button" class="'+(on?'on':'')+'" aria-pressed="'+(on?'true':'false')+'" data-mes="'+m+'" onclick="cvMes(this.dataset.mes)">'+cvEsc(cvMesRotulo(m))+'</button>';
+    }).join('');
+    if(CV.lido!==true){
+      if(elK) elK.innerHTML=''; elG.innerHTML=''; if(elD) elD.innerHTML='';
+      if(elMsg) elMsg.innerHTML=(CV.lido===null)
+        ?'<div class="hint" style="margin-bottom:12px">Conferindo as reservas de dezembro e janeiro…</div>'
+        :('<div class="dc-faltas">'+cvEsc(CV.falhou||'Não consegui ler os dados.')+'<div style="font-weight:600;margin-top:4px">O calendário não mostra vagas sem ter lido tudo: isso não quer dizer que há vaga. Confira a internet e toque em «Atualizar».</div></div>');
+      return;
+    }
+    if(elMsg) elMsg.innerHTML=CV.avisoPern?('<div class="dc-faltas">'+cvEsc(CV.avisoPern)+'</div>'):'';
+    var mes=CV.mes, dias=M.diasDoMes(mes), D=(CV.oc||{}).dias||{}, L=M.LIMITE;
+    var R=M.resumoMes(CV.oc, mes);
+    var kpi=function(v, l){ return '<div class="kpi"><div><div class="v">'+cvEsc(v)+'</div><div class="l">'+cvEsc(l)+'</div></div></div>'; };
+    if(elK) elK.innerHTML=kpi(R.lotadas, 'noites lotadas (30 ou mais)')
+      +kpi(R.acima, 'noites acima de 30')
+      +kpi(R.maisCheia?R.maisCheia.n:0, R.maisCheia?('noite mais cheia · '+CV_SEM_CURTA[cvSemana(R.maisCheia.dia)]+' '+cvBR(R.maisCheia.dia)):'noite mais cheia')
+      +kpi(R.vagasLivres, 'vagas livres no mês');
+    var g=CV_SEM_CURTA.map(function(s){ return '<div class="cv-sem">'+s+'</div>'; }).join('');
+    var off=dias.length?cvSemana(dias[0]):0;
+    for(var i=0;i<off;i++) g+='<div class="cv-vazio" aria-hidden="true"></div>';
+    var cls={folga:'n-ok', enchendo:'n-at', lotado:'n-lot', acima:'n-mais'};
+    dias.forEach(function(d){
+      var x=D[d]||{dormem:[], saem:[]}, n=x.dormem.length, nv=M.nivel(n), on=(CV.sel===d), fch=cvFechado(d);
+      var sub=(n>L)?('+'+(n-L)+' acima'):(M.vagas(n)+(M.vagas(n)===1?' vaga':' vagas'));
+      var sai=x.saem.length?(x.saem.length+(x.saem.length===1?' sai':' saem')):'';
+      var rot=CV_SEM_LONGA[cvSemana(d)]+' '+cvBR(d)+': '+n+(n===1?' peludinho':' peludinhos')+', '+sub+(sai?(', '+sai):'')+(fch?(', '+fch):'');
+      g+='<button type="button" class="cv-dia '+cls[nv]+(on?' sel':'')+'" data-dia="'+d+'" aria-pressed="'+(on?'true':'false')+'" aria-label="'+cvEsc(rot)+'" onclick="cvDia(this.dataset.dia)">'
+        +'<span class="dn">'+Number(d.slice(8,10))+'</span>'+(fch?'<span class="pt"></span>':'')
+        +'<b>'+n+'</b><em>'+cvEsc(sub)+'</em>'+(sai?('<span class="cv-sai">'+cvEsc(sai)+'</span>'):'')+'<span class="fx"></span></button>';
+    });
+    elG.innerHTML=g;
+    if(elD) elD.innerHTML=(CV.sel && CV.sel.slice(0,7)===mes)?cvDetalheHtml(CV.sel):'';
+  }
+  // ---- No Orçamento: «cabe?» a cada mudança de datas (só dezembro e janeiro; só avisa, não trava) ----
+  function cvAvisoOrcamento(ent, sai){
+    var box=document.getElementById('orcVagasAviso'); if(!box) return;
+    box.innerHTML='';
+    var M=cvMod(); if(!M || !ent || !sai || sai<=ent) return;
+    var T=M.temporada(orcHojeISO()), toca=false, d=ent, g=0;
+    while(d<sai && g<400){ if(d>=T.inicio && d<=T.fim){ toca=true; break; } d=M.maisDias(d,1); g++; }
+    if(!toca) return;
+    CV.pedido=[ent, sai];
+    if(CV.lido!==true || (Date.now()-CV.quando)>=CV_PRAZO){
+      box.innerHTML='<div class="hint" style="margin-top:10px">Conferindo as vagas de dezembro e janeiro…</div>';
+      cvCarregar(false).then(function(){
+        var p=CV.pedido||[]; if(p[0]!==ent || p[1]!==sai) return;   // as datas mudaram enquanto lia
+        if(CV.lido===true) cvAvisoOrcamento(ent, sai);
+        else box.innerHTML='<div class="dc-faltas" style="margin-top:10px">Não consegui conferir as vagas destas noites.<div style="font-weight:600;margin-top:4px">Isso não quer dizer que há vaga. Confira no Calendário Dez/Jan antes de fechar.</div></div>';
+      });
+      return;
+    }
+    var novos=(typeof ORC_SEL!=='undefined' && ORC_SEL)?ORC_SEL.length:0;
+    var r=M.checarPeriodo(CV.oc, ent, sai, novos, (typeof ORC_EDITANDO!=='undefined' && ORC_EDITANDO)||'');
+    if(!r.noites.length) return;
+    var L=M.LIMITE, h='';
+    if(r.acima.length){
+      h='<div class="dc-faltas" style="margin-top:10px"><strong>Passa de '+L+' peludinhos em '+r.acima.length+(r.acima.length===1?' noite':' noites')+':</strong> '
+        +cvEsc(r.acima.map(function(x){ return CV_SEM_CURTA[cvSemana(x.dia)]+' '+cvBR(x.dia)+' ('+x.depois+')'; }).join(', '))+'.'
+        +'<div style="font-weight:600;margin-top:4px">Contando este orçamento. Acima de '+L+', só com autorização da Márcia.</div></div>';
+    } else {
+      var mc=r.maisCheia, v=M.vagas(mc.depois);
+      h='<div class="cv-caixa"><strong>Cabe.</strong> A noite mais cheia é '+cvEsc(CV_SEM_LONGA[cvSemana(mc.dia)]+', '+cvBR(mc.dia))+', com '+mc.depois
+        +' peludinhos contando este orçamento — '+(v===0?'fica lotada.':(v+(v===1?' vaga sobrando.':' vagas sobrando.')))+'</div>';
+    }
+    if(r.foraDaTemporada) h+='<div class="hint" style="margin-top:6px">Só as noites de dezembro e janeiro entram nesta conta.</div>';
+    h+='<button type="button" class="btn" style="margin-top:8px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="abrirItemDoMenu(\'calendariovagas\')">Ver no Calendário Dez/Jan</button>';
+    box.innerHTML=h;
+  }
+
   // ================= ACERTO DAS PLANTONISTAS =========================================
   // A tabela é da Adriana (13/ago/2026). O valor é por NOITE e depende de quantos FILHOts
   // dormiram aqui — mais FILHOts, mais trabalho. A ajuda de custo é fixa e sempre soma.
@@ -31934,7 +32194,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-11-15-01';
+  const APP_VERSAO='2026-11-17-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -33080,7 +33340,9 @@ return { criar };
       {k:'recepcao', t:'Pendências com o tutor'}, {k:'cuidadovet', t:'Cuidado Vet'},
       // Faltava aqui (Adriana, 13/ago/2026): "não consegui dar permissão para Orçamento
       // Hospedagem". O que não está nesta lista NÃO PODE ser concedido a ninguém.
-      {k:'orcamento', t:'Orçamento de hospedagem'}
+      {k:'orcamento', t:'Orçamento de hospedagem'},
+      // 16/nov/2026: quem tem o Orçamento já tem o calendário (NAV_PAGINA_JUNTO); dá para conceder só ele.
+      {k:'calendariovagas', t:'Calendário Dez/Jan'}
     ]},
     {grp:'Central Zêluz · Day Care', itens:[
       // 24/set, 25/set, 19/set e 21/set/2026: Hoje na Zêluz, Quem chamar hoje, Pendências de
@@ -33109,6 +33371,13 @@ return { criar };
   // marcação só acrescenta. Marcada, a tela aparece para a pessoa; desmarcada, fica o que o
   // papel dela já mostrava.
   const NAV_PAGINAS_SO_LIBERA=['eahist','ritmo','gestdia','banhos','dashdc','agendamarcia','peso','alergia','vacinas'];
+  // Tela que vem JUNTO com outra (Calendário Dez/Jan, 16/nov/2026): quem tem o Orçamento concedido
+  // enxerga o calendário sem a Gestão marcar mais nada — é a mesma pessoa que fecha a reserva.
+  const NAV_PAGINA_JUNTO={calendariovagas:'orcamento'};
+  function navPaginaTem(u, k){
+    var p=(u && Array.isArray(u.paginas))?u.paginas:[];
+    return p.indexOf(k)>=0 || (!!NAV_PAGINA_JUNTO[k] && p.indexOf(NAV_PAGINA_JUNTO[k])>=0);
+  }
   // O que está no sidebar e NÃO se concede daqui — dito na própria tela do Time, para a
   // Gestão não procurar o que não existe.
   //  · config (Configurações): senhas das pontes e logins — só Gestão e Diretoria;
@@ -33705,7 +33974,7 @@ return { criar };
       document.querySelectorAll('#nav a[data-v="'+k+'"]').forEach(function(a){
         a.style.removeProperty('display'); permMarcarConcedida(a, false);
         if(!restrito) return; // sem restrição: volta ao CSS do papel
-        var pode=u.paginas.indexOf(k)>=0;
+        var pode=navPaginaTem(u, k);
         if(!pode){ if(!soLibera) a.style.setProperty('display','none','important'); return; }
         // Marcada no Time. Se o papel sozinho já a mostra, nada muda na barra. Se o papel a
         // esconde (a veterinária só enxerga o caminho dela), é uma tela CONCEDIDA: fica
@@ -33865,7 +34134,7 @@ return { criar };
       if(_h && document.getElementById('v-'+_h)) v=_h;
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     if(Array.isArray(u.paginas)){
-      if(u.paginas.length){ if(u.paginas.indexOf(v)<0) v=u.paginas[0]; } // pousa numa página permitida
+      if(u.paginas.length){ if(!navPaginaTem(u, v)) v=u.paginas[0]; } // pousa numa página permitida
       else { v=null; } // nada concedido (e sem atividade) → não navega; a Gestão precisa conceder acesso
     }
     // Abre a corrente inteira: a categoria E o sub-cabeçalho da tela em que a pessoa cai.
@@ -103315,14 +103584,14 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',tentar,{once:true});else tentar();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
-<script src="agenda-marcia/dados.js?v=2026-11-15-01"></script>
-<script src="agenda-marcia/entrevistas.js?v=2026-11-15-01"></script>
-<script src="agenda-marcia/composta.js?v=2026-11-15-01"></script>
-<script src="agenda-marcia/painel.js?v=2026-11-15-01"></script>
-<script src="marcia129/painel.js?v=2026-11-15-01"></script>
-<script src="marcia129/dados.js?v=2026-11-15-01"></script>
-<script src="marcia129/app.js?v=2026-11-15-01"></script>
-<script src="agenda-marcia/app.js?v=2026-11-15-01"></script>
+<script src="agenda-marcia/dados.js?v=2026-11-17-01"></script>
+<script src="agenda-marcia/entrevistas.js?v=2026-11-17-01"></script>
+<script src="agenda-marcia/composta.js?v=2026-11-17-01"></script>
+<script src="agenda-marcia/painel.js?v=2026-11-17-01"></script>
+<script src="marcia129/painel.js?v=2026-11-17-01"></script>
+<script src="marcia129/dados.js?v=2026-11-17-01"></script>
+<script src="marcia129/app.js?v=2026-11-17-01"></script>
+<script src="agenda-marcia/app.js?v=2026-11-17-01"></script>
 <script id="menu-contadores171">'use strict';
 /* 30/out/2026 — contadores vermelhos no menu (maquete aprovada pela Adriana).
    «Márcia Gestão»: cuidados das avaliações de HOJE ainda não revisados + alertas de reação ainda sem «Tutor avisado».
