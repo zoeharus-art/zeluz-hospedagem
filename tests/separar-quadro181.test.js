@@ -102,7 +102,7 @@ const ficha = (n, tutor, ex) => ({ p: { n, tutor }, ex: Object.assign({ n }, ex 
     const L = Q.montarLinhas(DIA, dash, lista, { 'd~escova~a6': { feito: true, quem: 'X', ts: 1 } });
     const ver = JSON.parse(JSON.stringify(L)).map((x) => [x.pet, x.origem, x.b + (x.m || ''), x.velho, x.feito].join(' | '));
     assert.deepStrictEqual(ver, [
-      'Bidu | loja | Vermífugo · 1 comprimido (3,1 kg) | true | false',
+      'Bidu | loja | Vermífugo · 1 comprimido (3,1 kg) · marca: escolher | true | false',
       'Mel | plano | Vermífugo Endogard · 2ª dose · dose pelo peso (14 kg) | false | false',
       'Pipoca | loja | Carrapaticida · até 10 kg · marca: escolher — da última vez: Credelli | false | false',
       'Pipoca | bolsa | Escova de dentes | false | true',

@@ -60810,6 +60810,23 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
   // Pipeta é o tubo inteiro: não existe meia pipeta, por isso ela é uma quantidade e
   // não uma observação. Só o carrapaticida oferece.
   var DASH_QTD_PIP=[{v:'PIPETA', t:'Pipeta (o tubo inteiro)'}].concat(DASH_QTD);
+  // O NOME do produto (Adriana, 19/nov/2026): «Falta aqui colocar o nome do medicamento, para já salvar no que reservar
+  // quando comprado na Zêluz... O que separar só está pipeta, precisa do nome... como o vermífugo também, precisa de nome.»
+  // As listas são os produtos que mais saíram do Empório (Zetta, nov/2026), na ordem de venda. «Outro» existe para
+  // não travar quem lança o que veio de casa com um nome fora da lista.
+  var DASH_PIPETA_NOME=[
+    {v:'VECTRA 3D', t:'Vectra 3D'}, {v:'ADVANTAGE MAX3', t:'Advantage Max3'}, {v:'FIPROLEX', t:'Fiprolex'},
+    {v:'NEOPET', t:'NeoPet'}, {v:'EFIPET 3+', t:'Efipet 3+'}, {v:'EFFIPRO', t:'Effipro'},
+    {v:'CONFRONT PLUS', t:'Confront Plus'}, {v:'EC-PET', t:'EC-Pet'}, {v:'REVOLUTION', t:'Revolution'},
+    {v:'OUTRA PIPETA', t:'Outra'}
+  ];
+  var DASH_VERM_NOME=[
+    {v:'DRONTAL PLUS', t:'Drontal Plus'}, {v:'ENDOGARD', t:'Endogard'}, {v:'FENZOL PET', t:'Fenzol Pet'},
+    {v:'VETMAX PLUS', t:'Vetmax Plus'}, {v:'MILBEMAX', t:'Milbemax'}, {v:'ENDAL PLUS', t:'Endal Plus'},
+    {v:'DRONTAL PUPPY', t:'Drontal Puppy'}, {v:'OUTRO VERMÍFUGO', t:'Outro'}
+  ];
+  // «Pipeta · 30 dias» muda se a duração da pipeta mudar na Configuração: o que vale é começar com PIPETA.
+  function dashEhPipeta(v){ return /^PIPETA\b/.test(String(v||'').trim().toUpperCase()); }
   // "Nada a observar" existe de propósito: obrigatório é ESCOLHER, não é ter observação.
   // Sem essa opção a pessoa inventaria um texto só para o botão liberar.
   // LOJA (Adriana, 17/set/2026): o produto NÃO veio de casa — foi comprado aqui, na loja
@@ -60949,12 +60966,15 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
       {c:'onde', rot:'Onde está o remédio?',    ops:DASH_MED_ONDE, obrig:true}]},
     // campos → a tela PERGUNTA antes de deixar lançar; obrig:true não deixa passar em branco
     {k:'vermifugo',     t:'Vermífugo',                  col:'Vermifugo',                      icone:'💊', campos:[
+      {c:'nome', rot:'Qual vermífugo?',   ops:DASH_VERM_NOME, obrig:true},
       {c:'qtd',  rot:'Quanto foi dado',   ops:DASH_QTD, obrig:true},
       {c:'onde', rot:'Alguma observação', ops:DASH_ONDE, obrig:true}]},
     {k:'carrapaticida', t:'Carrapaticida',              col:'Carrapaticida',                  icone:'🔬', campos:[
       // O produto com a duração na frente (29/set/2026): "Bravecto · 90 dias". Não é
       // obrigatório — escolhido, entra no texto da planilha e da TV.
       {c:'prod', rot:'Qual produto?',     ops:DASH_ECTO_PROD},
+      // «Pipeta» sozinha não diz o que separar: escolhida a pipeta, pergunta qual (19/nov/2026).
+      {c:'nome', rot:'Qual pipeta?',      ops:DASH_PIPETA_NOME, obrig:true, dep:{c:'prod', f:dashEhPipeta}},
       {c:'qtd',  rot:'Quanto foi dado',   ops:DASH_QTD_PIP, obrig:true},
       {c:'onde', rot:'Alguma observação', ops:DASH_ONDE, obrig:true}]},
     {k:'coleira',       t:'Troca de coleira',           col:'Troca de Coleira',               icone:'🏷️', campos:[
@@ -64676,6 +64696,12 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
   }
   // Pura: o que a ficha recebe pela dose de `dt`. {itemK, patch, prox} ou {erro}. A marca {itemK}_lanc diz, na ficha,
   // de onde veio a data (é ela que a Prevenção mostra, enquanto a data da ficha for a deste lançamento).
+  // O nome escolhido no lançamento, como a ficha escreve («Vectra 3D»). «Outro»/«Outra» não é nome: devolve ''.
+  function dashNomeParaFicha(lista, v){
+    v=String(v||'').trim(); if(!v || /^OUTR[AO]\b/.test(v)) return '';
+    var o=(lista||[]).filter(function(x){ return x && x.v===v; })[0];
+    return o ? o.t : '';
+  }
   function dashPrevFichaPatch(k, ex, dt, quem, det){
     ex=ex||{}; det=det||{}; dt=String(dt||''); quem=String(quem||'').trim();
     var itemK=DASH_PREV_FICHA_ITENS[k], patch={}, iso=/^\d{4}-\d{2}-\d{2}$/;
@@ -64696,6 +64722,7 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
         prevVermLancePatch(patch, ex, dt);
       }
       if(!patch.verm_p) return {erro:'sem-item'};
+      var nmV=dashNomeParaFicha(DASH_VERM_NOME, det.nome); if(nmV) patch.verm_nome=nmV;
     } else if(k==='carrapaticida'){
       var rot=String(det.prod||'').toUpperCase(), prod='';
       if(rot) ectoProdutosLista().forEach(function(pr){ if(String(ectoRotulo(pr)).toUpperCase()===rot) prod=pr; });
@@ -64707,6 +64734,8 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
       if(daLinha && prod!==String(ex.ecto_prod||'')) ectoPatchProduto(patch, {prod:prod, dias:dias});
       if(ex.ecto_p_manual) patch.ecto_p_manual='';
       if(quem) patch.ecto_por=quem;
+      // o nome da pipeta (19/nov/2026) vira o «da última vez» da ficha; «Outra» não apaga o que a ficha já sabe
+      var nmE=dashNomeParaFicha(DASH_PIPETA_NOME, det.nome); if(nmE && prod==='Pipeta') patch.ecto_nome=nmE;
     } else if(k==='coleira'){
       if(String(det.veio||'')==='N\u00c3O VEIO') return {erro:'nao-veio'};
       var dc=prevDiasDoItem({coleira:true}, ex);
@@ -64901,9 +64930,9 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
   // A dose escolhida na Zelozinha fica no `det` e a célula continua «(CONFERIR ORIENTAÇÃO)», porque a planilha e a TV leem a célula. Na tela a equipe precisa ver a dose, no mesmo formato de quem lança à mão: "Chico/Shih Tzu (1 COMPRIMIDO · LOJA)". Sem dose nem produto escolhidos, continua pedindo para conferir.
   function dashCelulaComDose(o){
     o=o||{};var v=String(o.valor||''),det=o.det||{};
-    if(String(det.cuidado57_estado||'')!=='conferir-orientacao'||(!det.prod&&!det.qtd))return v;
+    if(String(det.cuidado57_estado||'')!=='conferir-orientacao'||(!det.prod&&!det.qtd&&!det.nome))return v;
     var origem=String((o.origemVencimento||{}).origemResposta||''),onde=('onde' in det)?String(det.onde||''):(origem==='bolsa'?'NA BOLSA':origem==='loja'?'LOJA':'');
-    return v.replace(/\s*\(CONFERIR (?:HORÁRIO\/)?ORIENTAÇÃO\)\s*$/,'')+' ('+[det.prod,det.qtd,onde].filter(Boolean).join(' · ')+')';
+    return v.replace(/\s*\(CONFERIR (?:HORÁRIO\/)?ORIENTAÇÃO\)\s*$/,'')+' ('+[det.prod,det.nome,det.qtd,onde].filter(Boolean).join(' · ')+')';
   }
   function dashCartaoHTML(it, __diaDash){
 var lista=dashAgendaMarciaFiltrar133(it.k,DASH_DADOS[it.k]||{});
@@ -65063,6 +65092,7 @@ return '<div class="card" data-dash-card="'+escAttr(it.k)+'">'
   function dashCampoAtivo(k, c){
     if(!c || !c.dep) return true;
     var d=dashDet(k), alvo=c.dep.v;
+    if(typeof c.dep.f==='function') return !!c.dep.f(d[c.dep.c]);
     if(Array.isArray(alvo)) return alvo.indexOf(d[c.dep.c])>=0;
     return d[c.dep.c]===alvo;
   }
@@ -106157,16 +106187,21 @@ renderAtual=function(){
   /* Qual cuidado pede escolha de produto/lugar (AC4.1, AC4.2, AC4.5): vermífugo e 2ª dose, carrapaticida. Coleira, escova e vacina não. */
   function camposDoCuidado(itemK){
     var k=txt(itemK);
-    if(k==='verm_p'||k==='verm_dose2_p')return['qtd','onde'];
-    if(k==='ecto_p')return['prod','qtd','onde'];
+    /* o NOME do produto (19/11/2026): «O que separar só está pipeta, precisa do nome... como o vermífugo também» */
+    if(k==='verm_p'||k==='verm_dose2_p')return['nome','qtd','onde'];
+    if(k==='ecto_p')return['prod','nome','qtd','onde'];
     return[];
   }
+  /* o nome só é pedido no carrapaticida quando o produto é pipeta (o comprimido já é o nome: Bravecto, Simparic...) */
+  function ehPipeta(v){return /^PIPETA\b/.test(txt(v).toUpperCase());}
+  function pedeNome(itemK,det){var k=txt(itemK),d=obj(det)?det:{};return k==='verm_p'||k==='verm_dose2_p'||(k==='ecto_p'&&ehPipeta(d.prod));}
   function ondePadrao(valor){return valor==='autorizar_loja'?'LOJA':valor==='autorizar_bolsa'?'NA BOLSA':'';}
   /* O que ainda falta escolher (AC4.3): só produto e quanto — o «onde» já vem marcado pela resposta. */
   function faltaEscolher(itemK,det,preMarcaQtd){
     var d=obj(det)?det:{},falta=[];
     camposDoCuidado(itemK).forEach(function(c){
       if(c==='prod'&&!txt(d.prod))falta.push('produto');
+      if(c==='nome'&&pedeNome(itemK,d)&&!txt(d.nome))falta.push('nome');
       if(c==='qtd'&&!txt(d.qtd)&&!txt(preMarcaQtd))falta.push('quanto');
     });
     return falta;
@@ -106175,7 +106210,7 @@ renderAtual=function(){
   function podeEscolher(ctx){
     ctx=ctx||{};
     if(ctx.tarefaEstado==='emexecucao'||ctx.tarefaEstado==='realizado'||ctx.estadoLinha==='realizado-conferido')return{ok:false,motivo:'ja-aplicado',frase:FRASE_JA_APLICADO};
-    if(ctx.snoopyConfirmado===true&&ctx.campo!=='prod'&&ctx.campo!=='qtd')return{ok:false,motivo:'ja-no-snoopy',frase:FRASE_JA_NO_SNOOPY};
+    if(ctx.snoopyConfirmado===true&&ctx.campo!=='prod'&&ctx.campo!=='qtd'&&ctx.campo!=='nome')return{ok:false,motivo:'ja-no-snoopy',frase:FRASE_JA_NO_SNOOPY};
     return{ok:true};
   }
   /* AC4.4 + AC4.8: aplica UMA escolha no `det` da linha do Day Care. Só a linha da MESMA resposta e revisão; `valor` (a célula),
@@ -106190,12 +106225,15 @@ renderAtual=function(){
     var det=obj(linha.det)?copia(linha.det):{};
     if(txt(det.cuidado57_estado)!=='conferir-orientacao')return{ok:false,motivo:'ja-aplicado',frase:FRASE_JA_APLICADO};
     var campo=txt(escolha&&escolha.campo),valor=typeof (escolha&&escolha.valor)==='string'?escolha.valor:null;
-    if(['qtd','prod','onde'].indexOf(campo)<0||valor===null||valor.length>80||/[\u0000-\u001F\u007F]/.test(valor))return{ok:false,motivo:'escolha-invalida'};
+    if(['qtd','prod','onde','nome'].indexOf(campo)<0||valor===null||valor.length>80||/[\u0000-\u001F\u007F]/.test(valor))return{ok:false,motivo:'escolha-invalida'};
     if(e.itemK&&camposDoCuidado(e.itemK).indexOf(campo)<0)return{ok:false,motivo:'escolha-invalida'};
+    if(campo==='nome'&&valor!==''&&e.itemK&&!pedeNome(e.itemK,det))return{ok:false,motivo:'escolha-invalida'};
     var antes=JSON.stringify(det);
     if(campo==='onde'&&valor===txt(escolha.padrao)&&valor!=='')delete det.onde;
     else if(campo!=='onde'&&valor==='')delete det[campo];
     else det[campo]=valor;
+    /* trocou a pipeta por comprimido: o nome da pipeta não vale mais */
+    if(campo==='prod'&&det.nome&&e.itemK&&!pedeNome(e.itemK,det))delete det.nome;
     var novo=copia(linha);novo.det=det;
     return{ok:true,mudou:JSON.stringify(det)!==antes,linha:novo};
   }
@@ -106292,7 +106330,7 @@ renderAtual=function(){
   }
   return{RESPOSTAS:RESPOSTAS,FRASE_JA_NO_SNOOPY:FRASE_JA_NO_SNOOPY,FRASE_JA_APLICADO:FRASE_JA_APLICADO,FRASE_TROCA_APLICADO:FRASE_TROCA_APLICADO,
     rotuloResposta:rotuloResposta,mascara:mascara,hora:hora,quandoEnviado:quandoEnviado,retornoDepois:retornoDepois,msAte1330:msAte1330,inicio1330:inicio1330,horaDaSaida:horaDaSaida,
-    grupoDoPet:grupoDoPet,resumo:resumo,rotuloGrupo:rotuloGrupo,topo:topo,ordenar:ordenar,camposDoCuidado:camposDoCuidado,ondePadrao:ondePadrao,faltaEscolher:faltaEscolher,
+    grupoDoPet:grupoDoPet,resumo:resumo,rotuloGrupo:rotuloGrupo,topo:topo,ordenar:ordenar,camposDoCuidado:camposDoCuidado,pedeNome:pedeNome,ondePadrao:ondePadrao,faltaEscolher:faltaEscolher,
     podeEscolher:podeEscolher,mesclarEscolha:mesclarEscolha,decidirTroca:decidirTroca,estadoDaTarefa:estadoDaTarefa,linhaDoLancamentoConfirmada:linhaDoLancamentoConfirmada,
     classificarFilas117:classificarFilas117,chaveRascunho137:chaveRascunho137,retornosAnteriores143:retornosAnteriores143,retornoAnterior143:retornoAnterior143};
 });
@@ -106336,6 +106374,49 @@ renderAtual=function(){
   }
   root.ZelozinhaFicha171={NOMES:NOMES,ARTIGOS:ARTIGOS,BASES:BASES,fichaTemData:fichaTemData,proximoDe:proximoDe,cuidadoNaFrase:cuidadoNaFrase,daDo:daDo,mensagem:mensagem,resultadoHTML:resultadoHTML,dataBR:br};
 }(typeof window!=='undefined'?window:globalThis));
+</script>
+<script id="zelozinha-texto-pronto">'use strict';
+/* TEXTO PRONTO QUANDO A ZELOZINHA NÃO MANDA (Adriana, 19/11/2026): «Quando não enviar, deixar o texto pronto, para copiar e
+   colar, acelerando o humano.» Caso que motivou: o Romeo tinha só a antirrábica vencendo numa quinta, dia sem veterinária,
+   e o cartão ficou em «Contato humano» sem nada para mandar.
+   - Os cuidados que não são vacina usam o texto aprovado de sempre (mensagem-unica41), sem mudar uma letra.
+   - A vacina sem veterinária no dia usa o texto abaixo, no formato pedido por ela (linhas e emojis leves).
+   Função pura: não lê banco, não grava nada. Quem desenha o cartão passa os dados. */
+(function(root,factory){var api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.ZelozinhaTextoPronto=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
+  var VACINAS={vac_mult_p:'múltipla',vac_gripe_p:'contra gripe',vac_raiva_p:'antirrábica'};
+  function txt(v){return v==null?'':String(v).trim();}
+  function iso(v){return /^\d{4}-\d{2}-\d{2}$/.test(txt(v));}
+  function br(i){return i.slice(8,10)+'/'+i.slice(5,7)+'/'+i.slice(0,4);}
+  function amanha(i){var d=new Date(Date.UTC(+i.slice(0,4),+i.slice(5,7)-1,+i.slice(8,10))+86400000);return d.toISOString().slice(0,10);}
+  function juntar(a){return a.length<2?(a[0]||''):a.slice(0,-1).join(', ')+' e '+a[a.length-1];}
+  function nomeValido(v){var s=txt(v);return /^[\p{L}\p{M}' .-]{1,40}$/u.test(s)?s:'';}
+  function prazo(dia,vence){return vence===dia?'vence hoje':vence===amanha(dia)?'vence amanhã':vence<dia?'venceu em '+br(vence):'vence em '+br(vence);}
+  /* entrada: {nomeTutor, nomePeludo, dia, vacinas:[{itemK, vence}]} — nomes já no primeiro nome */
+  function vacinaSemVet(e){
+    e=e||{};var tutor=nomeValido(e.nomeTutor),pet=nomeValido(e.nomePeludo),dia=txt(e.dia);
+    var vs=(Array.isArray(e.vacinas)?e.vacinas:[]).filter(function(x){return x&&VACINAS[txt(x.itemK)]&&iso(x.vence);});
+    if(!tutor||!pet||!iso(dia)||!vs.length)return {ok:false,motivo:'dados incompletos'};
+    var frase=vs.length===1?'A vacina '+VACINAS[vs[0].itemK]+' de '+pet+' '+prazo(dia,vs[0].vence)+'.'
+      :'As vacinas '+juntar(vs.map(function(x){return VACINAS[x.itemK];}))+' de '+pet+' estão vencendo.';
+    return {ok:true,texto:['Olá, '+tutor+', tudo bem? 💛','',pet+' está aqui com a gente hoje, aproveitando o dia. 🐾',frase,
+      'Podemos aplicar na próxima vinda, com a nossa equipe veterinária. Assim a proteção de '+pet+' fica em dia, e a de todos os nossos Aulunos também.',
+      'Qual dia fica melhor para você? 💛'].join('\n')};
+  }
+  /* entrada: {nomeTutor, nomePeludo, sexo, dia, vacinaHoje, pendentes:[{itemK, vence}]}; gerar = MensagemUnica41.gerarMensagem.
+     Devolve as caixas do cartão: [{titulo, texto}]. Vacina vai na mensagem de sempre só quando a veterinária está no dia. */
+  function textos(e,gerar){
+    e=e||{};var pend=(Array.isArray(e.pendentes)?e.pendentes:[]).filter(function(x){return x&&txt(x.itemK)&&iso(x.vence);}),out=[];
+    if(!pend.length||!nomeValido(e.nomeTutor)||!nomeValido(e.nomePeludo))return out;
+    var vac=pend.filter(function(x){return !!VACINAS[x.itemK];}),resto=pend.filter(function(x){return !VACINAS[x.itemK];});
+    var sexo=e.sexo==='F'||e.sexo==='M'?e.sexo:undefined;
+    function unica(lista,comVet){if(typeof gerar!=='function'||!lista.length)return null;var m=gerar({nomeTutor:txt(e.nomeTutor),nomePeludo:txt(e.nomePeludo),sexo:sexo,dia:e.dia,presencaConfirmada:true,cuidados:lista.map(function(x){return {itemK:x.itemK,vence:x.vence};}),veterinariaConfirmada:comVet});return m&&m.ok?m.texto:null;}
+    if(vac.length&&e.vacinaHoje===true){var tudo=unica(pend,true);if(tudo){out.push({titulo:'Mensagem pronta para copiar: a Zelozinha não mandou',texto:tudo});return out;}}
+    var t1=unica(resto,false);if(t1)out.push({titulo:'Mensagem pronta para copiar: a Zelozinha não mandou'+(vac.length?' (demais cuidados)':''),texto:t1});
+    if(vac.length){var t2=vacinaSemVet({nomeTutor:e.nomeTutor,nomePeludo:e.nomePeludo,dia:e.dia,vacinas:vac});if(t2.ok)out.push({titulo:'Mensagem pronta para copiar: vacina (sem veterinária hoje)',texto:t2.texto});}
+    return out;
+  }
+  return {vacinaSemVet:vacinaSemVet,textos:textos,VACINAS:VACINAS};
+});
 </script>
 <script id="zelozinha-contatos89-ui">'use strict';
 /* «Contatos e respostas de hoje» — a tela da Zelozinha (Story 6.94: as quatro respostas em um toque, o que cada uma faz à vista, sem salto de tela).
@@ -106553,6 +106634,9 @@ renderAtual=function(){
   function listaQtd(itemK){try{return itemK==='ecto_p'?DASH_QTD_PIP:DASH_QTD;}catch(_){return[];}}
   function listaOnde(){try{return DASH_ONDE;}catch(_){return[];}}
   function listaProd(){try{return DASH_ECTO_PROD;}catch(_){return[];}}
+  /* 19/11/2026: «Qual vermífugo?» e «Qual pipeta?», as mesmas listas do Lançamento do dia */
+  function listaNome(itemK){try{return itemK==='ecto_p'?DASH_PIPETA_NOME:DASH_VERM_NOME;}catch(_){return[];}}
+  function rotuloNome(itemK){return itemK==='ecto_p'?'Qual pipeta?':'Qual vermífugo?';}
   function preMarcaQtd(c,cy){
     if(cy.itemK!=='verm_p'&&cy.itemK!=='verm_dose2_p')return '';
     try{var a=typeof vermAvaliarFicha==='function'?vermAvaliarFicha(c.row&&c.row.p):null;if(!a||a.pesar||!a.dose||!a.dose.rot)return '';var rot=String(a.dose.rot);return achar(listaQtd(cy.itemK),rot)?rot:'';}catch(_){return '';}
@@ -106560,6 +106644,7 @@ renderAtual=function(){
   function escolhasResumo(c,v,det){
     var cy=v.cy,partes=[],campos=T.camposDoCuidado(cy.itemK),falta=T.faltaEscolher(cy.itemK,det,'');
     if(campos.indexOf('prod')>=0&&txt(det.prod))partes.push(achar(listaProd(),det.prod)||det.prod);
+    if(txt(det.nome))partes.push(achar(listaNome(cy.itemK),det.nome)||det.nome);
     var q=txt(det.qtd);if(q)partes.push(achar(listaQtd(cy.itemK),q)||q);
     var padrao=T.ondePadrao(v.valor),ondeV=('onde' in det)?String(det.onde):padrao;
     partes.push(ondeV===''?'Nada a observar':(achar(listaOnde(),ondeV)||ondeV));
@@ -106580,15 +106665,17 @@ renderAtual=function(){
     var det=linha.det&&typeof linha.det==='object'?linha.det:{},falta=T.faltaEscolher(cy.itemK,det,''),travado=!!estado.salvando[c.dcKey];
     var padrao=T.ondePadrao(v.valor),qtdAtual=txt(det.qtd),sugerida=qtdAtual?'':preMarcaQtd(c,cy),ondeAtual=('onde' in det)?String(det.onde):padrao;
     var corpo=(campos.indexOf('prod')>=0?chipsHTML('Qual produto?','prod',listaProd(),txt(det.prod),ck,travado,false,falta.indexOf('produto')>=0):'')
+      +(T.pedeNome(cy.itemK,det)?chipsHTML(rotuloNome(cy.itemK),'nome',listaNome(cy.itemK),txt(det.nome),ck,travado,true,falta.indexOf('nome')>=0):'')
       +(sugerida?'<p class="zt694-sub">Pelo peso, a dose sugerida é <strong>'+esc(achar(listaQtd(cy.itemK),sugerida)||sugerida)+'</strong>. Toque nela para confirmar.</p>':'')
       +chipsHTML('Quanto foi dado','qtd',listaQtd(cy.itemK),qtdAtual,ck,travado,true,falta.indexOf('quanto')>=0)
       +chipsHTML('Alguma observação','onde',listaOnde(),ondeAtual,ck,travado,false,false);
     var partesResumo=[],racaResumo=racaPet(c),produtoSalvo=txt(det.prod),qtdSalva=txt(det.qtd);
     if(campos.indexOf('prod')>=0&&produtoSalvo)partesResumo.push(produtoSalvo);
+    if(T.pedeNome(cy.itemK,det)&&txt(det.nome))partesResumo.push(txt(det.nome));
     if(qtdSalva)partesResumo.push(qtdSalva);
     if(ondeAtual)partesResumo.push(ondeAtual);
     var resumo=nomePet(c)+(racaResumo?'/'+racaResumo:'')+(partesResumo.length?' ('+partesResumo.join(' · ')+')':''),completo=falta.length===0;
-    var faltaTexto=falta.map(function(x){return x==='produto'?'Qual produto?':x==='quanto'?'Quanto foi dado':x;}).join(' · ');
+    var faltaTexto=falta.map(function(x){return x==='produto'?'Qual produto?':x==='nome'?rotuloNome(cy.itemK):x==='quanto'?'Quanto foi dado':x;}).join(' · ');
     var footer='<div class="hint zt694-lancamento-hint" style="margin-top:9px">No Lançamento do dia: <strong>'+esc(resumo)+'</strong></div>'
       +'<button type="button" class="btn '+(completo?'btn-primary':'btn-gold')+'" style="margin-top:8px;width:100%;opacity:1" disabled aria-disabled="true">'
       +(completo?'Escolhas salvas no Lançamento do dia':'Falta responder acima')+'</button>'
@@ -106702,7 +106789,22 @@ renderAtual=function(){
     var casa=textosEmCasaDe(c,vms),ret=textosRetornoDe(c,vms),out=[];
     casa.forEach(function(x){out.push({tipo:x.tutorFez?'tutor-fez':'casa',texto:x.texto,titulo:x.tutorFez?'Agradecimento ao tutor, pronto para copiar':'Mensagem para o tutor, pronta para enviar'+(casa.length>1?(x.vacina?': vacina':': demais cuidados'):'')});});
     ret.forEach(function(x){out.push({tipo:'retorno',texto:x.texto,titulo:x.titulo});});
+    textosProntosDe(c,vms).forEach(function(x){out.push({tipo:'pronta',texto:x.texto,titulo:x.titulo});});
     return out;
+  }
+  /* 19/11/2026 («Quando não enviar, deixar o texto pronto, para copiar e colar»): o cuidado que ficou em «Contato humano»
+     ou «Não enviada» e ainda não tem resposta ganha a mensagem pronta. A escova continua só com a equipe. */
+  function textosProntosDe(c,vms){
+    var TP=window.ZelozinhaTextoPronto,ZS=window.ZelozinhaSimples,MU=window.MensagemUnica41;
+    if(!TP||!c||c.dia!==estado.dia)return[];
+    var pend=(vms||[]).filter(function(v){var st=v&&v.st||{},k=txt(v&&v.cy&&v.cy.itemK);
+      return k&&k!=='escova_p'&&!v.atual&&!v.retorno143&&!v.agendado&&st.enviada!==true&&(st.categoria==='humano'||(st.zs&&st.rotulo==='NÃO ENVIADA'));});
+    if(!pend.length)return[];
+    var r=ZS&&ZS.responsavel?ZS.responsavel(c.cadastro,tutorNome(c)):null,nome=r&&r.ok?r.nome:tutorNome(c);
+    var tutor=ZS&&ZS.primeiroNome?ZS.primeiroNome(nome):txt(nome).split(/[\s\/,]+/)[0];
+    var p=c.row&&c.row.p||{},vet=false;try{vet=!!(ZS&&ZS.veterinariaNoDia&&ZS.veterinariaNoDia(c.dia));}catch(_){vet=false;}
+    return TP.textos({nomeTutor:tutor,nomePeludo:nomePet(c),sexo:p.sexo,dia:c.dia,vacinaHoje:vet,
+      pendentes:pend.map(function(v){return{itemK:v.cy.itemK,vence:v.cy.dueDate};})},MU&&MU.gerarMensagem);
   }
   function copiaHTML(c,vms){
     var textos=caixasDe(c,vms),semTel=!telDe(c);
@@ -108586,10 +108688,19 @@ renderAtual=function(){
       var dias = u && iso(txt(u.data).slice(0, 10)) ? diasEntre(txt(u.data).slice(0, 10), dia) : null;
       return { kg: kg, velho: !kg || dias === null || dias > PESO_VELHO_DIAS };
     }
-    function ectoTexto(f, kg, prod) {
-      var tam = tamanhoCarrapaticida(kg), ult = f ? txt(f.ex.ecto_nome) : '';
+    /* 19/11/2026: o nome escolhido no lançamento («Vectra 3D»); «Outra»/«Outro» não é nome */
+    function nomeEscolhido(lista, v) {
+      v = txt(v); if (!v || /^OUTR[AO]\b/.test(v)) return '';
+      var o = (lista || []).filter(function (x) { return x && x.v === v; })[0];
+      return o ? o.t : minusc(v);
+    }
+    function listaGlobal(n) { try { return n === 'pipeta' ? DASH_PIPETA_NOME : DASH_VERM_NOME; } catch (_) { return []; } }
+    function ectoTexto(f, kg, prod, nome) {
+      var tam = tamanhoCarrapaticida(kg), ult = f ? txt(f.ex.ecto_nome) : '', pip = /^PIPETA\b/.test(txt(prod).toUpperCase());
+      var nm = pip ? nomeEscolhido(listaGlobal('pipeta'), nome) : '';
+      if (nm) prod = nm + ' (pipeta)';
       return { b: 'Carrapaticida' + (prod ? ' ' + prod : '') + (tam ? ' · ' + tam : ''),
-               m: prod ? '' : (' · marca: escolher' + (ult ? ' — da última vez: ' + ult : '')) };
+               m: (prod && (!pip || nm)) ? '' : (' · marca: escolher' + (ult ? ' — da última vez: ' + ult : '')) };
     }
     Object.keys(ITENS).forEach(function (k) {
       var doItem = obj(dash && dash[k]) ? dash[k] : {};
@@ -108597,8 +108708,9 @@ renderAtual=function(){
         var o = doItem[id] || {}, det = o.det || {};
         if (k === 'coleira' && txt(det.veio).toUpperCase() === 'NÃO VEIO') return;   // não há o que separar
         var f = porDc[txt(o.chave)] || null, pi = pesoInfo(f), t;
-        if (k === 'carrapaticida') t = ectoTexto(f, pi.kg, txt(det.prod));
-        else if (k === 'vermifugo') t = { b: 'Vermífugo' + (det.prod ? ' ' + txt(det.prod) : (f && f.ex.verm_nome ? ' ' + txt(f.ex.verm_nome) : '')) + (det.qtd ? ' · ' + minusc(det.qtd) : ''), m: pi.kg ? ' (' + kgTxt(pi.kg) + ')' : '' };
+        if (k === 'carrapaticida') t = ectoTexto(f, pi.kg, txt(det.prod), det.nome);
+        else if (k === 'vermifugo') { var vn = nomeEscolhido(listaGlobal('verm'), det.nome) || txt(det.prod) || (f ? txt(f.ex.verm_nome) : '');
+          t = { b: 'Vermífugo' + (vn ? ' ' + vn : '') + (det.qtd ? ' · ' + minusc(det.qtd) : ''), m: (pi.kg ? ' (' + kgTxt(pi.kg) + ')' : '') + (vn ? '' : ' · marca: escolher') }; }
         else if (k === 'coleira') t = { b: 'Coleira' + (f && f.ex.col_nome ? ' ' + txt(f.ex.col_nome) : ''), m: txt(det.onde).toUpperCase() === 'BANHO' ? ' · troca no banho' : '' };
         else t = { b: 'Escova de dentes', m: '' };
         vistas[(f ? f.dc : txt(o.chave)) + '|' + k] = linhas.length;
