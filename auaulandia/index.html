@@ -60812,19 +60812,26 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
   var DASH_QTD_PIP=[{v:'PIPETA', t:'Pipeta (o tubo inteiro)'}].concat(DASH_QTD);
   // O NOME do produto (Adriana, 19/nov/2026): «Falta aqui colocar o nome do medicamento, para já salvar no que reservar
   // quando comprado na Zêluz... O que separar só está pipeta, precisa do nome... como o vermífugo também, precisa de nome.»
-  // As listas são os produtos que mais saíram do Empório (Zetta, nov/2026), na ordem de venda. «Outro» existe para
-  // não travar quem lança o que veio de casa com um nome fora da lista.
-  var DASH_PIPETA_NOME=[
-    {v:'VECTRA 3D', t:'Vectra 3D'}, {v:'ADVANTAGE MAX3', t:'Advantage Max3'}, {v:'FIPROLEX', t:'Fiprolex'},
-    {v:'NEOPET', t:'NeoPet'}, {v:'EFIPET 3+', t:'Efipet 3+'}, {v:'EFFIPRO', t:'Effipro'},
-    {v:'CONFRONT PLUS', t:'Confront Plus'}, {v:'EC-PET', t:'EC-Pet'}, {v:'REVOLUTION', t:'Revolution'},
-    {v:'OUTRA PIPETA', t:'Outra'}
+  // 19/11/2026, depois da maquete: «O produto, colocar o local para escrevermos, não precisa de descrever quais são. Nós
+  // escrevemos.» O nome é ESCRITO (texto livre, como o remédio da Medicação), sem lista de marcas.
+  // «Vermífugo se é dose única ou não... precisa de ter.» A ficha já guarda o esquema (verm_doses: «Dose única» ou
+  // «2 doses»); o lançamento pergunta e a ficha recebe. A 2ª dose é escolha própria: é ela que fecha a série.
+  var DASH_VERM_DOSES=[
+    {v:'DOSE ÚNICA',     t:'Dose única'},
+    {v:'1ª DE 2 DOSES',  t:'1ª de 2 doses'},
+    {v:'2ª DOSE',        t:'2ª dose'}
   ];
-  var DASH_VERM_NOME=[
-    {v:'DRONTAL PLUS', t:'Drontal Plus'}, {v:'ENDOGARD', t:'Endogard'}, {v:'FENZOL PET', t:'Fenzol Pet'},
-    {v:'VETMAX PLUS', t:'Vetmax Plus'}, {v:'MILBEMAX', t:'Milbemax'}, {v:'ENDAL PLUS', t:'Endal Plus'},
-    {v:'DRONTAL PUPPY', t:'Drontal Puppy'}, {v:'OUTRO VERMÍFUGO', t:'Outro'}
-  ];
+  // O nome como a ficha e o quadro escrevem: escrito todo em maiúscula (é assim que a planilha guarda) vira «Drontal Plus»;
+  // escrito com minúsculas fica como a pessoa escreveu.
+  function dashNomeProduto(v){
+    v=String(v==null?'':v).replace(/[()]/g,' ').trim().replace(/\s+/g,' ').slice(0,60);
+    if(!v || /[a-zà-ÿ]/.test(v)) return v;
+    // palavra com número («3D», «MAX3», «3+») fica como foi escrita
+    return v.split(/([\s\-\/]+)/).map(function(w){
+      if(!w || /^[\s\-\/]+$/.test(w) || /\d/.test(w)) return w;
+      return w.charAt(0)+w.slice(1).toLowerCase();
+    }).join('');
+  }
   // «Pipeta · 30 dias» muda se a duração da pipeta mudar na Configuração: o que vale é começar com PIPETA.
   function dashEhPipeta(v){ return /^PIPETA\b/.test(String(v||'').trim().toUpperCase()); }
   // "Nada a observar" existe de propósito: obrigatório é ESCOLHER, não é ter observação.
@@ -60966,7 +60973,8 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
       {c:'onde', rot:'Onde está o remédio?',    ops:DASH_MED_ONDE, obrig:true}]},
     // campos → a tela PERGUNTA antes de deixar lançar; obrig:true não deixa passar em branco
     {k:'vermifugo',     t:'Vermífugo',                  col:'Vermifugo',                      icone:'💊', campos:[
-      {c:'nome', rot:'Qual vermífugo?',   ops:DASH_VERM_NOME, obrig:true},
+      {c:'nome', rot:'Qual vermífugo?',   texto:true, obrig:true, ph:'Escreva o nome. Ex.: Drontal Plus'},
+      {c:'doses',rot:'Dose única ou 2 doses?', ops:DASH_VERM_DOSES, obrig:true},
       {c:'qtd',  rot:'Quanto foi dado',   ops:DASH_QTD, obrig:true},
       {c:'onde', rot:'Alguma observação', ops:DASH_ONDE, obrig:true}]},
     {k:'carrapaticida', t:'Carrapaticida',              col:'Carrapaticida',                  icone:'🔬', campos:[
@@ -60974,7 +60982,7 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
       // obrigatório — escolhido, entra no texto da planilha e da TV.
       {c:'prod', rot:'Qual produto?',     ops:DASH_ECTO_PROD},
       // «Pipeta» sozinha não diz o que separar: escolhida a pipeta, pergunta qual (19/nov/2026).
-      {c:'nome', rot:'Qual pipeta?',      ops:DASH_PIPETA_NOME, obrig:true, dep:{c:'prod', f:dashEhPipeta}},
+      {c:'nome', rot:'Qual pipeta?',      texto:true, obrig:true, ph:'Escreva o nome. Ex.: Vectra 3D', dep:{c:'prod', f:dashEhPipeta}},
       {c:'qtd',  rot:'Quanto foi dado',   ops:DASH_QTD_PIP, obrig:true},
       {c:'onde', rot:'Alguma observação', ops:DASH_ONDE, obrig:true}]},
     {k:'coleira',       t:'Troca de coleira',           col:'Troca de Coleira',               icone:'🏷️', campos:[
@@ -64687,7 +64695,8 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
   var DASH_PREV_FICHA_MOTIVO={
     produto:'Ficha não mudou: falta o produto do carrapaticida',
     'nao-veio':'Ficha não mudou: a coleira não veio',
-    validade:'Ficha não mudou: falta a validade da coleira'
+    validade:'Ficha não mudou: falta a validade da coleira',
+    'sem-1a-dose':'Ficha não mudou: a 1ª dose do vermífugo não está na ficha'
   };
   function dashPrevFichaNo(dia){ return 'daycare/prev-ficha/'+dia; }
   function dashPrevFichaElegivel(k, o){
@@ -64696,19 +64705,38 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
   }
   // Pura: o que a ficha recebe pela dose de `dt`. {itemK, patch, prox} ou {erro}. A marca {itemK}_lanc diz, na ficha,
   // de onde veio a data (é ela que a Prevenção mostra, enquanto a data da ficha for a deste lançamento).
-  // O nome escolhido no lançamento, como a ficha escreve («Vectra 3D»). «Outro»/«Outra» não é nome: devolve ''.
-  function dashNomeParaFicha(lista, v){
-    v=String(v||'').trim(); if(!v || /^OUTR[AO]\b/.test(v)) return '';
-    var o=(lista||[]).filter(function(x){ return x && x.v===v; })[0];
-    return o ? o.t : '';
+  // O esquema que o lançamento escolheu (19/11/2026); sem escolha, '' (a ficha decide como antes).
+  function dashVermEsquema(v){
+    v=String(v||'').trim().toUpperCase();
+    if(v==='DOSE ÚNICA') return 'unica';
+    if(v==='1ª DE 2 DOSES') return 'primeira';
+    if(v==='2ª DOSE') return 'segunda';
+    return '';
   }
   function dashPrevFichaPatch(k, ex, dt, quem, det){
     ex=ex||{}; det=det||{}; dt=String(dt||''); quem=String(quem||'').trim();
     var itemK=DASH_PREV_FICHA_ITENS[k], patch={}, iso=/^\d{4}-\d{2}-\d{2}$/;
     if(!itemK || !iso.test(dt)) return {erro:'sem-item'};
     if(k==='vermifugo'){
-      var t1=String(ex.verm_t||'');
-      if(vermSerieVenceu(ex, dt)){ patch=vermSerieNovaPatch(ex, dt); if(quem) patch.verm_por=quem; }
+      var t1=String(ex.verm_t||''), esq=dashVermEsquema(det.doses);
+      // Quem lançou disse o esquema: vale o que foi dito, e a ficha passa a ter esse esquema.
+      if(esq==='unica'){
+        patch={verm_doses:'Dose única', verm_t:dt, verm_2a:'', verm_dose2_t:'', verm_p:addDiasISO(dt, VERMIF_PROX)};
+        if(ex.verm_p_manual) patch.verm_p_manual='';
+        if(quem) patch.verm_por=quem;
+      } else if(esq==='primeira'){
+        var d2n=addDiasISO(dt, vermIntervalo(ex));
+        patch={verm_doses:'2 doses', verm_t:dt, verm_dose2_t:'', verm_2a:d2n, verm_p:addDiasISO(d2n, VERMIF_PROX)};
+        if(ex.verm_p_manual) patch.verm_p_manual='';
+        if(quem) patch.verm_por=quem;
+      } else if(esq==='segunda'){
+        // a 2ª precisa da 1ª antes dela na ficha; sem isso a ficha não muda e a linha diz por quê
+        if(!iso.test(t1) || t1>=dt) return {erro:'sem-1a-dose'};
+        itemK='verm_dose2_p';
+        patch={verm_doses:'2 doses', verm_dose2_t:dt, verm_2a:dt, verm_p:addDiasISO(dt, VERMIF_PROX)};
+        if(ex.verm_p_manual) patch.verm_p_manual='';
+        if(quem) patch.verm_dose2_por=quem;
+      } else if(vermSerieVenceu(ex, dt)){ patch=vermSerieNovaPatch(ex, dt); if(quem) patch.verm_por=quem; }
       else if(vermDose2Prevista(ex) && iso.test(t1) && dt>t1){
         // a 2ª dose desta série ainda não foi dada: este lançamento é ela (a mesma conta do «Lance aqui mesmo»)
         itemK='verm_dose2_p';
@@ -64722,7 +64750,7 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
         prevVermLancePatch(patch, ex, dt);
       }
       if(!patch.verm_p) return {erro:'sem-item'};
-      var nmV=dashNomeParaFicha(DASH_VERM_NOME, det.nome); if(nmV) patch.verm_nome=nmV;
+      var nmV=dashNomeProduto(det.nome); if(nmV) patch.verm_nome=nmV;
     } else if(k==='carrapaticida'){
       var rot=String(det.prod||'').toUpperCase(), prod='';
       if(rot) ectoProdutosLista().forEach(function(pr){ if(String(ectoRotulo(pr)).toUpperCase()===rot) prod=pr; });
@@ -64734,8 +64762,8 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
       if(daLinha && prod!==String(ex.ecto_prod||'')) ectoPatchProduto(patch, {prod:prod, dias:dias});
       if(ex.ecto_p_manual) patch.ecto_p_manual='';
       if(quem) patch.ecto_por=quem;
-      // o nome da pipeta (19/nov/2026) vira o «da última vez» da ficha; «Outra» não apaga o que a ficha já sabe
-      var nmE=dashNomeParaFicha(DASH_PIPETA_NOME, det.nome); if(nmE && prod==='Pipeta') patch.ecto_nome=nmE;
+      // o nome da pipeta (19/nov/2026), escrito por quem lançou, vira o «da última vez» da ficha
+      var nmE=dashNomeProduto(det.nome); if(nmE && prod==='Pipeta') patch.ecto_nome=nmE;
     } else if(k==='coleira'){
       if(String(det.veio||'')==='N\u00c3O VEIO') return {erro:'nao-veio'};
       var dc=prevDiasDoItem({coleira:true}, ex);
@@ -64930,9 +64958,9 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
   // A dose escolhida na Zelozinha fica no `det` e a célula continua «(CONFERIR ORIENTAÇÃO)», porque a planilha e a TV leem a célula. Na tela a equipe precisa ver a dose, no mesmo formato de quem lança à mão: "Chico/Shih Tzu (1 COMPRIMIDO · LOJA)". Sem dose nem produto escolhidos, continua pedindo para conferir.
   function dashCelulaComDose(o){
     o=o||{};var v=String(o.valor||''),det=o.det||{};
-    if(String(det.cuidado57_estado||'')!=='conferir-orientacao'||(!det.prod&&!det.qtd&&!det.nome))return v;
+    if(String(det.cuidado57_estado||'')!=='conferir-orientacao'||(!det.prod&&!det.qtd&&!det.nome&&!det.doses))return v;
     var origem=String((o.origemVencimento||{}).origemResposta||''),onde=('onde' in det)?String(det.onde||''):(origem==='bolsa'?'NA BOLSA':origem==='loja'?'LOJA':'');
-    return v.replace(/\s*\(CONFERIR (?:HORÁRIO\/)?ORIENTAÇÃO\)\s*$/,'')+' ('+[det.prod,det.nome,det.qtd,onde].filter(Boolean).join(' · ')+')';
+    return v.replace(/\s*\(CONFERIR (?:HORÁRIO\/)?ORIENTAÇÃO\)\s*$/,'')+' ('+[det.prod,det.nome,det.doses,det.qtd,onde].filter(Boolean).join(' · ')+')';
   }
   function dashCartaoHTML(it, __diaDash){
 var lista=dashAgendaMarciaFiltrar133(it.k,DASH_DADOS[it.k]||{});
@@ -106188,10 +106216,14 @@ renderAtual=function(){
   function camposDoCuidado(itemK){
     var k=txt(itemK);
     /* o NOME do produto (19/11/2026): «O que separar só está pipeta, precisa do nome... como o vermífugo também» */
-    if(k==='verm_p'||k==='verm_dose2_p')return['nome','qtd','onde'];
+    /* «Vermífugo se é dose única ou não... precisa de ter» (19/11/2026): o vermífugo pergunta o esquema; a 2ª dose já é a 2ª */
+    if(k==='verm_p')return['nome','doses','qtd','onde'];
+    if(k==='verm_dose2_p')return['nome','qtd','onde'];
     if(k==='ecto_p')return['prod','nome','qtd','onde'];
     return[];
   }
+  /* as respostas do esquema no cartão: no vermífugo que vence, dose única ou a 1ª de duas (os valores do Lançamento do dia) */
+  var DOSES_VALIDAS=['DOSE ÚNICA','1ª DE 2 DOSES'];
   /* o nome só é pedido no carrapaticida quando o produto é pipeta (o comprimido já é o nome: Bravecto, Simparic...) */
   function ehPipeta(v){return /^PIPETA\b/.test(txt(v).toUpperCase());}
   function pedeNome(itemK,det){var k=txt(itemK),d=obj(det)?det:{};return k==='verm_p'||k==='verm_dose2_p'||(k==='ecto_p'&&ehPipeta(d.prod));}
@@ -106202,6 +106234,7 @@ renderAtual=function(){
     camposDoCuidado(itemK).forEach(function(c){
       if(c==='prod'&&!txt(d.prod))falta.push('produto');
       if(c==='nome'&&pedeNome(itemK,d)&&!txt(d.nome))falta.push('nome');
+      if(c==='doses'&&!txt(d.doses))falta.push('doses');
       if(c==='qtd'&&!txt(d.qtd)&&!txt(preMarcaQtd))falta.push('quanto');
     });
     return falta;
@@ -106210,7 +106243,7 @@ renderAtual=function(){
   function podeEscolher(ctx){
     ctx=ctx||{};
     if(ctx.tarefaEstado==='emexecucao'||ctx.tarefaEstado==='realizado'||ctx.estadoLinha==='realizado-conferido')return{ok:false,motivo:'ja-aplicado',frase:FRASE_JA_APLICADO};
-    if(ctx.snoopyConfirmado===true&&ctx.campo!=='prod'&&ctx.campo!=='qtd'&&ctx.campo!=='nome')return{ok:false,motivo:'ja-no-snoopy',frase:FRASE_JA_NO_SNOOPY};
+    if(ctx.snoopyConfirmado===true&&ctx.campo!=='prod'&&ctx.campo!=='qtd'&&ctx.campo!=='nome'&&ctx.campo!=='doses')return{ok:false,motivo:'ja-no-snoopy',frase:FRASE_JA_NO_SNOOPY};
     return{ok:true};
   }
   /* AC4.4 + AC4.8: aplica UMA escolha no `det` da linha do Day Care. Só a linha da MESMA resposta e revisão; `valor` (a célula),
@@ -106225,9 +106258,10 @@ renderAtual=function(){
     var det=obj(linha.det)?copia(linha.det):{};
     if(txt(det.cuidado57_estado)!=='conferir-orientacao')return{ok:false,motivo:'ja-aplicado',frase:FRASE_JA_APLICADO};
     var campo=txt(escolha&&escolha.campo),valor=typeof (escolha&&escolha.valor)==='string'?escolha.valor:null;
-    if(['qtd','prod','onde','nome'].indexOf(campo)<0||valor===null||valor.length>80||/[\u0000-\u001F\u007F]/.test(valor))return{ok:false,motivo:'escolha-invalida'};
+    if(['qtd','prod','onde','nome','doses'].indexOf(campo)<0||valor===null||valor.length>80||/[\u0000-\u001F\u007F]/.test(valor))return{ok:false,motivo:'escolha-invalida'};
     if(e.itemK&&camposDoCuidado(e.itemK).indexOf(campo)<0)return{ok:false,motivo:'escolha-invalida'};
     if(campo==='nome'&&valor!==''&&e.itemK&&!pedeNome(e.itemK,det))return{ok:false,motivo:'escolha-invalida'};
+    if(campo==='doses'&&valor!==''&&DOSES_VALIDAS.indexOf(valor)<0)return{ok:false,motivo:'escolha-invalida'};
     var antes=JSON.stringify(det);
     if(campo==='onde'&&valor===txt(escolha.padrao)&&valor!=='')delete det.onde;
     else if(campo!=='onde'&&valor==='')delete det[campo];
@@ -106634,9 +106668,20 @@ renderAtual=function(){
   function listaQtd(itemK){try{return itemK==='ecto_p'?DASH_QTD_PIP:DASH_QTD;}catch(_){return[];}}
   function listaOnde(){try{return DASH_ONDE;}catch(_){return[];}}
   function listaProd(){try{return DASH_ECTO_PROD;}catch(_){return[];}}
-  /* 19/11/2026: «Qual vermífugo?» e «Qual pipeta?», as mesmas listas do Lançamento do dia */
-  function listaNome(itemK){try{return itemK==='ecto_p'?DASH_PIPETA_NOME:DASH_VERM_NOME;}catch(_){return[];}}
+  /* 19/11/2026: «Qual vermífugo?» e «Qual pipeta?» são ESCRITOS («Nós escrevemos»); «Dose única ou 2 doses?» em botão */
   function rotuloNome(itemK){return itemK==='ecto_p'?'Qual pipeta?':'Qual vermífugo?';}
+  function listaDoses(){try{return DASH_VERM_DOSES.filter(function(o){return o.v!=='2ª DOSE';});}catch(_){return[];}}
+  function nomeLimpo(v){return String(v==null?'':v).replace(/[()]/g,' ').replace(/[\u0000-\u001F\u007F]/g,' ').trim().replace(/\s+/g,' ').slice(0,60).toUpperCase();}
+  function nomeMostrar(v){try{if(typeof dashNomeProduto==='function')return dashNomeProduto(v);}catch(_){}/* silencioso de propósito: sem o arrumador, vale o nome como foi escrito */return txt(v);}
+  function nomeHTML(itemK,atual,travado,pendente){
+    var rot=rotuloNome(itemK),ph=itemK==='ecto_p'?'Escreva o nome. Ex.: Vectra 3D':'Escreva o nome. Ex.: Drontal Plus';
+    return '<div class="zt694-chips"><label class="cad-lb" style="margin-top:9px;display:block">'+esc(rot)
+      +(pendente?' <span style="color:var(--crm-critico);font-weight:900">— falta responder</span>':'')+'</label>'
+      +'<div style="display:flex;gap:6px;margin-top:4px;align-items:stretch">'
+      +'<input class="cad-in" data-zt694-nome-txt maxlength="60" style="flex:1;min-width:0" placeholder="'+esc(ph)+'" aria-label="'+esc(rot)+'" value="'+esc(atual?nomeMostrar(atual):'')+'"'+(travado?' disabled':'')+'>'
+      +'<button type="button" class="btn btn-gold zt694-acao" style="padding:6px 14px;font-size:12.5px;font-weight:800" data-zt694-acao="esc-nome"'+(travado?' disabled':'')+'>Salvar</button>'
+      +'</div></div>';
+  }
   function preMarcaQtd(c,cy){
     if(cy.itemK!=='verm_p'&&cy.itemK!=='verm_dose2_p')return '';
     try{var a=typeof vermAvaliarFicha==='function'?vermAvaliarFicha(c.row&&c.row.p):null;if(!a||a.pesar||!a.dose||!a.dose.rot)return '';var rot=String(a.dose.rot);return achar(listaQtd(cy.itemK),rot)?rot:'';}catch(_){return '';}
@@ -106644,7 +106689,8 @@ renderAtual=function(){
   function escolhasResumo(c,v,det){
     var cy=v.cy,partes=[],campos=T.camposDoCuidado(cy.itemK),falta=T.faltaEscolher(cy.itemK,det,'');
     if(campos.indexOf('prod')>=0&&txt(det.prod))partes.push(achar(listaProd(),det.prod)||det.prod);
-    if(txt(det.nome))partes.push(achar(listaNome(cy.itemK),det.nome)||det.nome);
+    if(txt(det.nome))partes.push(nomeMostrar(det.nome));
+    if(campos.indexOf('doses')>=0&&txt(det.doses))partes.push(achar(listaDoses(),det.doses)||det.doses);
     var q=txt(det.qtd);if(q)partes.push(achar(listaQtd(cy.itemK),q)||q);
     var padrao=T.ondePadrao(v.valor),ondeV=('onde' in det)?String(det.onde):padrao;
     partes.push(ondeV===''?'Nada a observar':(achar(listaOnde(),ondeV)||ondeV));
@@ -106665,17 +106711,19 @@ renderAtual=function(){
     var det=linha.det&&typeof linha.det==='object'?linha.det:{},falta=T.faltaEscolher(cy.itemK,det,''),travado=!!estado.salvando[c.dcKey];
     var padrao=T.ondePadrao(v.valor),qtdAtual=txt(det.qtd),sugerida=qtdAtual?'':preMarcaQtd(c,cy),ondeAtual=('onde' in det)?String(det.onde):padrao;
     var corpo=(campos.indexOf('prod')>=0?chipsHTML('Qual produto?','prod',listaProd(),txt(det.prod),ck,travado,false,falta.indexOf('produto')>=0):'')
-      +(T.pedeNome(cy.itemK,det)?chipsHTML(rotuloNome(cy.itemK),'nome',listaNome(cy.itemK),txt(det.nome),ck,travado,true,falta.indexOf('nome')>=0):'')
+      +(T.pedeNome(cy.itemK,det)?nomeHTML(cy.itemK,txt(det.nome),travado,falta.indexOf('nome')>=0):'')
+      +(campos.indexOf('doses')>=0?chipsHTML('Dose única ou 2 doses?','doses',listaDoses(),txt(det.doses),ck,travado,true,falta.indexOf('doses')>=0):'')
       +(sugerida?'<p class="zt694-sub">Pelo peso, a dose sugerida é <strong>'+esc(achar(listaQtd(cy.itemK),sugerida)||sugerida)+'</strong>. Toque nela para confirmar.</p>':'')
       +chipsHTML('Quanto foi dado','qtd',listaQtd(cy.itemK),qtdAtual,ck,travado,true,falta.indexOf('quanto')>=0)
       +chipsHTML('Alguma observação','onde',listaOnde(),ondeAtual,ck,travado,false,false);
     var partesResumo=[],racaResumo=racaPet(c),produtoSalvo=txt(det.prod),qtdSalva=txt(det.qtd);
     if(campos.indexOf('prod')>=0&&produtoSalvo)partesResumo.push(produtoSalvo);
     if(T.pedeNome(cy.itemK,det)&&txt(det.nome))partesResumo.push(txt(det.nome));
+    if(campos.indexOf('doses')>=0&&txt(det.doses))partesResumo.push(txt(det.doses));
     if(qtdSalva)partesResumo.push(qtdSalva);
     if(ondeAtual)partesResumo.push(ondeAtual);
     var resumo=nomePet(c)+(racaResumo?'/'+racaResumo:'')+(partesResumo.length?' ('+partesResumo.join(' · ')+')':''),completo=falta.length===0;
-    var faltaTexto=falta.map(function(x){return x==='produto'?'Qual produto?':x==='nome'?rotuloNome(cy.itemK):x==='quanto'?'Quanto foi dado':x;}).join(' · ');
+    var faltaTexto=falta.map(function(x){return x==='produto'?'Qual produto?':x==='nome'?rotuloNome(cy.itemK):x==='doses'?'Dose única ou 2 doses?':x==='quanto'?'Quanto foi dado':x;}).join(' · ');
     var footer='<div class="hint zt694-lancamento-hint" style="margin-top:9px">No Lançamento do dia: <strong>'+esc(resumo)+'</strong></div>'
       +'<button type="button" class="btn '+(completo?'btn-primary':'btn-gold')+'" style="margin-top:8px;width:100%;opacity:1" disabled aria-disabled="true">'
       +(completo?'Escolhas salvas no Lançamento do dia':'Falta responder acima')+'</button>'
@@ -107633,6 +107681,9 @@ renderAtual=function(){
     if(acao==='fechar-ficha'){if(cy)fecharFichaTutor138(c,cy,care);return;}
     if(acao==='esc'&&cy&&!estado.salvando[c.dcKey])acenderEscolha(el);
     if(acao==='esc'){if(cy)gravarEscolha(c,cy,el.getAttribute('data-zt694-campo')||'',valor,{});return;}
+    /* o nome escrito: grava em MAIÚSCULA, numa linha só, como a planilha sempre guardou; vazio não grava */
+    if(acao==='esc-nome'){var boxN=el.closest('.zt694-chips'),inpN=boxN&&boxN.querySelector('[data-zt694-nome-txt]'),vN=nomeLimpo(inpN&&inpN.value);
+      if(!cy||estado.salvando[c.dcKey])return;if(!vN){if(inpN&&inpN.focus)inpN.focus();return;}gravarEscolha(c,cy,'nome',vN,{});return;}
     if(acao==='tarefa-tentar'){if(cy){var v=vmCuidado(c,cy);responder(c,[ic],v.valor,el);}return;}
     if(acao==='completar'){if(cy){var v2=vmCuidado(c,cy);trocarComAnulacao(c,v2,ic,v2.valor,{soCompletar:true});}return;}
     if(acao==='copiar'||acao==='whats-texto'){
@@ -108688,16 +108739,15 @@ renderAtual=function(){
       var dias = u && iso(txt(u.data).slice(0, 10)) ? diasEntre(txt(u.data).slice(0, 10), dia) : null;
       return { kg: kg, velho: !kg || dias === null || dias > PESO_VELHO_DIAS };
     }
-    /* 19/11/2026: o nome escolhido no lançamento («Vectra 3D»); «Outra»/«Outro» não é nome */
-    function nomeEscolhido(lista, v) {
-      v = txt(v); if (!v || /^OUTR[AO]\b/.test(v)) return '';
-      var o = (lista || []).filter(function (x) { return x && x.v === v; })[0];
-      return o ? o.t : minusc(v);
+    /* 19/11/2026: o nome escrito no lançamento, como a ficha escreve («Drontal Plus») */
+    function nomeEscolhido(v) {
+      v = txt(v); if (!v) return '';
+      try { if (typeof dashNomeProduto === 'function') return dashNomeProduto(v); } catch (_) {} /* silencioso de propósito: sem o arrumador, vale o nome como foi escrito */
+      return v;
     }
-    function listaGlobal(n) { try { return n === 'pipeta' ? DASH_PIPETA_NOME : DASH_VERM_NOME; } catch (_) { return []; } }
     function ectoTexto(f, kg, prod, nome) {
       var tam = tamanhoCarrapaticida(kg), ult = f ? txt(f.ex.ecto_nome) : '', pip = /^PIPETA\b/.test(txt(prod).toUpperCase());
-      var nm = pip ? nomeEscolhido(listaGlobal('pipeta'), nome) : '';
+      var nm = pip ? nomeEscolhido(nome) : '';
       if (nm) prod = nm + ' (pipeta)';
       return { b: 'Carrapaticida' + (prod ? ' ' + prod : '') + (tam ? ' · ' + tam : ''),
                m: (prod && (!pip || nm)) ? '' : (' · marca: escolher' + (ult ? ' — da última vez: ' + ult : '')) };
@@ -108709,8 +108759,8 @@ renderAtual=function(){
         if (k === 'coleira' && txt(det.veio).toUpperCase() === 'NÃO VEIO') return;   // não há o que separar
         var f = porDc[txt(o.chave)] || null, pi = pesoInfo(f), t;
         if (k === 'carrapaticida') t = ectoTexto(f, pi.kg, txt(det.prod), det.nome);
-        else if (k === 'vermifugo') { var vn = nomeEscolhido(listaGlobal('verm'), det.nome) || txt(det.prod) || (f ? txt(f.ex.verm_nome) : '');
-          t = { b: 'Vermífugo' + (vn ? ' ' + vn : '') + (det.qtd ? ' · ' + minusc(det.qtd) : ''), m: (pi.kg ? ' (' + kgTxt(pi.kg) + ')' : '') + (vn ? '' : ' · marca: escolher') }; }
+        else if (k === 'vermifugo') { var vn = nomeEscolhido(det.nome) || txt(det.prod) || (f ? txt(f.ex.verm_nome) : '');
+          t = { b: 'Vermífugo' + (vn ? ' ' + vn : '') + (det.doses ? ' · ' + minusc(det.doses) : '') + (det.qtd ? ' · ' + minusc(det.qtd) : ''), m: (pi.kg ? ' (' + kgTxt(pi.kg) + ')' : '') + (vn ? '' : ' · marca: escolher') }; }
         else if (k === 'coleira') t = { b: 'Coleira' + (f && f.ex.col_nome ? ' ' + txt(f.ex.col_nome) : ''), m: txt(det.onde).toUpperCase() === 'BANHO' ? ' · troca no banho' : '' };
         else t = { b: 'Escova de dentes', m: '' };
         vistas[(f ? f.dc : txt(o.chave)) + '|' + k] = linhas.length;

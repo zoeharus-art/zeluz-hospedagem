@@ -16,26 +16,33 @@ const T = puro.ZelozinhaTela94;
 const tp = { Intl, Date, JSON, Object, Array, String, RegExp }; tp.globalThis = tp; vm.createContext(tp); vm.runInContext(script('zelozinha-texto-pronto'), tp);
 const TP = tp.ZelozinhaTextoPronto;
 const listas = {}; vm.createContext(listas);
-vm.runInContext(trecho('  var DASH_PIPETA_NOME=[', '  var DASH_ONDE=[').replace(/var DASH_ONDE=\[$/, '') + ';this.P=DASH_PIPETA_NOME;this.V=DASH_VERM_NOME;this.ehPip=dashEhPipeta;', listas);
-vm.runInContext(trecho('  function dashNomeParaFicha(lista, v){', '  function dashPrevFichaPatch(') + ';this.nf=dashNomeParaFicha;', listas);
+vm.runInContext(trecho('  var DASH_VERM_DOSES=[', '  var DASH_ONDE=[').replace(/var DASH_ONDE=\[$/, '') + ';this.D=DASH_VERM_DOSES;this.nf=dashNomeProduto;this.ehPip=dashEhPipeta;', listas);
+vm.runInContext(trecho('  function dashVermEsquema(v){', '  function dashPrevFichaPatch(') + ';this.esq=dashVermEsquema;', listas);
+// o patch da ficha, com as contas do vermífugo de verdade (datas inventadas)
+const fichaCtx = { DASH_PREV_FICHA_ITENS: { vermifugo: 'verm_p', carrapaticida: 'ecto_p' } }; vm.createContext(fichaCtx);
+vm.runInContext(trecho('  const VERMIF_2A_DOSE=21;', '  const FEZES_PROX=120;') + trecho('  function addDiasISO(iso,n){', '  function addMesesISO(') + trecho('  function vermDose2Prevista(ex){', '  // ===== "VERMÍFUGO OU EXAME DE FEZES"')
+  + trecho('  function vermSerieVenceu(ex, dt){', '  // A ficha em «2 doses» com a 2ª fora') + trecho('  function prevVermSem2a(ex){', '  // Lança "feito em"')
+  + trecho('  function dashNomeProduto(v){', '  // «Pipeta · 30 dias» muda') + trecho('  function dashVermEsquema(v){', '  // Confere os lançamentos do dia aberto')
+  + ';function vermDose2Data(){return "";};this.patch=dashPrevFichaPatch;', fichaCtx);
 
 console.log('O nome do medicamento:');
-prova('as listas têm os produtos do Empório e um «Outro»; a pergunta da pipeta só aparece com a pipeta', () => {
-  assert.deepEqual(Array.from(listas.P.map((x) => x.t).slice(0, 4)), ['Vectra 3D', 'Advantage Max3', 'Fiprolex', 'NeoPet']);
-  assert.equal(listas.P[listas.P.length - 1].t, 'Outra');
-  assert.deepEqual(Array.from(listas.V.map((x) => x.t).slice(0, 2)), ['Drontal Plus', 'Endogard']);
+prova('o nome é ESCRITO (sem lista de marcas); o vermífugo pergunta dose única ou 2 doses; a pergunta da pipeta só aparece com a pipeta', () => {
+  assert.equal(/DASH_PIPETA_NOME|DASH_VERM_NOME/.test(html), false, 'as listas de marcas saíram');
+  assert.deepEqual(Array.from(listas.D.map((x) => x.t)), ['Dose única', '1ª de 2 doses', '2ª dose']);
   assert.equal(listas.ehPip('PIPETA · 30 DIAS'), true); assert.equal(listas.ehPip('PIPETA · 45 DIAS'), true); assert.equal(listas.ehPip('BRAVECTO · 90 DIAS'), false);
-  assert.match(html, /\{c:'nome', rot:'Qual vermífugo\?',\s+ops:DASH_VERM_NOME, obrig:true\}/);
-  assert.match(html, /\{c:'nome', rot:'Qual pipeta\?',\s+ops:DASH_PIPETA_NOME, obrig:true, dep:\{c:'prod', f:dashEhPipeta\}\}/);
+  assert.match(html, /\{c:'nome', rot:'Qual vermífugo\?',\s+texto:true, obrig:true, ph:'Escreva o nome[^']*'\},\s+\{c:'doses',rot:'Dose única ou 2 doses\?', ops:DASH_VERM_DOSES, obrig:true\}/);
+  assert.match(html, /\{c:'nome', rot:'Qual pipeta\?',\s+texto:true, obrig:true, ph:'Escreva o nome[^']*', dep:\{c:'prod', f:dashEhPipeta\}\}/);
   assert.match(html, /if\(typeof c\.dep\.f==='function'\) return !!c\.dep\.f\(d\[c\.dep\.c\]\);/, 'a pergunta condicional aceita função');
 });
 prova('no cartão da Zelozinha: vermífugo pede o nome; carrapaticida só com pipeta', () => {
-  assert.equal(JSON.stringify(T.camposDoCuidado('verm_p')), JSON.stringify(['nome', 'qtd', 'onde']));
+  assert.equal(JSON.stringify(T.camposDoCuidado('verm_p')), JSON.stringify(['nome', 'doses', 'qtd', 'onde']));
+  assert.equal(JSON.stringify(T.camposDoCuidado('verm_dose2_p')), JSON.stringify(['nome', 'qtd', 'onde']), 'a 2ª dose já é a 2ª');
   assert.equal(T.pedeNome('verm_p', {}), true);
   assert.equal(T.pedeNome('ecto_p', { prod: 'PIPETA · 30 DIAS' }), true);
   assert.equal(T.pedeNome('ecto_p', { prod: 'BRAVECTO · 90 DIAS' }), false);
   assert.equal(T.pedeNome('col_p', {}), false);
-  assert.deepEqual(Array.from(T.faltaEscolher('verm_p', { qtd: '1 COMPRIMIDO' }, '')), ['nome']);
+  assert.deepEqual(Array.from(T.faltaEscolher('verm_p', { qtd: '1 COMPRIMIDO' }, '')), ['nome', 'doses']);
+  assert.deepEqual(Array.from(T.faltaEscolher('verm_p', { nome: 'DRONTAL PLUS', doses: 'DOSE ÚNICA', qtd: '1 COMPRIMIDO' }, '')), []);
   assert.deepEqual(Array.from(T.faltaEscolher('ecto_p', { prod: 'PIPETA · 30 DIAS', qtd: 'PIPETA' }, '')), ['nome']);
   assert.deepEqual(Array.from(T.faltaEscolher('ecto_p', { prod: 'BRAVECTO · 90 DIAS', qtd: '1 COMPRIMIDO' }, '')), []);
 });
@@ -44,6 +51,10 @@ prova('gravar o nome: aceito no vermífugo e na pipeta; trocar para comprimido a
   const esp = (itemK) => ({ linhaId: 'l1', respostaId: 'r1', revisao: 0, itemK });
   let r = T.mesclarEscolha(linha('verm_p', {}), esp('verm_p'), { campo: 'nome', valor: 'DRONTAL PLUS' });
   assert.equal(r.ok, true); assert.equal(r.linha.det.nome, 'DRONTAL PLUS');
+  r = T.mesclarEscolha(linha('verm_p', {}), esp('verm_p'), { campo: 'doses', valor: '1ª DE 2 DOSES' });
+  assert.equal(r.ok, true); assert.equal(r.linha.det.doses, '1ª DE 2 DOSES');
+  assert.equal(T.mesclarEscolha(linha('verm_p', {}), esp('verm_p'), { campo: 'doses', valor: 'TRÊS DOSES' }).ok, false, 'só as respostas da lista');
+  assert.equal(T.mesclarEscolha(linha('ecto_p', {}), esp('ecto_p'), { campo: 'doses', valor: 'DOSE ÚNICA' }).ok, false, 'carrapaticida não tem esquema');
   r = T.mesclarEscolha(linha('ecto_p', { prod: 'PIPETA · 30 DIAS' }), esp('ecto_p'), { campo: 'nome', valor: 'VECTRA 3D' });
   assert.equal(r.ok, true); assert.equal(r.linha.det.nome, 'VECTRA 3D');
   r = T.mesclarEscolha(r.linha, esp('ecto_p'), { campo: 'prod', valor: 'BRAVECTO · 90 DIAS' });
@@ -52,19 +63,36 @@ prova('gravar o nome: aceito no vermífugo e na pipeta; trocar para comprimido a
   assert.equal(r.ok, false);
   assert.equal(T.podeEscolher({ campo: 'nome', tarefaEstado: 'criada', snoopyConfirmado: true }).ok, true);
 });
-prova('a ficha recebe o nome bonito («Vectra 3D»); «Outra» não apaga o que a ficha sabe', () => {
-  assert.equal(listas.nf(listas.P, 'VECTRA 3D'), 'Vectra 3D');
-  assert.equal(listas.nf(listas.V, 'DRONTAL PLUS'), 'Drontal Plus');
-  assert.equal(listas.nf(listas.P, 'OUTRA PIPETA'), '');
-  assert.equal(listas.nf(listas.V, ''), '');
+prova('a ficha recebe o nome escrito, arrumado («Drontal Plus»); escrito com minúscula fica como foi escrito', () => {
+  assert.equal(listas.nf('DRONTAL PLUS'), 'Drontal Plus');
+  assert.equal(listas.nf('  VECTRA   3D '), 'Vectra 3D');
+  assert.equal(listas.nf('EC-PET'), 'Ec-Pet');
+  assert.equal(listas.nf('NexGard Spectra'), 'NexGard Spectra');
+  assert.equal(listas.nf(''), '');
   assert.match(html, /patch\.verm_nome=nmV/); assert.match(html, /if\(nmE && prod==='Pipeta'\) patch\.ecto_nome=nmE/);
+});
+prova('a ficha recebe o esquema escolhido: dose única, 1ª de 2 doses (2ª prevista pelo intervalo da ficha) e 2ª dose', () => {
+  const P = fichaCtx.patch;
+  let r = P('vermifugo', { verm_doses: '2 doses', verm_t: '2026-07-01', verm_2a: '2026-07-22' }, '2026-11-19', 'Teste', { nome: 'DRONTAL PLUS', doses: 'DOSE ÚNICA' });
+  assert.equal(r.itemK, 'verm_p'); assert.equal(r.patch.verm_doses, 'Dose única'); assert.equal(r.patch.verm_t, '2026-11-19');
+  assert.equal(r.patch.verm_2a, ''); assert.equal(r.patch.verm_p, '2027-03-19'); assert.equal(r.patch.verm_nome, 'Drontal Plus');
+  r = P('vermifugo', { verm_doses: 'Dose única', verm_dose2_dias: 15 }, '2026-11-19', 'Teste', { doses: '1ª DE 2 DOSES' });
+  assert.equal(r.patch.verm_doses, '2 doses'); assert.equal(r.patch.verm_2a, '2026-12-04'); assert.equal(r.patch.verm_p, '2027-04-03');
+  r = P('vermifugo', { verm_doses: '2 doses', verm_t: '2026-11-04' }, '2026-11-19', 'Teste', { doses: '2ª DOSE' });
+  assert.equal(r.itemK, 'verm_dose2_p'); assert.equal(r.patch.verm_dose2_t, '2026-11-19'); assert.equal(r.patch.verm_p, '2027-03-19');
+  assert.equal(P('vermifugo', {}, '2026-11-19', 'Teste', { doses: '2ª DOSE' }).erro, 'sem-1a-dose', 'sem a 1ª na ficha, a ficha não muda');
+  r = P('vermifugo', { verm_doses: 'Dose única', verm_t: '2026-07-01' }, '2026-11-19', 'Teste', {});
+  assert.equal(r.patch.verm_p, '2027-03-19', 'sem a escolha (lançamento antigo), a ficha decide como antes');
 });
 prova('o quadro «O que separar» e o cartão mostram o nome', () => {
   const sep = script('separar-quadro180');
   assert.match(sep, /if \(nm\) prod = nm \+ ' \(pipeta\)'/);
-  assert.match(sep, /nomeEscolhido\(listaGlobal\('verm'\), det\.nome\)/);
+  assert.match(sep, /nomeEscolhido\(det\.nome\)/);
+  assert.match(sep, /det\.doses \? ' · ' \+ minusc\(det\.doses\)/);
   const ui = script('zelozinha-contatos89-ui');
-  assert.match(ui, /T\.pedeNome\(cy\.itemK,det\)\?chipsHTML\(rotuloNome\(cy\.itemK\),'nome'/);
+  assert.match(ui, /T\.pedeNome\(cy\.itemK,det\)\?nomeHTML\(cy\.itemK/);
+  assert.match(ui, /data-zt694-nome-txt/); assert.match(ui, /acao==='esc-nome'/);
+  assert.match(ui, /chipsHTML\('Dose única ou 2 doses\?','doses',listaDoses\(\)/);
 });
 
 console.log('O texto pronto quando a Zelozinha não manda:');
