@@ -80,8 +80,8 @@ const ORIGEM = '2026-11-17', HOJE = '2026-11-20';   // a tutora respondeu na ter
 const TUTOR = 'Tutora Fictícia', NUM = '5531999990000', PK = 'luna__tutora fictícia', DC = N.dcKeyDoPelKey(PK);
 const cad = (extra) => Object.assign({ n: 'Luna', tutor: TUTOR, tel: '31999990000' }, extra || {});
 const checkin = { tipo: 'entrada', quem: 'Recepção Teste', fim: Date.parse(HOJE + 'T08:10:00-03:00') };
-const TEXTO_VERM = 'Olá, Tutora, tudo bem? Luna está aqui com a gente hoje, aproveitando o dia. Na ficha, o vermífugo ainda aparece em aberto. Se você já fez, é só nos contar o produto e a data, que atualizamos tudo por aqui. Se a correria não deixou, podemos cuidar disso hoje mesmo, enquanto Luna aproveita o dia. Assim a proteção de Luna fica em dia, e a de todos os nossos Aulunos também. Podemos fazer hoje?';
-const TEXTO_VAC = 'Olá, Tutora, tudo bem? Luna está aqui com a gente hoje, aproveitando o dia. Na ficha, a vacina antirrábica ainda aparece em aberto. Se já foi aplicada, pode nos enviar uma foto do cartão de vacinação assinado pelo médico-veterinário? Assim atualizamos tudo por aqui. Se a correria não deixou, podemos aplicar aqui na Zêluz, com a nossa equipe veterinária. Assim a proteção de Luna fica em dia, e a de todos os nossos Aulunos também. Quer que a gente agende?';
+const TEXTO_VERM = ["Olá, Tutora, tudo bem? 💛","","Luna está aqui com a gente hoje, aproveitando o dia. 🐾","Na ficha, o vermífugo ainda aparece em aberto. Se você já fez, é só nos contar o produto e a data, que atualizamos tudo por aqui. 📝","Se a correria não deixou, podemos cuidar disso hoje mesmo, enquanto Luna aproveita o dia. Assim a proteção de Luna fica em dia, e a de todos os nossos Aulunos também.","Podemos fazer hoje? 💛"].join('\n');
+const TEXTO_VAC = ["Olá, Tutora, tudo bem? 💛","","Luna está aqui com a gente hoje, aproveitando o dia. 🐾","Na ficha, a vacina antirrábica ainda aparece em aberto. Se já foi aplicada, pode nos enviar uma foto do cartão de vacinação assinado pelo médico-veterinário? 📸","Assim atualizamos tudo por aqui.","Se a correria não deixou, podemos aplicar aqui na Zêluz, com a nossa equipe veterinária. Assim a proteção de Luna fica em dia, e a de todos os nossos Aulunos também.","Quer que a gente agende? 💛"].join('\n');
 function itemCobranca(extra) {
   return Object.assign({ v: 1, tipo: 'cobranca', estado: 'pronto', dia: HOJE, dcKey: DC, pelKey: PK, nome: 'Luna', sexo: 'F', tutor: TUTOR, para: NUM,
     texto: TEXTO_VERM, itens: [{ itemK: 'verm_p', vence: ORIGEM }], origem: { dia: ORIGEM, itemK: 'verm_p' }, criadoEm: 1 }, extra || {});
@@ -102,10 +102,10 @@ prova('o texto aprovado da vacina pede a foto do cartão assinado pelo médico-v
   assert.equal(CC.gerarCobranca({ nomeTutor: 'Tutora', nomePeludo: 'Luna', itemK: 'vac_raiva_p' }).vacina, true);
 });
 
-prova('o tom combinado: sem emoji, sem «em casa», sem «o/a» antes do FILHOt; entrada ruim não vira texto', () => {
+prova('o tom combinado: formatado em linhas e com emojis leves, sem «em casa», sem «o/a» antes do FILHOt; entrada ruim não vira texto', () => {
   ['verm_p', 'verm_dose2_p', 'ecto_p', 'col_p', 'vac_mult_p', 'vac_gripe_p', 'vac_raiva_p'].forEach((k) => {
     const t = CC.gerarCobranca({ nomeTutor: 'Tutora', nomePeludo: 'Luna', itemK: k }).texto;
-    assert.ok(!/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(t), 'sem emoji: ' + k);
+    assert.ok(/^Olá, Tutora, tudo bem\? 💛\n\nLuna está aqui com a gente hoje, aproveitando o dia\. 🐾\n/.test(t) && /💛$/.test(t), 'formatado em linhas e com emojis (pedido de 19/11): ' + k);
     assert.ok(!/em casa/i.test(t), 'nunca «em casa» (ela achou pesado): ' + k);
     assert.ok(!/\b(o|a) Luna\b/.test(t), 'sem artigo antes do nome: ' + k);
     assert.ok(!/\b(cão|cães|cachorro|dono)\b/i.test(t), 'vocabulário da casa: ' + k);
