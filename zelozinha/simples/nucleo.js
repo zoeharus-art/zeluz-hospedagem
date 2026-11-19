@@ -8,8 +8,11 @@
 const FILA = 'daycare/zelozinha-fila';
 const SAUDE = 'daycare/zelozinha-saude/vps';
 const CONTROLE = 'daycare/zelozinha-controle/estado';
-const VERSAO = 'simples-6';
+const VERSAO = 'simples-7';
 const SUFIXO_PLANO = '~plano';
+/* COBRANÇA DO «VAI FAZER EM CASA» (Adriana, 17/11/2026; textos aprovados em 19/11/2026): mora em {dcKey}~cobranca, sai sozinha
+   (nunca junto com irmãos nem com a pergunta do dia) e o texto é remontado aqui com cobranca-casa.js. */
+const SUFIXO_COBRANCA = '~cobranca';
 const JID = /^\d{6,20}@s\.whatsapp\.net$/;
 
 const PADRAO = Object.freeze({
@@ -70,11 +73,15 @@ function jaEsperou(it, agora, cfg = PADRAO) {
   return !naJanela(agora + espera, cfg);
 }
 
-/* o item só vale na chave dele: a pergunta na dcKey; o aviso do plano na dcKey ou na dcKey~plano. Devolve o item com a chave. */
+/* o item só vale na chave dele: a pergunta na dcKey; o aviso do plano na dcKey ou na dcKey~plano; a cobrança SÓ na dcKey~cobranca.
+   Devolve o item com a chave. */
 function itensNaChave(fila) {
-  return Object.keys(objeto(fila) ? fila : {}).filter((k) => objeto(fila[k]) && texto(fila[k].dcKey)
-    && (texto(fila[k].dcKey) === k || (fila[k].tipo === 'plano' && texto(fila[k].dcKey) + SUFIXO_PLANO === k)))
-    .map((k) => Object.assign({}, fila[k], { chave: k }));
+  return Object.keys(objeto(fila) ? fila : {}).filter((k) => {
+    const it = fila[k];
+    if (!objeto(it) || !texto(it.dcKey)) return false;
+    if (it.tipo === 'cobranca') return texto(it.dcKey) + SUFIXO_COBRANCA === k;
+    return texto(it.dcKey) === k || (it.tipo === 'plano' && texto(it.dcKey) + SUFIXO_PLANO === k);
+  }).map((k) => Object.assign({}, fila[k], { chave: k }));
 }
 
 /* O próximo da fila: o «pronto» que entrou primeiro e já esperou. Item sem texto ou sem telefone não sai. */
@@ -89,9 +96,9 @@ function escolherProximo(fila, agora = Date.now(), cfg = PADRAO) {
    os outros «prontos» do mesmo dia para o mesmo telefone saem na mesma mensagem, na vez do primeiro. */
 const IRMAOS_MAX = 5;
 function irmaos(fila, principal) {
-  if (!objeto(principal)) return [];
+  if (!objeto(principal) || principal.tipo === 'cobranca') return [];   /* a cobrança sai sempre sozinha */
   const chave = texto(principal.chave) || texto(principal.dcKey);
-  return itensNaChave(fila).filter((it) => it.chave !== chave && it.dcKey !== principal.dcKey)
+  return itensNaChave(fila).filter((it) => it.chave !== chave && it.dcKey !== principal.dcKey && it.tipo !== 'cobranca')
     .filter((it) => it.estado === 'pronto' && it.dia === principal.dia && texto(it.texto) && texto(it.para) === texto(principal.para)
       && (it.tipo === 'plano') === (principal.tipo === 'plano'))   /* o aviso do plano só sai junto com outro aviso do plano */
     .sort((a, b) => (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0) || (a.chave < b.chave ? -1 : 1))
@@ -152,7 +159,7 @@ function primeiroNome(nome) { const s = texto(nome); return s.split(/[\s\/,]+/)[
 /* O serviço não confia no que veio da fila: antes de enviar, confere com o banco que o FILHOt tem
    check-in hoje, que o telefone é o do tutor principal da ficha e que o texto é exatamente o texto
    aprovado (MensagemUnica41) para aqueles cuidados. Qualquer diferença: nada sai. */
-function conferirItem({ item, cadastro, checkin, gerar, gerarPlano, doseDoDia }) {
+function conferirItem({ item, cadastro, checkin, gerar, gerarPlano, doseDoDia, gerarCobranca }) {
   const recusa = (motivo) => ({ ok: false, motivo });
   if (!texto(item.pelKey) || dcKeyDoPelKey(item.pelKey) !== texto(item.dcKey)) return recusa('A ficha não corresponde ao FILHOt da fila; nada foi enviado.');
   if (!entradaConfirmada(checkin)) return recusa('Não achei o check-in de hoje deste FILHOt; nada foi enviado.');
@@ -165,6 +172,15 @@ function conferirItem({ item, cadastro, checkin, gerar, gerarPlano, doseDoDia })
   const chaveNome = texto(item.pelKey).split('__')[0];
   if (chaveNome !== nome.toLowerCase().replace(/[.#$[\]/]/g, '-') && jsNorm(texto(cadastro.n)) !== jsNorm(nome)) return recusa('O nome do FILHOt não confere com a ficha; nada foi enviado.');
   const itens = Array.isArray(item.itens) ? item.itens : [];
+  /* cobrança do «Vai fazer em casa» (19/11/2026): um cuidado só, de uma questão de um dia ANTERIOR; o texto é o aprovado, remontado aqui
+     com o primeiro nome do tutor e do FILHOt */
+  if (item.tipo === 'cobranca') {
+    const k = itens.length === 1 ? texto(itens[0] && itens[0].itemK) : '', origem = objeto(item.origem) ? texto(item.origem.dia) : '';
+    if (!k || !/^\d{4}-\d{2}-\d{2}$/.test(origem) || !(origem < texto(item.dia))) return recusa('A cobrança não tem a questão de origem certa; nada foi enviado.');
+    const c = typeof gerarCobranca === 'function' ? gerarCobranca({ nomeTutor: primeiroNome(r.nome), nomePeludo: primeiroNome(nome), itemK: k }) : null;
+    if (!c || c.ok !== true || c.texto !== texto(item.texto)) return recusa('O texto não confere com a cobrança aprovada para esta ficha; nada foi enviado.');
+    return { ok: true };
+  }
   /* aviso do plano com cuidados incluídos (05/11/2026): o texto é o do aviso, remontado aqui; nunca o da pergunta */
   if (item.tipo === 'plano') {
     /* não confia na fila: cada cuidado tem de estar pago no plano que vale hoje, com a dose de hoje gasta na ficha (09/11/2026) */
@@ -203,5 +219,5 @@ function interpretarEnvio(r, jid) {
   return { estado: 'conferir', motivo: `O WhatsApp respondeu com erro (código ${r.status}); a mensagem pode ter saído.` };
 }
 
-module.exports = { FILA, SAUDE, CONTROLE, VERSAO, SUFIXO_PLANO, PADRAO, itensNaChave, lerConfig, partesSP, diaSP, naJanela, proximoIntervalo, digitandoMs,
+module.exports = { FILA, SAUDE, CONTROLE, VERSAO, SUFIXO_PLANO, SUFIXO_COBRANCA, PADRAO, itensNaChave, lerConfig, partesSP, diaSP, naJanela, proximoIntervalo, digitandoMs,
   escolherProximo, jaEsperou, irmaos, abandonados, saidaConfirmada, entradaConfirmada, dcKeyDoPelKey, telefone, responsavel, primeiroNome, conferirItem, interpretarNumero, interpretarEnvio };

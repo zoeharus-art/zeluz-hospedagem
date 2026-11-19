@@ -118,9 +118,9 @@ prova('o texto da mensagem do dia (mensagem-unica41) NÃO mudou: nenhuma letra',
   assert.equal(m.texto, 'Bom dia, Dora! Como você está? 💛\n\nO Mingau está com a gente hoje e temos um cuidado para deixar em dia:\n🐾 O vermífugo *vence hoje*.\n\nPodemos cuidar disso hoje, enquanto ele aproveita o dia na Zêluz? Assim, vocês resolvem tudo em uma só visita, sem precisar encaixar outro compromisso na rotina — e sobra mais tempo para curtirem juntos. 💛');
 });
 
-prova('a cópia do app é idêntica à do serviço e o serviço está na versão simples-6', () => {
+prova('a cópia do app é idêntica à do serviço e o serviço está na versão simples-7', () => {
   assert.equal(script('aviso-plano').replace(/\s+$/, ''), fs.readFileSync(path.resolve(__dirname, '../zelozinha/simples/aviso-plano.js'), 'utf8').replace(/\s+$/, ''));
-  assert.equal(N.VERSAO, 'simples-6', 'os cuidados pagos no plano (doses e segunda mensagem) mudam o serviço: versão nova');
+  assert.equal(N.VERSAO, 'simples-7', 'a cobrança do «Vai fazer em casa» (19/11/2026) muda o serviço: versão nova');
 });
 
 prova('cuidados pagos no plano (09/11/2026): vale dentro do período, só o que foi pago, e cada dose uma vez; o check-in repetido no dia não gasta de novo', () => {
@@ -912,8 +912,10 @@ prova('a ligação grava só em caminhos que a regra do banco já permite (dayca
   assert.equal(regras['$colecao']['$item']['.write'], 'auth != null', 'qualquer login grava dentro de daycare/{coleção}/{item}');
   const P = script('zelozinha-pendencias178') + script('zelozinha-pendencias178-ligacao');
   const caminhos = new Set(); (P.match(/'daycare\/[a-z0-9-]+/g) || []).forEach((c) => caminhos.add(c.slice(1)));
-  const permitidos = ['daycare/zelozinha-pendencias', 'daycare/zelozinha-fila', 'daycare/dashboard', 'daycare/agendamentos', 'daycare/cadastro'];
+  /* 19/11/2026: a cobrança do «Vai fazer em casa» LÊ os check-ins do dia pelo mapa vivo (zMapaVivo); nada é gravado lá */
+  const permitidos = ['daycare/zelozinha-pendencias', 'daycare/zelozinha-fila', 'daycare/dashboard', 'daycare/agendamentos', 'daycare/cadastro', 'daycare/checkin-corpo'];
   caminhos.forEach((c) => assert.ok(permitidos.includes(c), 'caminho não previsto: ' + c));
+  assert.ok(!/ref\([^)]*checkin-corpo[^)]*\)\s*\.(set|update|transaction|remove)\(/.test(P), 'os check-ins só são lidos');
   assert.ok(caminhos.has('daycare/zelozinha-pendencias'));
 });
 
@@ -991,9 +993,9 @@ prova('a fábrica do check-in recebe a porta que lança o plano, e a auditoria s
   assert.ok(script('zelozinha-simples').includes("FINAIS={'na-fila':1,'ja-estava-na-fila':1,humano:1,'resolvido-antes':1};"), 'plano-sem-linha NÃO é final: a fila se completa sozinha e tenta de novo');
 });
 
-prova('versão 2026-11-17-02 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
-  assert.match(html, /const APP_VERSAO='2026-11-17-02';/);
-  assert.equal(html.split('2026-11-17-02').length - 1, 15);
+prova('versão 2026-11-19-01 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
+  assert.match(html, /const APP_VERSAO='2026-11-19-01';/);
+  assert.equal(html.split('2026-11-19-01').length - 1, 15);
   assert.ok(!/2026-11-05-01|2026-11-05-02/.test(html), 'nenhum ?v= ficou na versão antiga');
 });
 
