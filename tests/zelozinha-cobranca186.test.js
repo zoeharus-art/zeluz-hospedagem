@@ -285,7 +285,7 @@ prova('a página: o texto aprovado vem antes de quem o usa; a ligação dispara 
   assert.match(lig, /zMapaVivo\(cob\.caminho,VAGA_COB/); assert.match(lig, /aindaVence\(c\.dia,c\.dc,c\.itemK,c\.vence\)!==true/, 'na dúvida sobre a ficha, não cobra');
   assert.match(lig, /v\.pronto!==true\|\|v\.erro/, 'sem a lista completa, não cancela nem cobra');
   assert.ok(!/\b(alert|confirm|prompt)\(/.test(lig));
-  const n = (html.match(/2026-11-19-01/g) || []).length; assert.equal(n, 15, 'versão 2026-11-19-01 em todos os lugares');
+  const n = (html.match(/2026-11-21-01/g) || []).length; assert.equal(n, 15, 'versão 2026-11-21-01 em todos os lugares');
 });
 
 (async () => {
