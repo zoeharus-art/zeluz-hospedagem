@@ -118,9 +118,9 @@ prova('o texto da mensagem do dia (mensagem-unica41) NÃO mudou: nenhuma letra',
   assert.equal(m.texto, 'Bom dia, Dora! Como você está? 💛\n\nO Mingau está com a gente hoje e temos um cuidado para deixar em dia:\n🐾 O vermífugo *vence hoje*.\n\nPodemos cuidar disso hoje, enquanto ele aproveita o dia na Zêluz? Assim, vocês resolvem tudo em uma só visita, sem precisar encaixar outro compromisso na rotina — e sobra mais tempo para curtirem juntos. 💛');
 });
 
-prova('a cópia do app é idêntica à do serviço e o serviço está na versão simples-6', () => {
+prova('a cópia do app é idêntica à do serviço e o serviço está na versão simples-7', () => {
   assert.equal(script('aviso-plano').replace(/\s+$/, ''), fs.readFileSync(path.resolve(__dirname, '../zelozinha/simples/aviso-plano.js'), 'utf8').replace(/\s+$/, ''));
-  assert.equal(N.VERSAO, 'simples-6', 'os cuidados pagos no plano (doses e segunda mensagem) mudam o serviço: versão nova');
+  assert.equal(N.VERSAO, 'simples-7', 'a cobrança do «Vai fazer em casa» (19/11/2026) muda o serviço: versão nova');
 });
 
 prova('cuidados pagos no plano (09/11/2026): vale dentro do período, só o que foi pago, e cada dose uma vez; o check-in repetido no dia não gasta de novo', () => {
@@ -408,12 +408,13 @@ prova('registros: aberta em andamento, resolvida e agendada; e o registro sem it
     '2026-11-05': { 'orfa__tutora-z': { verm_p: { v: 1, st: 'aberta', passo: 'data', faltou: { dia: HOJE, sel: 'Plano: não foi dado em 05/11', msg: 'x' }, vence: HOJE, nome: 'Orfa', tutor: 'Tutora Z', rev: 1 } } } };
   const l = P.listar({ hoje: HOJE, fila, regs, respostaAntiga, aindaVence });
   assert.equal(P.grupoDe(l.abertas.find((c) => c.pet === 'Nina')), 'bolsa');
-  assert.deepEqual(json(l.fechadas.map((c) => c.pet + ':' + c.st)), ['Farofa:agendada', 'Pipoca:resolvida']);
+  assert.deepEqual(json(l.fechadas.map((c) => c.pet + ':' + c.st)), ['Farofa:agendada']);
   assert.equal(l.agendadas, 1);
   const luna = l.abertas.find((c) => c.pet === 'Luna'), orfa = l.abertas.find((c) => c.pet === 'Orfa');
   assert.equal(P.grupoDe(luna), 'faltou'); assert.equal(luna.msgTipo, 'Aviso do plano'); assert.equal(P.grupoDe(orfa), 'faltou', 'sem item na fila, o registro basta');
-  assert.ok(!l.abertas.some((c) => c.pet === 'Pipoca'), 'o resolvido sai da lista aberta');
-  assert.equal(l.contagem.faltou, 2); assert.equal(l.contagem.bolsa, 1);
+  /* 17/11/2026: o «Vai fazer em casa» fechado antes volta aberto, esperando a data do tutor */
+  const pip = l.abertas.find((c) => c.pet === 'Pipoca'); assert.ok(pip, 'o antigo «Vai fazer em casa» volta aberto'); assert.equal(P.grupoDe(pip), 'casa'); assert.equal(pip.casa.por, 'Dani');
+  assert.equal(l.contagem.faltou, 2); assert.equal(l.contagem.bolsa, 1); assert.equal(l.contagem.casa, 1);
 });
 
 /* ---- a máquina de estados ---- */
@@ -423,12 +424,40 @@ function cartaoDe(P, pet, regs) { return P.listar({ hoje: HOJE, fila: filaDeExem
 function passo(P, c, acao, args, ctx) { const t = P.transicao(c, acao, args, ctx || ctxT()); assert.equal(t.ok, true, t.erro); const regs = { [c.dia]: { [c.dc]: { [c.itemK]: t.rec } } }; return { t, c: cartaoDe2(P, c, regs) }; }
 function cartaoDe2(P, c, regs) { const l = P.listar({ hoje: HOJE, fila: filaDeExemplo(), regs, respostaAntiga: () => '', aindaVence: () => true }); return l.abertas.concat(l.fechadas).find((x) => x.key === c.key); }
 
-prova('«Vai fazer em casa» resolve direto, sem lançamento; «Tentei de novo» registra quem tentou e quando, sem mensagem nova', () => {
+prova('«Vai fazer em casa» NÃO fecha (17/11/2026): fica aberta no grupo «Vai fazer em casa», sem lançamento; «Tentei de novo» registra quem tentou e quando', () => {
   const P = modulo(), c = cartaoDe(P, 'Zeca');
   const a = passo(P, c, 'tent', {}); assert.equal(a.t.efeitos.length, 0);
   assert.equal(a.c.tent.length, 1); assert.equal(a.c.tent[0].por, 'Dani'); assert.equal(a.c.st, 'aberta'); assert.equal(P.grupoDe(a.c), 'nresp');
   const b = passo(P, a.c, 'resp', { k: 'casa' });
-  assert.equal(b.t.efeitos.length, 0); assert.equal(b.c.st, 'resolvida'); assert.equal(b.c.res.como, 'Vai fazer em casa. Sem lançamento'); assert.equal(b.c.res.por, 'Dani');
+  assert.equal(b.t.efeitos.length, 0); assert.equal(b.c.st, 'aberta'); assert.equal(b.c.passo, 'casa'); assert.equal(P.grupoDe(b.c), 'casa'); assert.equal(b.c.casa.por, 'Dani'); assert.equal(b.c.res, null);
+  const cob = passo(P, b.c, 'tent', {}); assert.equal(cob.c.st, 'aberta'); assert.equal(cob.c.passo, 'casa'); assert.equal(cob.c.tent.length, 2, '«Cobrei o tutor» guarda quem cobrou e quando');
+  const v = passo(P, cob.c, 'voltar0', {}); assert.equal(P.grupoDe(v.c), 'nresp', '«Mudar a resposta» desfaz a escolha'); assert.equal(v.t.rec.casa, undefined);
+});
+
+prova('«Vai fazer em casa» sai sozinha quando a ficha recebe a data (o cuidado deixa de vencer); na dúvida, continua aberta', () => {
+  const P = modulo(), c = cartaoDe(P, 'Nina');
+  const t = P.transicao(c, 'resp', { k: 'casa' }, ctxT()), regs = { [c.dia]: { [c.dc]: { [c.itemK]: t.rec } } };
+  const venceu = P.listar({ hoje: HOJE, fila: filaDeExemplo(), regs, respostaAntiga: () => '', aindaVence: () => false });
+  assert.ok(!venceu.abertas.some((x) => x.key === c.key)); const f = venceu.fechadas.find((x) => x.key === c.key);
+  assert.equal(f.st, 'resolvida'); assert.equal(f.auto, true); assert.equal(f.res.como, 'Ficha atualizada: o tutor fez em casa');
+  const h = P.telaSemHTML(Object.assign({ pronto: true, hoje: HOJE }, venceu), Object.assign(P.novoUI(), { resAberto: true }));
+  assert.match(h, /Saiu sozinha quando a ficha recebeu a data/);
+  const duvida = P.listar({ hoje: HOJE, fila: filaDeExemplo(), regs, respostaAntiga: () => '', aindaVence: () => null });
+  assert.ok(duvida.abertas.some((x) => x.key === c.key && x.passo === 'casa'), 'ficha não única ou não lida: continua aberta');
+});
+
+prova('a tela do «Vai fazer em casa»: mensagem pronta publicada (textoEmCasa), Copiar, «Cobrei o tutor», «Abrir a ficha» e o aviso de que sai sozinha', () => {
+  const cx = novoContexto(), P = cx.ZelozinhaPendencias178;
+  cx.ZeluzRespostaApp88 = { textoEmCasa: (i, k) => (i.tutor && k ? 'Combinado, ' + String(i.tutor).split(' ')[0] + '! Depois desse cuidado, você nos informa a data e o produto usado?' : '') };
+  const c = cartaoDe(P, 'Nina'), t = P.transicao(c, 'resp', { k: 'casa' }, ctxT()), regs = { [c.dia]: { [c.dc]: { [c.itemK]: t.rec } } };
+  const l = P.listar({ hoje: HOJE, fila: filaDeExemplo(), regs, respostaAntiga: () => '', aindaVence: () => true });
+  const h = P.telaSemHTML(Object.assign({ pronto: true, hoje: HOJE }, l), P.novoUI());
+  assert.match(h, /Vai fazer em casa: esperar a data/); assert.match(h, /Mensagem pronta para enviar/); assert.match(h, /Combinado, Tutora! Depois desse cuidado/);
+  assert.match(h, /data-z178-a="copiarcasa"/); assert.match(h, />Cobrei o tutor</); assert.match(h, /data-z178-a="ficha"/); assert.match(h, /A questão sai daqui sozinha/); assert.match(h, />Mudar a resposta</);
+  assert.match(h, /Vai fazer em casa <span class="n">1<\/span>/, 'o filtro do grupo novo');
+  delete cx.ZeluzRespostaApp88;
+  const sem = P.telaSemHTML(Object.assign({ pronto: true, hoje: HOJE }, l), P.novoUI());
+  assert.match(sem, /Sem o nome do tutor na ficha não há mensagem pronta/); assert.ok(!/copiarcasa/.test(sem));
 });
 
 prova('«Autorizou pegar na loja» pede o horário (sem ele, não salva) e lança hoje no Lançamento do dia, com o horário', () => {
@@ -514,7 +543,8 @@ prova('«Faltou» em qualquer linha devolve a questão a «Sem finalização» p
   const depois = cartaoDe2(P, c, { [c.dia]: { [c.dc]: { [c.itemK]: fa.rec } } });
   assert.equal(P.grupoDe(depois), 'faltou'); assert.equal(depois.passo, 'data');
   const novaData = P.transicao(depois, 'salvard', { data: '2026-11-10' }, ctxT()); assert.equal(novaData.ok, true); assert.equal(novaData.rec.faltou, undefined, 'com a nova data, o aviso de falta some');
-  assert.equal(P.transicao(depois, 'resp', { k: 'casa' }, ctxT()).rec.st, 'resolvida', '«Ou dar outro final»');
+  const outro = P.transicao(depois, 'resp', { k: 'casa' }, ctxT()).rec;
+  assert.equal(outro.st, 'aberta', '«Ou dar outro final»: em casa fica aberta'); assert.equal(outro.passo, 'casa'); assert.equal(outro.faltou, undefined);
 });
 
 prova('o que vai para o Lançamento do dia: o formato dos lançamentos à mão, id estável e seguro, e a marca da Zelozinha', () => {
@@ -617,7 +647,7 @@ prova('mudança de outro aparelho chega pela escuta dos registros: a lista e o c
   let avisos = 0; B.api.aoMudar(() => { avisos++; });
   const k = A.api.view().abertas.find((x) => x.pet === 'Nina').key;
   await A.api.acao(k, 'resp', { k: 'casa' });
-  assert.ok(avisos > 0); assert.ok(!B.api.view().abertas.some((x) => x.pet === 'Nina')); assert.equal(B.api.contar(), 4);
+  assert.ok(avisos > 0); assert.ok(B.api.view().abertas.some((x) => x.pet === 'Nina' && x.passo === 'casa'), 'em casa continua aberta no outro aparelho'); assert.equal(B.api.contar(), 5);
   assert.equal(A.db.leituras.filter((l) => /zelozinha-fila/.test(l)).length, 2, 'uma leitura por aparelho (os dois abriram), nenhuma por causa da mudança');
 });
 
@@ -733,7 +763,7 @@ prova('a tela: Resolvidas mostra quem resolveu, quando e «Reabrir»; agendada l
 
 prova('a tela: «Resolvidas» mostra as 50 mais recentes e diz quantas são no total', () => {
   const P = modulo(), muitas = [];
-  for (let i = 0; i < 53; i++) muitas.push(Object.assign(P.cartao('2026-11-03', 'p' + i + '__t', 'verm_p', '2026-11-03', { nome: 'P' + i, tutor: 'T' }, { v: 1, st: 'resolvida', res: { por: 'Dani', em: EM(HOJE, '09:00'), como: 'Vai fazer em casa. Sem lançamento' }, seq: i }, null)));
+  for (let i = 0; i < 53; i++) muitas.push(Object.assign(P.cartao('2026-11-03', 'p' + i + '__t', 'verm_p', '2026-11-03', { nome: 'P' + i, tutor: 'T' }, { v: 1, st: 'resolvida', res: { por: 'Dani', em: EM(HOJE, '09:00'), como: 'Tutor mandou o resto · foi para o Lançamento do dia 05/11' }, seq: i }, null)));
   const h = P.telaSemHTML({ pronto: true, hoje: HOJE, abertas: [], fechadas: muitas, contagem: {}, agendadas: 0, maisAntiga: '' }, Object.assign(P.novoUI(), { resAberto: true }));
   assert.match(h, /Resolvidas \(53\)/); assert.equal((h.match(/data-z178-res=/g) || []).length, 50); assert.match(h, /Mostrando as 50 mais recentes\./);
 });
@@ -882,8 +912,10 @@ prova('a ligação grava só em caminhos que a regra do banco já permite (dayca
   assert.equal(regras['$colecao']['$item']['.write'], 'auth != null', 'qualquer login grava dentro de daycare/{coleção}/{item}');
   const P = script('zelozinha-pendencias178') + script('zelozinha-pendencias178-ligacao');
   const caminhos = new Set(); (P.match(/'daycare\/[a-z0-9-]+/g) || []).forEach((c) => caminhos.add(c.slice(1)));
-  const permitidos = ['daycare/zelozinha-pendencias', 'daycare/zelozinha-fila', 'daycare/dashboard', 'daycare/agendamentos', 'daycare/cadastro'];
+  /* 19/11/2026: a cobrança do «Vai fazer em casa» LÊ os check-ins do dia pelo mapa vivo (zMapaVivo); nada é gravado lá */
+  const permitidos = ['daycare/zelozinha-pendencias', 'daycare/zelozinha-fila', 'daycare/dashboard', 'daycare/agendamentos', 'daycare/cadastro', 'daycare/checkin-corpo'];
   caminhos.forEach((c) => assert.ok(permitidos.includes(c), 'caminho não previsto: ' + c));
+  assert.ok(!/ref\([^)]*checkin-corpo[^)]*\)\s*\.(set|update|transaction|remove)\(/.test(P), 'os check-ins só são lidos');
   assert.ok(caminhos.has('daycare/zelozinha-pendencias'));
 });
 
@@ -961,9 +993,9 @@ prova('a fábrica do check-in recebe a porta que lança o plano, e a auditoria s
   assert.ok(script('zelozinha-simples').includes("FINAIS={'na-fila':1,'ja-estava-na-fila':1,humano:1,'resolvido-antes':1};"), 'plano-sem-linha NÃO é final: a fila se completa sozinha e tenta de novo');
 });
 
-prova('versão 2026-11-17-01 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
-  assert.match(html, /const APP_VERSAO='2026-11-17-01';/);
-  assert.equal(html.split('2026-11-17-01').length - 1, 14);
+prova('versão 2026-11-21-01 em todos os arquivos versionados; nenhuma versão antiga ficou para trás', () => {
+  assert.match(html, /const APP_VERSAO='2026-11-21-01';/);
+  assert.equal(html.split('2026-11-21-01').length - 1, 15);
   assert.ok(!/2026-11-05-01|2026-11-05-02/.test(html), 'nenhum ?v= ficou na versão antiga');
 });
 

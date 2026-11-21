@@ -1991,6 +1991,50 @@
   .he-tag.achegar{background:rgba(222,180,40,.2);color:var(--z-gold-deep)}
   .he-tag.saiu{background:var(--z-cream-warm);color:var(--muted)}
   .he-grp{font-size:13px;font-weight:800;color:var(--z-blue);margin:18px 0 9px;letter-spacing:.02em}
+  /* ===== CALENDÁRIO DEZ/JAN (Adriana, 16/nov/2026 — maquete respondida) =====
+     A grade da maquete aprovada: número grande = peludinhos que dormem; a faixa de baixo é a cor do dia.
+     Fora da grade, só classes que o app já tem (card, seg gold, kpis, hosp-est, he-tag, dc-faltas). */
+  .cv-legenda{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 14px;font-size:12px;font-weight:600;color:var(--z-blue)}
+  .cv-legenda span{display:inline-flex;align-items:center;gap:6px}
+  .cv-lg{width:12px;height:12px;border-radius:50%;flex:none;display:inline-block}
+  .cv-lg.ok{background:var(--crm-ok)} .cv-lg.at{background:var(--crm-atencao)} .cv-lg.lot{background:var(--crm-critico)}
+  .cv-lg.mais{background:var(--z-blue);border:2px solid var(--z-gold)}
+  .cv-lg.fer{width:6px;height:6px;background:var(--z-gold-deep);margin:0 3px}
+  .cv-grade{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;max-width:420px;margin-bottom:16px}
+  .cv-grade .cv-sem{font-size:10.5px;font-weight:800;color:var(--muted);text-align:center;padding:2px 0}
+  .cv-dia{position:relative;height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:10px;background:var(--z-white);color:var(--z-blue);font-family:var(--font-ui);cursor:pointer;overflow:hidden;padding:13px 0 7px;line-height:1.1}
+  .cv-dia .dn{position:absolute;top:3px;left:5px;font-size:9.5px;font-weight:700;color:var(--muted)}
+  .cv-dia .pt{position:absolute;top:5px;right:5px;width:5px;height:5px;border-radius:50%;background:var(--z-gold-deep)}
+  .cv-dia b{font-size:16px;font-weight:800;letter-spacing:-.02em}
+  .cv-dia em{font-style:normal;font-size:8px;font-weight:600;color:var(--muted)}
+  .cv-dia .cv-sai{font-size:8px;font-weight:800;color:var(--crm-ok)}
+  .cv-dia .fx{position:absolute;left:0;right:0;bottom:0;height:4px}
+  .cv-dia.n-ok .fx{background:var(--crm-ok)} .cv-dia.n-at .fx{background:var(--crm-atencao)} .cv-dia.n-lot .fx{background:var(--crm-critico)} .cv-dia.n-mais .fx{background:var(--z-gold)}
+  .cv-dia.n-mais{background:var(--z-blue);color:var(--z-cream);border:2px solid var(--z-gold)}
+  .cv-dia.n-mais .dn,.cv-dia.n-mais em,.cv-dia.n-mais .cv-sai{color:var(--z-cream)}
+  .cv-dia.sel{box-shadow:0 0 0 2px var(--z-blue)}
+  .cv-dia.n-mais.sel{box-shadow:0 0 0 2px var(--z-gold)}
+  .cv-dia:focus-visible{outline:3px solid var(--z-gold);outline-offset:2px}
+  .cv-vazio{visibility:hidden}
+  @media(min-width:720px){
+    .cv-grade{max-width:none;gap:6px}
+    .cv-dia{aspect-ratio:auto;height:104px;padding:20px 6px 12px}
+    .cv-dia .dn{top:7px;left:9px;font-size:12px}
+    .cv-dia .pt{top:10px;right:10px;width:7px;height:7px}
+    .cv-dia b{font-size:24px;line-height:1}
+    .cv-dia em{font-size:11.5px;margin-top:2px}
+    .cv-dia .cv-sai{font-size:11px;margin-top:2px}
+  }
+  .cv-caixa{border:1.5px solid var(--line);background:var(--z-cream);border-radius:12px;padding:12px 14px;font-size:13.5px;font-weight:700;color:var(--z-blue);margin-top:12px}
+  .cv-caixa.crit{border-color:var(--crm-critico)}
+  .cv-det-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .cv-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:0 8px}
+  .cv-det .hosp-est{padding:7px 11px;margin-bottom:5px;gap:2px}
+  .cv-det .hosp-est .he-nome{font-size:14px}
+  .cv-det .hosp-est .he-sub{font-size:12px;margin-top:1px}
+  #cvKpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px}
+  @media(min-width:720px){ #cvKpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px} }
+  .cv-det summary{cursor:pointer;font-size:13px;font-weight:800;color:var(--z-blue);margin:16px 0 8px;min-height:24px}
   .he-edit{border-color:var(--z-gold);background:var(--z-cream)}
   .nav a.so-conferencia{display:none}
   body[data-role="conferencia"] .nav a.so-conferencia,
@@ -2945,8 +2989,8 @@
 .z-painel44{--p44-blue:#234d67;--p44-soft:#3a6a85;--p44-cream:#fffdf6;--p44-warm:#faf5e9;--p44-gold:#deb428;--p44-line:#e7e0d2;--p44-muted:#7c8a93;box-sizing:border-box;max-width:1160px;padding:24px 38px 52px;background:var(--p44-cream);color:var(--p44-blue);font-family:Inter,Poppins,system-ui,sans-serif}.z-painel44 *{box-sizing:border-box}.z-painel44 [hidden]{display:none!important}.z-painel44 button{font:inherit}.z-painel44 button:focus-visible{outline:3px solid rgba(222,180,40,.55);outline-offset:3px}.z-painel44__topo{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.z-painel44__saudacao .pm-saud1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.12;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2{margin:8px 0 0;font-size:16px;font-weight:600;line-height:1.45;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2 b{font-size:21px;font-weight:800;color:#a57a00}.z-painel44__saudacao .pm-saud3{max-width:54ch;margin:5px 0 0;color:var(--p44-soft);font-size:15px;font-weight:500;font-style:italic;line-height:1.5}.z-painel44__saudacao .pm-traco{display:block;width:40px;height:3px;margin-top:13px;border-radius:2px;background:linear-gradient(90deg,var(--p44-gold),#a57a00)}.z-painel44__saudacao .pm-data{margin-top:14px;color:var(--p44-muted);font-size:12px;font-weight:600}.z-painel44__selo{flex:0 0 auto;padding:8px 11px;border:1px solid var(--p44-line);border-radius:999px;background:#fff;color:var(--p44-blue);font-size:12px;font-weight:700}.z-painel44__selo:before{content:'•';margin-right:5px;color:var(--p44-gold);font-size:18px}.z-painel44__sticker{display:block;width:62px;max-width:90px;height:68px;max-height:80px;object-fit:contain;margin:4px auto 0}.z-painel44__bem-estar{display:block;width:100%;margin-bottom:18px}.z-painel44__bem-estar>*{width:100%}.z-painel44__abas{display:flex;gap:7px;margin:0 0 16px}.z-painel44__abas button{padding:10px 14px;border:1px solid var(--p44-line);border-radius:10px;background:#fff;color:var(--p44-blue);font-size:14px;font-weight:700;cursor:pointer}.z-painel44__abas button[aria-selected=true]{border-color:var(--p44-blue);background:var(--p44-blue);color:var(--p44-cream)}.z-painel44__intro{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:12px 0}.z-painel44__intro h2,.z-painel44__equipe h2{margin:0;font-size:20px}.z-painel44__intro p,.z-painel44__equipe>p{margin:5px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__contagem{color:var(--p44-muted);font-size:12px;font-weight:700}.z-painel44__temas{display:grid;gap:9px}.z-painel44__tema{overflow:hidden;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__tema-cabeca{display:grid;grid-template-columns:36px 1fr auto 20px;align-items:center;gap:10px;width:100%;padding:14px 15px;border:0;background:transparent;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__tema-icone{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--p44-warm);font-size:17px}.z-painel44__tema-titulo,.z-painel44__tema-passo{display:block}.z-painel44__tema-titulo{font-size:15px;font-weight:800}.z-painel44__tema-passo{margin-top:3px;color:var(--p44-muted);font-size:12px}.z-painel44__pill{padding:4px 8px;border-radius:999px;background:#e9f5f7;color:#226477;font-size:11px;font-weight:800}.z-painel44__seta{color:var(--p44-soft);font-size:18px;transition:transform .16s}.z-painel44__tema.aberto .z-painel44__seta{transform:rotate(90deg)}.z-painel44__tema-corpo{margin:0 12px 12px;padding:14px 15px;border-top:1px solid var(--p44-line);background:var(--p44-warm)}.z-painel44__equipe{padding:18px;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__pessoas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}.z-painel44__pessoa{display:flex;align-items:center;gap:11px;width:100%;padding:13px;border:1px solid var(--p44-line);border-radius:12px;background:#fff;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__avatar{display:grid;place-items:center;width:39px;height:39px;flex:0 0 auto;border-radius:50%;background:var(--p44-blue);color:var(--p44-cream);font-size:12px;font-weight:800}.z-painel44__pessoa-info{min-width:0}.z-painel44__pessoa strong,.z-painel44__pessoa small{display:block}.z-painel44__pessoa strong{font-size:14px}.z-painel44__pessoa small{overflow:hidden;margin-top:3px;color:var(--p44-muted);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.z-painel44__pessoa-seta{margin-left:auto;color:#a57a00;font-size:18px}.z-painel44__pessoa-detalhe{margin-top:15px}.z-painel44__pessoa-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__pessoa-secao h3{margin:0;font-size:14px}.z-painel44__pessoa-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}.z-painel44__vazio{margin:15px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__zelozinha{display:block;width:100%;margin-top:16px;padding:12px;border:1px dashed var(--p44-gold);border-radius:11px;background:var(--p44-warm);color:#805d00;text-align:left;cursor:pointer}.z-painel44__zelozinha-titulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.z-painel44__canal{padding:3px 7px;border-radius:999px;background:#fff;color:var(--p44-muted);font-size:11px}.z-painel44__zelozinha-aviso{display:block;margin-top:7px;font-size:12px;line-height:1.45}.z-painel44__perfil{margin-top:15px}.z-painel44__voltar{margin-bottom:12px;padding:8px 11px;border:1px solid var(--p44-line);border-radius:9px;background:#fff;color:var(--p44-blue);font-size:13px;font-weight:700;cursor:pointer}.z-painel44__perfil-subtitulo{margin:4px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__perfil-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__perfil-secao h3{margin:0;font-size:14px}.z-painel44__perfil-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}@media(max-width:760px){.z-painel44{padding:18px}.z-painel44__topo,.z-painel44__intro{display:block}.z-painel44__selo{display:inline-block;margin-top:13px}.z-painel44__contagem{display:block;margin-top:8px}.z-painel44__tema-cabeca{grid-template-columns:32px 1fr auto 16px;padding:12px}.z-painel44__tema-corpo{margin:0 8px 8px;padding:12px}.z-painel44__pessoas,.z-painel44__perfil-conteudo,.z-painel44__pessoa-conteudo{grid-template-columns:1fr}}
 
 </style>
-<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-17-01">
-<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-17-01">
+<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-21-01">
+<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-21-01">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -3145,6 +3189,8 @@
                tutor sobre o que viu no corpo do FILHOt. -->
           <a data-v="cuidadovet" class="so-vet" title="Alterações no corpo que a veterinária precisa ver."><span data-icon="stethoscope"></span><span>Cuidado Vet</span></a>
           <a data-v="orcamento" class="so-recepcao" title="Monte e envie o orçamento ao tutor."><span data-icon="dollar"></span><span>Orçamento de hospedagem</span></a>
+          <!-- CALENDÁRIO DEZ/JAN (Adriana, 16/nov/2026): quem vê o Orçamento vê o calendário. -->
+          <a data-v="calendariovagas" class="so-recepcao" title="Quantos peludinhos dormem em cada noite de dezembro e janeiro — no máximo 30."><span data-icon="cal"></span><span>Calendário Dez/Jan</span></a>
           </div>
         </div>
         <!-- DAY CARE — o dia do auluno visto pela Central. "Planos e cobranças" deixou de
@@ -5217,6 +5263,7 @@
       </div>
       <div class="hint" style="margin-top:6px">Toque no campo e escolha no calendário — não dá para digitar, é assim que o ano errado não passa.</div>
       <div id="orcAvisoData"></div>
+      <div id="orcVagasAviso" role="status" aria-live="polite"></div>
       <div style="margin-top:14px">
         <label class="cad-lb">Temporada</label>
         <div id="orcTemporada" class="orc-temp"></div>
@@ -5267,6 +5314,32 @@
     <div class="card">
       <div class="hint">Os <strong>valores da hospedagem</strong>, os feriados e a ponte com a planilha agora moram em <strong>Configurações &rsaquo; Valores da hospedagem</strong>. Só a Gestão altera; os orçamentos já salvos guardam o preço da época.</div>
       <button type="button" class="btn btn-gold so-master" style="margin-top:9px" onclick="abrirItemDoMenu('config')">Abrir Configurações &rsaquo; Valores da hospedagem</button>
+    </div>
+  </section>
+
+  <!-- CALENDÁRIO DEZ/JAN (Adriana, 16/nov/2026): «Dezembro e janeiro ficam imensos, precisamos
+       conseguir visualizar as vagas. São no máximo 30 vagas por dia; além disso, só com autorização
+       da Márcia.» Conta noite por noite os orçamentos FECHADOS, quem já fez check-in e as pernoites
+       do Day Care. A conta é do módulo calendario-vagas.js; aqui fica só o desenho. -->
+  <section class="view" id="v-calendariovagas">
+    <div class="role-note"><span data-icon="cal"></span><span><strong>Cada noite comporta 30 peludinhos.</strong> Entram sozinhos os orçamentos fechados, quem já fez check-in e as pernoites do Day Care. Quem sai num dia libera a vaga daquela noite. Acima de 30, só com autorização da Márcia.</span></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <div class="seg gold" id="cvMeses" role="group" aria-label="Mês"></div>
+        <button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="cvAbrir(true)">Atualizar</button>
+      </div>
+      <div id="cvMsg"></div>
+      <div class="kpis" id="cvKpis" aria-live="polite"></div>
+      <div class="cv-legenda" aria-label="Legenda de cores">
+        <span><i class="cv-lg ok"></i>Com folga (até 24)</span>
+        <span><i class="cv-lg at"></i>Enchendo (25 a 29)</span>
+        <span><i class="cv-lg lot"></i>Lotado (30)</span>
+        <span><i class="cv-lg mais"></i>Acima de 30 (só com a Márcia)</span>
+        <span><i class="cv-lg fer"></i>Casa fechada (domingo, feriado ou recesso)</span>
+      </div>
+      <div class="hint" style="margin:-6px 0 10px">Toque num dia para ver quem dorme. Toque de novo para esconder.</div>
+      <div class="cv-grade" id="cvGrade" role="group" aria-label="Noites do mês"></div>
+      <div id="cvDetalhe" class="cv-det"></div>
     </div>
   </section>
 
@@ -5737,9 +5810,10 @@
 <script src="autoria-logica.js?v=2026-10-15-02"></script>
 <script src="navegacao-inicio.js?v=2026-10-15-02"></script>
 <script src="hospedes-atividades.js?v=2026-10-16-01"></script>
-<script src="alimentacao-hospede.js?v=2026-11-17-01"></script>
-<script src="cafe-operacional.js?v=2026-11-17-01"></script>
-<script src="plantao-turno.js?v=2026-11-17-01"></script>
+<script src="alimentacao-hospede.js?v=2026-11-21-01"></script>
+<script src="cafe-operacional.js?v=2026-11-21-01"></script>
+<script src="plantao-turno.js?v=2026-11-21-01"></script>
+<script src="calendario-vagas.js?v=2026-11-21-01"></script>
 <script src="cafe-aluno-logica.js?v=2026-10-16-06"></script>
 <script src="presenca-logica.js?v=2026-10-16-02"></script>
 <script src="historico-checkins.js?v=2026-10-15-02"></script>
@@ -8661,6 +8735,7 @@ return { criar };
     checkin:['Check-in','O tutor chega: entrada, alimentação, medicação, assinatura (1º passo).'],
     conferencia:['Conferência do check-in','O monitor confere corpo e pertences de quem chegou (2º passo; o 1º é da Central Zêluz).'],
     orcamento:['Orçamento de hospedagem','Monte e envie o orçamento ao tutor.'],
+    calendariovagas:['Calendário Dez/Jan','Quantos peludinhos dormem em cada noite — no máximo 30.'],
     alergia:['Conhecer a família','Conheça a família: envie, registre a resposta e atualize a ficha.'],
     peso:['Peso','Pesar qualquer FILHOt: recepção, veterinária e gestão.'],
     eahist:['Enriquecimento Ambiental','O que foi feito e quem não participou.'],
@@ -8795,6 +8870,7 @@ return { criar };
     if(v==='lancar-pagamento'){ if(typeof lpAbrir==='function') lpAbrir(); }
     if(v==='daycare'){ if(typeof abrirDayCare==='function') abrirDayCare(); }
     if(v==='orcamento'){ if(typeof orcInit==='function') orcInit(); }
+    if(v==='calendariovagas'){ if(typeof cvAbrir==='function') cvAbrir(false); }
     if(v==='relatorios'){ if(typeof renderRelatorios==='function') renderRelatorios(); if(typeof orcCarregarLista==='function') orcCarregarLista(); }
     if(v==='config'){ if(typeof configCarregar==='function') configCarregar(); if(typeof cfgLoginsCarregar==='function') cfgLoginsCarregar(); if(typeof protoCarregar==='function') protoCarregar(); if(typeof orcAbrirConfig==='function') orcAbrirConfig(); }
     if(v==='linhadotempo'){ if(typeof ltAbrir==='function') ltAbrir(); }
@@ -25831,6 +25907,7 @@ return { criar };
   function orcCalcular(){
     var cardR=document.getElementById('orcCardResultado'), cardM=document.getElementById('orcCardMsg');
     var av=document.getElementById('orcAvisoData'); if(av) av.innerHTML='';
+    var avV=document.getElementById('orcVagasAviso'); if(avV) avV.innerHTML='';   // as vagas de dez/jan (Calendário Dez/Jan)
     orcAutoTemporada();
     var temp=ORC_TEMP, alta=(temp==='alta');
     var PT=orcPrecoDe(temp);
@@ -25880,6 +25957,8 @@ return { criar };
     // Noite a noite: a noite do dia D vai de D para D+1. A última noite começa no dia anterior à saída.
     var noites=[], d=ent, guarda=0;
     while(d<saiReal&&guarda<400){ noites.push({iso:d, dw:orcDiaSemana(d)}); d=orcMaisDias(d,1); guarda++; }
+    // CALENDÁRIO DEZ/JAN (16/nov/2026): cabe nas 30 vagas? Só avisa, não trava (resposta da Adriana).
+    try{ if(typeof cvAvisoOrcamento==='function') cvAvisoOrcamento(ent, saiReal); }catch(e){} /* silencioso de propósito: o aviso de vagas é extra — falhar não pode derrubar a conta */
     var pets=ORC_SEL.map(function(s,i){
       var ordem=i+1, off=orcDescontoDe(s,ordem);
       // Dias EFETIVOS: se a tutora trocou a quinta pela sexta nesta hospedagem, é a sexta que
@@ -29335,6 +29414,187 @@ return { criar };
     orcRenderTipo(); orcRenderTemporada(); orcRenderSel(); orcCalcular();
   }
 
+  // ===== CALENDÁRIO DEZ/JAN (Adriana, 16/nov/2026 — maquete respondida no mesmo dia) ==========
+  // «Dezembro e janeiro ficam imensos, precisamos conseguir visualizar as vagas. Todos que forem
+  //  fechando coloque no calendário. São no máximo 30 vagas por dia; além disso, só com
+  //  autorização da Márcia.» As respostas dela: o número grande é quantos DORMEM; pernoite do Day
+  // Care ocupa vaga; acima de 30 só avisa, não trava; o orçamento sem confirmar aparece à parte, sem
+  // ocupar vaga; quem SAI no dia libera a vaga daquela noite e isso fica à vista; o detalhe do dia
+  // se esconde com um toque. A conta mora em calendario-vagas.js (ZeluzCalendarioVagas); aqui ficam
+  // a leitura das três fontes e o desenho.
+  // NUNCA «vaga» sem leitura: se os orçamentos ou as estadias não vieram, a tela diz que não leu.
+  var CV={lido:null, falhou:'', avisoPern:'', oc:null, temp:null, mes:'', sel:'', quando:0, lendo:null, pedido:null};
+  var CV_PRAZO=3*60*1000;
+  var CV_SEM_CURTA=['dom','seg','ter','qua','qui','sex','sáb'];
+  var CV_SEM_LONGA=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+  var CV_MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  function cvMod(){ return (typeof ZeluzCalendarioVagas!=='undefined' && ZeluzCalendarioVagas)?ZeluzCalendarioVagas:null; }
+  function cvEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function cvBR(d){ d=String(d||''); return d.slice(8,10)+'/'+d.slice(5,7); }
+  function cvSemana(d){ var p=String(d||'').split('-'); var w=new Date(Date.UTC(+p[0], +p[1]-1, +p[2])).getUTCDay(); return isNaN(w)?0:w; }
+  function cvMesRotulo(mes){ var t=CV_MESES[Number(String(mes).slice(5,7))-1]||''; return t.charAt(0).toUpperCase()+t.slice(1)+' '+String(mes).slice(0,4); }
+  function cvFechado(d){ try{ return (typeof orcFechado==='function')?String(orcFechado(d)||''):''; }catch(e){ return ''; } } /* silencioso de propósito: o pontinho do feriado é enfeite — sem ele o dia continua certo */
+  function cvComPrazo(pr, ms){
+    return new Promise(function(res){
+      var t=setTimeout(function(){ res({ok:false, prazo:true}); }, ms);
+      Promise.resolve(pr).then(function(v){ clearTimeout(t); res(v); }, function(){ clearTimeout(t); res({ok:false}); });
+    });
+  }
+  // Lê orçamentos (a coleção inteira), estadias e pernoites da temporada; devolve a ocupação ou null.
+  function cvCarregar(forcar){
+    var M=cvMod(); if(!M){ CV.lido=false; CV.falhou='O módulo do calendário não carregou. Feche e abra o app de novo.'; return Promise.resolve(null); }
+    var hoje=orcHojeISO(), T=M.temporada(hoje);
+    if(!forcar && CV.lido===true && CV.temp && CV.temp.inicio===T.inicio && (Date.now()-CV.quando)<CV_PRAZO) return Promise.resolve(CV.oc);
+    if(CV.lendo) return CV.lendo;
+    if(!DB){ CV.lido=false; CV.falhou='Sem conexão com o banco.'; return Promise.resolve(null); }
+    var pOrc=cvComPrazo(orcLerVivos(!!forcar), 20000);
+    var pEst=cvComPrazo((typeof zMapaUma==='function')
+      ? zMapaUma('auaulandia/estadias').then(function(v){ return {ok:true, v:v||{}}; })
+      : Promise.resolve({ok:false}), 20000);
+    var pPern;
+    try{
+      pPern=cvComPrazo(DB.ref('daycare/pernoites').orderByKey().startAt(T.inicio).endAt(T.fim).once('value').then(function(s){
+        return {ok:true, v:((s && typeof s.val==='function')?s.val():null)||{}};
+      }, function(e){ _logLeituraFalhou('daycare/pernoites (Calendário Dez/Jan)', e); return {ok:false}; }), 20000);
+    }catch(e){ pPern=Promise.resolve({ok:false}); _logLeituraFalhou('daycare/pernoites (Calendário Dez/Jan)', e); }
+    CV.lendo=Promise.all([pOrc, pEst, pPern]).then(function(r){
+      CV.lendo=null;
+      if(!(r[0] && r[0].ok)){ CV.lido=false; CV.falhou='Não consegui ler os orçamentos.'; return null; }
+      if(!(r[1] && r[1].ok)){ CV.lido=false; CV.falhou='Não consegui ler quem já fez check-in.'; return null; }
+      var orcs=Object.assign({}, r[0].todos||{}, (typeof ORC_LISTA_CACHE==='object' && ORC_LISTA_CACHE)||{});
+      var pernOk=!!(r[2] && r[2].ok);
+      CV.avisoPern=pernOk?'':'Não consegui ler as pernoites do Day Care: as noites podem ter mais peludinhos do que mostram. Toque em «Atualizar».';
+      CV.oc=M.ocupacao({orcamentos:orcs, estadias:r[1].v, pernoites:pernOk?r[2].v:{}, hoje:hoje,
+        diaDoTs:(typeof faltaDiaLocal==='function')?faltaDiaLocal:null}, T.inicio, T.fim);
+      CV.temp=T; CV.lido=true; CV.falhou=''; CV.quando=Date.now();
+      return CV.oc;
+    }).catch(function(e){
+      CV.lendo=null; CV.lido=false; CV.falhou='Não consegui ler os dados agora.';
+      _logLeituraFalhou('Calendário Dez/Jan', e); return null;
+    });
+    return CV.lendo;
+  }
+  function cvAbrir(forcar){
+    var M=cvMod(); var T=M?M.temporada(orcHojeISO()):null;
+    if(T && CV.mes!==T.dez && CV.mes!==T.jan){ CV.mes=(String(orcHojeISO()).slice(5,7)==='01')?T.jan:T.dez; CV.sel=''; }
+    if(forcar || CV.lido!==true) CV.lido=null;
+    cvRender();
+    return cvCarregar(!!forcar).then(function(){ cvRender(); });
+  }
+  function cvMes(m){ CV.mes=String(m||''); CV.sel=''; cvRender(); }
+  function cvDia(d){
+    CV.sel=(CV.sel===d)?'':String(d||'');
+    cvRender();
+    if(CV.sel){ try{ var el=document.getElementById('cvDetalhe'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){} } /* silencioso de propósito: rolar a tela é conforto */
+  }
+  function cvLinha(p){
+    var tags={hospedado:['agora','hospedado'], reserva:['achegar','reserva fechada'], pernoite:['saiu','pernoite Day Care'], aConfirmar:['saiu','sem confirmar']};
+    var tg=tags[p.origem]||['saiu',''];
+    var sub=[];
+    if(p.tutor) sub.push(p.tutor);
+    if(p.raca) sub.push(p.raca);
+    sub.push(p.origem==='pernoite'?('noite de '+cvBR(p.entrada)):('entra '+cvBR(p.entrada)+' · sai '+cvBR(p.saida)));
+    return '<div class="hosp-est"><div class="he-main"><div class="he-nome">'+cvEsc(p.nome)+'<span class="he-tag '+tg[0]+'">'+cvEsc(tg[1])+'</span></div>'
+      +'<div class="he-sub">'+cvEsc(sub.join(' · '))+'</div></div></div>';
+  }
+  // Cada grupo do dia é uma gaveta: «saem» e «chegam» abertas; «quem dorme» fechada — a noite de
+  // sábado com 30 nomes não pode virar a página inteira (Adriana, 16/nov/2026).
+  function cvGrupo(titulo, lista, aberto){
+    return '<details'+(aberto?' open':'')+'><summary>'+cvEsc(titulo)+'</summary><div class="cv-lista">'+lista.map(cvLinha).join('')+'</div></details>';
+  }
+  function cvDetalheHtml(d){
+    var M=cvMod(), x=((CV.oc||{}).dias||{})[d]; if(!M || !x) return '';
+    var n=x.dormem.length, L=M.LIMITE, w=cvSemana(d), fch=cvFechado(d);
+    var resumo=[n+(n===1?' dorme':' dormem'), (n>L?((n-L)+' acima de '+L):(M.vagas(n)+(M.vagas(n)===1?' vaga':' vagas')))];
+    if(x.chegam.length) resumo.push(x.chegam.length+(x.chegam.length===1?' chega':' chegam'));
+    if(x.saem.length) resumo.push(x.saem.length+(x.saem.length===1?' sai':' saem'));
+    var h='<div class="cv-det-topo"><div><div class="he-grp" style="margin:6px 0 2px;font-size:16px">'+cvEsc(CV_SEM_LONGA[w]+' · '+cvBR(d))+'</div>'
+      +'<div class="hint">'+cvEsc(resumo.join(' · '))+(fch?(' · '+cvEsc(fch)+': a casa não recebe nem entrega'):'')+'</div></div>'
+      +'<button type="button" class="btn" style="background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="cvDia(\'\')">Esconder</button></div>';
+    if(n>L) h+='<div class="dc-faltas" style="margin-top:10px">Passou de '+L+': '+n+' peludinhos nesta noite. Acima de '+L+', só com autorização da Márcia.</div>';
+    if(x.saem.length) h+=cvGrupo('Saem neste dia — a vaga desta noite fica livre ('+x.saem.length+')', x.saem, true);
+    if(x.chegam.length) h+=cvGrupo('Chegam neste dia ('+x.chegam.length+')', x.chegam, true);
+    h+=n?cvGrupo('Quem dorme nesta noite ('+n+') — toque para ver', x.dormem, false):'<div class="troca-vazio" style="margin-top:14px">Ninguém dorme aqui nesta noite.</div>';
+    if(x.aConfirmar.length) h+=cvGrupo('Com orçamento, sem confirmar ('+x.aConfirmar.length+') — não ocupam vaga', x.aConfirmar, false);
+    return h;
+  }
+  function cvRender(){
+    var M=cvMod();
+    var elMes=document.getElementById('cvMeses'), elMsg=document.getElementById('cvMsg'), elK=document.getElementById('cvKpis'),
+        elG=document.getElementById('cvGrade'), elD=document.getElementById('cvDetalhe');
+    if(!elG) return;
+    var T=M?M.temporada(orcHojeISO()):null;
+    if(elMes && T) elMes.innerHTML=[T.dez, T.jan].map(function(m){
+      var on=(m===CV.mes);
+      return '<button type="button" class="'+(on?'on':'')+'" aria-pressed="'+(on?'true':'false')+'" data-mes="'+m+'" onclick="cvMes(this.dataset.mes)">'+cvEsc(cvMesRotulo(m))+'</button>';
+    }).join('');
+    if(CV.lido!==true){
+      if(elK) elK.innerHTML=''; elG.innerHTML=''; if(elD) elD.innerHTML='';
+      if(elMsg) elMsg.innerHTML=(CV.lido===null)
+        ?'<div class="hint" style="margin-bottom:12px">Conferindo as reservas de dezembro e janeiro…</div>'
+        :('<div class="dc-faltas">'+cvEsc(CV.falhou||'Não consegui ler os dados.')+'<div style="font-weight:600;margin-top:4px">O calendário não mostra vagas sem ter lido tudo: isso não quer dizer que há vaga. Confira a internet e toque em «Atualizar».</div></div>');
+      return;
+    }
+    if(elMsg) elMsg.innerHTML=CV.avisoPern?('<div class="dc-faltas">'+cvEsc(CV.avisoPern)+'</div>'):'';
+    var mes=CV.mes, dias=M.diasDoMes(mes), D=(CV.oc||{}).dias||{}, L=M.LIMITE;
+    var R=M.resumoMes(CV.oc, mes);
+    var kpi=function(v, l){ return '<div class="kpi"><div><div class="v">'+cvEsc(v)+'</div><div class="l">'+cvEsc(l)+'</div></div></div>'; };
+    if(elK) elK.innerHTML=kpi(R.lotadas, 'noites lotadas (30 ou mais)')
+      +kpi(R.acima, 'noites acima de 30')
+      +kpi(R.maisCheia?R.maisCheia.n:0, R.maisCheia?('noite mais cheia · '+CV_SEM_CURTA[cvSemana(R.maisCheia.dia)]+' '+cvBR(R.maisCheia.dia)):'noite mais cheia')
+      +kpi(R.vagasLivres, 'vagas livres no mês');
+    var g=CV_SEM_CURTA.map(function(s){ return '<div class="cv-sem">'+s+'</div>'; }).join('');
+    var off=dias.length?cvSemana(dias[0]):0;
+    for(var i=0;i<off;i++) g+='<div class="cv-vazio" aria-hidden="true"></div>';
+    var cls={folga:'n-ok', enchendo:'n-at', lotado:'n-lot', acima:'n-mais'};
+    dias.forEach(function(d){
+      var x=D[d]||{dormem:[], saem:[]}, n=x.dormem.length, nv=M.nivel(n), on=(CV.sel===d), fch=cvFechado(d);
+      var sub=(n>L)?('+'+(n-L)+' acima'):(M.vagas(n)+(M.vagas(n)===1?' vaga':' vagas'));
+      var sai=x.saem.length?(x.saem.length+(x.saem.length===1?' sai':' saem')):'';
+      var rot=CV_SEM_LONGA[cvSemana(d)]+' '+cvBR(d)+': '+n+(n===1?' peludinho':' peludinhos')+', '+sub+(sai?(', '+sai):'')+(fch?(', '+fch):'');
+      g+='<button type="button" class="cv-dia '+cls[nv]+(on?' sel':'')+'" data-dia="'+d+'" aria-pressed="'+(on?'true':'false')+'" aria-label="'+cvEsc(rot)+'" onclick="cvDia(this.dataset.dia)">'
+        +'<span class="dn">'+Number(d.slice(8,10))+'</span>'+(fch?'<span class="pt"></span>':'')
+        +'<b>'+n+'</b><em>'+cvEsc(sub)+'</em>'+(sai?('<span class="cv-sai">'+cvEsc(sai)+'</span>'):'')+'<span class="fx"></span></button>';
+    });
+    elG.innerHTML=g;
+    if(elD) elD.innerHTML=(CV.sel && CV.sel.slice(0,7)===mes)?cvDetalheHtml(CV.sel):'';
+  }
+  // ---- No Orçamento: «cabe?» a cada mudança de datas (só dezembro e janeiro; só avisa, não trava) ----
+  function cvAvisoOrcamento(ent, sai){
+    var box=document.getElementById('orcVagasAviso'); if(!box) return;
+    box.innerHTML='';
+    var M=cvMod(); if(!M || !ent || !sai || sai<=ent) return;
+    var T=M.temporada(orcHojeISO()), toca=false, d=ent, g=0;
+    while(d<sai && g<400){ if(d>=T.inicio && d<=T.fim){ toca=true; break; } d=M.maisDias(d,1); g++; }
+    if(!toca) return;
+    CV.pedido=[ent, sai];
+    if(CV.lido!==true || (Date.now()-CV.quando)>=CV_PRAZO){
+      box.innerHTML='<div class="hint" style="margin-top:10px">Conferindo as vagas de dezembro e janeiro…</div>';
+      cvCarregar(false).then(function(){
+        var p=CV.pedido||[]; if(p[0]!==ent || p[1]!==sai) return;   // as datas mudaram enquanto lia
+        if(CV.lido===true) cvAvisoOrcamento(ent, sai);
+        else box.innerHTML='<div class="dc-faltas" style="margin-top:10px">Não consegui conferir as vagas destas noites.<div style="font-weight:600;margin-top:4px">Isso não quer dizer que há vaga. Confira no Calendário Dez/Jan antes de fechar.</div></div>';
+      });
+      return;
+    }
+    var novos=(typeof ORC_SEL!=='undefined' && ORC_SEL)?ORC_SEL.length:0;
+    var r=M.checarPeriodo(CV.oc, ent, sai, novos, (typeof ORC_EDITANDO!=='undefined' && ORC_EDITANDO)||'');
+    if(!r.noites.length) return;
+    var L=M.LIMITE, h='';
+    if(r.acima.length){
+      h='<div class="dc-faltas" style="margin-top:10px"><strong>Passa de '+L+' peludinhos em '+r.acima.length+(r.acima.length===1?' noite':' noites')+':</strong> '
+        +cvEsc(r.acima.map(function(x){ return CV_SEM_CURTA[cvSemana(x.dia)]+' '+cvBR(x.dia)+' ('+x.depois+')'; }).join(', '))+'.'
+        +'<div style="font-weight:600;margin-top:4px">Contando este orçamento. Acima de '+L+', só com autorização da Márcia.</div></div>';
+    } else {
+      var mc=r.maisCheia, v=M.vagas(mc.depois);
+      h='<div class="cv-caixa"><strong>Cabe.</strong> A noite mais cheia é '+cvEsc(CV_SEM_LONGA[cvSemana(mc.dia)]+', '+cvBR(mc.dia))+', com '+mc.depois
+        +' peludinhos contando este orçamento — '+(v===0?'fica lotada.':(v+(v===1?' vaga sobrando.':' vagas sobrando.')))+'</div>';
+    }
+    if(r.foraDaTemporada) h+='<div class="hint" style="margin-top:6px">Só as noites de dezembro e janeiro entram nesta conta.</div>';
+    h+='<button type="button" class="btn" style="margin-top:8px;background:var(--z-cream-warm);color:var(--z-blue);border:1.5px solid var(--line)" onclick="abrirItemDoMenu(\'calendariovagas\')">Ver no Calendário Dez/Jan</button>';
+    box.innerHTML=h;
+  }
+
   // ================= ACERTO DAS PLANTONISTAS =========================================
   // A tabela é da Adriana (13/ago/2026). O valor é por NOITE e depende de quantos FILHOts
   // dormiram aqui — mais FILHOts, mais trabalho. A ajuda de custo é fixa e sempre soma.
@@ -31975,7 +32235,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-11-17-01';
+  const APP_VERSAO='2026-11-21-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -33121,7 +33381,9 @@ return { criar };
       {k:'recepcao', t:'Pendências com o tutor'}, {k:'cuidadovet', t:'Cuidado Vet'},
       // Faltava aqui (Adriana, 13/ago/2026): "não consegui dar permissão para Orçamento
       // Hospedagem". O que não está nesta lista NÃO PODE ser concedido a ninguém.
-      {k:'orcamento', t:'Orçamento de hospedagem'}
+      {k:'orcamento', t:'Orçamento de hospedagem'},
+      // 16/nov/2026: quem tem o Orçamento já tem o calendário (NAV_PAGINA_JUNTO); dá para conceder só ele.
+      {k:'calendariovagas', t:'Calendário Dez/Jan'}
     ]},
     {grp:'Central Zêluz · Day Care', itens:[
       // 24/set, 25/set, 19/set e 21/set/2026: Hoje na Zêluz, Quem chamar hoje, Pendências de
@@ -33150,6 +33412,13 @@ return { criar };
   // marcação só acrescenta. Marcada, a tela aparece para a pessoa; desmarcada, fica o que o
   // papel dela já mostrava.
   const NAV_PAGINAS_SO_LIBERA=['eahist','ritmo','gestdia','banhos','dashdc','agendamarcia','peso','alergia','vacinas'];
+  // Tela que vem JUNTO com outra (Calendário Dez/Jan, 16/nov/2026): quem tem o Orçamento concedido
+  // enxerga o calendário sem a Gestão marcar mais nada — é a mesma pessoa que fecha a reserva.
+  const NAV_PAGINA_JUNTO={calendariovagas:'orcamento'};
+  function navPaginaTem(u, k){
+    var p=(u && Array.isArray(u.paginas))?u.paginas:[];
+    return p.indexOf(k)>=0 || (!!NAV_PAGINA_JUNTO[k] && p.indexOf(NAV_PAGINA_JUNTO[k])>=0);
+  }
   // O que está no sidebar e NÃO se concede daqui — dito na própria tela do Time, para a
   // Gestão não procurar o que não existe.
   //  · config (Configurações): senhas das pontes e logins — só Gestão e Diretoria;
@@ -33746,7 +34015,7 @@ return { criar };
       document.querySelectorAll('#nav a[data-v="'+k+'"]').forEach(function(a){
         a.style.removeProperty('display'); permMarcarConcedida(a, false);
         if(!restrito) return; // sem restrição: volta ao CSS do papel
-        var pode=u.paginas.indexOf(k)>=0;
+        var pode=navPaginaTem(u, k);
         if(!pode){ if(!soLibera) a.style.setProperty('display','none','important'); return; }
         // Marcada no Time. Se o papel sozinho já a mostra, nada muda na barra. Se o papel a
         // esconde (a veterinária só enxerga o caminho dela), é uma tela CONCEDIDA: fica
@@ -33906,7 +34175,7 @@ return { criar };
       if(_h && document.getElementById('v-'+_h)) v=_h;
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
     if(Array.isArray(u.paginas)){
-      if(u.paginas.length){ if(u.paginas.indexOf(v)<0) v=u.paginas[0]; } // pousa numa página permitida
+      if(u.paginas.length){ if(!navPaginaTem(u, v)) v=u.paginas[0]; } // pousa numa página permitida
       else { v=null; } // nada concedido (e sem atividade) → não navega; a Gestão precisa conceder acesso
     }
     // Abre a corrente inteira: a categoria E o sub-cabeçalho da tela em que a pessoa cai.
@@ -103356,14 +103625,14 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',tentar,{once:true});else tentar();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
-<script src="agenda-marcia/dados.js?v=2026-11-17-01"></script>
-<script src="agenda-marcia/entrevistas.js?v=2026-11-17-01"></script>
-<script src="agenda-marcia/composta.js?v=2026-11-17-01"></script>
-<script src="agenda-marcia/painel.js?v=2026-11-17-01"></script>
-<script src="marcia129/painel.js?v=2026-11-17-01"></script>
-<script src="marcia129/dados.js?v=2026-11-17-01"></script>
-<script src="marcia129/app.js?v=2026-11-17-01"></script>
-<script src="agenda-marcia/app.js?v=2026-11-17-01"></script>
+<script src="agenda-marcia/dados.js?v=2026-11-21-01"></script>
+<script src="agenda-marcia/entrevistas.js?v=2026-11-21-01"></script>
+<script src="agenda-marcia/composta.js?v=2026-11-21-01"></script>
+<script src="agenda-marcia/painel.js?v=2026-11-21-01"></script>
+<script src="marcia129/painel.js?v=2026-11-21-01"></script>
+<script src="marcia129/dados.js?v=2026-11-21-01"></script>
+<script src="marcia129/app.js?v=2026-11-21-01"></script>
+<script src="agenda-marcia/app.js?v=2026-11-21-01"></script>
 <script id="menu-contadores171">'use strict';
 /* 30/out/2026 — contadores vermelhos no menu (maquete aprovada pela Adriana).
    «Márcia Gestão»: cuidados das avaliações de HOJE ainda não revisados + alertas de reação ainda sem «Tutor avisado».
@@ -104344,6 +104613,68 @@ renderAtual=function(){
   return { gerarAvisoPlano, PACOTES, DOSES_MAX, pacote, planoDoDia, saldo, cobre, gastar, doseDoDia };
 }));
 </script>
+<script id="cobranca-casa">/* cobranca-casa/index.js */
+'use strict';
+
+/* Cobrança do «Vai fazer em casa» (Adriana, 17/11/2026; textos aprovados em 19/11/2026).
+ * O tutor respondeu que faria o cuidado fora da Zêluz e a ficha ainda não tem a data. No PRÓXIMO dia em que o FILHOt
+ * está de novo na Zêluz (depois do check-in), a Zelozinha manda esta mensagem, uma vez. Tom de parceira: nunca
+ * «você ia fazer em casa» (ela achou pesado), e já oferece resolver aqui.
+ * Muda só os nomes (primeiro nome do tutor e do FILHOt) e o cuidado. Formatado em linhas, com emojis leves
+ * («Sempre os textos precisam ir formatados, e com emojis... fica mais leve», 19/11/2026). Sem «o/a» antes do nome do FILHOt.
+ * Este texto NÃO é o da mensagem do dia (mensagem-unica41), que não muda.
+ * Uma cópia idêntica deste arquivo mora no app (<script id="cobranca-casa">); a prova confere. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.CobrancaCasa = factory();
+}(typeof self !== 'undefined' ? self : this, function () {
+  /* vermífugo, carrapaticida e coleira: «Na ficha, {cuidado} ainda aparece em aberto» */
+  const CUIDADOS = Object.freeze({
+    verm_p: 'o vermífugo',
+    verm_dose2_p: 'a 2ª dose do vermífugo',
+    ecto_p: 'o carrapaticida',
+    col_p: 'a coleira Seresto'
+  });
+  /* vacinas: «Na ficha, a vacina {nome} ainda aparece em aberto» */
+  const VACINAS = Object.freeze({
+    vac_mult_p: 'múltipla',
+    vac_gripe_p: 'contra gripe',
+    vac_raiva_p: 'antirrábica'
+  });
+
+  function motivo(m) { return { ok: false, motivo: m }; }
+  function nomeValido(v) { const s = String(v || '').trim(); return /^[\p{L}\p{M}' .-]{1,40}$/u.test(s) ? s : ''; }
+
+  /* entrada: { nomeTutor, nomePeludo, itemK } — os nomes já chegam só com o primeiro nome */
+  function gerarCobranca(entrada) {
+    if (!entrada || typeof entrada !== 'object') return motivo('entrada inválida');
+    const tutor = nomeValido(entrada.nomeTutor), pet = nomeValido(entrada.nomePeludo), k = String(entrada.itemK || '').trim();
+    if (!tutor) return motivo('o nome do tutor é obrigatório');
+    if (!pet) return motivo('o nome do FILHOt é obrigatório');
+    /* formato pedido por ela em 19/11/2026: saudação, linha em branco, uma frase por linha, emojis leves */
+    const abertura = [`Olá, ${tutor}, tudo bem? 💛`, '', `${pet} está aqui com a gente hoje, aproveitando o dia. 🐾`];
+    const fecho = `Assim a proteção de ${pet} fica em dia, e a de todos os nossos Aulunos também.`;
+    if (Object.prototype.hasOwnProperty.call(CUIDADOS, k)) {
+      return { ok: true, vacina: false, texto: abertura.concat([
+        `Na ficha, ${CUIDADOS[k]} ainda aparece em aberto. Se você já fez, é só nos contar o produto e a data, que atualizamos tudo por aqui. 📝`,
+        `Se a correria não deixou, podemos cuidar disso hoje mesmo, enquanto ${pet} aproveita o dia. ${fecho}`,
+        'Podemos fazer hoje? 💛'
+      ]).join('\n') };
+    }
+    if (Object.prototype.hasOwnProperty.call(VACINAS, k)) {
+      return { ok: true, vacina: true, texto: abertura.concat([
+        `Na ficha, a vacina ${VACINAS[k]} ainda aparece em aberto. Se já foi aplicada, pode nos enviar uma foto do cartão de vacinação assinado pelo médico-veterinário? 📸`,
+        'Assim atualizamos tudo por aqui.',
+        `Se a correria não deixou, podemos aplicar aqui na Zêluz, com a nossa equipe veterinária. ${fecho}`,
+        'Quer que a gente agende? 💛'
+      ]).join('\n') };
+    }
+    return motivo('cuidado sem texto de cobrança aprovado');
+  }
+
+  return { gerarCobranca, CUIDADOS, VACINAS };
+}));
+</script>
 <script id="zelozinha-simples">'use strict';
 /* ZELOZINHA SIMPLES (Adriana, 29/out/2026): "Quero que a zelozinha entre no app da forma mais simples
    possível, para mandar essas mensagens. Com menos gasto de tudo, e da forma mais tranquila, mandando
@@ -104360,6 +104691,8 @@ renderAtual=function(){
   var FILA='daycare/zelozinha-fila',SAUDE='daycare/zelozinha-saude/vps',CONTROLE='daycare/zelozinha-controle/estado';
   /* o aviso do plano mora em {dcKey}~plano (09/11/2026): no mesmo dia pode haver o aviso do que foi pago e a pergunta do que não foi */
   var SUFIXO_PLANO='~plano';
+  /* a cobrança do «Vai fazer em casa» mora em {dcKey}~cobranca (19/11/2026): sai sozinha, no próximo dia em que o FILHOt vem */
+  var SUFIXO_COBRANCA='~cobranca';
   var SINAL_MAX_MS=5*60*1000;
   var ITENS={vac_mult_p:1,vac_gripe_p:1,vac_raiva_p:1,verm_p:1,verm_dose2_p:1,ecto_p:1,col_p:1};
   var PODE_PAUSAR={diretoria:1,supervisor:1,supervisao:1};
@@ -104432,8 +104765,26 @@ renderAtual=function(){
     }
     return {ok:true,item:itens[0],itens:itens};
   }
-  /* a chave da fila: a pergunta na dcKey, o aviso do plano em {dcKey}~plano */
-  function chaveDe(item){return item&&item.tipo==='plano'?txt(item.dcKey)+SUFIXO_PLANO:txt(item&&item.dcKey);}
+  /* a chave da fila: a pergunta na dcKey, o aviso do plano em {dcKey}~plano, a cobrança em {dcKey}~cobranca */
+  function chaveDe(item){return item&&item.tipo==='plano'?txt(item.dcKey)+SUFIXO_PLANO:item&&item.tipo==='cobranca'?txt(item.dcKey)+SUFIXO_COBRANCA:txt(item&&item.dcKey);}
+  /* COBRANÇA DO «VAI FAZER EM CASA» (Adriana, 17/11/2026; textos aprovados em 19/11/2026): "Se tiver ainda pendente no próximo dia,
+     a Zelozinha precisa mandar mensagem". Monta o item da fila com o texto aprovado (CobrancaCasa), para o tutor principal da ficha,
+     com o primeiro nome do tutor e do FILHOt. O serviço da VPS remonta e confere o mesmo texto antes de enviar.
+     e: {dia, ficha:{dcKey,pelKey,nome,sexo,tutor}, cadastro, itemK, vence, origemDia, gerar?} */
+  function montarCobranca(e){
+    e=e||{};var dia=txt(e.dia),f=e.ficha||{},cad=e.cadastro,k=txt(e.itemK),origem=txt(e.origemDia);
+    if(!iso(dia)||!txt(f.dcKey)||!txt(f.pelKey)||!txt(f.nome)||!ITENS[k])return {ok:false,motivo:'a questão está incompleta'};
+    if(!iso(origem)||!(origem<dia))return {ok:false,motivo:'a cobrança só sai num dia depois da resposta do tutor'};
+    if(humano(cad&&cad.comunicacaoZelozinha))return {ok:false,humano:true,motivo:'contato humano, como pede a ficha'};
+    var r=responsavel(cad,f.tutor);if(!r.ok)return r;
+    var gerar=typeof e.gerar==='function'?e.gerar:(root.CobrancaCasa&&root.CobrancaCasa.gerarCobranca);
+    if(typeof gerar!=='function')return {ok:false,motivo:'o texto aprovado da cobrança não está carregado'};
+    var m=gerar({nomeTutor:primeiroNome(r.nome),nomePeludo:primeiroNome(f.nome),itemK:k});
+    if(!m||m.ok!==true||!txt(m.texto))return {ok:false,motivo:(m&&m.motivo)||'o texto da cobrança não foi montado'};
+    var sexo=f.sexo==='F'||f.sexo==='M'?f.sexo:'';
+    return {ok:true,item:{v:1,tipo:'cobranca',estado:'pronto',dia:dia,dcKey:txt(f.dcKey),pelKey:txt(f.pelKey),nome:txt(f.nome),sexo:sexo,tutor:r.nome,para:r.telefone,
+      texto:m.texto,itens:[{itemK:k,vence:txt(e.vence)}],origem:{dia:origem,itemK:k}}};
+  }
   function enfileirar(db,item,extra){
     var novo=Object.assign({},item,extra||{});
     return db.ref(FILA+'/'+item.dia+'/'+chaveDe(item)).transaction(function(atual){return atual?undefined:novo;}).then(function(r){return {ok:true,criado:!!(r&&r.committed)};});
@@ -104581,7 +104932,7 @@ renderAtual=function(){
   function naFila(it){return it&&(it.estado==='pronto'||it.estado==='enviando');}
   function posicao(dc){
     var lista=Object.keys(vivo.fila).map(function(k){return vivo.fila[k];}).filter(naFila).sort(function(a,b){if(a.estado!==b.estado)return a.estado==='enviando'?-1:1;return (Number(a.criadoEm)||0)-(Number(b.criadoEm)||0);});
-    for(var i=0;i<lista.length;i++)if(lista[i].dcKey===dc)return i+1;return 0;
+    for(var i=0;i<lista.length;i++)if(lista[i].dcKey===dc&&lista[i].tipo!=='cobranca')return i+1;return 0;
   }
   function partesSP(ms){var o={};try{new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',weekday:'short',hour:'2-digit',hourCycle:'h23'}).formatToParts(new Date(ms)).forEach(function(p){o[p.type]=p.value;});}catch(_){}return {dow:o.weekday||'',h:Number(o.hour)};}
   function naJanela(ms){var p=partesSP(ms);return ['Mon','Tue','Wed','Thu','Fri'].indexOf(p.dow)>=0&&p.h>=7&&p.h<13;}
@@ -104687,7 +105038,8 @@ renderAtual=function(){
   function enviadosHoje(dia,excluir){
     if(!vivo.dia||vivo.dia!==dia)return [];
     var fora=obj(excluir)?excluir:{};
-    return Object.keys(vivo.fila).filter(function(k){var it=vivo.fila[k];return obj(it)&&it.estado==='enviado'&&!Object.prototype.hasOwnProperty.call(fora,k)&&!Object.prototype.hasOwnProperty.call(fora,txt(it.dcKey));})
+    /* a cobrança do «Vai fazer em casa» não deixa o FILHOt «em dia»: ela fica no cartão da aba «Sem finalização» */
+    return Object.keys(vivo.fila).filter(function(k){var it=vivo.fila[k];return obj(it)&&it.estado==='enviado'&&it.tipo!=='cobranca'&&!Object.prototype.hasOwnProperty.call(fora,k)&&!Object.prototype.hasOwnProperty.call(fora,txt(it.dcKey));})
       .map(function(k){return Object.assign({},vivo.fila[k],{dcKey:k});})
       .sort(function(a,b){return (Number(b.enviadoEm)||0)-(Number(a.enviadoEm)||0)||(a.dcKey<b.dcKey?-1:1);});
   }
@@ -104721,7 +105073,7 @@ renderAtual=function(){
       var b=t.closest('[data-zs-acao]');if(b&&!b.disabled){b.disabled=true;marcar(b.getAttribute('data-zs-dc'),b.getAttribute('data-zs-acao')).then(function(ok){if(!ok)b.disabled=false;});}
     });
   }
-  return {FILA:FILA,SAUDE:SAUDE,CONTROLE:CONTROLE,telefone:telefone,responsavel:responsavel,primeiroNome:primeiroNome,veterinariaNoDia:veterinariaNoDia,montar:montar,cuidadosDoDia:cuidadosDoDia,cobertura:cobertura,chaveDe:chaveDe,SUFIXO_PLANO:SUFIXO_PLANO,enfileirar:enfileirar,cancelarSePronto:cancelarSePronto,criarFabrica:criarFabrica,criarCompletar:criarCompletar,
+  return {FILA:FILA,SAUDE:SAUDE,CONTROLE:CONTROLE,telefone:telefone,responsavel:responsavel,primeiroNome:primeiroNome,veterinariaNoDia:veterinariaNoDia,montar:montar,cuidadosDoDia:cuidadosDoDia,cobertura:cobertura,chaveDe:chaveDe,SUFIXO_PLANO:SUFIXO_PLANO,SUFIXO_COBRANCA:SUFIXO_COBRANCA,montarCobranca:montarCobranca,enfileirar:enfileirar,cancelarSePronto:cancelarSePronto,criarFabrica:criarFabrica,criarCompletar:criarCompletar,
     ligar:ligar,desligar:desligar,aoMudar:aoMudar,item:item,posicao:posicao,geral:geral,textoGeral:textoGeral,naJanela:naJanela,
     statusDoCiclo:statusDoCiclo,cartaoHTML:cartaoHTML,enviadosHoje:enviadosHoje,secaoEmDiaHTML:secaoEmDiaHTML,planoHoje:planoHoje,aviso:aviso,marcar:marcar,alternarPausa:alternarPausa,pintarTopo:pintarTopo,_vivo:vivo};
 });
@@ -104743,7 +105095,14 @@ renderAtual=function(){
   var CUIDADO={vac_mult_p:'Vacina múltipla',vac_gripe_p:'Vacina contra gripe',vac_raiva_p:'Vacina antirrábica',verm_p:'Vermífugo',verm_dose2_p:'2ª dose do vermífugo',ecto_p:'Proteção contra pulgas e carrapatos',col_p:'Coleira repelente'};
   var DOSE_FORMA={verm_p:'comp',verm_dose2_p:'comp',ecto_p:'pipeta'};
   var RESP={loja:'Autorizou pegar na loja',bolsa:'Trouxe na bolsa',casa:'Vai fazer em casa',data:'Autorizou para outra data'};
-  var GRUPOS=[['nresp','Tutor não respondeu'],['resp','Resposta a registrar'],['bolsa','Confirmar com o Day Care'],['contato','Falar com o tutor'],['data','Falta a data'],['faltou','Faltou ou não foi dado']];
+  var GRUPOS=[['nresp','Tutor não respondeu'],['resp','Resposta a registrar'],['bolsa','Confirmar com o Day Care'],['contato','Falar com o tutor'],['casa','Vai fazer em casa'],['data','Falta a data'],['faltou','Faltou ou não foi dado']];
+  /* «VAI FAZER EM CASA» FICA EM ABERTO (Adriana, 17/11/2026): "precisamos agradecer e pedir que ela nos informe — tem a mensagem pronta e não apenas sumir;
+     precisa ficar em aberto, porque temos que cobrar o tutor depois se ele deu... não pode simplesmente fechar."
+     - A resposta «Vai fazer em casa» não fecha mais a questão: ela vai para o grupo «Vai fazer em casa» (passo 'casa') com a mensagem de agradecimento
+       publicada (`ZeluzRespostaApp88.textoEmCasa`, a mesma da tela «Contatos e respostas de hoje»), «Cobrei o tutor» e «Abrir a ficha».
+     - Sai daqui sozinha quando a ficha recebe a data (o cuidado deixa de vencer). Na dúvida (ficha não única ou não lida), continua aberta.
+     - Os registros antigos que já tinham sido fechados como «Vai fazer em casa» voltam a aparecer abertos, pela mesma regra. */
+  var COMO_CASA_ANTIGO=/^Vai fazer em casa/;
   /* o que cabe na bolsa: os mesmos botões de «Quanto foi dado» (DASH_QTD) + a pipeta; `v` é o valor que o Lançamento do dia guarda */
   var TEM=[{k:'meio',t:'½ comprimido',n:0.5,f:'comp',v:'MEIO COMPRIMIDO'},{k:'um',t:'1 comprimido',n:1,f:'comp',v:'1 COMPRIMIDO'},{k:'umemeio',t:'1 e ½ comprimido',n:1.5,f:'comp',v:'1 COMPRIMIDO E MEIO'},
     {k:'dois',t:'2 comprimidos',n:2,f:'comp',v:'2 COMPRIMIDOS'},{k:'doisemeio',t:'2 e ½ comprimidos',n:2.5,f:'comp',v:'2 COMPRIMIDOS E MEIO'},{k:'tres',t:'3 comprimidos',n:3,f:'comp',v:'3 COMPRIMIDOS'},
@@ -104801,12 +105160,15 @@ renderAtual=function(){
       cuidado:CUIDADO[k]||k,msgDia:dia,msgEm:Number(it&&it.enviadoEm)||0,msgHora:hhmm(it&&it.enviadoEm),msg:txt(it&&it.textoEnviado)||txt(it&&it.texto),
       msgTipo:'Mensagem',irmao:irmaoDe(it,dc,dd),rec:rec,st:rec?txt(r.st)||'aberta':'aberta',passo:rec?txt(r.passo)||'naoresp':'naoresp',prev:txt(r.prev),tem:txt(r.tem),
       tent:tent,faltou:obj(r.faltou)?r.faltou:null,reaberta:r.reaberta===true,precisa:obj(r.precisa)?r.precisa:null,res:obj(r.res)?r.res:null,linha:obj(r.linha)?r.linha:null,agenda:obj(r.agenda)?r.agenda:null,
-      origem:txt(r.origem),seq:Number(r.seq)||0};
+      origem:txt(r.origem),seq:Number(r.seq)||0,casa:obj(r.casa)?r.casa:null};
     if(it&&it.tipo==='plano')c.msgTipo='Aviso do plano';
+    /* fechada antes de 17/11/2026 como «Vai fazer em casa»: volta aberta, esperando a data do tutor */
+    if(rec&&c.st==='resolvida'&&c.res&&COMO_CASA_ANTIGO.test(txt(c.res.como))){c.casa={por:txt(c.res.por),em:Number(c.res.em)||0};c.st='aberta';c.passo='casa';c.prev='naoresp';c.res=null;c.seq=0;}
     return c;
   }
   function grupoDe(c){
     if(c.faltou)return 'faltou';
+    if(c.passo==='casa')return 'casa';
     if(c.passo==='bolsa1'||c.passo==='bolsa2')return 'bolsa';
     if(c.passo==='contato')return 'contato';
     if(c.passo==='data')return 'data';
@@ -104816,12 +105178,23 @@ renderAtual=function(){
   /* f: {hoje, fila:{dia:{dcKey:item}}, regs:{dia:{dcKey:{itemK:registro}}}, respostaAntiga(dia,dc,itemK,vence) → ''|'aguardar'|'outra', aindaVence(dia,dc,itemK,vence) → true|false|null} */
   function listar(f){
     f=f||{};var hoje=txt(f.hoje),ini=iso(hoje)?maisDias(hoje,-JANELA_FILA):'',iniReg=iso(hoje)?maisDias(hoje,-JANELA_REG):'',fila=obj(f.fila)?f.fila:{},regs=obj(f.regs)?f.regs:{};
-    var abertas=[],fechadas=[],vistos={};
-    function pronto(c){return c.st==='aberta'?abertas.push(c):fechadas.push(c);}
+    var abertas=[],fechadas=[],vistos={},cobr={};
+    function pronto(c){
+      /* «Vai fazer em casa»: a ficha já tem a data (o cuidado não vence mais) — a questão sai sozinha */
+      if(c.st==='aberta'&&c.passo==='casa'&&typeof f.aindaVence==='function'&&f.aindaVence(c.dia,c.dc,c.itemK,c.vence)===false){c.st='resolvida';c.auto=true;c.res={por:'',em:0,como:'Ficha atualizada: o tutor fez em casa'};}
+      return c.st==='aberta'?abertas.push(c):fechadas.push(c);
+    }
     Object.keys(fila).sort().forEach(function(dia){
       if(!iso(dia)||dia<ini||dia>hoje||!obj(fila[dia]))return;
       Object.keys(fila[dia]).sort().forEach(function(ch){
-        var it=fila[dia][ch];if(!obj(it)||it.estado!=='enviado')return;
+        var it=fila[dia][ch];if(!obj(it))return;
+        /* a cobrança do «Vai fazer em casa» ({dcKey}~cobranca, 19/11/2026) não é questão nova: ela vai para o cartão da questão de origem (a mais recente vale) */
+        if(it.tipo==='cobranca'){
+          var o=obj(it.origem)?it.origem:{},ko=chave(txt(o.dia),txt(it.dcKey),txt(o.itemK));
+          if(txt(it.dcKey)+'~cobranca'===ch&&(!cobr[ko]||cobr[ko].dia<=dia))cobr[ko]={dia:dia,estado:txt(it.estado),em:Number(it.enviadoEm)||0,texto:txt(it.textoEnviado)||txt(it.texto),motivo:txt(it.motivo)};
+          return;
+        }
+        if(it.estado!=='enviado')return;
         /* o aviso do plano mora em {dcKey}~plano (09/11/2026); o registro e o cartão são do FILHOt (dcKey) */
         var dc=it.tipo==='plano'&&txt(it.dcKey)?txt(it.dcKey):ch;
         (Array.isArray(it.itens)?it.itens:[]).forEach(function(x){
@@ -104844,16 +105217,51 @@ renderAtual=function(){
         var it=obj(fila[dia])&&obj(fila[dia][dc])?fila[dia][dc]:null;pronto(cartao(dia,dc,k,rec.vence,it,rec,fila[dia]));
       });});
     });
+    abertas.concat(fechadas).forEach(function(c){if(cobr[c.key])c.cobranca=cobr[c.key];});
     abertas.sort(function(a,b){return a.dia<b.dia?-1:a.dia>b.dia?1:(a.msgEm-b.msgEm)||(a.key<b.key?-1:a.key>b.key?1:0);});
     fechadas.sort(function(a,b){return (b.seq-a.seq)||(a.key<b.key?-1:1);});
     var contagem={};abertas.forEach(function(c){var g=grupoDe(c);contagem[g]=(contagem[g]||0)+1;});
     return {abertas:abertas,fechadas:fechadas,contagem:contagem,agendadas:fechadas.filter(function(c){return c.st==='agendada';}).length,maisAntiga:abertas.length?abertas[0].dia:''};
   }
+  /* ---------- a cobrança automática do «Vai fazer em casa» (Adriana, 17/11/2026; textos aprovados em 19/11/2026) ----------
+     "Se tiver ainda pendente no próximo dia, a Zelozinha precisa mandar mensagem" — no próximo dia em que o FILHOt está de novo na Zêluz.
+     - Só questão aberta no grupo «Vai fazer em casa», de um dia ANTERIOR, de FILHOt com check-in hoje, de segunda a sexta (os dias de envio).
+     - Uma cobrança por questão: a que saiu (ou ficou para conferir, ou foi recusada) não se repete; a que não chegou a sair
+       (o FILHOt saiu antes, ou ficou na fila depois das 13h) volta na próxima vinda.
+     - Um FILHOt recebe no máximo uma cobrança por dia (a questão mais antiga primeiro). */
+  var DIAS_ENVIO={1:1,2:1,3:1,4:1,5:1};
+  function cobrancaBloqueia(cb,hoje){
+    if(!obj(cb))return false;
+    if(cb.estado==='enviado'||cb.estado==='enviando'||cb.estado==='conferir'||cb.estado==='falhou')return true;
+    return cb.dia===hoje;
+  }
+  /* o: {hoje, abertas (da view), presentes:{dcKey:true}} → as questões a cobrar hoje */
+  function cobrancasDoDia(o){
+    o=o||{};var hoje=txt(o.hoje),pres=obj(o.presentes)?o.presentes:{},out=[],dcs={};
+    if(!iso(hoje)||!DIAS_ENVIO[new Date(hoje+'T00:00:00Z').getUTCDay()])return out;
+    (Array.isArray(o.abertas)?o.abertas:[]).forEach(function(c){
+      if(!c||c.st!=='aberta'||c.faltou||c.passo!=='casa'||!iso(c.dia)||!(c.dia<hoje)||pres[c.dc]!==true||dcs[c.dc])return;
+      if(obj(c.cobranca)&&c.cobranca.dia===hoje){dcs[c.dc]=1;return;}
+      if(cobrancaBloqueia(c.cobranca,hoje))return;
+      dcs[c.dc]=1;out.push(c);
+    });
+    return out;
+  }
+  /* a cobrança de hoje que ainda está «pronto» e cuja questão já não está aberta em «Vai fazer em casa» (a ficha recebeu a data, a resposta mudou) sai da fila.
+     Só chame com a lista completa (view pronta): com a lista vazia por falta de leitura, tudo seria cancelado. */
+  function cobrancasParaCancelar(o){
+    o=o||{};var fila=obj(o.filaHoje)?o.filaHoje:{},abertos={};
+    (Array.isArray(o.abertas)?o.abertas:[]).forEach(function(c){if(c&&c.st==='aberta'&&!c.faltou&&c.passo==='casa')abertos[c.key]=1;});
+    return Object.keys(fila).filter(function(k){
+      var it=fila[k];if(!obj(it)||it.tipo!=='cobranca'||it.estado!=='pronto'||txt(it.dcKey)+'~cobranca'!==k)return false;
+      var or=obj(it.origem)?it.origem:{};return !abertos[chave(txt(or.dia),txt(it.dcKey),txt(or.itemK))];
+    });
+  }
   /* ---------- a máquina de estados de uma questão (pura): devolve o registro novo e o que precisa acontecer fora dele ---------- */
   function registroDe(c){
     var r=c.rec?copia(c.rec):{v:1,dia:c.dia,dcKey:c.dc,itemK:c.itemK,st:'aberta',passo:'naoresp'};
     r.vence=c.vence||r.vence||'';r.nome=c.pet;r.tutor=c.tutor||'';if(c.raca)r.raca=c.raca;
-    r.st=c.st;r.passo=c.passo;r.prev=c.prev;r.tem=c.tem;r.tent=c.tent.slice();r.faltou=c.faltou;r.reaberta=c.reaberta;r.precisa=c.precisa;r.res=c.res;r.linha=c.linha;r.agenda=c.agenda;
+    r.st=c.st;r.passo=c.passo;r.prev=c.prev;r.tem=c.tem;r.tent=c.tent.slice();r.faltou=c.faltou;r.reaberta=c.reaberta;r.precisa=c.precisa;r.res=c.res;r.linha=c.linha;r.agenda=c.agenda;r.casa=c.passo==='casa'?c.casa:null;
     if(c.origem)r.origem=c.origem;
     return r;
   }
@@ -104913,7 +105321,7 @@ renderAtual=function(){
     if(acao!=='reabrir'&&c.st!=='aberta')return erro('Esta questão já tem um final. Reabra para mudar.');
     if(acao==='resp'){
       var k=args.k;if(!RESP[k])return erro('Resposta desconhecida.');
-      if(k==='casa'){fechar(r,'resolvida','Vai fazer em casa. Sem lançamento',ctx);return pronto();}
+      if(k==='casa'){r.prev=c.faltou?'data':c.passo;r.passo='casa';r.casa={por:ctx.por,em:ctx.agora};r.faltou=null;return pronto();}
       r.prev=c.passo;
       if(k==='loja')r.passo='loja_h';
       if(k==='bolsa'){r.passo='bolsa1';r.tem='';r.precisa=(typeof ctx.precisaDe==='function'?ctx.precisaDe(c):null)||precisaPadrao(c.itemK);}
@@ -104921,7 +105329,7 @@ renderAtual=function(){
       r.faltou=c.faltou;return pronto();
     }
     if(acao==='tent'){r.tent.push({por:ctx.por,em:ctx.agora});return pronto();}
-    if(acao==='voltar0'){r.passo=c.prev||'naoresp';r.prev='';return pronto();}
+    if(acao==='voltar0'){r.passo=c.prev||'naoresp';r.prev='';r.casa=null;return pronto();}
     if(acao==='voltar'){r.passo='bolsa1';r.tem='';return pronto();}
     if(acao==='salvarh'){
       var h=txt(args.hora);if(!horaOk(h))return erro('Escolha o horário antes.');
@@ -104988,7 +105396,7 @@ renderAtual=function(){
   var API={COL:COL,FILA:FILA,JANELA_FILA:JANELA_FILA,JANELA_REG:JANELA_REG,FRESCOR_MS:FRESCOR_MS,ITEM_DASH:ITEM_DASH,CUIDADO:CUIDADO,DOSE_FORMA:DOSE_FORMA,RESP:RESP,GRUPOS:GRUPOS,TEM:TEM,
     txt:txt,obj:obj,iso:iso,esc:esc,copia:copia,plural:plural,dm:dm,dow:dow,rotDia:rotDia,maisDias:maisDias,diasEntre:diasEntre,hhmm:hhmm,diaSP:diaSP,quandoTxt:quandoTxt,horaOk:horaOk,limpar:limpar,chave:chave,caminho:caminho,idLinha:idLinha,
     temDe:temDe,temPorValor:temPorValor,precisaDeValor:precisaDeValor,precisaPadrao:precisaPadrao,avalia:avalia,fmtN:fmtN,
-    listar:listar,grupoDe:grupoDe,idadeTxt:idadeTxt,cartao:cartao,cartaoDeLinha:cartaoDeLinha,registroDe:registroDe,montarLinha:montarLinha,montarLinhasPlano:montarLinhasPlano,lancarPlano:lancarPlano,transicao:transicao,transicaoLinha:transicaoLinha};
+    listar:listar,grupoDe:grupoDe,idadeTxt:idadeTxt,cartao:cartao,cobrancasDoDia:cobrancasDoDia,cobrancasParaCancelar:cobrancasParaCancelar,cobrancaBloqueia:cobrancaBloqueia,cartaoDeLinha:cartaoDeLinha,registroDe:registroDe,montarLinha:montarLinha,montarLinhasPlano:montarLinhasPlano,lancarPlano:lancarPlano,transicao:transicao,transicaoLinha:transicaoLinha};
   /* ---------- a leitura, a gravação e as ações (portas injetadas: o app entrega o banco, o Lançamento do dia, o «Agendou para» e a ficha) ---------- */
   function criar(P){
     P=P||{};
@@ -105162,12 +105570,40 @@ renderAtual=function(){
       return '<div class="z178-hbloco falta"><div class="z178-htit">Qual horário hoje?</div><div class="z178-hsub">O horário vai junto para o Lançamento do dia '+esc(dm(hoje))+'.</div><div class="z178-hlinha"><input class="z178-in" type="time" value="'+esc(v)+'" data-z178-in="h" data-z178-q="'+esc(c.key)+'" aria-label="Horário de hoje para '+esc(c.pet)+'">'+bt('salvarh',c,'gold','Salvar horário')+'</div>'+(e?'<p class="z178-erro" role="alert">'+esc(e)+'</p>':'')+'</div>'+linkVoltar(c);
     }
     if(g==='data')return '<div class="z178-hbloco falta"><div class="z178-htit">Para qual dia?</div>'+blocoData(c,ui,hoje)+'</div>'+linkVoltar(c);
+    if(g==='casa'){
+      var tx=textoCasa(c),cp=ui.copiado[c.key+':casa'],quem=c.casa&&c.casa.por?' por '+c.casa.por+(c.casa.em?', '+quandoTxt(c.casa.em):''):'';
+      return '<div class="z178-hbloco falta"><div class="z178-htit">Vai fazer em casa</div><div class="z178-hsub">Resposta registrada'+esc(quem)+'. Fica aberta até a ficha receber a data.</div>'
+        +cobrancaHTML(c,hoje)
+        +(tx?'<div class="z178-rotulo">Mensagem pronta para enviar</div><div class="z178-zap"><div class="z178-bal zel grande" data-z178-casa-msg="'+esc(c.key)+'">'+esc(tx)+'</div></div>':'<p class="z178-nota">Sem o nome do tutor na ficha não há mensagem pronta.</p>')
+        +'<div class="z178-btns">'+(tx?bt('copiarcasa',c,'gold','Copiar mensagem'):'')+bt('tent',c,'','Cobrei o tutor')+bt('ficha',c,'','Tutor informou: abrir a ficha')+'</div>'
+        +(cp==='ok'?'<p class="z178-feedback" role="status">Mensagem copiada.</p>':'')+(cp==='falha'?'<p class="z178-nota" role="status">Não deu para copiar sozinho. Selecione o texto da mensagem acima.</p>':'')
+        +(ui.erro[c.key+':ficha']?'<p class="z178-erro" role="alert">'+esc(ui.erro[c.key+':ficha'])+'</p>':'')
+        +'<p class="z178-nota">Quando o tutor informar a data, atualize a ficha com «Quem deu: Tutor em casa». A questão sai daqui sozinha.</p>'
+        +(e?'<p class="z178-erro" role="alert">'+esc(e)+'</p>':'')+'</div>'+linkVoltar(c,'Mudar a resposta');
+    }
     return '';
+  }
+  /* COBRANÇA AUTOMÁTICA (19/11/2026): o que o cartão do «Vai fazer em casa» mostra sobre a cobrança da Zelozinha.
+     c.cobranca vem da fila ({dcKey}~cobranca, com a questão de origem): {dia, estado, em, texto, motivo} */
+  function cobrancaHTML(c,hoje){
+    var cb=obj(c.cobranca)?c.cobranca:null,quando=cb?dm(cb.dia)+(cb.em&&hhmm(cb.em)?' às '+hhmm(cb.em):''):'';
+    var dica='<p class="z178-nota">Se o tutor autorizar fazer aqui, toque em «Mudar a resposta» e escolha «Autorizou pegar na loja»'+(/^vac_/.test(c.itemK)?' ou «Autorizou para outra data»':'')+'.</p>';
+    var bal=cb&&cb.texto?'<div class="z178-zap"><div class="z178-bal zel" data-z178-cobranca-msg="'+esc(c.key)+'">'+esc(cb.texto)+'</div></div>':'';
+    if(!cb)return '<p class="z178-nota" data-z178-cobranca="espera">Na próxima vinda de '+esc(c.pet)+', depois do check-in, a Zelozinha manda a cobrança sozinha (segunda a sexta, das 7h às 13h).</p>';
+    if(cb.estado==='enviado')return '<div class="z178-rotulo" data-z178-cobranca="enviada">A Zelozinha cobrou em '+esc(quando)+'</div>'+bal+dica;
+    if((cb.estado==='pronto'||cb.estado==='enviando')&&cb.dia===hoje)return '<p class="z178-nota" data-z178-cobranca="fila">'+(cb.estado==='enviando'?'A Zelozinha está mandando a cobrança agora.':'A cobrança está na fila de hoje: sai no horário de envio.')+'</p>';
+    if(cb.estado==='conferir')return '<p class="z178-aviso" data-z178-cobranca="conferir">O WhatsApp não confirmou a cobrança de '+esc(dm(cb.dia))+'. Veja no WhatsApp da Zêluz se ela saiu.</p>'+bal;
+    if(cb.estado==='falhou')return '<p class="z178-aviso" data-z178-cobranca="falhou">A cobrança de '+esc(dm(cb.dia))+' não saiu: '+esc(cb.motivo||'o WhatsApp recusou a mensagem.')+' Fale com o tutor e toque em «Cobrei o tutor».</p>';
+    return '<p class="z178-nota" data-z178-cobranca="espera">A cobrança de '+esc(dm(cb.dia))+' não chegou a sair'+(cb.motivo?' ('+esc(cb.motivo.replace(/\.$/,''))+')':'')+'. Ela sai na próxima vinda de '+esc(c.pet)+'.</p>';
+  }
+  /* a mensagem de agradecimento do «Vai fazer em casa»: a publicada, que mora numa função só (ZeluzRespostaApp88.textoEmCasa) */
+  function textoCasa(c){
+    try{var b=root&&root.ZeluzRespostaApp88;return b&&typeof b.textoEmCasa==='function'?txt(b.textoEmCasa({tutor:c.tutor},c.itemK)):'';}catch(_){return '';}
   }
   function seloHTML(c){
     if(c.faltou)return '<span class="z178-chip alerta">'+esc(c.faltou.sel)+'</span>';
-    var t={nresp:'Tutor não respondeu',resp:'Autorizou pegar na loja',bolsa:'Confirmar com o Day Care',contato:'Falar com o tutor',data:'Autorizou para outra data'}[grupoDe(c)],g=grupoDe(c);
-    return '<span class="z178-chip '+(g==='contato'?'alerta':g==='bolsa'?'sem':'env')+'">'+esc(t)+'</span>';
+    var t={nresp:'Tutor não respondeu',resp:'Autorizou pegar na loja',bolsa:'Confirmar com o Day Care',contato:'Falar com o tutor',casa:'Vai fazer em casa: esperar a data',data:'Autorizou para outra data'}[grupoDe(c)],g=grupoDe(c);
+    return '<span class="z178-chip '+(g==='contato'?'alerta':g==='bolsa'||g==='casa'?'sem':'env')+'">'+esc(t)+'</span>';
   }
   function mensagemHTML(c){
     return '<div class="z178-zap" data-z178-msg="'+esc(c.key)+'">'+(c.msg?'<div class="z178-bal zel"><small>'+esc(c.msgTipo)+' da Zelozinha · '+esc(dm(c.msgDia))+(c.msgHora?', '+esc(c.msgHora):'')+'</small>'+esc(c.msg)+'</div>':'<p class="z178-nota">O texto desta mensagem não está guardado.</p>')
@@ -105179,13 +105615,14 @@ renderAtual=function(){
       +'<p class="z178-cuid">'+esc(c.cuidado)+(c.vence?' <span>· vence '+esc(dm(c.vence))+'</span>':'')+(c.reaberta?' <span>· reaberta</span>':'')+'</p>'
       +'<p class="z178-quando"><strong>'+esc(c.msgTipo)+' de '+esc(dm(c.msgDia))+(c.msgHora?', '+esc(c.msgHora):'')+'</strong> · '+esc(idadeTxt(c,hoje))+'</p>';
     if(c.irmao)h+='<p class="z178-irm"><span class="z178-chip env">Mensagem junto com o irmão</span> É a mesma mensagem '+esc(c.irmao)+'. Cada um tem as próprias ações.</p>';
-    if(c.tent.length)h+='<p class="z178-tent">'+esc(plural(c.tent.length,'tentativa','tentativas'))+': '+c.tent.map(function(t){return esc(t.por)+', '+esc(quandoTxt(t.em));}).join(' · ')+'</p>';
+    if(c.tent.length)h+='<p class="z178-tent">'+esc(c.passo==='casa'?plural(c.tent.length,'contato','contatos'):plural(c.tent.length,'tentativa','tentativas'))+': '+c.tent.map(function(t){return esc(t.por)+', '+esc(quandoTxt(t.em));}).join(' · ')+'</p>';
     h+='<div class="z178-linkrow"><button type="button" class="z178-link" data-z178-a="vermsg" data-z178-q="'+esc(c.key)+'" aria-expanded="'+abre+'">'+(abre?'Esconder mensagem':'Ver mensagem')+'</button></div>';
     if(abre)h+=mensagemHTML(c);
     return h+acoesHTML(c,ui,hoje)+'</article>';
   }
   function resolvidaHTML(c){
     var ag=c.st==='agendada',r=c.res||{};
+    if(c.auto)return '<div class="z178-res" data-z178-res="'+esc(c.key)+'"><div class="z178-rt">'+esc(c.pet)+' · '+esc(c.cuidado)+'</div><div class="z178-rs">Saiu sozinha quando a ficha recebeu a data</div><span class="z178-chip ok">'+esc(r.como||'')+'</span></div>';
     return '<div class="z178-res" data-z178-res="'+esc(c.key)+'"><div class="z178-rt">'+esc(c.pet)+' · '+esc(c.cuidado)+'</div><div class="z178-rs">'+(ag?'Agendada':'Resolvida')+' por '+esc(r.por||'equipe')+(r.em?', '+esc(quandoTxt(r.em)):'')+'</div>'
       +'<span class="z178-chip '+(ag?'sem':'ok')+'">'+esc(r.como||'')+'</span><div class="z178-btns">'+bt('reabrir',c,'','Reabrir')+'</div></div>';
   }
@@ -105351,6 +105788,12 @@ renderAtual=function(){
       function falha(){ui.copiado[key]='falha';ui.msgAberta[key]=true;pintarSem();}
       try{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(c.msg).then(ok,falha);else falha();}catch(_){falha();}
     }
+    function copiarCasa(key){
+      var c=api.achar(key),tx=c?textoCasa(c):'';if(!tx)return;
+      function ok(){ui.copiado[key+':casa']='ok';pintarSem();}
+      function falha(){ui.copiado[key+':casa']='falha';pintarSem();}
+      try{if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(tx).then(ok,falha);else falha();}catch(_){falha();}
+    }
     function lerCampo(key,tipo){var el=document.querySelector('input[data-z178-in="'+tipo+'"][data-z178-q="'+key.replace(/["\\]/g,'\\$&')+'"]');return el?el.value:ui.draft[key+':'+tipo]||'';}
     function tocouCartao(b){
       var a=b.getAttribute('data-z178-a'),key=b.getAttribute('data-z178-q')||'',k=b.getAttribute('data-k'),v=b.getAttribute('data-v');
@@ -105359,6 +105802,8 @@ renderAtual=function(){
       if(a==='atualizar'){b.disabled=true;api.atualizar().then(pintarSem,pintarSem);return;}
       if(a==='vermsg'){ui.msgAberta[key]=!ui.msgAberta[key];ui.foco='[data-z178-card="'+key.replace(/["\\]/g,'\\$&')+'"]';pintarSem();return;}
       if(a==='copiar'){copiar(key);return;}
+      if(a==='copiarcasa'){copiarCasa(key);return;}
+      if(a==='ficha'){var cf=api.achar(key),okF=false;try{okF=!!(cf&&typeof P.abrirFicha==='function'&&P.abrirFicha(cf.dc));}catch(_){okF=false;}if(okF)delete ui.erro[key+':ficha'];else{ui.erro[key+':ficha']='Não achei a ficha única deste FILHOt. Abra pela busca de FILHOts.';pintarSem();}return;}
       if(a==='resp'||a==='tent'||a==='voltar0'||a==='voltar'||a==='confirmar'||a==='reabrir'){lido(key,a,k?{k:k}:{},b);return;}
       if(a==='b1'||a==='tem'||a==='comb'){lido(key,a,{v:v},b);return;}
       if(a==='salvarh'){lido(key,'salvarh',{hora:lerCampo(key,'h')},b);return;}
@@ -107991,7 +108436,13 @@ renderAtual=function(){
     validarData:function(h,dia,itemK){var ZA=w.ZelozinhaAgenda;return ZA?ZA.validarData(h,dia,itemK):{ok:true};},pet:pet,
     gravarLinha:gravarLinha,removerLinha:removerLinha,marcarLinha:marcarLinha,agendar:agendar,desfazerAgenda:desfazerAgenda,marcarAgenda:marcarAgenda};
   var api=P.criar(portas);
-  var tela=P.instalar({api:api,portas:{planoView:planoView,salvarHora:salvarHora,lerLinha:lerLinha,redesenharLinha:redesenharLinha}});
+  /* «Tutor informou: abrir a ficha» (17/11/2026): a ficha do FILHOt, pelo mesmo caminho da lista do Day Care; só com ficha única */
+  function abrirFicha(dc){
+    var p=petUnico(dc);if(!p||typeof abrirPeludinhoDay!=='function')return false;
+    var i=PELUDINHOS.indexOf(p);if(i<0)return false;
+    abrirPeludinhoDay(i);return true;
+  }
+  var tela=P.instalar({api:api,portas:{planoView:planoView,salvarHora:salvarHora,lerLinha:lerLinha,redesenharLinha:redesenharLinha,abrirFicha:abrirFicha}});
   P.instalarEstilo();
   w.ZelozinhaPendencias178Tela={api:api,tela:tela,portas:portas,planoView:planoView,salvarHora:salvarHora,editarHora:editarHora,lerLinha:lerLinha,espelhar:espelhar,
     lancarPlano:function(x){return P.lancarPlano({pet:pet,gravarLinha:gravarLinha,precisaDe:precisaDe,agora:agora},x);}};
@@ -108008,6 +108459,51 @@ renderAtual=function(){
   var baseAtivar=w.zelozinha116Ativar;if(typeof baseAtivar==='function')w.zelozinha116Ativar=function(){var r=baseAtivar.apply(this,arguments);abrir(false);return r;};
   setTimeout(function(){var v=hub&&hub.closest?hub.closest('#v-hoje'):null;if(v&&v.classList&&v.classList.contains('active'))abrir(false);},1500);
   setInterval(function(){var v=hub&&hub.closest?hub.closest('#v-hoje'):null;if(v&&v.classList&&v.classList.contains('active')&&!d.hidden)abrir(false);},5*60*1000);
+  /* ---------- COBRANÇA AUTOMÁTICA DO «VAI FAZER EM CASA» (Adriana, 17/11/2026; textos aprovados em 19/11/2026) ----------
+     Todo aparelho logado olha os check-ins do dia (o mesmo mapa vivo que a fila da Zelozinha já usa: não baixa nada a mais).
+     Quem tem questão aberta em «Vai fazer em casa» de um dia anterior e fez check-in hoje ganha a cobrança na fila ({dcKey}~cobranca).
+     Pôr na fila é «só se não existir»: vários aparelhos ao mesmo tempo não duplicam. A ficha tem de confirmar que o cuidado ainda vence
+     (na dúvida, não cobra). A cobrança de hoje que ainda não saiu e cuja questão fechou sai da fila. O serviço da VPS confere tudo de novo. */
+  var cob={dia:'',caminho:'',presentes:{},t:null,rodando:false},VAGA_COB='_z178Cobranca';
+  function agoraServidor(){try{return firebase.database.ServerValue.TIMESTAMP;}catch(_){return Date.now();}}
+  function diaReal(){return P.diaSP(Date.now());}
+  function cobPrender(){
+    var h=diaReal();if(!P.iso(h)||h===cob.dia||typeof zMapaVivo!=='function'||!banco())return;
+    if(cob.caminho&&typeof zMapaDesligar==='function'){try{zMapaDesligar(cob.caminho,VAGA_COB);}catch(_){}}
+    cob.dia=h;cob.caminho='daycare/checkin-corpo/'+h;cob.presentes={};
+    try{zMapaVivo(cob.caminho,VAGA_COB,function(m){if(diaReal()!==h)return;var p={};if(obj(m))Object.keys(m).forEach(function(k){if(obj(m[k])&&m[k].tipo==='entrada')p[k]=true;});cob.presentes=p;cobAgendar();});}catch(_){cob.dia='';}
+  }
+  function cobAgendar(){if(cob.t)return;cob.t=setTimeout(function(){cob.t=null;cobrar();},30000);}
+  function cobrar(){
+    var Z=w.ZelozinhaSimples,b=banco(),h=diaReal(),a=ator();
+    if(cob.rodando||!Z||typeof Z.montarCobranca!=='function'||typeof Z.enfileirar!=='function'||!b||h!==cob.dia||h!==hoje()||!a.id||!Object.keys(cob.presentes).length)return Promise.resolve(0);
+    cob.rodando=true;var novos=0;
+    return Promise.resolve(api.abrir(false)).then(function(ok){
+      var v=api.view();if(!ok||!v||v.pronto!==true||v.erro)return;
+      var cadeia=Promise.resolve();
+      P.cobrancasParaCancelar({abertas:v.abertas,filaHoje:filaHoje(h)}).forEach(function(k){
+        cadeia=cadeia.then(function(){return Z.cancelarSePronto(b,h,k,'A questão já não está em «Vai fazer em casa»: a ficha recebeu a data ou a resposta mudou.');}).catch(function(){});
+      });
+      P.cobrancasDoDia({hoje:h,abertas:v.abertas,presentes:cob.presentes}).forEach(function(c){
+        cadeia=cadeia.then(function(){
+          if(aindaVence(c.dia,c.dc,c.itemK,c.vence)!==true)return;
+          var p=petUnico(c.dc),pk=p?txt(pelKey(p)):'';if(!pk)return;
+          return Promise.resolve(b.ref('daycare/cadastro/'+pk).once('value')).then(function(s){
+            var m=Z.montarCobranca({dia:h,ficha:{dcKey:c.dc,pelKey:pk,nome:txt(pelNome(p)),sexo:p.sexo,tutor:txt(p.tutor)},cadastro:s&&typeof s.val==='function'?s.val():null,itemK:c.itemK,vence:c.vence,origemDia:c.dia});
+            if(!m.ok)return;
+            return Z.enfileirar(b,m.item,{criadoEm:agoraServidor(),criadoPor:a.id}).then(function(r){
+              if(!r||!r.criado)return;novos++;
+              try{if(typeof audit==='function')audit('zelozinha-fila',m.item.nome+' — a cobrança do «Vai fazer em casa» entrou na fila',{dcKey:c.dc});}catch(_){/* silencioso de propósito: a auditoria não pode travar a fila */}
+            });
+          });
+        }).catch(function(){});
+      });
+      return cadeia;
+    }).catch(function(){}).then(function(){cob.rodando=false;return novos;});
+  }
+  w.zelozinha178Cobrar=function(){cobPrender();return cobrar();};
+  setTimeout(function(){cobPrender();cobAgendar();},5000);
+  setInterval(function(){cobPrender();cobAgendar();},10*60*1000);
 }(window,document));
 </script>
 <style id="separar-quadro180-estilo">

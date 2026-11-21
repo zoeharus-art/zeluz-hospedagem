@@ -42,6 +42,22 @@ Se algo não bater, nada sai e o item fica «Não enviada». Assim, nem quem con
 
 **Plano com cuidados incluídos (05/11/2026; cuidados pagos com doses desde 09/11/2026, `simples-5`):** a família que paga cuidados junto com o plano não recebe pergunta por eles, só o aviso, e só no dia em que o FILHOt vem (vence 05, vem 06: dá e avisa em 06; se não vier, não avisa nada). O que vale é o que foi marcado na ficha › aba Plano › «Cuidados pagos junto com o plano»: `daycare/cadastro/<chave>/plano_cuidados/<início do plano> = { fim, itens: { verm_p: 2, ... } }`, com o período do plano e a quantidade de doses (1 a 6). A 2ª dose do vermífugo gasta do vermífugo. No check-in, o app gasta a dose do dia numa transação em `plano_usos/<cuidado>/<dia>` (vários aparelhos ao mesmo tempo não gastam duas, e o check-in repetido no dia não gasta de novo) e põe o aviso na fila na chave `<dcKey>~plano`, com `tipo: "plano"` e o texto de `aviso-plano.js`: «Oi, {tutor}, tudo bem? Hoje {o/a} {nome} recebe aqui {cuidado}, conforme fechado no plano. Qualquer novidade, a gente conta. 💛». O que não foi pago, já gastou as doses ou está fora do período vai na pergunta de sempre, na chave `<dcKey>`: nesse dia a família recebe duas mensagens. A chave antiga `cuidadosNoPlano` não decide mais nada; a aba da Zelozinha só mostra quem ainda precisa ser marcado na ficha. O serviço não confia na fila: antes de enviar o aviso, confere na ficha lida do banco que cada cuidado está pago no plano que vale no dia e que a dose do dia está gasta (senão, «Não enviada»). Ele trata o aviso como os outros itens, com três diferenças: (1) remonta o texto com `aviso-plano.js`, e não com `mensagem-unica41`; (2) aviso só sai junto com outro aviso do mesmo telefone (irmãos recebem um aviso só); (3) pergunta e aviso nunca saem na mesma mensagem. O texto de `mensagem-unica41` não mudou nenhuma letra.
 
+**Cobrança do «Vai fazer em casa» (pedido de 17/11/2026, textos aprovados em 19/11/2026, `simples-7`):** «Se tiver ainda pendente no próximo dia, a Zelozinha precisa mandar mensagem». Quando a questão da aba «Sem finalização» está aberta em «Vai fazer em casa», a Zelozinha manda uma cobrança no próximo dia em que o FILHOt volta à Zêluz, depois do check-in. O app põe o item na fila, na chave `<dcKey>~cobranca`, com `tipo: "cobranca"`, um cuidado só e `origem: {dia, itemK}`, que é a questão de origem. O texto vem de `cobranca-casa.js` e leva o primeiro nome do tutor e do FILHOt, vai formatado em linhas e com emojis leves (💛 🐾, pedido de 19/11/2026) e nunca diz «em casa». Para vermífugo, carrapaticida e coleira, o texto pergunta o produto e a data e oferece fazer hoje. Para vacina, pede a foto do cartão assinado pelo médico-veterinário e oferece agendar.
+
+Regras do app (ligação da aba «Sem finalização»):
+- Só entra na fila de segunda a sexta.
+- A ficha precisa confirmar que o cuidado ainda vence; na dúvida, não cobra.
+- Cada questão é cobrada uma vez. A cobrança que saiu, ficou em Conferir ou foi recusada não se repete. A que não chegou a sair (o FILHOt saiu antes, ou ela ficou na fila depois das 13h) volta na próxima vinda.
+- Um FILHOt recebe no máximo uma cobrança por dia.
+- Se a questão fecha antes do envio, a cobrança «pronta» sai da fila.
+
+O serviço trata a cobrança como os outros itens, com três diferenças:
+1. Remonta o texto com `cobranca-casa.js` e o confere.
+2. Recusa a cobrança que não vem de uma questão de um dia anterior.
+3. A cobrança sai sempre sozinha: nunca vai junto com irmãos nem com a pergunta do dia.
+
+O cartão da aba «Sem finalização» mostra o estado: espera a próxima vinda, na fila de hoje, cobrou (com o texto), não saiu ou recusada. O texto de `mensagem-unica41` não mudou nenhuma letra.
+
 **A fila se completa sozinha (30/10/2026):** além do check-in, todo aparelho logado olha os check-ins do dia e põe na fila quem tem check-in e cuidado vencendo e ainda não está nela. Gravar é «só se não existir», então nada se duplica.
 
 ## Arquivos
@@ -53,6 +69,7 @@ Se algo não bater, nada sai e o item fica «Não enviada». Assim, nem quem con
 | `mensagem-unica41.js` | Cópia idêntica do texto aprovado que está no app. A prova falha se as duas ficarem diferentes |
 | `mensagem-irmaos.js` | O texto aprovado para irmãos do mesmo tutor, também idêntico ao do app (`<script id="mensagem-irmaos">`) |
 | `aviso-plano.js` | O aviso do plano com cuidados incluídos (abaixo), idêntico ao do app (`<script id="aviso-plano">`). A prova falha se as duas cópias ficarem diferentes |
+| `cobranca-casa.js` | A cobrança do «Vai fazer em casa», idêntica à do app (`<script id="cobranca-casa">`). A prova falha se as duas cópias ficarem diferentes |
 | `package.json` | Uma dependência só: `firebase-admin` 14.5.0 |
 | `zelozinha.service` | A unidade do systemd |
 
@@ -67,7 +84,7 @@ A configuração já existe na VPS e não muda: `/etc/zeluz-piloto/automatico80.
 1. Copie a pasta `zelozinha/simples/` para `/opt/zelozinha/`.
 2. Em `/opt/zelozinha`, rode `npm install --omit=dev`.
 3. Copie a unidade: `cp /opt/zelozinha/zelozinha.service /etc/systemd/system/`. Depois rode `systemctl daemon-reload` e `systemctl enable --now zelozinha`.
-4. Confira com `journalctl -u zelozinha -n 20`. Tem de aparecer `{"ok":true,"zelozinha":"simples-6",…}`.
+4. Confira com `journalctl -u zelozinha -n 20`. Tem de aparecer `{"ok":true,"zelozinha":"simples-7",…}`.
 5. A tela da Zelozinha deve mostrar «WhatsApp conectado», sem a faixa vermelha.
 6. O webhook da instância do WhatsApp ainda aponta para a ponte antiga, que foi desligada. Desligue esse webhook, porque o serviço novo não usa eventos de entrada.
 

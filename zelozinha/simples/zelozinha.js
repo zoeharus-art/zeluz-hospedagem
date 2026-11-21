@@ -9,6 +9,7 @@ const N = require('./nucleo');
 const Mensagem = require('./mensagem-unica41');   // cópia idêntica do texto aprovado do app (a prova confere)
 const MensagemIrmaos = require('./mensagem-irmaos');   // texto aprovado para irmãos do mesmo tutor (30/out/2026), também idêntico ao do app
 const AvisoPlano = require('./aviso-plano');   // aviso do plano com cuidados incluídos (05/11/2026), idêntico ao do app
+const CobrancaCasa = require('./cobranca-casa');   // cobrança do «Vai fazer em casa» (19/11/2026), idêntica à do app
 
 const PASSO_MS = 15000, SINAL_MS = 120000, ESPERA_NUMERO_MS = 60000, TENTATIVAS_NUMERO = 3;
 
@@ -75,13 +76,13 @@ function criarServico(op) {
   }
   /* reserva o item (pronto -> enviando) e confere com o banco; devolve o item conferido ou o estado em que ele ficou */
   async function prepararItem(dia, it) {
-    const dc = it.dcKey, ch = it.chave || dc;   /* o aviso do plano pode morar em {dcKey}~plano */
+    const dc = it.dcKey, ch = it.chave || dc;   /* o aviso do plano pode morar em {dcKey}~plano; a cobrança, em {dcKey}~cobranca */
     if (!(await mudar(dia, ch, 'pronto', { estado: 'enviando', tentativaEm: agora() }))) return 'disputado';
     const ler = (c) => db.ref(c).once('value').then((s) => s.val());
     const [saida, checkin, cadastro] = await Promise.all([ler(`daycare/checkout-corpo/${dia}/${dc}`), ler(`daycare/checkin-corpo/${dia}/${dc}`), ler(`daycare/cadastro/${it.pelKey}`)]);
     if (N.saidaConfirmada(saida)) { await mudar(dia, ch, 'enviando', { estado: 'cancelado', motivo: 'Saiu antes do envio.' }); return 'cancelado'; }
     /* não confia na fila: só sai o texto aprovado, para o tutor principal da ficha, de quem tem check-in hoje */
-    const conf = N.conferirItem({ item: it, cadastro, checkin, gerar: Mensagem.gerarMensagem, gerarPlano: AvisoPlano.gerarAvisoPlano, doseDoDia: AvisoPlano.doseDoDia });
+    const conf = N.conferirItem({ item: it, cadastro, checkin, gerar: Mensagem.gerarMensagem, gerarPlano: AvisoPlano.gerarAvisoPlano, doseDoDia: AvisoPlano.doseDoDia, gerarCobranca: CobrancaCasa.gerarCobranca });
     if (!conf.ok) { await mudar(dia, ch, 'enviando', { estado: 'falhou', motivo: conf.motivo }); log('recusado', 'item não confere com o banco'); return 'recusado'; }
     return { it, tutor: N.primeiroNome(N.responsavel(cadastro, it.tutor).nome) };   // só o primeiro nome (10/11/2026)
   }
