@@ -153,7 +153,8 @@ async function testarAbaSnoopy116() {
   await testarAbaSnoopy116();
   assert.equal(T.podeEscolher({ campo: 'prod', tarefaEstado: 'criada', snoopyConfirmado: true }).ok, true);
   assert.equal(T.podeEscolher({ campo: 'qtd', tarefaEstado: 'criada', snoopyConfirmado: true }).ok, true);
-  assert.equal(JSON.stringify(T.camposDoCuidado('ecto_p')), JSON.stringify(['prod','qtd','onde']));
+  assert.equal(JSON.stringify(T.camposDoCuidado('ecto_p')), JSON.stringify(['prod','nome','qtd','onde']));   // o nome da pipeta entrou em 19/11/2026
+  assert.equal(T.podeEscolher({ campo: 'nome', tarefaEstado: 'criada', snoopyConfirmado: true }).ok, true);
   assert.equal(T.podeEscolher({ campo: 'onde', tarefaEstado: 'criada', snoopyConfirmado: true }).motivo, 'ja-no-snoopy');
   assert.equal(T.podeEscolher({ campo: 'prod', tarefaEstado: 'realizado', snoopyConfirmado: true }).motivo, 'ja-aplicado');
   const m = mundo();
