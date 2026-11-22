@@ -37,12 +37,13 @@ const igual = (a, b, msg) => assert.deepStrictEqual(JSON.parse(JSON.stringify(a)
 
 // ------------------------------------------------------------------ 1. a regra pura
 console.log('Regra do turno');
-prova('dia útil: de dia é o turno dos monitores; das 19h às 7h é o noturno', () => {
-  igual(['06:45', '07:00', '07:30', '12:00', '18:59', '19:00', '23:59', '00:00', '02:00'].map((h) => Turno.turno(false, h)),
-    ['noturno', 'fora', 'fora', 'fora', 'fora', 'noturno', 'noturno', 'noturno', 'noturno']);
+// 22/nov/2026: todo dia, das 7h às 18h piscam café e almoço; das 18h às 7h, o jantar (nada some da tela).
+prova('dia útil: das 7h às 18h é o diurno; das 18h às 7h é o noturno', () => {
+  igual(['06:45', '07:00', '07:30', '12:00', '17:59', '18:00', '23:59', '00:00', '02:00'].map((h) => Turno.turno(false, h)),
+    ['noturno', 'diurno', 'diurno', 'diurno', 'diurno', 'noturno', 'noturno', 'noturno', 'noturno']);
 });
-prova('domingo, feriado e recesso: das 7h às 19h é o diurno; das 19h às 7h, o noturno', () => {
-  igual(['06:59', '07:00', '12:00', '18:59', '19:00', '02:00'].map((h) => Turno.turno(true, h)),
+prova('domingo, feriado e recesso: a mesma regra (das 18h em diante é o jantar)', () => {
+  igual(['06:59', '07:00', '12:00', '17:59', '18:00', '02:00'].map((h) => Turno.turno(true, h)),
     ['noturno', 'diurno', 'diurno', 'diurno', 'noturno', 'noturno']);
 });
 prova('o diurno tem café e almoço; o noturno, só o jantar; o turno dos monitores, nada', () => {
@@ -157,26 +158,22 @@ prova('a conta do mês do Day Care pula o recesso (e não pula o que a Gestão t
 
 console.log('Cartão do turno');
 const card = () => { els.plantaoTurnoCard = { innerHTML: '' }; const r = J('plantaoTurnoAplicar()'); return { r, h: els.plantaoTurnoCard.innerHTML, b: body.dataset.plantaoTurno }; };
-prova('domingo 22/11, 12h: plantão diurno, com café e almoço', () => {
+prova('domingo 22/11, 12h: destaque no café e no almoço', () => {
   as('2026-11-22', '12:00'); const c = card();
-  igual([c.r.turno, c.b], ['diurno', 'diurno']);
-  assert.ok(/Plantão diurno · 07h às 19h/.test(c.h) && /Domingo, 22\/11/.test(c.h) && /café da manhã/.test(c.h) && /almoço/.test(c.h), c.h);
+  igual([c.r.turno, c.b, body.dataset.plantaoFechado], ['diurno', 'diurno', '1']);
+  assert.ok(/Agora: café da manhã e almoço/.test(c.h) && /Jantar/.test(c.h), c.h);
   assert.ok(/var\(--z-gold\)/.test(c.h), 'barrinha dourada');
 });
-prova('feriado e recesso também são diurno (Consciência Negra, 24/12)', () => {
-  as('2026-11-20', '07:30'); assert.ok(/Consciência Negra, 20\/11/.test(card().h));
-  as('2026-12-24', '07:30'); const c = card(); igual(c.r.turno, 'diurno'); assert.ok(/Recesso de Natal, 24\/12/.test(c.h), c.h);
-});
-prova('terça 17/11, 12h: turno do time de monitores', () => {
+prova('terça 17/11, 12h: também café e almoço (todo dia)', () => {
   as('2026-11-17', '12:00'); const c = card();
-  igual(c.r.turno, 'fora'); assert.ok(/turno do time de monitores/.test(c.h) && /começa às 19h/.test(c.h), c.h);
+  igual([c.r.turno, body.dataset.plantaoFechado], ['diurno', '0']); assert.ok(/Agora: café da manhã e almoço/.test(c.h), c.h);
 });
-prova('19h10 de qualquer dia: plantão noturno, só o jantar', () => {
-  as('2026-11-17', '19:10'); let c = card(); igual(c.r.turno, 'noturno'); assert.ok(/Plantão noturno · 19h às 07h/.test(c.h) && /jantar/.test(c.h));
+prova('18h10 de qualquer dia: destaque no jantar e no relatório', () => {
+  as('2026-11-17', '18:10'); let c = card(); igual(c.r.turno, 'noturno'); assert.ok(/Agora: jantar e Relatório do Jantar/.test(c.h), c.h);
   as('2026-11-22', '19:10'); c = card(); igual(c.r.turno, 'noturno');
 });
-prova('às 19h a tela troca sozinha: o turno avisa que mudou', () => {
-  as('2026-11-22', '18:59'); card(); as('2026-11-22', '19:00');
+prova('às 18h a tela troca sozinha: o turno avisa que mudou', () => {
+  as('2026-11-22', '17:59'); card(); as('2026-11-22', '18:00');
   igual(J('plantaoTurnoAplicar()'), { turno: 'noturno', mudou: true });
 });
 prova('o jantar das 02h grava no dia anterior; o almoço, no dia de hoje', () => {
@@ -213,16 +210,20 @@ prova('leitura que falhou não deixa marcar nada', () => {
 
 console.log('Tela e estilo');
 prova('o app carrega o módulo do turno e tem os blocos novos', () => {
-  assert.ok(/<script src="plantao-turno\.js\?v=2026-11-22-01"><\/script>/.test(html));
-  assert.ok(/<script src="cafe-operacional\.js\?v=2026-11-22-01"><\/script>/.test(html));
+  assert.ok(/<script src="plantao-turno\.js\?v=2026-11-22-02"><\/script>/.test(html));
+  assert.ok(/<script src="cafe-operacional\.js\?v=2026-11-22-02"><\/script>/.test(html));
   for (const id of ['plantaoTurnoCard', 'cardFecharTurno', 'prevSec_plantao-almoco', 'prevSec_plantao-jantar', 'plAlmocoGrid', 'plJantarGrid'])
     assert.ok(html.indexOf('id="' + id + '"') >= 0, id);
 });
-prova('o CSS esconde por turno: plantonista no noturno sem café e almoço; no diurno sem jantar; no turno dos monitores sem nada', () => {
-  const css = (html.match(/body\[data-role="plantonista"\]:not\(\[data-plantao-turno="diurno"\]\) #prevSec_plantao-cafe[\s\S]*?\{display:none !important\}/) || [''])[0];
-  for (const s of ['body:not([data-plantao-turno="diurno"]) #prevSec_plantao-almoco', 'body:not([data-plantao-turno="noturno"]) #prevSec_plantao-jantar',
-    'body[data-role="plantonista"][data-plantao-turno="fora"] #cardFecharTurno', 'body[data-role="plantonista"]:not([data-plantao-turno="noturno"]) #card-inicio'])
-    assert.ok(css.indexOf(s) >= 0, s);
+prova('o CSS não esconde nada da plantonista: café, almoço, jantar e relatório piscam pela hora', () => {
+  for (const s of ['body[data-role="plantonista"]:not([data-plantao-turno="diurno"]) #prevSec_plantao-cafe',
+    'body:not([data-plantao-turno="diurno"]) #prevSec_plantao-almoco,', 'body:not([data-plantao-turno="noturno"]) #prevSec_plantao-jantar,',
+    'body[data-role="plantonista"]:not([data-plantao-turno="noturno"]) #card-inicio'])
+    assert.ok(html.indexOf(s) < 0, 'ainda esconde: ' + s);
+  for (const s of ['body[data-role="plantonista"][data-plantao-turno="diurno"] #prevSec_plantao-cafe>summary',
+    'body[data-role="plantonista"][data-plantao-turno="noturno"] #prevSec_plantao-jantar>summary',
+    'body[data-role="plantonista"][data-plantao-turno="noturno"] #card-inicio>.rel-head{animation:plPiscaAgora'])
+    assert.ok(html.indexOf(s) >= 0, 'sem pisca: ' + s);
   assert.ok(/body:not\(\[data-role="plantonista"\]\) #plantaoTurnoCard\{display:none !important\}/.test(html), 'só a plantonista vê o cartão do turno');
 });
 

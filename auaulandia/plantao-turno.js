@@ -10,13 +10,16 @@
   if(root) root.ZeluzPlantaoTurno=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   function hora(hhmm){ var m=/^(\d{1,2}):(\d{2})/.exec(String(hhmm==null?'':hhmm)); return m?Number(m[1]):NaN; }
-  // diaFechado: domingo, feriado ou recesso (a Zêluz não abre e quem fica é a plantonista).
-  // 'diurno' 07h–19h só em dia fechado · 'noturno' 19h–07h todo dia · 'fora' é o turno dos monitores.
+  // 22/nov/2026 (Adriana): «Sempre apareça almoço e café para as plantonistas. Todos os dias, bem como
+  //  relatório de jantar. Pelo horário aparece qual fazer piscando. Até as 18h aparece café e almoço,
+  //  depois das 18h já aparece o relatório do jantar.» O turno diz só O QUE PISCA; nada some da tela.
+  // 'diurno' 07h–18h (café e almoço) · 'noturno' 18h–07h (jantar e relatório) · todo dia.
+  // diaFechado continua no contrato (quem chama ainda manda), mas não muda mais o turno.
   function turno(diaFechado,hhmm){
     var h=hora(hhmm);
     if(!(h>=0&&h<24)) return 'fora';
-    if(h>=19||h<7) return 'noturno';
-    return diaFechado?'diurno':'fora';
+    if(h>=18||h<7) return 'noturno';
+    return 'diurno';
   }
   function refeicoes(t){ return t==='diurno'?['cafe','almoco']:(t==='noturno'?['jantar']:[]); }
   // O jantar da madrugada pertence ao dia em que o plantão começou, às 19h.
