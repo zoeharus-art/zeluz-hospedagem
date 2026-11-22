@@ -213,8 +213,8 @@ prova('leitura que falhou não deixa marcar nada', () => {
 
 console.log('Tela e estilo');
 prova('o app carrega o módulo do turno e tem os blocos novos', () => {
-  assert.ok(/<script src="plantao-turno\.js\?v=2026-11-21-01"><\/script>/.test(html));
-  assert.ok(/<script src="cafe-operacional\.js\?v=2026-11-21-01"><\/script>/.test(html));
+  assert.ok(/<script src="plantao-turno\.js\?v=2026-11-22-01"><\/script>/.test(html));
+  assert.ok(/<script src="cafe-operacional\.js\?v=2026-11-22-01"><\/script>/.test(html));
   for (const id of ['plantaoTurnoCard', 'cardFecharTurno', 'prevSec_plantao-almoco', 'prevSec_plantao-jantar', 'plAlmocoGrid', 'plJantarGrid'])
     assert.ok(html.indexOf('id="' + id + '"') >= 0, id);
 });
