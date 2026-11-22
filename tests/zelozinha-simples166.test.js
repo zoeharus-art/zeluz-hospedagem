@@ -180,8 +180,8 @@ prova('a página: a ponte usa a fila simples, o controle antigo saiu e a versão
   assert.match(html, /data-zs-estado/); assert.match(html, /data-zs-faixa/); assert.match(html, /data-zs-pausa/);
   assert.match(html, /window\.ZelozinhaSimples\.statusDoCiclo\(c,cy\)/);
   assert.match(html, /window\.ZelozinhaSimples\.ligar\(DB,diaAtual\(\)\)/);
-  assert.match(html, /const APP_VERSAO='2026-11-21-01';/);
-  assert.equal(html.split('2026-11-21-01').length - 1, 15);
+  assert.match(html, /const APP_VERSAO='2026-11-22-01';/);
+  assert.equal(html.split('2026-11-22-01').length - 1, 15);
 });
 
 /* ---------- o serviço da VPS ---------- */
