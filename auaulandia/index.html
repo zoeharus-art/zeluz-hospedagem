@@ -5234,6 +5234,10 @@
           <div><label class="cad-lb">Nome do peludinho</label><input class="cad-in" id="orcAvNome" placeholder="Ex: Thor"></div>
           <div><label class="cad-lb">Nome do tutor</label><input class="cad-in" id="orcAvTutor" placeholder="Ex: Renata"></div>
         </div>
+        <div style="margin-top:8px"><label class="cad-lb">Celular do tutor (WhatsApp)</label>
+          <input class="cad-in" id="orcAvTel" type="tel" inputmode="numeric" autocomplete="off" placeholder="(31) 99999-9999" oninput="orcTelMascara(this)" onblur="orcTelConferir()">
+          <div class="hint" id="orcAvTelNota">É por este número que a equipe acompanha o orçamento e confirma a reserva. Sem ele, o orçamento entra no CRM sem botão de WhatsApp.</div>
+        </div>
         <div style="margin-top:8px"><label class="cad-lb">Raça <span style="color:#b3261e">(obrigatória)</span></label>
           <input class="cad-in" id="orcAvRaca" list="racasList" autocomplete="off" placeholder="Comece a digitar: wes → West Terrier" onfocus="orcRacasAtualizar()">
           <div class="hint">Escolha da lista: ela já tem as raças da casa e as do cadastro, e evita a mesma raça escrita de dois jeitos. Sem a raça, dois FILHOts de mesmo nome viram um só na planilha e no dashboard.</div>
@@ -25566,6 +25570,39 @@ return { criar };
       return b.charAt(0).toLocaleUpperCase('pt-BR')+b.slice(1);
     }).join(' ');
   }
+  // ===== CELULAR DO TUTOR NOVO (Adriana, 17/nov/2026) ================================
+  // O orçamento de quem nunca hospedou não guardava telefone, e o CRM ficava sem como
+  // acompanhar: 21 de 38 orçamentos abertos sem WhatsApp. O campo é recomendado, não
+  // obrigatório. Celular antigo de 10 dígitos (DDD + 8, começando por 6 a 9) ganha o 9.
+  function orcTelDigitos(v){
+    var d=String(v||'').replace(/\D/g,'');
+    if((d.length===13||d.length===12)&&d.indexOf('55')===0) d=d.slice(2);
+    if(d.length===10&&'6789'.indexOf(d.charAt(2))>=0) d=d.slice(0,2)+'9'+d.slice(2);
+    return d;
+  }
+  function orcTelValido(d){ return /^[1-9][0-9]9[0-9]{8}$/.test(d); }
+  function orcTelBonito(d){ return d.length===11?('('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7)):d; }
+  function orcTelMascara(el){
+    var d=String(el.value||'').replace(/\D/g,'').slice(0,13);
+    if(d.length>11) { el.value=d; return; }
+    var r=d;
+    if(d.length>2) r='('+d.slice(0,2)+') '+d.slice(2);
+    if(d.length>7) r='('+d.slice(0,2)+') '+d.slice(2,d.length===11?7:6)+'-'+d.slice(d.length===11?7:6);
+    el.value=r;
+  }
+  function orcTelConferir(){
+    var el=document.getElementById('orcAvTel'), nota=document.getElementById('orcAvTelNota');
+    if(!el||!nota) return '';
+    var bruto=String(el.value||'').replace(/\D/g,'');
+    var base='É por este número que a equipe acompanha o orçamento e confirma a reserva. Sem ele, o orçamento entra no CRM sem botão de WhatsApp.';
+    if(!bruto){ nota.style.color=''; nota.textContent=base; return ''; }
+    var d=orcTelDigitos(bruto);
+    if(!orcTelValido(d)){ nota.style.color='var(--crm-critico)'; nota.textContent='Confira o número: precisa ser celular com DDD, como (31) 99999-9999.'; return null; }
+    el.value=orcTelBonito(d);
+    nota.style.color='var(--crm-ok)';
+    nota.textContent=(bruto.length===10||bruto.length===12)?'Celular conferido. Acrescentei o 9 na frente, como manda a regra atual.':'Celular conferido.';
+    return d;
+  }
   async function orcAddAvulso(){
     var n=nomeProprio(((document.getElementById('orcAvNome')||{}).value||''));
     var t=nomeProprio(((document.getElementById('orcAvTutor')||{}).value||''));
@@ -25573,6 +25610,8 @@ return { criar };
     // da Carolina da Maya da Luciana na planilha, no dashboard e no cadastro que vem depois.
     var rDig=String(((document.getElementById('orcAvRaca')||{}).value||'')).trim();
     if(!n||!t){ alert('Escreva o nome do peludinho e o nome do tutor.'); return; }
+    var tel=orcTelConferir();
+    if(tel===null){ alert('Confira o celular do tutor: precisa ser celular com DDD, como (31) 99999-9999. Se não tiver o número agora, deixe o campo vazio.'); try{ document.getElementById('orcAvTel').focus(); }catch(e){} /* silencioso de propósito: foco de tela */ return; }
     if(!rDig){ alert('Falta a raça. Ela é obrigatória para cliente novo — sem ela, dois FILHOts de mesmo nome viram um só.'); try{ document.getElementById('orcAvRaca').focus(); }catch(e){} /* silencioso de propósito: enfeite de tela (foco, rolagem, mídia) — falhar não muda dado nenhum */ return; }
     // A GRAFIA DA LISTA (01/out/2026): "westie" entra como West Terrier, "shitzu" como Shih Tzu.
     // Fora da lista, pergunta — raça rara não fica bloqueada, mas o erro de digitação não passa calado.
@@ -25589,8 +25628,9 @@ return { criar };
     var key='avulso__'+jsNorm(n)+'__'+jsNorm(t);
     if(ORC_SEL.some(function(s){ return s.key===key; })){ alert('Ele já está neste orçamento.'); return; }
     ORC_SEL.push({key:key, nome:n, tutor:t, raca:r, dias:[], planoKey:'', rotulo:'sem plano', compromisso:'',
-                  hospOff:0, semCadastro:true, sexo:ORC_AV_SEXO});
+                  hospOff:0, semCadastro:true, sexo:ORC_AV_SEXO, tel:tel||''});
     document.getElementById('orcAvNome').value=''; document.getElementById('orcAvTutor').value='';
+    var _at=document.getElementById('orcAvTel'); if(_at) _at.value=''; orcTelConferir();
     var _ar=document.getElementById('orcAvRaca'); if(_ar) _ar.value='';
     ORC_AV_SEXO=''; orcAvSexoSet('');
     orcNovoComecou();
@@ -26221,7 +26261,7 @@ return { criar };
       var p=(typeof PELUDINHOS!=='undefined'?PELUDINHOS:[]).find(function(x){ return pelKey(x)===sp.key; });
       if(!p) return {key:sp.key, nome:sp.nome||'', tutor:sp.tutor||o.tutor||'', raca:sp.raca||'',
                      dias:[], trocas:sp.trocas||{}, planoKey:'', rotulo:sp.plano||'sem plano',
-                     compromisso:sp.compromisso||'', hospOff:0, semCadastro:!!sp.sem_cadastro};
+                     compromisso:sp.compromisso||'', hospOff:0, semCadastro:!!sp.sem_cadastro, tel:sp.tel||''};
       var pl=orcPlanoDoPet(p);
       var _raca=(typeof pelGet==='function')?(pelGet(p,'raca')||''):(p.raca||'');
       return (ORC_AULUNO&&pl.ativo)
@@ -26296,6 +26336,7 @@ return { criar };
       entrada:C.entrada, saida:C.saida, saida_pedida:C.saidaPedida, noites:C.noites,
       temporada:C.temporada||(C.alta?'alta':'baixa'), alta_temporada:!!C.alta, total_cent:C.total, parcela1_cent:C.p1, parcela2_cent:C.p2,
       tutor:(C.pets[0]&&C.pets[0].sel.tutor)||'',
+      tel:(C.pets.map(function(p){ return p.sel.tel||''; }).filter(Boolean)[0])||'',
       precos_da_epoca:orcPrecos(),
       status:'aguardando',                       // aguardando · fechado · nao_fechou
       auluno:!!ORC_AULUNO,
@@ -26304,7 +26345,7 @@ return { criar };
         plano:p.sel.rotulo, compromisso:p.sel.compromisso||'',
         trocas:p.sel.trocas||{},
         ordem:p.ordem, desconto_pct:p.off, diarias:p.nDia, pernoites:p.nPer,
-        sem_cadastro:!!p.sel.semCadastro,
+        sem_cadastro:!!p.sel.semCadastro, tel:p.sel.tel||'',
         // Quantas reposições este FILHOt usou AQUI. Sem este número gravado, o dia
         // abatido no valor não tinha como virar baixa na ficha — foi exatamente o
         // buraco que a Adriana viu em 10/set/2026 (Maya e Serena).
@@ -26451,7 +26492,7 @@ return { criar };
         key:p.sel.key, nome:p.sel.nome, raca:p.sel.raca||'', tutor:p.sel.tutor||'',
         plano:p.sel.rotulo, compromisso:p.sel.compromisso||'', trocas:p.sel.trocas||{},
         ordem:p.ordem, desconto_pct:p.off, diarias:p.nDia, pernoites:p.nPer,
-        sem_cadastro:!!p.sel.semCadastro,
+        sem_cadastro:!!p.sel.semCadastro, tel:p.sel.tel||'',
         reposicoes:p.repUsa||0, reposicao_economia_cent:p.repEconomia||0,
         subtotal_diarias_cent:p.liqDia, subtotal_pernoites_cent:p.brutoPer,
         subtotal_cent:p.total }; }),
