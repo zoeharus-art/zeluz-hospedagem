@@ -100,8 +100,8 @@ async function montar(b, turno) {
   await prova('a ficha sem check-in avisa que falta e manda falar com a recepção', () => {
     assert.ok(/Almoço de Teste 04: não há check-in de hospedagem hoje/.test(dia.r.fichas[3]), dia.r.fichas[3]);
   });
-  await prova('a área da plantonista continua: Café e Almoço à vista, Jantar escondido', () => {
-    assert.deepStrictEqual(dia.r.area, { cafe: true, almoco: true, jantar: false });
+  await prova('a área da plantonista mostra tudo de dia: Café, Almoço e Jantar (22/nov: nada some)', () => {
+    assert.deepStrictEqual(dia.r.area, { cafe: true, almoco: true, jantar: true });
   });
   await prova('a moradora também conta: entra no almoço e no café, com a comida do cadastro', () => {
     assert.ok(dia.r.listaAlmoco.indexOf('Moradora Teste') >= 0, dia.r.listaAlmoco.join(', '));
@@ -119,8 +119,8 @@ async function montar(b, turno) {
     assert.ok(/Jantar de Teste 01: 25/.test(f), f);
     assert.ok(f.indexOf('Almoço de') < 0, f);
   });
-  await prova('a área da plantonista à noite: só o Jantar', () => {
-    assert.deepStrictEqual(noite.r.area, { cafe: false, almoco: false, jantar: true });
+  await prova('a área da plantonista à noite também mostra tudo: Café, Almoço e Jantar', () => {
+    assert.deepStrictEqual(noite.r.area, { cafe: true, almoco: true, jantar: true });
   });
   await prova('nenhum erro de página', () => assert.deepStrictEqual(noite.erros, []));
 
