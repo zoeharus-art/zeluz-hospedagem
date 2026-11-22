@@ -43,7 +43,14 @@ async function montar(b, turno) {
       e3: { nome: 'Teste 03', tutor: 'Tutora Teste', raca: 'SRD', refKey: 'teste 03__tutora teste', status: 'ativa', entrada: mais(-2), saida: mais(2), ficha: { alim: alim({ on: true }) } }
     });
     hospedes = ['Teste 01', 'Teste 02', 'Teste 03', 'Teste 04'].map((n) => ({ nome: n, tutor: 'Tutora Teste', raca: 'SRD', refKey: n.toLowerCase() + '__tutora teste', ini: 'T', cor: '#234D67' }));
+    // A moradora (sem estadia): a comida vem do cadastro de almoço do Day Care.
+    almCadCache = { 'moradora teste__casa teste': { alim: 'Ração', quant: '50g', lento: true, nao: false } };
+    hospedes.push({ nome: 'Moradora Teste', tutor: '', raca: 'SRD', ini: 'M', cor: '#5AABB5', mascote: true });
     renderHosp();
+    PL_REF.almoco.leitura = { dia: cafeDataKey(), ger: 99, estado: 'ok', promessa: null, em: Date.now() };
+    const listaAlmoco = plRefParticipantes('almoco').participantes.map((o) => o.hospede.nome);
+    const listaCafe = cafeParticipantesAtivos().participantes.map((o) => o.hospede.nome);
+    const faixaMoradora = (() => { const c = [...document.querySelectorAll('#hospGrid .pet')].find((x) => /Moradora Teste/.test(x.innerText)); const f = c && c.querySelector('.hb-almoco'); return f && getComputedStyle(f).display !== 'none' ? f.innerText.replace(/\s+/g, ' ').trim() : ''; })();
     const faixa = (nome) => {
       const c = [...document.querySelectorAll('#hospGrid .pet')].find((x) => ((x.querySelector('.nm') || {}).innerText || '').indexOf(nome) === 0);
       const f = c && c.querySelector('.hb-almoco');
@@ -55,7 +62,8 @@ async function montar(b, turno) {
       turnoBody: document.body.dataset.plantaoTurno,
       faixas: ['Teste 01', 'Teste 02', 'Teste 03', 'Teste 04'].map(faixa),
       fichas: ['Teste 01', 'Teste 02', 'Teste 03', 'Teste 04'].map(ficha),
-      area: { cafe: vis('prevSec_plantao-cafe'), almoco: vis('prevSec_plantao-almoco'), jantar: vis('prevSec_plantao-jantar') }
+      area: { cafe: vis('prevSec_plantao-cafe'), almoco: vis('prevSec_plantao-almoco'), jantar: vis('prevSec_plantao-jantar') },
+      listaAlmoco, listaCafe, faixaMoradora
     };
   }, turno);
   await p.close();
@@ -94,6 +102,11 @@ async function montar(b, turno) {
   });
   await prova('a área da plantonista continua: Café e Almoço à vista, Jantar escondido', () => {
     assert.deepStrictEqual(dia.r.area, { cafe: true, almoco: true, jantar: false });
+  });
+  await prova('a moradora também conta: entra no almoço e no café, com a comida do cadastro', () => {
+    assert.ok(dia.r.listaAlmoco.indexOf('Moradora Teste') >= 0, dia.r.listaAlmoco.join(', '));
+    assert.ok(dia.r.listaCafe.indexOf('Moradora Teste') >= 0, dia.r.listaCafe.join(', '));
+    assert.strictEqual(dia.r.faixaMoradora, 'ALMOÇO: 50g de Ração + Comedouro LENTO');
   });
   await prova('nenhum erro de página', () => assert.deepStrictEqual(dia.erros, []));
 

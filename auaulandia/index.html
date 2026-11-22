@@ -18215,7 +18215,9 @@ return { criar };
   function cafeParticipantesAtivos(){
     if(typeof ZeluzCafeOperacional==='undefined') return {pronto:false,participantes:[],conferencias:[{estado:'modulo-cafe-ausente'}]};
     var hotel=ZeluzCafeOperacional.criar({pronto:(typeof CF_ESTADIAS_LIDO!=='undefined'&&CF_ESTADIAS_LIDO===true),estadias:(typeof EST_TODAS!=='undefined'&&EST_TODAS)||{},hospedes:function(){return (typeof hospedes!=='undefined'&&hospedes)||[];},hoje:function(){return cafeDataKey();}}).ler();
-    var aluno=cafeAlunoDados(); if(aluno.pronto)hotel.participantes=hotel.participantes.concat(aluno.participantes); return hotel;
+    var aluno=cafeAlunoDados(); if(aluno.pronto)hotel.participantes=hotel.participantes.concat(aluno.participantes);
+    if(hotel.pronto&&typeof plRefMoradoras==='function') hotel.participantes=hotel.participantes.concat(plRefMoradoras('cafe'));   // a moradora também conta (22/nov/2026)
+    return hotel;
   }
   // ===== A OBSERVAÇÃO DO CHECK-IN NOS CARTÕES DO ALMOÇO E DO CAFÉ (Story 6.121, pergunta 73) =====
   // Adriana, 22/out/2026: procurou na ficha inteira o texto vermelho do cartão do almoço e não o achou. O
@@ -18371,9 +18373,39 @@ return { criar };
   function plRefParticipantes(tipo){
     if(typeof ZeluzCafeOperacional==='undefined') return {pronto:false,participantes:[],conferencias:[{estado:'modulo-cafe-ausente'}]};
     var dia=plRefDia(tipo);
-    return ZeluzCafeOperacional.criar({refeicao:tipo, pronto:(typeof CF_ESTADIAS_LIDO!=='undefined'&&CF_ESTADIAS_LIDO===true),
+    var L=ZeluzCafeOperacional.criar({refeicao:tipo, pronto:(typeof CF_ESTADIAS_LIDO!=='undefined'&&CF_ESTADIAS_LIDO===true),
       estadias:(typeof EST_TODAS!=='undefined'&&EST_TODAS)||{}, hospedes:function(){ return (typeof hospedes!=='undefined'&&hospedes)||[]; },
       hoje:function(){ return dia; }}).ler();
+    if(L.pronto) L.participantes=L.participantes.concat(plRefMoradoras(tipo));
+    return L;
+  }
+  // ===== A MORADORA TAMBÉM CONTA — Adriana, 22/nov/2026 =====================================
+  // «Clara e a Zelozinha também contam (Repolho).» A moradora não tem estadia nem check-in: a comida dela
+  // está no cadastro de almoço do Day Care (daycare/almoco-cad, que todo aparelho já mantém em almCadCache).
+  // Ela entra nas listas de café, almoço e jantar e no cartão. No café e no jantar a quantidade é a do almoço,
+  // e a tela avisa que foi repetida. Sem cadastro, a tela diz que falta — nunca inventa.
+  function plRefComidaMoradora(h){
+    var alvo=(typeof jsNorm==='function')?jsNorm(h&&h.nome||''):String(h&&h.nome||'').toLowerCase();
+    var fontes=[(typeof almCadCache!=='undefined'&&almCadCache)||{},(typeof ALM_CAD_CACHE!=='undefined'&&ALM_CAD_CACHE)||{},(typeof ALMOCO_SEED!=='undefined'&&ALMOCO_SEED)||{}];
+    for(var i=0;i<fontes.length;i++){
+      var F=fontes[i], ks=Object.keys(F).filter(function(k){ var n=String(k).split('__')[0]; return ((typeof jsNorm==='function')?jsNorm(n):n.toLowerCase())===alvo; });
+      for(var j=0;j<ks.length;j++){ var c=F[ks[j]]; if(c&&(c.alim||c.quant)) return c; }
+    }
+    return null;
+  }
+  function plRefPlanoMoradora(h,tipo){
+    var c=plRefComidaMoradora(h);
+    if(!c) return {estado:'conferir',motivo:'a comida da moradora não está cadastrada no almoço do Day Care'};
+    var t=String(c.quant||'').trim(), a=String(c.alim||'').trim();
+    var porcao={texto:[t,a].filter(Boolean).join(' de ')||a, extra:c.lento?'Comedouro LENTO':'', pendente:(tipo==='almoco'?'':'Quantidade do almoço, repetida — confirme'), semRacao:false};
+    if(c.nao&&tipo==='almoco') return {estado:'nao',plano:{marca:a,moradora:true}};
+    return {estado:'ok',plano:{marca:'',restricao:String(c.restr||''),moradora:true},porcao:porcao};
+  }
+  function plRefMoradoras(tipo){
+    return ((typeof hospedes!=='undefined'&&hospedes)||[]).filter(function(h){ return h&&h.mascote; }).map(function(h){
+      var r=plRefPlanoMoradora(h,tipo);
+      return (r.estado==='ok')?{hospede:h,plano:r.plano,porcao:r.porcao,estadiaId:'',refKey:'',moradora:true}:null;
+    }).filter(Boolean);
   }
   function plRefEstado(tipo,k){ var v=(PL_REF[tipo].marcas||{})[k]; return (v&&v.estado)||(typeof v==='string'?v:''); }
   function plRefPodeOperar(tipo){
@@ -18699,7 +18731,8 @@ return { criar };
   var PL_REF_MOTIVO_FICHA={'conferir-dia':'as refeições do dia de entrada ou de saída precisam ser conferidas','conferir-refeicao':'o check-in não confirma esta refeição',
     'conferir-quantidade':'a quantidade não foi lançada no check-in','conferir-unidade-racao':'a unidade da ração não foi lançada no check-in','duplicada':'há mais de uma hospedagem ativa dele hoje'};
   function plRefDoHospede(h,tipo){
-    if(!h||h.mascote) return null;
+    if(!h) return null;
+    if(h.mascote) return plRefPlanoMoradora(h,tipo);
     if(typeof ZeluzCafeOperacional==='undefined'||typeof CF_ESTADIAS_LIDO==='undefined'||CF_ESTADIAS_LIDO!==true) return {estado:'carregando'};
     var dia=plRefDia(tipo), k=String((typeof medAgendaKey==='function'?medAgendaKey(h):'')||'').toLowerCase();
     var T=(typeof EST_TODAS!=='undefined'&&EST_TODAS)||{};
@@ -18745,7 +18778,7 @@ return { criar };
   }
   // Faixa do cartão na lista do plantão diurno (mesmo desenho da faixa do jantar).
   function plRefFaixaCard(h){
-    if(!h||h.mascote||!document.body||document.body.dataset.plantaoTurno!=='diurno') return '';
+    if(!h||!document.body||document.body.dataset.plantaoTurno!=='diurno') return '';
     var r=plRefDoHospede(h,'almoco'); if(!r||r.estado==='carregando') return '';
     if(r.estado==='ok'){
       var p=r.plano||{}, por=r.porcao||{};
@@ -24387,7 +24420,7 @@ return { criar };
       var _ai=document.getElementById('hf-alim-info'), _js=document.getElementById('janta-slot-inicio');
       if(_ai){ jantaSlotRender();
         // Plantão diurno (22/nov/2026): na ficha aparecem o café e o almoço de hoje; à noite, o jantar, como sempre.
-        if(document.body&&document.body.dataset.plantaoTurno==='diurno'&&currentHosp&&!currentHosp.mascote){
+        if(document.body&&document.body.dataset.plantaoTurno==='diurno'&&currentHosp){
           _ai.innerHTML=plRefCaixaFicha(currentHosp,'cafe')+plRefCaixaFicha(currentHosp,'almoco')+'<div class="hint" style="margin-top:6px">O que foi comido se marca no Café da manhã e no Almoço do Relatório da noite.</div>';
         } else { var _ah=(_js&&_js.innerHTML)||''; _ai.innerHTML=_ah+(_ah?'<div class="hint" style="margin-top:6px">O que foi servido se escreve no Relatório do Jantar.</div>':''); } }
       fichaTopicosPintar(); }catch(e){ _logFalhaGrav('carregarFicha (tópicos)', e); }
