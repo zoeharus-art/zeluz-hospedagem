@@ -2312,6 +2312,15 @@
   .hb-hoje{display:block;margin:6px 0 0;font-size:11px;font-weight:800;letter-spacing:.2px;color:var(--z-blue);background:rgba(222,180,40,.20);padding:5px 8px;border-radius:7px;border-left:3px solid var(--z-gold);text-align:left;line-height:1.35}
   .hb-hoje.falta{background:rgba(179,38,30,.12);border-left-color:var(--crm-critico);color:var(--crm-critico)}
   .hb-hoje.ok{background:rgba(39,174,96,.12);border-left-color:var(--crm-ok)}
+  /* «Mudar saída» no cartão do hóspede — Adriana, 23/nov/2026 (maquete aprovada) */
+  #msModal{display:none;position:fixed;inset:0;background:rgba(26,58,79,.55);z-index:120;align-items:flex-start;justify-content:center;padding:18px;overflow-y:auto}
+  #msModal.on{display:flex}
+  #msModal .card{max-width:460px;width:100%;margin:auto 0}
+  .ms-creme{margin:0 0 12px;padding:12px 14px;border-radius:10px;background:var(--z-cream-warm);border-left:4px solid var(--z-gold);font-size:14px;font-weight:600;color:var(--z-blue);line-height:1.45}
+  .ms-tit{font-size:13px;font-weight:800;color:var(--z-blue);margin:4px 0 6px;letter-spacing:.02em}
+  .ms-msg{white-space:pre-wrap;background:var(--z-white);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.5;margin:0 0 8px}
+  .ms-btn{margin-top:8px;width:100%;min-height:40px;border:1.5px solid var(--z-gold);background:var(--z-cream);color:var(--z-blue);border-radius:10px;font-weight:800;font-size:12.5px;cursor:pointer}
+  #msModal .seg{margin-bottom:12px}
   .ref-hoje-box{margin:0 0 14px;padding:12px 14px;border-radius:10px;background:var(--z-cream-warm);border-left:4px solid var(--z-gold)}
   .ref-hoje-tit{font-size:13px;font-weight:800;color:var(--z-blue);letter-spacing:.02em;text-transform:uppercase}
   .ref-hoje-sub{font-size:11.5px;color:var(--muted);font-weight:600;margin:2px 0 4px}
@@ -3023,8 +3032,8 @@
 .z-painel44{--p44-blue:#234d67;--p44-soft:#3a6a85;--p44-cream:#fffdf6;--p44-warm:#faf5e9;--p44-gold:#deb428;--p44-line:#e7e0d2;--p44-muted:#7c8a93;box-sizing:border-box;max-width:1160px;padding:24px 38px 52px;background:var(--p44-cream);color:var(--p44-blue);font-family:Inter,Poppins,system-ui,sans-serif}.z-painel44 *{box-sizing:border-box}.z-painel44 [hidden]{display:none!important}.z-painel44 button{font:inherit}.z-painel44 button:focus-visible{outline:3px solid rgba(222,180,40,.55);outline-offset:3px}.z-painel44__topo{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.z-painel44__saudacao .pm-saud1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.12;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2{margin:8px 0 0;font-size:16px;font-weight:600;line-height:1.45;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2 b{font-size:21px;font-weight:800;color:#a57a00}.z-painel44__saudacao .pm-saud3{max-width:54ch;margin:5px 0 0;color:var(--p44-soft);font-size:15px;font-weight:500;font-style:italic;line-height:1.5}.z-painel44__saudacao .pm-traco{display:block;width:40px;height:3px;margin-top:13px;border-radius:2px;background:linear-gradient(90deg,var(--p44-gold),#a57a00)}.z-painel44__saudacao .pm-data{margin-top:14px;color:var(--p44-muted);font-size:12px;font-weight:600}.z-painel44__selo{flex:0 0 auto;padding:8px 11px;border:1px solid var(--p44-line);border-radius:999px;background:#fff;color:var(--p44-blue);font-size:12px;font-weight:700}.z-painel44__selo:before{content:'•';margin-right:5px;color:var(--p44-gold);font-size:18px}.z-painel44__sticker{display:block;width:62px;max-width:90px;height:68px;max-height:80px;object-fit:contain;margin:4px auto 0}.z-painel44__bem-estar{display:block;width:100%;margin-bottom:18px}.z-painel44__bem-estar>*{width:100%}.z-painel44__abas{display:flex;gap:7px;margin:0 0 16px}.z-painel44__abas button{padding:10px 14px;border:1px solid var(--p44-line);border-radius:10px;background:#fff;color:var(--p44-blue);font-size:14px;font-weight:700;cursor:pointer}.z-painel44__abas button[aria-selected=true]{border-color:var(--p44-blue);background:var(--p44-blue);color:var(--p44-cream)}.z-painel44__intro{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:12px 0}.z-painel44__intro h2,.z-painel44__equipe h2{margin:0;font-size:20px}.z-painel44__intro p,.z-painel44__equipe>p{margin:5px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__contagem{color:var(--p44-muted);font-size:12px;font-weight:700}.z-painel44__temas{display:grid;gap:9px}.z-painel44__tema{overflow:hidden;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__tema-cabeca{display:grid;grid-template-columns:36px 1fr auto 20px;align-items:center;gap:10px;width:100%;padding:14px 15px;border:0;background:transparent;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__tema-icone{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--p44-warm);font-size:17px}.z-painel44__tema-titulo,.z-painel44__tema-passo{display:block}.z-painel44__tema-titulo{font-size:15px;font-weight:800}.z-painel44__tema-passo{margin-top:3px;color:var(--p44-muted);font-size:12px}.z-painel44__pill{padding:4px 8px;border-radius:999px;background:#e9f5f7;color:#226477;font-size:11px;font-weight:800}.z-painel44__seta{color:var(--p44-soft);font-size:18px;transition:transform .16s}.z-painel44__tema.aberto .z-painel44__seta{transform:rotate(90deg)}.z-painel44__tema-corpo{margin:0 12px 12px;padding:14px 15px;border-top:1px solid var(--p44-line);background:var(--p44-warm)}.z-painel44__equipe{padding:18px;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__pessoas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}.z-painel44__pessoa{display:flex;align-items:center;gap:11px;width:100%;padding:13px;border:1px solid var(--p44-line);border-radius:12px;background:#fff;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__avatar{display:grid;place-items:center;width:39px;height:39px;flex:0 0 auto;border-radius:50%;background:var(--p44-blue);color:var(--p44-cream);font-size:12px;font-weight:800}.z-painel44__pessoa-info{min-width:0}.z-painel44__pessoa strong,.z-painel44__pessoa small{display:block}.z-painel44__pessoa strong{font-size:14px}.z-painel44__pessoa small{overflow:hidden;margin-top:3px;color:var(--p44-muted);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.z-painel44__pessoa-seta{margin-left:auto;color:#a57a00;font-size:18px}.z-painel44__pessoa-detalhe{margin-top:15px}.z-painel44__pessoa-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__pessoa-secao h3{margin:0;font-size:14px}.z-painel44__pessoa-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}.z-painel44__vazio{margin:15px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__zelozinha{display:block;width:100%;margin-top:16px;padding:12px;border:1px dashed var(--p44-gold);border-radius:11px;background:var(--p44-warm);color:#805d00;text-align:left;cursor:pointer}.z-painel44__zelozinha-titulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.z-painel44__canal{padding:3px 7px;border-radius:999px;background:#fff;color:var(--p44-muted);font-size:11px}.z-painel44__zelozinha-aviso{display:block;margin-top:7px;font-size:12px;line-height:1.45}.z-painel44__perfil{margin-top:15px}.z-painel44__voltar{margin-bottom:12px;padding:8px 11px;border:1px solid var(--p44-line);border-radius:9px;background:#fff;color:var(--p44-blue);font-size:13px;font-weight:700;cursor:pointer}.z-painel44__perfil-subtitulo{margin:4px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__perfil-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__perfil-secao h3{margin:0;font-size:14px}.z-painel44__perfil-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}@media(max-width:760px){.z-painel44{padding:18px}.z-painel44__topo,.z-painel44__intro{display:block}.z-painel44__selo{display:inline-block;margin-top:13px}.z-painel44__contagem{display:block;margin-top:8px}.z-painel44__tema-cabeca{grid-template-columns:32px 1fr auto 16px;padding:12px}.z-painel44__tema-corpo{margin:0 8px 8px;padding:12px}.z-painel44__pessoas,.z-painel44__perfil-conteudo,.z-painel44__pessoa-conteudo{grid-template-columns:1fr}}
 
 </style>
-<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-23-01">
-<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-23-01">
+<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-23-02">
+<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-23-02">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -5844,11 +5853,12 @@
 <script src="autoria-logica.js?v=2026-10-15-02"></script>
 <script src="navegacao-inicio.js?v=2026-10-15-02"></script>
 <script src="hospedes-atividades.js?v=2026-10-16-01"></script>
-<script src="alimentacao-hospede.js?v=2026-11-23-01"></script>
-<script src="cafe-operacional.js?v=2026-11-23-01"></script>
-<script src="plantao-turno.js?v=2026-11-23-01"></script>
-<script src="refeicoes-do-dia.js?v=2026-11-23-01"></script>
-<script src="calendario-vagas.js?v=2026-11-23-01"></script>
+<script src="alimentacao-hospede.js?v=2026-11-23-02"></script>
+<script src="cafe-operacional.js?v=2026-11-23-02"></script>
+<script src="plantao-turno.js?v=2026-11-23-02"></script>
+<script src="refeicoes-do-dia.js?v=2026-11-23-02"></script>
+<script src="mudar-saida.js?v=2026-11-23-02"></script>
+<script src="calendario-vagas.js?v=2026-11-23-02"></script>
 <script src="cafe-aluno-logica.js?v=2026-10-16-06"></script>
 <script src="presenca-logica.js?v=2026-10-16-02"></script>
 <script src="historico-checkins.js?v=2026-10-15-02"></script>
@@ -18672,6 +18682,7 @@ return { criar };
           ${(function(){ try{ return h.mascote?'':alimMarcaDoCard(h); }catch(e){ return ''; } })()}
           ${(function(){ try{ return plRefFaixaCard(h); }catch(e){ return ''; } })()}
           <div class="ref-hoje-card" data-i="${i}">${(function(){ try{ return refHojeFaixaHTML(h); }catch(e){ return ''; } })()}</div>
+          ${(function(){ try{ return msBotaoCard(h,i); }catch(e){ return ''; } })()}
         </div>`;
       }).join('');
     renderKPIs();
@@ -32480,7 +32491,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-11-23-01';
+  const APP_VERSAO='2026-11-23-02';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -62618,7 +62629,8 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
       ? ' <span class="dash-bsaida-nota" style="color:var(--z-gold-deep);font-weight:800;font-size:11.5px">a hora nova vai para a planilha na próxima conferência</span>' : '';
     if(!banhoDiaPode()) return h;
     return h+banhoSaidaBotao('tirar', 'banhoSaidaTirar(this.dataset.id)', o.id, '', 'var(--crm-critico)')
-      +banhoSaidaBotao('mudar a hora', 'banhoSaidaHoraAbrir(this.dataset.id,this.dataset.onde)', o.id, 'linha');
+      +banhoSaidaBotao('mudar a hora', 'banhoSaidaHoraAbrir(this.dataset.id,this.dataset.onde)', o.id, 'linha')
+      +msBotaoBanho(o);
   }
   // O cartão Banho de `dia` (de hoje em diante): o banho de saída que NÃO está nas linhas do automático — sem hora
   // (com «definir a hora»), a caminho (com hora; a conferência ainda não passou) e tirado (com «pôr de volta»). O
@@ -62646,7 +62658,8 @@ function zelozinha42Despachar(captura){return zelozinha42Bridge?zelozinha42Bridg
         return '<div class="pair" data-bsaida="sem-hora" style="padding:5px 0;border-bottom:1px solid var(--line)"><span class="k"><strong>'+esc(banhoSaidaNomePlanilha(o))+'</strong>'
           +nota(o.horaVelha?('sem hora — a saída mudou: a hora era '+o.horaVelha.hora+', para '+banhoDiaBR(o.horaVelha.dia).slice(0,5)):'sem hora — a hora ainda não foi escrita no check-in')
           +(pode?(banhoSaidaBotao('definir a hora', 'banhoSaidaHoraAbrir(this.dataset.id,this.dataset.onde)', o.id, 'linha')
-                 +banhoSaidaBotao('tirar', 'banhoSaidaTirar(this.dataset.id)', o.id, '', 'var(--crm-critico)')):'')
+                 +banhoSaidaBotao('tirar', 'banhoSaidaTirar(this.dataset.id)', o.id, '', 'var(--crm-critico)')
+                 +msBotaoBanho(o)):'')
           +'</span></div>'+painel(o);
       }).join('');
     }
@@ -88081,10 +88094,10 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
   // alerta" (o que o tutor trouxe foi contado para a data antiga).
   // A conta de cobertura já existia na Conferência, mas dependia de alguém tocar em "Avisar
   // a Recepção". Agora ela roda sozinha sempre que a estadia muda e cria o aviso na Recepção.
-  function checarFaltasDaEstadia(id, est, motivoTexto){
-    if(!DB||!est) return;
-    var nome=est.nome||'', tutor=est.tutor||'';
+  // O que vai faltar (remédio e comida) até a saída da estadia. PURA de gravação: o «Mudar saída» confere ANTES de salvar.
+  function faltasDaEstadia(est){
     var achados=[];
+    if(!est) return achados;
     // --- Medicação: cada remédio contra os dias que faltam até a NOVA saída
     var meds=Array.isArray(est.medicacao)?est.medicacao:[];
     meds.forEach(function(m){
@@ -88134,6 +88147,13 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
                       unidade:(a.unidade&&a.unidade!=='gramas')?a.unidade:'g', necessario:Math.ceil(min), trazido:traz, ate:est.saida});
       }
     }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
+    return achados;
+  }
+  // opc.semAlerta: quem chamou já mostrou as faltas na própria tela (o «Mudar saída»); só registra as pendências.
+  function checarFaltasDaEstadia(id, est, motivoTexto, opc){
+    if(!DB||!est) return;
+    var nome=est.nome||'', tutor=est.tutor||'';
+    var achados=faltasDaEstadia(est);
     if(!achados.length) return;
     // Não repete aviso já aberto para o mesmo FILHOt + mesmo item.
     DB.ref('auaulandia/avisos-racao').once('value').then(function(s){
@@ -88151,7 +88171,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
         }).catch(function(e){ _logFalhaGrav('auaulandia/avisos-racao (checarFaltasDaEstadia)', e); });
       });
       var novos=achados.filter(function(f){ return !jaAberto[f.tipo+'|'+jsNorm(f.nome)]; });
-      if(novos.length && typeof zAlertao==='function'){
+      if(novos.length && typeof zAlertao==='function' && !(opc&&opc.semAlerta)){
         zAlertao('⚠️ VAI FALTAR PARA '+String(nome||'ESTE FILHOt').toUpperCase(),
           novos.map(function(f){
             if(f.tipo==='medicacao-sem-contagem'){
@@ -90162,6 +90182,162 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     try{ zAlertao('DATAS SALVAS', ['Datas salvas. '+(n.nome||'O FILHOt')+' fica de '+((typeof ciBRdata==='function')?ciBRdata(n.entrada):n.entrada)+' até '+(n.saida?((typeof ciBRdata==='function')?ciBRdata(n.saida):n.saida):'data a confirmar')+'.',
       'Ele já aparece no Plantão nesses dias, mesmo que a planilha não tenha sido atualizada.'], {ok:true, botao:'Fechar'}); }
     catch(x){} /* silencioso de propósito: o cartaz da 6.57 já disse «Datas salvas» */
+  }
+  // =====================================================================================
+  // ===== MUDAR SAÍDA — Adriana, 23/nov/2026 (maquete aprovada) =========================
+  // «Tutor pediu para mudar a data de saída. Tive que entrar no check-in e confirmar todo ele. Quero uma forma mais
+  //  simples de mudar o dia. [...] Se for faltar algo, tem que ser avisado, para passarmos para o tutor.»
+  // O botão «Mudar saída» no cartão do hóspede (e «mudar o dia» na linha do banho de saída) abre um cartão só: a nova
+  // data, o banho de saída junto (mesma hora, outra hora ou sem banho), a conferência de comida e remédio ANTES de
+  // salvar (faltasDaEstadia), a mensagem pronta para o tutor e o motivo. Quem está logado assina; sem senha. Grava num
+  // update só da estadia (ZeluzMudarSaida.patch): saída, alteracao_anterior (a 6.52 lê), o banho de saída (a hora vale
+  // para o dia novo: horaDia) e um registro NOVO em datas_historico — a aba Hóspedes mostra a mudança como sempre.
+  // =====================================================================================
+  var MS=null;   // {id, e, saidaAntes, opt, nova, banho, hora, motivo, motivoTxt, msg, salvando, feito}
+  function msEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function msHoje(){ try{ return (typeof cafeDataKey==='function')?cafeDataKey():zHojeISO(); }catch(e){ return ''; } }
+  // A estadia em curso deste hóspede (a mesma régua das refeições: refKey + cobre hoje). Só uma; duas = não decide.
+  function msEstadiaDoHosp(h){
+    if(!h || h.mascote || typeof EST_TODAS==='undefined' || !EST_TODAS || typeof CF_ESTADIAS_LIDO==='undefined' || CF_ESTADIAS_LIDO!==true) return '';
+    var k=String((typeof medAgendaKey==='function'?medAgendaKey(h):'')||'').toLowerCase(), hoje=msHoje();
+    if(!k || !hoje) return '';
+    var ids=Object.keys(EST_TODAS).filter(function(id){ var e=EST_TODAS[id]||{};
+      return String(e.refKey||'').toLowerCase()===k && String(e.status||'ativa')==='ativa' && /^\d{4}-\d{2}-\d{2}$/.test(String(e.saida||''))
+        && String(e.entrada||'')<=hoje && hoje<=String(e.saida); });
+    return ids.length===1?ids[0]:'';
+  }
+  function msPode(){ try{ return hospAbaPode(); }catch(e){ return false; } }
+  function msBotaoCard(h, i){
+    if(!msPode()) return '';
+    var id=msEstadiaDoHosp(h); if(!id) return '';
+    return '<button type="button" class="ms-btn" data-ms="'+msEsc(id)+'" onclick="event.stopPropagation();msAbrirEstadia(this.dataset.ms)">Mudar saída</button>';
+  }
+  function msBotaoBanho(o){
+    if(!o || !o.emCurso || !msPode()) return '';
+    return banhoSaidaBotao('mudar o dia', 'msAbrirEstadia(this.dataset.id)', o.id, '');
+  }
+  function msAbrirEstadia(id){
+    if(!msPode()){ try{ zAlertao('SEM PERMISSÃO', ['Mudar a saída é com a recepção, a supervisão ou a gestão.'], {botao:'Entendi'}); }catch(x){} /* silencioso de propósito: sem o cartaz, nada é gravado do mesmo jeito */ return false; }
+    var e=(typeof EST_TODAS!=='undefined' && EST_TODAS)?EST_TODAS[id]:null;
+    if(!e){ try{ zAlertao('NÃO ACHEI A HOSPEDAGEM', ['Recarregue a tela e tente de novo.'], {botao:'Entendi'}); }catch(x){} /* silencioso de propósito: sem o cartaz, nada é gravado do mesmo jeito */ return false; }
+    if(String(e.status||'ativa')!=='ativa' || !/^\d{4}-\d{2}-\d{2}$/.test(String(e.saida||''))){
+      var recusa=''; try{ recusa=hospDatasRecusaTexto(e); }catch(x){ recusa=''; }
+      try{ zAlertao('A SAÍDA NÃO MUDA POR AQUI', [recusa||'Esta hospedagem não está em curso ou não tem data de saída. Use a aba Hóspedes.'], {botao:'Entendi'}); }catch(x){} /* silencioso de propósito: sem o cartaz, nada é gravado do mesmo jeito */ return false; }
+    var b=ZeluzMudarSaida.banho(e), op=ZeluzMudarSaida.opcoes(e.saida, msHoje());
+    MS={id:String(id), e:e, saidaAntes:String(e.saida||''), opt:0, nova:(op[0]||{}).v||'', banho:(b.tem?(b.hora?'mesma':'outra'):''), hora:b.hora||'',
+        motivo:'tutor', motivoTxt:'', msg:false, salvando:false, feito:null};
+    var box=document.getElementById('msModal');
+    if(!box){ box=document.createElement('div'); box.id='msModal'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); document.body.appendChild(box); }
+    msRender(); box.classList.add('on');
+    return true;
+  }
+  function msFechar(){ var b=document.getElementById('msModal'); if(b){ b.classList.remove('on'); b.innerHTML=''; } var f=MS&&MS.feito; MS=null;
+    if(f){ try{ renderHosp(); }catch(x){} /* silencioso de propósito: redesenho de tela */ } }
+  // A estadia com a nova saída, para conferir o que falta (a mesma conta do aviso «vai faltar»).
+  function msFaltas(){
+    if(!MS || !/^\d{4}-\d{2}-\d{2}$/.test(MS.nova)) return [];
+    try{ return faltasDaEstadia(Object.assign({}, MS.e, {saida:MS.nova})); }catch(e){ return []; }
+  }
+  function msSeg(lista, sel, fn){
+    return '<div class="seg gold" data-single>'+lista.map(function(o){
+      return '<button type="button" class="'+(o.v===sel?'on':'')+'" onclick="'+fn+'(\''+jsAspas(o.v)+'\')">'+msEsc(o.rot)+'</button>'; }).join('')+'</div>';
+  }
+  function msRender(){
+    var box=document.getElementById('msModal'); if(!box || !MS) return;
+    var M=ZeluzMudarSaida, e=MS.e, nm=String(e.nome||'o FILHOt'), h='';
+    if(MS.feito){
+      var f=MS.feito;
+      h='<div class="card"><h2 style="font-size:19px;margin:0 0 10px">Saída mudada</h2>'
+        +'<div class="ms-creme">'+msEsc(f.texto)+'</div>'
+        +(f.faltas?'<div class="dc-faltas">Falta avisar a tutora sobre '+msEsc(f.faltas)+'. Ficou registrado em «Pendências com o tutor».</div>':'')
+        +'<div class="alm-next"><button type="button" class="btn btn-gold" style="width:100%;min-height:46px" onclick="msFechar()">Fechar</button></div></div>';
+      box.innerHTML=h; return;
+    }
+    var op=M.opcoes(MS.saidaAntes, msHoje()), lista=op.map(function(o, i){ return {v:String(i), rot:o.rot}; }).concat([{v:'outra', rot:'Outra data'}]);
+    h+='<div class="card"><h2 style="font-size:19px;margin:0 0 10px">Mudar a saída de '+msEsc(nm)+'</h2>';
+    h+='<div class="ms-creme">Saída combinada: '+msEsc(M.diaTexto(MS.saidaAntes))+'</div>';
+    h+='<div class="ms-tit">Nova saída</div>'+msSeg(lista, String(MS.opt), 'msOpt');
+    if(MS.opt==='outra') h+='<div class="cad-grid"><div class="field"><label for="msData">Data de saída</label><input class="cad-in" type="date" id="msData" min="'+msEsc(msHoje())+'" value="'+msEsc(MS.nova)+'" onchange="msData(this.value)"></div></div>';
+    var erro=MS.nova?M.validar(e, MS.nova, msHoje()):'';
+    if(MS.nova) h+=erro?('<div class="dc-faltas">'+msEsc(erro)+'</div>'):('<div class="prev-calc">'+msEsc(M.frase(MS.saidaAntes, MS.nova))+'</div>');
+    var b=M.banho(e);
+    if(b.tem && MS.nova && !erro){
+      h+='<div class="ms-creme"><div class="ms-tit" style="margin-top:0">BANHO DE SAÍDA'+(b.tipo?(' · '+msEsc(b.tipo.toUpperCase())):'')+'</div>';
+      var bl=(b.hora?[{v:'mesma', rot:'Mesma hora ('+b.hora+')'}]:[]).concat([{v:'outra', rot:b.hora?'Outra hora':'Escolher a hora'}, {v:'sem', rot:'Sem banho'}]);
+      h+=(MS.banho==='sem'?'Não vai ter banho de saída.':('Vai junto para '+msEsc(M.br(MS.nova))+'.'))+msSeg(bl, MS.banho, 'msBanho');
+      if(MS.banho==='outra') h+=msSeg(M.HORAS.map(function(x){ return {v:x, rot:x}; }), MS.hora, 'msHora');
+      var dom=(M.diaTexto(MS.nova).indexOf('domingo')===0);
+      h+='<div class="hint" style="margin-top:0">'+(MS.banho==='sem'?('Sai da planilha do dia '+msEsc(M.br(MS.saidaAntes))+'.')
+        :(dom?'Domingo a casa está fechada: o banho não vai sozinho para a planilha. Combine o dia com a tutora.'
+             :('Vai para a planilha e para a TV do dia '+msEsc(M.br(MS.nova))+'. Sai da planilha do dia '+msEsc(M.br(MS.saidaAntes))+'.')))+'</div></div>';
+    }
+    var faltas=(MS.nova && !erro)?msFaltas():[];
+    if(MS.nova && !erro){
+      h+='<div class="ms-tit">Conferência da mudança</div>';
+      if(!faltas.length) h+='<div class="ms-creme">Comida e remédios: nada falta até '+msEsc(M.br(MS.nova))+'.</div>';
+      else{
+        h+=faltas.map(function(f){ return '<div class="dc-faltas">'+msEsc(M.faltaTexto(f))+' Avisar a tutora.</div>'; }).join('');
+        var txt=M.mensagem({tutor:e.tutor, nome:nm, nova:MS.nova, faltas:faltas});
+        h+='<button type="button" class="btn" style="width:100%;min-height:44px;margin-bottom:8px;background:var(--z-cream);border:1.5px solid var(--z-gold);color:var(--z-blue);font-weight:800" onclick="msCopiar()">Copiar mensagem para a tutora</button>';
+        if(MS.msg) h+='<div class="ms-msg" id="msMsg">'+msEsc(txt)+'</div><div class="hint" id="msMsgOk" style="margin-top:0">'+(MS.msg==='ok'?'Mensagem copiada. É só colar no WhatsApp.':'Selecione o texto acima e copie.')+'</div>';
+      }
+    }
+    h+='<div class="ms-tit">Por que mudou?</div>'+msSeg([{v:'tutor', rot:'Tutor pediu'}, {v:'outro', rot:'Outro motivo'}], MS.motivo, 'msMotivo');
+    if(MS.motivo==='outro') h+='<div class="cad-grid"><div class="field"><label for="msMotivoTxt">Qual foi o motivo?</label><input class="cad-in" id="msMotivoTxt" maxlength="80" value="'+msEsc(MS.motivoTxt)+'" oninput="MS&&(MS.motivoTxt=this.value)"></div></div>';
+    h+='<div class="alm-next" style="display:flex;flex-direction:column;gap:8px">'
+      +'<button type="button" class="btn btn-gold" style="width:100%;min-height:46px" '+((MS.salvando||!MS.nova||erro)?'disabled':'')+' onclick="msSalvar(this)">'+(MS.salvando?'Salvando…':'Salvar nova saída')+'</button>'
+      +'<button type="button" class="btn" style="width:100%;min-height:44px;background:var(--z-cream);border:1.5px solid var(--line);color:var(--z-blue)" onclick="msFechar()">Cancelar</button></div>';
+    h+='</div>';
+    box.innerHTML=h;
+  }
+  function msOpt(v){ if(!MS) return; MS.opt=v; MS.msg=false;
+    if(v==='outra'){ MS.nova=''; } else { var op=ZeluzMudarSaida.opcoes(MS.saidaAntes, msHoje()); MS.nova=(op[+v]||{}).v||''; }
+    msRender(); }
+  function msData(v){ if(!MS) return; MS.nova=String(v||''); MS.msg=false; msRender(); }
+  function msBanho(v){ if(!MS) return; MS.banho=v; if(v==='outra' && !MS.hora) MS.hora=''; msRender(); }
+  function msHora(v){ if(!MS) return; MS.hora=v; msRender(); }
+  function msMotivo(v){ if(!MS) return; MS.motivo=v; msRender(); }
+  function msCopiar(){
+    if(!MS) return;
+    var txt=ZeluzMudarSaida.mensagem({tutor:MS.e.tutor, nome:MS.e.nome, nova:MS.nova, faltas:msFaltas()});
+    MS.msg='mostrar'; msRender();
+    try{ navigator.clipboard.writeText(txt).then(function(){ if(MS){ MS.msg='ok'; msRender(); } }, function(){}); }
+    catch(e){} /* silencioso de propósito: sem a área de transferência, o texto fica na tela para copiar à mão */
+  }
+  async function msSalvar(btn){
+    if(!MS || MS.salvando) return false;
+    if(!msPode()){ try{ zAlertao('SEM PERMISSÃO', ['Mudar a saída é com a recepção, a supervisão ou a gestão.'], {botao:'Entendi'}); }catch(x){} /* silencioso de propósito: sem o cartaz, nada é gravado do mesmo jeito */ return false; }
+    if(!DB){ try{ zAlertao('SEM CONEXÃO', ['Sem conexão com o banco. Nada foi gravado.'], {botao:'Entendi'}); }catch(x){} /* silencioso de propósito: sem o cartaz, nada é gravado do mesmo jeito */ return false; }
+    var M=ZeluzMudarSaida, id=MS.id, nova=MS.nova, hoje=msHoje();
+    if(MS.banho==='outra' && M.banho(MS.e).tem && !/^\d{2}:\d{2}$/.test(MS.hora)){ try{ zAlertao('ESCOLHA A HORA', ['Toque na hora do banho de saída, ou escolha «Sem banho».'], {botao:'Entendi'}); }catch(x){} /* silencioso de propósito: sem o cartaz, nada é gravado do mesmo jeito */ return false; }
+    var motivo=(MS.motivo==='outro')?String(MS.motivoTxt||'').trim():'Tutor pediu';
+    if(!motivo){ try{ zAlertao('ESCREVA O MOTIVO', ['Diga em poucas palavras por que a saída mudou.'], {botao:'Entendi'}); }catch(x){} /* silencioso de propósito: sem o cartaz, nada é gravado do mesmo jeito */ return false; }
+    MS.salvando=true; msRender();
+    var e;
+    try{ var s=await DB.ref('auaulandia/estadias/'+id).once('value'); e=(s&&s.val)?s.val():null; }
+    catch(x){ e=undefined; }
+    var falha=function(t){ if(MS){ MS.salvando=false; msRender(); } try{ zAlertao('NÃO MUDEI A SAÍDA', [t, 'Nada foi gravado.'], {botao:'Entendi'}); }catch(y){} /* silencioso de propósito: sem o cartaz, nada foi gravado do mesmo jeito */ return false; };
+    if(e===undefined) return falha('Não consegui ler a hospedagem agora. Confira a internet e tente de novo.');
+    if(!e) return falha('Esta hospedagem não existe mais no sistema.');
+    if(String(e.saida||'')!==MS.saidaAntes) return falha('Alguém mudou a saída em outro aparelho (agora é '+M.br(e.saida)+'). Feche e abra de novo.');
+    var erro=M.validar(e, nova, hoje); if(erro) return falha(erro);
+    var ts=Date.now(), quem=(typeof quemSou==='function')?quemSou():'-';
+    var P=M.patch({e:e, nova:nova, banho:MS.banho, hora:MS.hora, quem:quem, ts:ts, quando:carimboBR(ts), motivo:motivo, chave:hospChaveNova(e.datas_historico, 'dh', ts)});
+    try{ await DB.ref('auaulandia/estadias/'+id).update(P); }
+    catch(x){ _logFalhaGrav('mudar saída', x); return falha('O banco não aceitou a gravação: '+((x&&x.message)||x)); }
+    var depois=Object.assign({}, e, {saida:nova});
+    try{ if(typeof EST_TODAS!=='undefined' && EST_TODAS && EST_TODAS[id]){ EST_TODAS[id].saida=nova; } }catch(x){} /* silencioso de propósito: o ouvinte das estadias traz o resto */
+    try{ if(typeof audit==='function') audit('estadia-datas','mudou a saída pelo cartão',{pet:e.nome||'', de:e.saida||'', para:nova, motivo:motivo, assinou:quem}); }catch(x){} /* silencioso de propósito: o audit() tem bolso próprio */
+    var faltas=[]; try{ faltas=faltasDaEstadia(depois); }catch(x){ faltas=[]; }
+    try{ checarFaltasDaEstadia(id, depois, 'a saída mudou de '+M.br(e.saida)+' para '+M.br(nova), {semAlerta:true}); }catch(x){ _logFalhaGrav('checarFaltasDaEstadia (mudar saída)', x); }
+    var b=M.banho(e), bt='';
+    if(b.tem){ if(MS.banho==='sem') bt=' Banho de saída tirado.';
+      else { var hh=(MS.banho==='outra')?MS.hora:b.hora; bt=hh?(' Banho de saída: '+M.br(nova)+' às '+hh+' (planilha e TV).'):(' Banho de saída em '+M.br(nova)+': falta escolher a hora.'); } }
+    MS.salvando=false;
+    MS.feito={texto:'Pronto. '+(e.nome||'O FILHOt')+' sai '+M.diaTexto(nova)+'.'+bt+' Plantão e refeições já contam a nova data.',
+      faltas:faltas.filter(function(f){ return f.tipo!=='medicacao-sem-contagem'; }).map(function(f){ return (f.tipo==='racao'?'a comida':('o '+(/^rem[ée]dio(\s|$)/i.test(String(f.nome||''))?f.nome:('remédio '+f.nome)))); }).join(' e ')};
+    msRender();
+    return true;
   }
   // A linha da estadia: a última mudança de datas e o histórico (AC7.2), a baixa com a saída combinada (AC8.1), a reabertura
   // (AC7.3), a saída antecipada desfeita (AC9.6) e os botões novos (AC8.2, AC9.1, AC7.3). PURA de gravação.
@@ -103928,14 +104104,14 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',tentar,{once:true});else tentar();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
-<script src="agenda-marcia/dados.js?v=2026-11-23-01"></script>
-<script src="agenda-marcia/entrevistas.js?v=2026-11-23-01"></script>
-<script src="agenda-marcia/composta.js?v=2026-11-23-01"></script>
-<script src="agenda-marcia/painel.js?v=2026-11-23-01"></script>
-<script src="marcia129/painel.js?v=2026-11-23-01"></script>
-<script src="marcia129/dados.js?v=2026-11-23-01"></script>
-<script src="marcia129/app.js?v=2026-11-23-01"></script>
-<script src="agenda-marcia/app.js?v=2026-11-23-01"></script>
+<script src="agenda-marcia/dados.js?v=2026-11-23-02"></script>
+<script src="agenda-marcia/entrevistas.js?v=2026-11-23-02"></script>
+<script src="agenda-marcia/composta.js?v=2026-11-23-02"></script>
+<script src="agenda-marcia/painel.js?v=2026-11-23-02"></script>
+<script src="marcia129/painel.js?v=2026-11-23-02"></script>
+<script src="marcia129/dados.js?v=2026-11-23-02"></script>
+<script src="marcia129/app.js?v=2026-11-23-02"></script>
+<script src="agenda-marcia/app.js?v=2026-11-23-02"></script>
 <script id="menu-contadores171">'use strict';
 /* 30/out/2026 — contadores vermelhos no menu (maquete aprovada pela Adriana).
    «Márcia Gestão»: cuidados das avaliações de HOJE ainda não revisados + alertas de reação ainda sem «Tutor avisado».
