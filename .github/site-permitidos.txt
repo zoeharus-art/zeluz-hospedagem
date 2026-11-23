@@ -49,6 +49,7 @@ auaulandia/hospedes-atividades.js
 auaulandia/alimentacao-hospede.js
 auaulandia/cafe-operacional.js
 auaulandia/plantao-turno.js
+auaulandia/refeicoes-do-dia.js
 auaulandia/calendario-vagas.js
 auaulandia/cafe-aluno-logica.js
 auaulandia/presenca-logica.js
