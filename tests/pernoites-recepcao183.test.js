@@ -348,8 +348,8 @@ prova('a página: menu, tela, papéis, título, abertura e versão', () => {
   assert.match(html, /pernoites:\['Pernoites',/);
   assert.match(html, /if\(v==='pernoites'\)\{ if\(typeof pnAbrir==='function'\) pnAbrir\(\); \}/);
   assert.match(html, /if\(v!=='pernoites'\)\{ if\(typeof pnParar==='function'\) pnParar\(\); \}/);
-  assert.match(html, /const APP_VERSAO='2026-11-23-02';/);
-  assert.equal((html.match(/2026-11-23-02/g) || []).length, 17);
+  assert.match(html, /const APP_VERSAO='2026-11-23-03';/);
+  assert.equal((html.match(/2026-11-23-03/g) || []).length, 18);
   assert.equal(html.includes('2026-11-12-01'), false);
   // o desenho é o da Reposição: classes copiadas, sem caixa de marcar nem − / +
   const tela = entre('<section class="view" id="v-pernoites">', '<!-- Extrato de um peludinho -->');
