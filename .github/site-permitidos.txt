@@ -51,6 +51,7 @@ auaulandia/cafe-operacional.js
 auaulandia/plantao-turno.js
 auaulandia/refeicoes-do-dia.js
 auaulandia/mudar-saida.js
+auaulandia/mudar-banho.js
 auaulandia/calendario-vagas.js
 auaulandia/cafe-aluno-logica.js
 auaulandia/presenca-logica.js
