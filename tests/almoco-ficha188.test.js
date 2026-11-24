@@ -95,9 +95,9 @@ async function montar(b, turno) {
     assert.ok(f.indexOf('Café da manhã de Teste 01: 20 g de ração') >= 0, f);
     assert.ok(f.indexOf('Almoço de Teste 01: 30 g de ração + 40 g de comida natural + Probiótico') >= 0, f);
     assert.ok(f.indexOf('Misturar com água morna') >= 0, f);
-    // 23/nov/2026 (maquete aprovada): de dia a ficha também mostra a porção do jantar e, em cima, o bloco «Hoje».
-    assert.ok(f.indexOf('Jantar de Teste 01: 25 gramas de ração') >= 0, f);
-    assert.ok(f.indexOf('Hoje, dia ') >= 0 && f.indexOf('As três refeições') >= 0, f);
+    // 24/nov/2026 (Adriana): travado no horário — de dia a ficha mostra só café e almoço; o jantar aparece às 18h50.
+    assert.ok(f.indexOf('Jantar de Teste 01') < 0, f);
+    assert.ok(f.indexOf('Plantão do dia · 7h às 18h50') >= 0, f);
   });
   await prova('a ficha sem check-in avisa que falta e manda falar com a recepção', () => {
     assert.ok(/Almoço de Teste 04: não há check-in de hospedagem hoje/.test(dia.r.fichas[3]), dia.r.fichas[3]);
