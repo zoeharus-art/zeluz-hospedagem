@@ -38,13 +38,21 @@ const igual = (a, b, msg) => assert.deepStrictEqual(JSON.parse(JSON.stringify(a)
 // ------------------------------------------------------------------ 1. a regra pura
 console.log('Regra do turno');
 // 22/nov/2026: todo dia, das 7h às 18h piscam café e almoço; das 18h às 7h, o jantar (nada some da tela).
-prova('dia útil: das 7h às 18h é o diurno; das 18h às 7h é o noturno', () => {
-  igual(['06:45', '07:00', '07:30', '12:00', '17:59', '18:00', '23:59', '00:00', '02:00'].map((h) => Turno.turno(false, h)),
-    ['noturno', 'diurno', 'diurno', 'diurno', 'diurno', 'noturno', 'noturno', 'noturno', 'noturno']);
+// 24/nov/2026: plantão de 12 h — dia 07h00–18h49, noite a partir das 18h50.
+prova('dia útil: das 7h às 18h49 é o diurno; das 18h50 às 7h é o noturno', () => {
+  igual(['06:45', '07:00', '07:30', '12:00', '18:00', '18:49', '18:50', '23:59', '00:00', '02:00'].map((h) => Turno.turno(false, h)),
+    ['noturno', 'diurno', 'diurno', 'diurno', 'diurno', 'diurno', 'noturno', 'noturno', 'noturno', 'noturno']);
 });
-prova('domingo, feriado e recesso: a mesma regra (das 18h em diante é o jantar)', () => {
-  igual(['06:59', '07:00', '12:00', '17:59', '18:00', '02:00'].map((h) => Turno.turno(true, h)),
+prova('domingo, feriado e recesso: a mesma regra (das 18h50 em diante é o jantar)', () => {
+  igual(['06:59', '07:00', '12:00', '18:49', '18:50', '02:00'].map((h) => Turno.turno(true, h)),
     ['noturno', 'diurno', 'diurno', 'diurno', 'noturno', 'noturno']);
+});
+prova('o remédio aparece só no turno dele: às 8h não aparece o da noite', () => {
+  const d = Turno.doseNoTurno;
+  igual(['07:00', '12:00', '18:49', '18:50', '20:00', '02:00'].map((h) => d(h, '08:00')), [true, true, true, false, false, false]);
+  igual(['07:00', '12:00', '18:50', '20:00', '23:59', '02:00'].map((h) => d(h, '19:30')), [false, false, true, true, true, false]);
+  igual(['02:00', '06:59', '07:00', '20:00'].map((h) => d(h, '03:00')), [true, true, false, false]);
+  igual(d('', '08:00'), true, 'remédio sem horário não some');
 });
 prova('o diurno tem café e almoço; o noturno, só o jantar; o turno dos monitores, nada', () => {
   igual([Turno.refeicoes('diurno'), Turno.refeicoes('noturno'), Turno.refeicoes('fora')], [['cafe', 'almoco'], ['jantar'], []]);
@@ -161,19 +169,20 @@ const card = () => { els.plantaoTurnoCard = { innerHTML: '' }; const r = J('plan
 prova('domingo 22/11, 12h: destaque no café e no almoço', () => {
   as('2026-11-22', '12:00'); const c = card();
   igual([c.r.turno, c.b, body.dataset.plantaoFechado], ['diurno', 'diurno', '1']);
-  assert.ok(/Agora: café da manhã e almoço/.test(c.h) && /Jantar/.test(c.h), c.h);
+  assert.ok(/Agora: plantão do dia/.test(c.h) && /ficha de cada peludinho/.test(c.h) && /jantar abre às 18h50/.test(c.h), c.h);
   assert.ok(/var\(--z-gold\)/.test(c.h), 'barrinha dourada');
 });
 prova('terça 17/11, 12h: também café e almoço (todo dia)', () => {
   as('2026-11-17', '12:00'); const c = card();
-  igual([c.r.turno, body.dataset.plantaoFechado], ['diurno', '0']); assert.ok(/Agora: café da manhã e almoço/.test(c.h), c.h);
+  igual([c.r.turno, body.dataset.plantaoFechado], ['diurno', '0']); assert.ok(/Agora: plantão do dia/.test(c.h), c.h);
 });
-prova('18h10 de qualquer dia: destaque no jantar e no relatório', () => {
-  as('2026-11-17', '18:10'); let c = card(); igual(c.r.turno, 'noturno'); assert.ok(/Agora: jantar e Relatório do Jantar/.test(c.h), c.h);
+prova('18h50 de qualquer dia: o jantar; às 18h10 ainda é o dia', () => {
+  as('2026-11-17', '18:10'); let c = card(); igual(c.r.turno, 'diurno');
+  as('2026-11-17', '18:50'); c = card(); igual(c.r.turno, 'noturno'); assert.ok(/Agora: plantão da noite/.test(c.h) && /jantar se marca na/.test(c.h), c.h);
   as('2026-11-22', '19:10'); c = card(); igual(c.r.turno, 'noturno');
 });
-prova('às 18h a tela troca sozinha: o turno avisa que mudou', () => {
-  as('2026-11-22', '17:59'); card(); as('2026-11-22', '18:00');
+prova('às 18h50 a tela troca sozinha: o turno avisa que mudou', () => {
+  as('2026-11-22', '18:49'); card(); as('2026-11-22', '18:50');
   igual(J('plantaoTurnoAplicar()'), { turno: 'noturno', mudou: true });
 });
 prova('o jantar das 02h grava no dia anterior; o almoço, no dia de hoje', () => {
@@ -181,7 +190,7 @@ prova('o jantar das 02h grava no dia anterior; o almoço, no dia de hoje', () =>
 });
 
 console.log('Lista do almoço na tela Plantão');
-prova('cada hóspede com a porção do almoço, a contagem e os botões Comeu / Metade / Não comeu', () => {
+prova('cada hóspede com a porção do almoço e a contagem; a marcação leva à ficha (24/11: um lugar só)', () => {
   as('2026-11-22', '12:00');
   for (const k of ['plAlmocoGrid', 'plAlmocoBarra', 'plAlmocoResumo']) els[k] = { innerHTML: '' };
   const e2 = est({ refKey: 'teste 02__tutora teste', nome: 'Teste <b>02</b>' });
@@ -193,8 +202,9 @@ prova('cada hóspede com a porção do almoço, a contagem e os botões Comeu / 
   const g = els.plAlmocoGrid.innerHTML, rz = els.plAlmocoResumo.innerHTML, b = els.plAlmocoBarra.innerHTML;
   assert.ok(/Teste 01/.test(g) && /80 g de ração/.test(g), 'nome e porção');
   assert.ok(g.indexOf('<b>02</b>') < 0 && /Teste &lt;b/.test(g), 'nome escapado: ' + (g.match(/class="nm">[^]{0,60}/g) || []).join(' | '));
-  assert.ok(/>Comeu</.test(g) && />Metade</.test(g) && />Não comeu</.test(g) && /Não chegou ainda/.test(g), 'botões');
-  assert.ok(/marcarRefeicaoHosp\('almoco'/.test(g), 'grava no almoço');
+  assert.ok(/>Marcar na ficha</.test(g) && /fichaAbrirRefeicao\(/.test(g), 'leva à ficha');
+  assert.ok(!/marcarRefeicaoHosp\('almoco'/.test(g), 'a lista não grava mais');
+  assert.ok(/>Comeu</.test(g) && />Falta marcar</.test(g), 'mostra o estado de cada um');
   assert.ok(/<b>1<\/b>servidos/.test(rz) && /<b>1<\/b>faltam/.test(rz), rz);
   assert.ok(/Iniciar/.test(b) && /Encerrar/.test(b) && /iniciarRefeicaoHosp\('almoco'\)/.test(b) && b.indexOf('disabled') < 0, b);
 });
@@ -210,8 +220,8 @@ prova('leitura que falhou não deixa marcar nada', () => {
 
 console.log('Tela e estilo');
 prova('o app carrega o módulo do turno e tem os blocos novos', () => {
-  assert.ok(/<script src="plantao-turno\.js\?v=2026-11-24-01"><\/script>/.test(html));
-  assert.ok(/<script src="cafe-operacional\.js\?v=2026-11-24-01"><\/script>/.test(html));
+  assert.ok(/<script src="plantao-turno\.js\?v=2026-11-24-02"><\/script>/.test(html));
+  assert.ok(/<script src="cafe-operacional\.js\?v=2026-11-24-02"><\/script>/.test(html));
   for (const id of ['plantaoTurnoCard', 'cardFecharTurno', 'prevSec_plantao-almoco', 'prevSec_plantao-jantar', 'plAlmocoGrid', 'plJantarGrid'])
     assert.ok(html.indexOf('id="' + id + '"') >= 0, id);
 });
