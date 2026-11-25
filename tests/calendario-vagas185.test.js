@@ -293,12 +293,12 @@ prova('quem tem o Orçamento concedido no Time vê o calendário; dá para conce
   assert.strictEqual(tem({ paginas: ['calendariovagas'] }, 'orcamento'), false, 'o calendário não abre o Orçamento');
   assert.ok(/var pode=navPaginaTem\(u, k\);/.test(html) && /if\(!navPaginaTem\(u, v\)\) v=u\.paginas\[0\];/.test(html));
 });
-prova('módulo carregado pela página, na lista do site, versão 2026-11-24-03 em todos os arquivos versionados', () => {
-  assert.ok(/<script src="calendario-vagas\.js\?v=2026-11-24-03"><\/script>/.test(html));
+prova('módulo carregado pela página, na lista do site, versão 2026-11-25-01 em todos os arquivos versionados', () => {
+  assert.ok(/<script src="calendario-vagas\.js\?v=2026-11-25-01"><\/script>/.test(html));
   const lista = fs.readFileSync(path.join(__dirname, '..', '.github', 'site-permitidos.txt'), 'utf8');
   assert.ok(/^auaulandia\/calendario-vagas\.js$/m.test(lista));
-  assert.match(html, /const APP_VERSAO='2026-11-24-03';/);
-  assert.equal(html.split('2026-11-24-03').length - 1, 18);
+  assert.match(html, /const APP_VERSAO='2026-11-25-01';/);
+  assert.equal(html.split('2026-11-25-01').length - 1, 18);
   assert.ok(html.indexOf('2026-11-15-01') < 0);
 });
 prova('regras da casa no texto novo: sem cão/cachorro/baia/solto, sem emoji, sem alert/confirm', () => {
