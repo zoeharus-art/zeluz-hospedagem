@@ -43,8 +43,10 @@ prova('no cartão da Zelozinha: vermífugo pede o nome; carrapaticida só com pi
   assert.equal(T.pedeNome('col_p', {}), false);
   assert.deepEqual(Array.from(T.faltaEscolher('verm_p', { qtd: '1 COMPRIMIDO' }, '')), ['nome', 'doses']);
   assert.deepEqual(Array.from(T.faltaEscolher('verm_p', { nome: 'DRONTAL PLUS', doses: 'DOSE ÚNICA', qtd: '1 COMPRIMIDO' }, '')), []);
-  assert.deepEqual(Array.from(T.faltaEscolher('ecto_p', { prod: 'PIPETA · 30 DIAS', qtd: 'PIPETA' }, '')), ['nome']);
-  assert.deepEqual(Array.from(T.faltaEscolher('ecto_p', { prod: 'BRAVECTO · 90 DIAS', qtd: '1 COMPRIMIDO' }, '')), []);
+  // 25/11/2026: o carrapaticida também pergunta onde vai passar (Day Care ou depois do banho)
+  assert.deepEqual(Array.from(T.faltaEscolher('ecto_p', { prod: 'PIPETA · 30 DIAS', qtd: 'PIPETA' }, '')), ['nome', 'passa']);
+  assert.deepEqual(Array.from(T.faltaEscolher('ecto_p', { prod: 'BRAVECTO · 90 DIAS', qtd: '1 COMPRIMIDO' }, '')), ['passa']);
+  assert.deepEqual(Array.from(T.faltaEscolher('ecto_p', { prod: 'BRAVECTO · 90 DIAS', qtd: '1 COMPRIMIDO', passa: 'DEPOIS DO BANHO' }, '')), []);
 });
 prova('gravar o nome: aceito no vermífugo e na pipeta; trocar para comprimido apaga o nome da pipeta; nome no comprimido é recusado', () => {
   const linha = (itemK, det) => ({ det: Object.assign({ cuidado57_estado: 'conferir-orientacao' }, det), origemVencimento: { protocolo: 'cuidado57', linhaId: 'l1', respostaId: 'r1', revisao: 0, itemK } });
