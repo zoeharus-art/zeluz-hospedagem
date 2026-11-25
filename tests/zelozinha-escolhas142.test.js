@@ -153,7 +153,7 @@ async function testarAbaSnoopy116() {
   await testarAbaSnoopy116();
   assert.equal(T.podeEscolher({ campo: 'prod', tarefaEstado: 'criada', snoopyConfirmado: true }).ok, true);
   assert.equal(T.podeEscolher({ campo: 'qtd', tarefaEstado: 'criada', snoopyConfirmado: true }).ok, true);
-  assert.equal(JSON.stringify(T.camposDoCuidado('ecto_p')), JSON.stringify(['prod','nome','qtd','onde']));   // o nome da pipeta entrou em 19/11/2026
+  assert.equal(JSON.stringify(T.camposDoCuidado('ecto_p')), JSON.stringify(['prod','nome','qtd','onde','passa']));   // o nome da pipeta entrou em 19/11/2026; onde vai passar em 25/11/2026
   assert.equal(T.podeEscolher({ campo: 'nome', tarefaEstado: 'criada', snoopyConfirmado: true }).ok, true);
   assert.equal(T.podeEscolher({ campo: 'onde', tarefaEstado: 'criada', snoopyConfirmado: true }).motivo, 'ja-no-snoopy');
   assert.equal(T.podeEscolher({ campo: 'prod', tarefaEstado: 'realizado', snoopyConfirmado: true }).motivo, 'ja-aplicado');
@@ -174,6 +174,22 @@ async function testarAbaSnoopy116() {
   const origem = mundo();
   assert.equal(await origem.escolher('onde', 'NA BOLSA'), false);
   assert.equal(origem.store.tx, 0); assert.match(origem.store.aviso, /Snoopy/);
+  // 25/11/2026 (Adriana): «Quando o carrapaticida será depois do banho, não deixa ser marcado.» O lugar virou pergunta
+  // própria: muda mesmo com a linha já no Snoopy, não mexe na origem e não pede nova confirmação do Snoopy.
+  assert.equal(T.podeEscolher({ campo: 'passa', tarefaEstado: 'criada', snoopyConfirmado: true }).ok, true);
+  const lugar = mundo();
+  assert.equal(await lugar.escolher('passa', 'DEPOIS DO BANHO'), true, 'depois do banho marcado com o Snoopy já lançado');
+  assert.equal(lugar.store.linha.det.passa, 'DEPOIS DO BANHO');
+  assert.equal('onde' in lugar.store.linha.det, false, 'a origem (loja) continua a da resposta');
+  assert.equal(lugar.store.linha.origemVencimento.origemResposta, 'loja');
+  assert.equal(lugar.store.linha.valor, linha().valor, 'célula de lançamento preservada');
+  assert.equal(S.projetar(lugar.store.linha, lugar.store.snoopy, lugar.store.linha).estado, 'confirmacao-vigente', 'o lugar não é cobrança');
+  assert.equal(lugar.store.invalidou116, 0, 'o lugar não mexe no financeiro');
+  assert.equal(await lugar.escolher('passa', 'NO DAY CARE'), true, 'trocar de volta para o Day Care');
+  assert.equal(lugar.store.linha.det.passa, 'NO DAY CARE');
+  assert.equal(await lugar.escolher('passa', 'NA PISCINA'), false, 'só os dois lugares valem');
+  assert.equal(lugar.store.linha.det.passa, 'NO DAY CARE');
+  assert.equal(T.mesclarEscolha(linha(), { linhaId: lineId, respostaId, revisao: 0, cycleKey, itemK: 'verm_p' }, { campo: 'passa', valor: 'NO DAY CARE' }).ok, false, 'vermífugo não tem a pergunta');
   const semPainel = mundo(); delete semPainel.ctx.window.zelozinha116SnoopyInvalidar;
   assert.equal(await semPainel.escolher('prod', 'PRODUTO FICTÍCIO'), false);
   assert.equal(semPainel.store.tx, 0, 'sem invalidação financeira, não criar Feito obsoleto');
