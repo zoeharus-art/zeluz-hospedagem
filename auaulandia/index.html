@@ -696,13 +696,12 @@
   body[data-role="plantonista"][data-plantao-turno="diurno"] #prevSec_plantao-cafe>summary,
   body[data-role="plantonista"][data-plantao-turno="diurno"] #prevSec_plantao-almoco>summary,
   body[data-role="plantonista"][data-plantao-turno="noturno"] #prevSec_plantao-jantar>summary,
-  body[data-role="plantonista"][data-plantao-turno="noturno"] #card-inicio>.rel-head{animation:plPiscaAgora 1.4s ease-in-out infinite;border-radius:12px}
   body[data-role="plantonista"][data-plantao-turno="diurno"] #prevSec_plantao-cafe>summary .prev-sec-nome::after,
   body[data-role="plantonista"][data-plantao-turno="diurno"] #prevSec_plantao-almoco>summary .prev-sec-nome::after,
   body[data-role="plantonista"][data-plantao-turno="noturno"] #prevSec_plantao-jantar>summary .prev-sec-nome::after{content:" · AGORA";color:var(--z-gold);font-weight:700}
   @media (prefers-reduced-motion:reduce){
     body[data-role="plantonista"] #prevSec_plantao-cafe>summary, body[data-role="plantonista"] #prevSec_plantao-almoco>summary,
-    body[data-role="plantonista"] #prevSec_plantao-jantar>summary, body[data-role="plantonista"] #card-inicio>.rel-head{animation:none}
+    body[data-role="plantonista"] #prevSec_plantao-jantar>summary
   }
   body[data-role="plantonista"] #magItens{pointer-events:none;opacity:.72}
   /* Foto (trocar/salvar): Gestão, Supervisão e Monitor podem. Plantonista e tutor NÃO (só recebem).
@@ -771,6 +770,10 @@
   .seg button.on.t-ok{background:var(--crm-ok);color:#fff}
   .seg button.on.t-bad{background:var(--crm-critico);color:#fff}
   .seg button.on.t-warn{background:var(--crm-atencao);color:var(--crm-atencao-text)}  /* Jantar dentro do relatório — 22/ago/2026 */
+  .noite-ref{margin:10px 0 12px;padding:10px 12px;border-radius:10px;background:var(--z-cream);border:1px solid var(--line);font-size:13.5px;line-height:1.5}
+  .noite-ref:empty{display:none}
+  .noite-ref-cab{font-weight:800;color:var(--z-blue);margin-bottom:4px}
+  .noite-ref-falta{color:var(--crm-critico);font-weight:700}
   .janta-box{margin:10px 0;padding:10px 12px;border-radius:10px;font-size:13.5px;line-height:1.45;
     font-weight:700;color:var(--z-blue);background:rgba(222,180,40,.18);border-left:4px solid var(--z-gold)}
   .janta-box div{font-weight:600;font-size:12.5px;margin-top:3px;color:var(--z-blue-soft)}
@@ -3032,8 +3035,8 @@
 .z-painel44{--p44-blue:#234d67;--p44-soft:#3a6a85;--p44-cream:#fffdf6;--p44-warm:#faf5e9;--p44-gold:#deb428;--p44-line:#e7e0d2;--p44-muted:#7c8a93;box-sizing:border-box;max-width:1160px;padding:24px 38px 52px;background:var(--p44-cream);color:var(--p44-blue);font-family:Inter,Poppins,system-ui,sans-serif}.z-painel44 *{box-sizing:border-box}.z-painel44 [hidden]{display:none!important}.z-painel44 button{font:inherit}.z-painel44 button:focus-visible{outline:3px solid rgba(222,180,40,.55);outline-offset:3px}.z-painel44__topo{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.z-painel44__saudacao .pm-saud1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.12;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2{margin:8px 0 0;font-size:16px;font-weight:600;line-height:1.45;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2 b{font-size:21px;font-weight:800;color:#a57a00}.z-painel44__saudacao .pm-saud3{max-width:54ch;margin:5px 0 0;color:var(--p44-soft);font-size:15px;font-weight:500;font-style:italic;line-height:1.5}.z-painel44__saudacao .pm-traco{display:block;width:40px;height:3px;margin-top:13px;border-radius:2px;background:linear-gradient(90deg,var(--p44-gold),#a57a00)}.z-painel44__saudacao .pm-data{margin-top:14px;color:var(--p44-muted);font-size:12px;font-weight:600}.z-painel44__selo{flex:0 0 auto;padding:8px 11px;border:1px solid var(--p44-line);border-radius:999px;background:#fff;color:var(--p44-blue);font-size:12px;font-weight:700}.z-painel44__selo:before{content:'•';margin-right:5px;color:var(--p44-gold);font-size:18px}.z-painel44__sticker{display:block;width:62px;max-width:90px;height:68px;max-height:80px;object-fit:contain;margin:4px auto 0}.z-painel44__bem-estar{display:block;width:100%;margin-bottom:18px}.z-painel44__bem-estar>*{width:100%}.z-painel44__abas{display:flex;gap:7px;margin:0 0 16px}.z-painel44__abas button{padding:10px 14px;border:1px solid var(--p44-line);border-radius:10px;background:#fff;color:var(--p44-blue);font-size:14px;font-weight:700;cursor:pointer}.z-painel44__abas button[aria-selected=true]{border-color:var(--p44-blue);background:var(--p44-blue);color:var(--p44-cream)}.z-painel44__intro{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:12px 0}.z-painel44__intro h2,.z-painel44__equipe h2{margin:0;font-size:20px}.z-painel44__intro p,.z-painel44__equipe>p{margin:5px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__contagem{color:var(--p44-muted);font-size:12px;font-weight:700}.z-painel44__temas{display:grid;gap:9px}.z-painel44__tema{overflow:hidden;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__tema-cabeca{display:grid;grid-template-columns:36px 1fr auto 20px;align-items:center;gap:10px;width:100%;padding:14px 15px;border:0;background:transparent;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__tema-icone{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--p44-warm);font-size:17px}.z-painel44__tema-titulo,.z-painel44__tema-passo{display:block}.z-painel44__tema-titulo{font-size:15px;font-weight:800}.z-painel44__tema-passo{margin-top:3px;color:var(--p44-muted);font-size:12px}.z-painel44__pill{padding:4px 8px;border-radius:999px;background:#e9f5f7;color:#226477;font-size:11px;font-weight:800}.z-painel44__seta{color:var(--p44-soft);font-size:18px;transition:transform .16s}.z-painel44__tema.aberto .z-painel44__seta{transform:rotate(90deg)}.z-painel44__tema-corpo{margin:0 12px 12px;padding:14px 15px;border-top:1px solid var(--p44-line);background:var(--p44-warm)}.z-painel44__equipe{padding:18px;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__pessoas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}.z-painel44__pessoa{display:flex;align-items:center;gap:11px;width:100%;padding:13px;border:1px solid var(--p44-line);border-radius:12px;background:#fff;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__avatar{display:grid;place-items:center;width:39px;height:39px;flex:0 0 auto;border-radius:50%;background:var(--p44-blue);color:var(--p44-cream);font-size:12px;font-weight:800}.z-painel44__pessoa-info{min-width:0}.z-painel44__pessoa strong,.z-painel44__pessoa small{display:block}.z-painel44__pessoa strong{font-size:14px}.z-painel44__pessoa small{overflow:hidden;margin-top:3px;color:var(--p44-muted);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.z-painel44__pessoa-seta{margin-left:auto;color:#a57a00;font-size:18px}.z-painel44__pessoa-detalhe{margin-top:15px}.z-painel44__pessoa-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__pessoa-secao h3{margin:0;font-size:14px}.z-painel44__pessoa-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}.z-painel44__vazio{margin:15px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__zelozinha{display:block;width:100%;margin-top:16px;padding:12px;border:1px dashed var(--p44-gold);border-radius:11px;background:var(--p44-warm);color:#805d00;text-align:left;cursor:pointer}.z-painel44__zelozinha-titulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.z-painel44__canal{padding:3px 7px;border-radius:999px;background:#fff;color:var(--p44-muted);font-size:11px}.z-painel44__zelozinha-aviso{display:block;margin-top:7px;font-size:12px;line-height:1.45}.z-painel44__perfil{margin-top:15px}.z-painel44__voltar{margin-bottom:12px;padding:8px 11px;border:1px solid var(--p44-line);border-radius:9px;background:#fff;color:var(--p44-blue);font-size:13px;font-weight:700;cursor:pointer}.z-painel44__perfil-subtitulo{margin:4px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__perfil-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__perfil-secao h3{margin:0;font-size:14px}.z-painel44__perfil-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}@media(max-width:760px){.z-painel44{padding:18px}.z-painel44__topo,.z-painel44__intro{display:block}.z-painel44__selo{display:inline-block;margin-top:13px}.z-painel44__contagem{display:block;margin-top:8px}.z-painel44__tema-cabeca{grid-template-columns:32px 1fr auto 16px;padding:12px}.z-painel44__tema-corpo{margin:0 8px 8px;padding:12px}.z-painel44__pessoas,.z-painel44__perfil-conteudo,.z-painel44__pessoa-conteudo{grid-template-columns:1fr}}
 
 </style>
-<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-24-02">
-<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-24-02">
+<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-24-03">
+<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-24-03">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -3868,7 +3871,7 @@
         </div>
       </div>
 
-      <div class="card rel-card collapsed" id="card-inicio">
+      <div class="card rel-card collapsed" id="card-inicio" style="display:none">
         <div class="rel-head" onclick="toggleRel('card-inicio')"><h2>Relatório do Jantar e preparação para dormir</h2><span class="rel-tag">Plantonista · a partir das 18h</span><span class="rel-caret">▾</span></div>
         <div class="rel-body">
         <div class="hint">A Plantonista relata o jantar e a preparação para dormir (chegada da noite, ~19h).</div>
@@ -3902,12 +3905,14 @@
       </div>
 
       <div class="card rel-card collapsed" id="card-noite">
-        <div class="rel-head" onclick="toggleRel('card-noite')"><h2>Relatório da Noite</h2><span class="rel-tag">Plantonista · 7h</span><span class="rel-caret">▾</span></div>
+        <div class="rel-head" onclick="toggleRel('card-noite')"><h2>Relatório da Noite</h2><span class="rel-tag">Plantonista · 18h50 às 7h</span><span class="rel-caret">▾</span></div>
         <div class="rel-body">
-        <div class="hint">Como os FILHOts passaram a noite? — a Plantonista relata como dormiram TODOS que ficaram (os hóspedes saem até as 11h30, então todos que dormiram entram aqui).</div>
+        <div class="hint">Um relatório só para o plantão da noite, do jantar até as 7h. Feche de manhã, antes de passar o plantão. O jantar e o remédio se marcam na ficha, na hora; aqui eles já vêm marcados.</div>
+        <div class="noite-ref" id="noite-ref-resumo"></div>
         <div class="obsline"><span class="q">Como passou a noite?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Dormiu a noite inteira</button><button data-tone="warn" onclick="pick(this)">Agitado</button></div></div>
         <div class="obsline"><span class="q">Está ativo?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="warn" onclick="pick(this)">Não</button></div></div>
         <div class="obsline"><span class="q">Bebeu água?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Sim</button><button data-tone="bad" onclick="pick(this)">Não</button></div></div>
+        <div class="obsline"><span class="q">Onde está a comida dele?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Geladeira</button><button data-tone="ok" onclick="pick(this)">Armário</button><button data-tone="warn" onclick="pick(this)">Na mochila</button><button data-tone="bad" onclick="pick(this)">Não trouxe — peguei da casa</button></div></div>
         <div class="obsline"><span class="q">Fez cocô?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onCocoQ(this)">Sim</button><button data-tone="warn" onclick="pick(this);onCocoQ(this)">Não</button><button data-tone="warn" onclick="pick(this);onCocoQ(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Consistência</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this)">Normal</button><button data-tone="bad" onclick="pick(this)">Pastoso</button><button data-tone="bad" onclick="pick(this)">Diarreia</button><button data-tone="warn" onclick="pick(this)">Não vi</button></div></div>
         <div class="obsline"><span class="q">Vomitou?</span><div class="seg" data-single><button data-tone="ok" onclick="pick(this);onVomQ(this)">Não</button><button data-tone="bad" onclick="pick(this);onVomQ(this)">Sim</button></div></div>
@@ -5853,13 +5858,13 @@
 <script src="autoria-logica.js?v=2026-10-15-02"></script>
 <script src="navegacao-inicio.js?v=2026-10-15-02"></script>
 <script src="hospedes-atividades.js?v=2026-10-16-01"></script>
-<script src="alimentacao-hospede.js?v=2026-11-24-02"></script>
-<script src="cafe-operacional.js?v=2026-11-24-02"></script>
-<script src="plantao-turno.js?v=2026-11-24-02"></script>
-<script src="refeicoes-do-dia.js?v=2026-11-24-02"></script>
-<script src="mudar-saida.js?v=2026-11-24-02"></script>
-<script src="mudar-banho.js?v=2026-11-24-02"></script>
-<script src="calendario-vagas.js?v=2026-11-24-02"></script>
+<script src="alimentacao-hospede.js?v=2026-11-24-03"></script>
+<script src="cafe-operacional.js?v=2026-11-24-03"></script>
+<script src="plantao-turno.js?v=2026-11-24-03"></script>
+<script src="refeicoes-do-dia.js?v=2026-11-24-03"></script>
+<script src="mudar-saida.js?v=2026-11-24-03"></script>
+<script src="mudar-banho.js?v=2026-11-24-03"></script>
+<script src="calendario-vagas.js?v=2026-11-24-03"></script>
 <script src="cafe-aluno-logica.js?v=2026-10-16-06"></script>
 <script src="presenca-logica.js?v=2026-10-16-02"></script>
 <script src="historico-checkins.js?v=2026-10-15-02"></script>
@@ -19202,13 +19207,13 @@ return { criar };
     if(d.recebeu) fichaTopicoPintar('card-dia', {estado:'ok', est:'✅ recebido', sub:'Recebido por '+d.recebeu});
     else if(d.passou) fichaTopicoPintar('card-dia', {estado:hoje?'pisca':'', est:hoje?'⚠ CONFIRMAR':'', sub:'Passado por '+d.passou+' — falta ler e confirmar o recebimento'});
     else fichaTopicoPintar('card-dia', {estado:(hoje&&papel==='monitor')?'pisca':'', est:(hoje&&papel==='monitor')?'⚠ FAZER':'', sub:'A Monitora ainda não passou o plantão do dia'});
+    // 24/nov/2026: o Jantar não é mais relatório; o cartão antigo só aparece (salvo) nos dias de antes.
     var j=R.inicio||{};
-    if(j.passou) fichaTopicoPintar('card-inicio', {estado:'ok', est:'✅ salvo', sub:'Feito por '+j.passou});
-    else fichaTopicoPintar('card-inicio', {estado:(hoje&&hora>='18:00')?'pisca':'', est:(hoje&&hora>='18:00')?'⚠ FAZER':'', sub:'Falta salvar o jantar'});
+    if(j.passou) fichaTopicoPintar('card-inicio', {estado:'ok', est:'✅ salvo', sub:'Feito por '+j.passou+' (relatório antigo)'});
     var nt=R.noite||{};
     var manha=(hoje && hora>='05:00' && hora<'12:00' && papel==='plantonista');
     if(nt.passou) fichaTopicoPintar('card-noite', {estado:'ok', est:'✅ salvo', sub:'Feito por '+nt.passou});
-    else fichaTopicoPintar('card-noite', {estado:manha?'pisca':'', est:manha?'⚠ FAZER':'', sub:'Preencher de manhã (7h), sobre a noite que passou'});
+    else fichaTopicoPintar('card-noite', {estado:manha?'pisca':'', est:manha?'⚠ FAZER':'', sub:'Fechar de manhã, antes de passar o plantão: do jantar até as 7h'});
   }
 
   // ===== ALERTA — Adriana, 27/out/2026 ===============================================
@@ -24525,11 +24530,54 @@ return { criar };
   // refeição para a mesma pergunta escondida — quem lê o relatório (selo NÃO COMEU, resumo, gestão) continua lendo.
   // Sem marca, a resposta antiga fica como estava. «Almoçou?» do Relatório da Noite é do dia anterior: não se copia.
   function relRefeicoesPreencher(cardId){
+    if(cardId==='card-noite'){ relNoitePreencher(); return; }
     if(!currentHosp || typeof refHojeLeitura!=='function' || refHojeLeitura()!=='ok') return;
     if(typeof dataKeyAtual==='function' && dataKeyAtual()!==cafeDataKey()) return;
     var r=refHojeDe(currentHosp), txt={tudo:'Sim',metade:'Metade',nao:'Não',na:'Não se aplica'};
     document.querySelectorAll('#'+cardId+' .obsline.rel-ref').forEach(function(l){
       var m=r[l.dataset.ref], alvo=m?txt[m.estado]:''; if(!alvo) return;
+      l.querySelectorAll('button').forEach(function(b){ var on=b.textContent.trim()===alvo;
+        b.classList.remove('on','t-ok','t-bad','t-warn'); if(on){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone); } });
+    });
+  }
+  // ===== Relatório da Noite = um relatório só por plantão (Adriana, 24/nov/2026) =====
+  // «Não tem início e fim como no Day Care. Não precisa. Precisamos dos dados.» A noite vai das 18h50 às 7h;
+  // o relatório da ficha do dia D é a noite de D-1 para D, fechado de manhã. O jantar e o almoço dessa noite
+  // são os do dia D-1: vêm das marcas da ficha (auaulandia/jantar|almoco e o almoço do Day Care), não de pergunta.
+  var REL_NOITE_REF={k:'', estado:'', r:null, ontem:'', dia:''};
+  function relNoiteRefCarregar(){
+    var h=currentHosp, k=(typeof fichaKey==='function')?fichaKey():'';
+    if(!h || !k) return Promise.resolve(null);
+    var dia=dataKeyAtual(), ontem=orcMaisDias(dia,-1), ck=cafeKey(h);
+    REL_NOITE_REF={k:k, estado:'lendo', r:null, ontem:ontem, dia:dia}; relNoiteResumoPintar();
+    if(!DB){ REL_NOITE_REF.estado='falha'; relNoiteResumoPintar(); return Promise.resolve(null); }
+    function ler(c){ return DB.ref(c).once('value').then(function(x){ return {ok:true,v:x.val()}; },function(e){ _logLeituraFalhou(c+' (relNoiteRefCarregar)', e); return {ok:false}; }); }
+    return Promise.all([ler('auaulandia/jantar/'+ontem+'/'+ck), ler('auaulandia/almoco/'+ontem+'/'+ck), ler('daycare/almoco/'+ontem), ler('daycare/atividade/'+ontem+'/almoco2')]).then(function(x){
+      if(REL_NOITE_REF.k!==k) return null;
+      if(!x[0].ok||!x[1].ok||!x[2].ok||!x[3].ok){ REL_NOITE_REF.estado='falha'; relNoiteResumoPintar(); return null; }
+      var M=x[2].v||{}, M2=x[3].v||{}, ks=refDcChaves(h), dc={};
+      for(var i=0;i<ks.length;i++){ if(M[ks[i]]!=null||M2[ks[i]]!=null){ dc={v:M[ks[i]],v2:M2[ks[i]]}; break; } }
+      REL_NOITE_REF.r=ZeluzRefeicoesDoDia.juntar({almocoPlantao:x[1].v, almocoDayCare:dc.v, almoco2DayCare:dc.v2, jantar:x[0].v});
+      REL_NOITE_REF.estado='ok'; relNoiteResumoPintar(); relNoitePreencher(); return REL_NOITE_REF;
+    });
+  }
+  function relNoiteDataBR(iso){ var p=String(iso||'').split('-'); return p.length===3?(p[2]+'/'+p[1]):''; }
+  function relNoiteResumoPintar(){
+    var el=document.getElementById('noite-ref-resumo'); if(!el) return;
+    var R=REL_NOITE_REF, cab='<div class="noite-ref-cab">Noite de '+relNoiteDataBR(R.ontem)+' para '+relNoiteDataBR(R.dia)+'</div>';
+    if(R.estado==='lendo'){ el.innerHTML=cab+'<div class="noite-ref-linha">Lendo o jantar marcado na ficha…</div>'; return; }
+    if(R.estado!=='ok'){ el.innerHTML=cab+'<div class="noite-ref-linha noite-ref-falta">Não deu para ler o jantar marcado na ficha. Confira a internet e abra a ficha de novo.</div>'; return; }
+    var linha=function(rot, m, faltaTxt){
+      if(!m) return '<div class="noite-ref-linha noite-ref-falta">'+rot+': '+faltaTxt+'</div>';
+      var quem=(m.quem?(' · marcado por '+escAttr(m.quem)+(m.hora?(' às '+escAttr(m.hora)):'')):'');
+      return '<div class="noite-ref-linha'+(m.estado==='nao'?' noite-ref-falta':'')+'">'+rot+': <strong>'+escAttr(ZeluzRefeicoesDoDia.texto(m))+'</strong>'+quem+'</div>'; };
+    el.innerHTML=cab+linha('Jantar', R.r&&R.r.jantar, 'não foi marcado na ficha')+linha('Almoço', R.r&&R.r.almoco, 'não foi marcado');
+  }
+  function relNoitePreencher(){
+    var R=REL_NOITE_REF; if(!currentHosp || R.estado!=='ok' || !R.r || R.k!==fichaKey()) return;
+    var txt={tudo:'Sim',metade:'Metade',nao:'Não',na:'Não se aplica'}, mapa={jantar:R.r.jantar, 'almoco-ontem':R.r.almoco};
+    document.querySelectorAll('#card-noite .obsline.rel-ref').forEach(function(l){
+      var m=mapa[l.dataset.ref], alvo=m?txt[m.estado]:''; if(!alvo) return;
       l.querySelectorAll('button').forEach(function(b){ var on=b.textContent.trim()===alvo;
         b.classList.remove('on','t-ok','t-bad','t-warn'); if(on){ b.classList.add('on'); if(b.dataset.tone) b.classList.add('t-'+b.dataset.tone); } });
     });
@@ -24698,6 +24746,7 @@ return { criar };
       fichaTopicosPintar(); }catch(e){ _logFalhaGrav('carregarFicha (tópicos)', e); }
     medHistEstadia={tinha:false}; renderMedHistBanner();
     ['dia','inicio','noite'].forEach(tp=>{ const c=document.getElementById('card-'+tp); if(c) c.classList.add('collapsed'); });
+    try{ var _ci0=document.getElementById('card-inicio'); if(_ci0) _ci0.style.display='none'; relNoiteRefCarregar(); }catch(e){ _logFalhaGrav('relNoiteRefCarregar', e); }
     if(!DB){ ['dia','inicio','noite'].forEach(tp=>aplicarCard('card-'+tp,{})); return; }
     const base='auaulandia/relatorios/'+fichaKey();
     Promise.all([
@@ -24709,6 +24758,9 @@ return { criar };
       aplicarCard('card-dia', dia || (ant?ant.dia:{}));
       aplicarCard('card-inicio', inicio || (ant?ant.inicio:{}));
       aplicarCard('card-noite', noite || {});
+      // 24/nov/2026: o Relatório do Jantar saiu; só aparece, para leitura, no dia que já tem o antigo salvo.
+      try{ var _ci=document.getElementById('card-inicio'), _iv=inicio||(ant?ant.inicio:null); if(_ci) _ci.style.display=(_iv&&_iv.passou)?'':'none'; }catch(e){} /* silencioso de propósito: só esconde ou mostra o cartão antigo */
+      try{ relNoitePreencher(); }catch(e){} /* silencioso de propósito: o salvar preenche de novo */
       checarHistMedEstadia(currentHosp, function(){ ['dia','inicio','noite'].forEach(tp=>sincMedVis('card-'+tp)); renderMedHistBanner(); });
     }).catch(function(){ ['dia','inicio','noite'].forEach(tp=>aplicarCard('card-'+tp,{})); });
   }
@@ -25207,6 +25259,7 @@ return { criar };
       põe('Cocô', q['Fez cocô?']); põe('Consistência', q['Consistência'], /Diarreia|Pastoso/.test(q['Consistência']||''));
       põe('Vomitou', q['Vomitou?'], q['Vomitou?']==='Sim'); põe('Tipo de vômito', q['Tipo de vômito']);
       põe('Jantou', q['Jantou?'], q['Jantou?']==='Não'); põe('Almoçou', q['Almoçou?'], q['Almoçou?']==='Não');
+      põe('Onde está a comida', q['Onde está a comida dele?']);
     } else if(tipo==='dia'){
       põe('Energia', q['Gastou energia?']);
       põe('Café', q['Tomou café da manhã?'], q['Tomou café da manhã?']==='Não');
@@ -32609,7 +32662,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-11-24-02';
+  const APP_VERSAO='2026-11-24-03';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -104366,14 +104419,14 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',tentar,{once:true});else tentar();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
-<script src="agenda-marcia/dados.js?v=2026-11-24-02"></script>
-<script src="agenda-marcia/entrevistas.js?v=2026-11-24-02"></script>
-<script src="agenda-marcia/composta.js?v=2026-11-24-02"></script>
-<script src="agenda-marcia/painel.js?v=2026-11-24-02"></script>
-<script src="marcia129/painel.js?v=2026-11-24-02"></script>
-<script src="marcia129/dados.js?v=2026-11-24-02"></script>
-<script src="marcia129/app.js?v=2026-11-24-02"></script>
-<script src="agenda-marcia/app.js?v=2026-11-24-02"></script>
+<script src="agenda-marcia/dados.js?v=2026-11-24-03"></script>
+<script src="agenda-marcia/entrevistas.js?v=2026-11-24-03"></script>
+<script src="agenda-marcia/composta.js?v=2026-11-24-03"></script>
+<script src="agenda-marcia/painel.js?v=2026-11-24-03"></script>
+<script src="marcia129/painel.js?v=2026-11-24-03"></script>
+<script src="marcia129/dados.js?v=2026-11-24-03"></script>
+<script src="marcia129/app.js?v=2026-11-24-03"></script>
+<script src="agenda-marcia/app.js?v=2026-11-24-03"></script>
 <script id="menu-contadores171">'use strict';
 /* 30/out/2026 — contadores vermelhos no menu (maquete aprovada pela Adriana).
    «Márcia Gestão»: cuidados das avaliações de HOJE ainda não revisados + alertas de reação ainda sem «Tutor avisado».
