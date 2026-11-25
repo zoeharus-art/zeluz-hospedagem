@@ -220,8 +220,8 @@ prova('leitura que falhou não deixa marcar nada', () => {
 
 console.log('Tela e estilo');
 prova('o app carrega o módulo do turno e tem os blocos novos', () => {
-  assert.ok(/<script src="plantao-turno\.js\?v=2026-11-24-02"><\/script>/.test(html));
-  assert.ok(/<script src="cafe-operacional\.js\?v=2026-11-24-02"><\/script>/.test(html));
+  assert.ok(/<script src="plantao-turno\.js\?v=2026-11-24-03"><\/script>/.test(html));
+  assert.ok(/<script src="cafe-operacional\.js\?v=2026-11-24-03"><\/script>/.test(html));
   for (const id of ['plantaoTurnoCard', 'cardFecharTurno', 'prevSec_plantao-almoco', 'prevSec_plantao-jantar', 'plAlmocoGrid', 'plJantarGrid'])
     assert.ok(html.indexOf('id="' + id + '"') >= 0, id);
 });
@@ -231,9 +231,10 @@ prova('o CSS não esconde nada da plantonista: café, almoço, jantar e relatór
     'body[data-role="plantonista"]:not([data-plantao-turno="noturno"]) #card-inicio'])
     assert.ok(html.indexOf(s) < 0, 'ainda esconde: ' + s);
   for (const s of ['body[data-role="plantonista"][data-plantao-turno="diurno"] #prevSec_plantao-cafe>summary',
-    'body[data-role="plantonista"][data-plantao-turno="noturno"] #prevSec_plantao-jantar>summary',
-    'body[data-role="plantonista"][data-plantao-turno="noturno"] #card-inicio>.rel-head{animation:plPiscaAgora'])
+    'body[data-role="plantonista"][data-plantao-turno="noturno"] #prevSec_plantao-jantar>summary'])
     assert.ok(html.indexOf(s) >= 0, 'sem pisca: ' + s);
+  // 24/nov/2026: o Relatório do Jantar saiu (um relatório só por plantão) e não pisca mais.
+  assert.ok(html.indexOf('#card-inicio>.rel-head{animation:plPiscaAgora') < 0, 'o Jantar antigo ainda pisca');
   assert.ok(/body:not\(\[data-role="plantonista"\]\) #plantaoTurnoCard\{display:none !important\}/.test(html), 'só a plantonista vê o cartão do turno');
 });
 
