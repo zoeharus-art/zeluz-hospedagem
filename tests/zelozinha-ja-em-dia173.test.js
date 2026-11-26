@@ -67,8 +67,10 @@ prova('o cartão da seção: nome, tutor, cuidados, «ENVIADA 09:50» e «Ver me
   assert.match(h, /Vacina múltipla, Vermífugo/, 'todos os cuidados da mensagem');
   assert.match(h, /ENVIADA 09:50/); assert.match(h, /ENVIADA 08:12/);
   assert.match(h, /Ver mensagem/); assert.match(h, /Texto fictício de Mel/);
-  assert.ok(!/<button/.test(h), 'só consulta: nenhum botão');
-  assert.ok(!/data-zs-acao|zt694-acao|Mandar de novo|Foi enviada/.test(h));
+  // 26/11/2026: o único botão é o «Corrigir» dos cuidados de prevenção (carrapaticida-corrigir197); nada de resposta nem reenvio
+  const semCorrigir = h.replace(/<div class="zt694-btns"><button type="button" class="btn zt694-btn zt694-acao" data-zt694-acao="corrigir-emdia"[^>]*>Corrigir<\/button><\/div>/g, '');
+  assert.ok(!/<button/.test(semCorrigir), 'só consulta: nenhum botão além do Corrigir');
+  assert.ok(!/data-zs-acao|zt694-acao|Mandar de novo|Foi enviada/.test(semCorrigir));
   ZS.desligar();
 });
 
@@ -166,8 +168,8 @@ prova('a tela: o estado aberto/fechado e a rolagem seguem o mesmo mecanismo do r
   assert.match(html, /\.zs-emdia\{/); assert.match(html, /\.zs-emdia\[open\]/);
 });
 
-prova('regras da casa: sem alert/confirm/prompt novos, sem vocabulário proibido no texto novo; versão 2026-11-25-02 em todos os arquivos versionados', () => {
-  assert.match(html, /const APP_VERSAO='2026-11-25-02';/);
+prova('regras da casa: sem alert/confirm/prompt novos, sem vocabulário proibido no texto novo; versão 2026-11-26-01 em todos os arquivos versionados', () => {
+  assert.match(html, /const APP_VERSAO='2026-11-26-01';/);
   assert.ok(!/2026-11-02-01/.test(html), 'nenhum ?v= ficou na versão antiga');
   const ini = html.indexOf('/* JÁ EM DIA HOJE'), fim = html.indexOf('/* fim JÁ EM DIA HOJE */');
   assert.ok(ini > 0 && fim > ini, 'o bloco novo está marcado no código');
