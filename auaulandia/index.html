@@ -65490,8 +65490,22 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
       Object.keys(DASH_PREV_FICHA_ITENS).forEach(function(k){
         var lista=(DASH_DADOS||{})[k]||{};
         Object.keys(lista).forEach(function(id){
-          var o=lista[id]; if(!dashPrevFichaElegivel(k, o)) return;
-          var mk=(m[k]||{})[id]; if(mk && mk.estado!=='aplicando') return;
+          var o=lista[id], mk=(m[k]||{})[id];
+          // 26/11/2026 (Adriana: «não tem a opção do banho, nem pipeta ou comprimido, e não consigo colocar a quantidade»):
+          // a ficha que recebeu a data antes das escolhas (versões de 25/11) tirou o cartão da Zelozinha. Ela volta sozinha
+          // ao que era e o cartão reaparece em «Para resolver» com as escolhas; o «Pronto» das escolhas grava a ficha de novo.
+          // A linha em memória pode estar velha (aparelho aberto desde cedo): relê a linha no banco antes de mexer na ficha.
+          if(grava && mk && mk.estado==='aplicado' && o && o.chave && dashPrev57Espera(o)==='escolhas'){
+            tarefas.push(Promise.resolve(DB.ref('daycare/dashboard/'+dia+'/'+k+'/'+id).once('value')).then(function(sl){
+              var fresca=(sl && sl.val && sl.val())||null;
+              if(fresca && JSON.stringify(fresca)!==JSON.stringify(lista[id])){ lista[id]=fresca; mudou=true; }
+              if(!fresca || dashPrev57Espera(fresca)!=='escolhas') return;
+              return dashPrevFichaDesfazer(dia, k, id, {reabrir:true, silencioso:true}).then(function(ok){ if(ok) mudou=true; });
+            }));
+            return;
+          }
+          if(!dashPrevFichaElegivel(k, o)) return;
+          if(mk && mk.estado!=='aplicando') return;
           var p=dashCuidado36PetPorDc(o.chave); if(!p) return;
           tarefas.push(Promise.resolve(dashCuidado36Presenca({dia:dia}, p, String(o.chave))).then(function(pr){
             var ch=k+'|'+id, v=!!pr; if(S.pres[ch]!==v){ S.pres[ch]=v; mudou=true; }
@@ -65544,14 +65558,15 @@ function prevCuidado36ValidarAntes(env){return dashCuidado36Revalidar(env);}
   }
   // Tirar a linha: a ficha volta ao que era — só se ninguém mexeu nela depois (senão, avisa e não mexe).
   function dashPrevFichaDesfazer(dia, k, id, opc){
-    var reabrir=!!(opc && opc.reabrir);
+    var reabrir=!!(opc && opc.reabrir), silencioso=!!(opc && opc.silencioso);
     if(!DB || !DASH_PREV_FICHA_ITENS[k]) return Promise.resolve(false);
     var ref=DB.ref(dashPrevFichaNo(dia)+'/'+k+'/'+id);
     return Promise.resolve(ref.once('value')).then(function(sn){
       var m=(sn && sn.val && sn.val())||null;
       if(!m || m.estado!=='aplicado') return false;
       var p=dashCuidado36PetPorDc(m.chave);
-      var aviso=function(l){ if(typeof zAlertao==='function') zAlertao('A FICHA NÃO VOLTOU SOZINHA', l, {botao:'Entendi'}); return false; };
+      // a volta automática (silencioso) não abre aviso: se a ficha foi mexida depois, ela fica como está
+      var aviso=function(l){ if(!silencioso && typeof zAlertao==='function') zAlertao('A FICHA NÃO VOLTOU SOZINHA', l, {botao:'Entendi'}); return false; };
       if(!p || String(pelKey(p))!==String(m.pelKey)) return aviso(['Não achei a ficha deste lançamento. Confira a data na tela Prevenção.']);
       if(!(typeof canEditPel==='function' && canEditPel())) return aviso(['A ficha de '+pelNome(p)+' continua com a data deste lançamento: só a recepção ou a Gestão mudam a ficha. Confira na tela Prevenção.']);
       var ex=pelExtra(p)||{}, depois=m.depois||{}, antes=m.antes||{};

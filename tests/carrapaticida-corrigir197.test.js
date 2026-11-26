@@ -116,7 +116,66 @@ async function prova(nome, fn) {
     return depoisCorrigir;
   });
 
+  // a ficha que já tinha recebido a data sem as escolhas (versões de 25/11) volta sozinha; a completa fica
+  const auto = await p.evaluate(async () => {
+    const dia = zPainel44Dia(), pet = { n: 'Teste03', tutor: 'Tutora' }, pk = pelKey(pet);
+    const banco = { daycare: { 'prev-ficha': {} } };
+    const partes = (c) => String(c).split('/').filter(Boolean);
+    const ler = (c) => partes(c).reduce((o, k) => (o && typeof o === 'object') ? o[k] : undefined, banco);
+    const pôr = (c, v) => { const ps = partes(c), ult = ps.pop(); let o = banco; ps.forEach((k) => { if (!o[k] || typeof o[k] !== 'object') o[k] = {}; o = o[k]; }); if (v === null) delete o[ult]; else o[ult] = JSON.parse(JSON.stringify(v)); };
+    DB = { ref: (c) => ({
+      once: async () => ({ val: () => { const v = ler(c); return v === undefined ? null : JSON.parse(JSON.stringify(v)); } }),
+      on: () => {}, off: () => {}, set: async (v) => pôr(c, v), remove: async () => pôr(c, null),
+      transaction: async (fn) => { const v = fn(ler(c) === undefined ? null : ler(c)); if (v === undefined) return { committed: false }; pôr(c, v); return { committed: true }; },
+      update: async (o) => Object.keys(o).forEach((k) => pôr(c + '/' + k, o[k])) }) };
+    const ovV = { protocolo: 'cuidado57', chave: pk, itemK: 'verm_p', origemResposta: 'loja', linhaId: 'v1' };
+    const ovE = { protocolo: 'cuidado57', chave: pk, itemK: 'ecto_p', origemResposta: 'loja', linhaId: 'e1' };
+    DASH_DADOS = {
+      vermifugo: { v1: { chave: pk, valor: 'Teste03/SRD (CONFERIR ORIENTAÇÃO)', origemVencimento: ovV, det: { cuidado57_estado: 'conferir-orientacao' } } },
+      carrapaticida: { e1: { chave: pk, valor: 'Teste03/SRD (CONFERIR ORIENTAÇÃO)', origemVencimento: ovE,
+        det: { cuidado57_estado: 'conferir-orientacao', prod: 'COMPRIMIDO · 90 DIAS', qtd: '1 COMPRIMIDO', passa: 'NO DAY CARE' } } } };
+    DASH_DADOS_DE = { ok: true, dia };
+    pôr('daycare/dashboard/' + dia + '/vermifugo/v1', DASH_DADOS.vermifugo.v1);
+    pôr('daycare/dashboard/' + dia + '/carrapaticida/e1', DASH_DADOS.carrapaticida.e1);
+    // memória velha: na tela, sem escolhas; no banco, já completas (escolhidas em outro aparelho) — não pode reabrir
+    DASH_DADOS.carrapaticida.e2 = { chave: pk, valor: 'Teste03/SRD (CONFERIR ORIENTAÇÃO)', origemVencimento: Object.assign({}, ovE, { linhaId: 'e2' }), det: { cuidado57_estado: 'conferir-orientacao' } };
+    pôr('daycare/dashboard/' + dia + '/carrapaticida/e2', Object.assign({}, DASH_DADOS.carrapaticida.e2, { det: DASH_DADOS.carrapaticida.e1.det }));
+    pôr('daycare/prev-ficha/' + dia + '/carrapaticida/e2', { chave: pk, pelKey: pk, estado: 'aplicado', itemK: 'ecto_p', antes: { ecto_t: '2026-08-20' }, depois: { ecto_t: dia } });
+    pôr('daycare/prev-ficha/' + dia + '/vermifugo/v1', { chave: pk, pelKey: pk, estado: 'aplicado', itemK: 'verm_p',
+      antes: { verm_t: '2026-08-20', verm_p: dia }, depois: { verm_t: dia, verm_p: '2027-02-24', verm_p_lanc: { dia, quem: 'Teste', ts: 1 } } });
+    pôr('daycare/prev-ficha/' + dia + '/carrapaticida/e1', { chave: pk, pelKey: pk, estado: 'aplicado', itemK: 'ecto_p',
+      antes: { ecto_t: '2026-08-20', ecto_p: dia }, depois: { ecto_t: dia, ecto_p: '2027-02-24', ecto_p_lanc: { dia, quem: 'Teste', ts: 1 } } });
+    const ficha = { verm_t: dia, verm_p: '2027-02-24', verm_p_lanc: { dia, quem: 'Teste', ts: 1 }, ecto_t: dia, ecto_p: '2027-02-24', ecto_p_lanc: { dia, quem: 'Teste', ts: 1 } };
+    const gravou = [], avisos = [];
+    dashDia = () => dia; zHojeISO = () => dia; renderDash = () => {};
+    dashCuidado36PetPorDc = () => pet; canEditPel = () => true; pelExtra = () => ficha; dashCuidado36Presenca = () => Promise.resolve(true);
+    prevGravar = (pp, patch) => { gravou.push(patch); Object.assign(ficha, patch); return Promise.resolve({ ok: true }); };
+    zAlertao = (t) => { avisos.push(t); };
+    DASH_PREV_FICHA.dia = ''; DASH_PREV_FICHA.quando = 0; DASH_PREV_FICHA.lendo = false;
+    await dashPrevFichaConciliar();
+    return {
+      verm: ler('daycare/prev-ficha/' + dia + '/vermifugo/v1') === undefined ? 'saiu' : 'ficou',
+      vermFicha: ficha.verm_t, ecto: (ler('daycare/prev-ficha/' + dia + '/carrapaticida/e1') || {}).estado, ectoFicha: ficha.ecto_t === dia,
+      velha: (ler('daycare/prev-ficha/' + dia + '/carrapaticida/e2') || {}).estado, velhaMemoria: !!(DASH_DADOS.carrapaticida.e2.det || {}).passa,
+      gravacoes: gravou.length, avisos,
+      linha: dashPrevFichaLinhaHTML('vermifugo', 'v1', DASH_DADOS.vermifugo.v1),
+    };
+  });
+
   console.log('Carrapaticida: escolhas antes da ficha e «Corrigir»');
+  await prova('a ficha que recebeu a data sem as escolhas volta sozinha; a completa fica como está', async () => {
+    assert.strictEqual(auto.verm, 'saiu');
+    assert.strictEqual(auto.vermFicha, '2026-08-20');
+    assert.strictEqual(auto.ecto, 'aplicado');
+    assert.strictEqual(auto.ectoFicha, true);
+    assert.strictEqual(auto.gravacoes, 1);
+    assert.deepStrictEqual(auto.avisos, []);
+    assert.ok(/Ficha: falta escolher na Zelozinha/.test(auto.linha), auto.linha);
+  });
+  await prova('tela aberta desde cedo (linha velha na memória) não reabre a ficha que já está certa no banco', async () => {
+    assert.strictEqual(auto.velha, 'aplicado');
+    assert.strictEqual(auto.velhaMemoria, true);
+  });
   await prova('sem nome, quanto e onde vai passar, a ficha espera; completas, grava; em correção, espera', async () => {
     assert.deepStrictEqual(r.eleg, [false, true, false]);
     assert.deepStrictEqual(r.espera, ['escolhas', '', 'corrigindo']);
