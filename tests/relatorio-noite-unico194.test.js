@@ -98,7 +98,7 @@ async function prova(nome, fn) {
   });
   await prova('dia antigo com o Relatório do Jantar salvo: o cartão aparece para leitura', () => assert.strictEqual(r.inicioAntigo, ''));
   await prova('o tópico da Noite diz para fechar de manhã, do jantar até as 7h', () => {
-    assert.ok(/Fechar de manhã, antes de passar o plantão: do jantar até as 7h/.test(r.topicoNoite), r.topicoNoite);
+    assert.ok(/fechar de manhã, antes de passar o plantão: do jantar até as 7h/i.test(r.topicoNoite), r.topicoNoite);
   });
   await prova('a Gestão recebe «Onde está a comida» no resumo da Noite', () => {
     assert.ok(r.linhas.indexOf('Onde está a comida: Geladeira') >= 0, r.linhas.join(' | '));

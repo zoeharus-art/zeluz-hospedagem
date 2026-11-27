@@ -2325,6 +2325,14 @@
   .ms-btn{margin-top:8px;width:100%;min-height:40px;border:1.5px solid var(--z-gold);background:var(--z-cream);color:var(--z-blue);border-radius:10px;font-weight:800;font-size:12.5px;cursor:pointer}
   #msModal .seg{margin-bottom:12px}
   .ref-hoje-box{margin:0 0 14px;padding:12px 14px;border-radius:10px;background:var(--z-cream-warm);border-left:4px solid var(--z-gold)}
+  /* Em destaque na ficha (27/nov/2026): o mesmo quadro creme das refeições, uma linha por refeição e o remédio. */
+  .fd-box{margin:0 0 16px}
+  .fd-linha{display:flex;flex-wrap:wrap;gap:2px 10px;padding:7px 0;border-top:1px solid var(--line);font-size:15px;line-height:1.4}
+  .fd-linha:first-of-type{border-top:none}
+  .fd-rot{flex:0 0 132px;font-weight:800;color:var(--z-blue)}
+  .fd-val{flex:1 1 160px;color:var(--ink,#1f2a33)}
+  .fd-sim .fd-rot,.fd-sim .fd-val{color:var(--crm-critico);font-weight:800}
+  .fd-pe{margin-top:6px;font-size:12.5px;color:var(--muted)}
   .ref-hoje-tit{font-size:13px;font-weight:800;color:var(--z-blue);letter-spacing:.02em;text-transform:uppercase}
   .ref-hoje-sub{font-size:11.5px;color:var(--muted);font-weight:600;margin:2px 0 4px}
   .ref-hoje-box .obsline{align-items:flex-start;padding:10px 0;border-bottom-color:#eadfc6}
@@ -3035,8 +3043,8 @@
 .z-painel44{--p44-blue:#234d67;--p44-soft:#3a6a85;--p44-cream:#fffdf6;--p44-warm:#faf5e9;--p44-gold:#deb428;--p44-line:#e7e0d2;--p44-muted:#7c8a93;box-sizing:border-box;max-width:1160px;padding:24px 38px 52px;background:var(--p44-cream);color:var(--p44-blue);font-family:Inter,Poppins,system-ui,sans-serif}.z-painel44 *{box-sizing:border-box}.z-painel44 [hidden]{display:none!important}.z-painel44 button{font:inherit}.z-painel44 button:focus-visible{outline:3px solid rgba(222,180,40,.55);outline-offset:3px}.z-painel44__topo{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px}.z-painel44__saudacao .pm-saud1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.12;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2{margin:8px 0 0;font-size:16px;font-weight:600;line-height:1.45;color:var(--p44-blue)}.z-painel44__saudacao .pm-saud2 b{font-size:21px;font-weight:800;color:#a57a00}.z-painel44__saudacao .pm-saud3{max-width:54ch;margin:5px 0 0;color:var(--p44-soft);font-size:15px;font-weight:500;font-style:italic;line-height:1.5}.z-painel44__saudacao .pm-traco{display:block;width:40px;height:3px;margin-top:13px;border-radius:2px;background:linear-gradient(90deg,var(--p44-gold),#a57a00)}.z-painel44__saudacao .pm-data{margin-top:14px;color:var(--p44-muted);font-size:12px;font-weight:600}.z-painel44__selo{flex:0 0 auto;padding:8px 11px;border:1px solid var(--p44-line);border-radius:999px;background:#fff;color:var(--p44-blue);font-size:12px;font-weight:700}.z-painel44__selo:before{content:'•';margin-right:5px;color:var(--p44-gold);font-size:18px}.z-painel44__sticker{display:block;width:62px;max-width:90px;height:68px;max-height:80px;object-fit:contain;margin:4px auto 0}.z-painel44__bem-estar{display:block;width:100%;margin-bottom:18px}.z-painel44__bem-estar>*{width:100%}.z-painel44__abas{display:flex;gap:7px;margin:0 0 16px}.z-painel44__abas button{padding:10px 14px;border:1px solid var(--p44-line);border-radius:10px;background:#fff;color:var(--p44-blue);font-size:14px;font-weight:700;cursor:pointer}.z-painel44__abas button[aria-selected=true]{border-color:var(--p44-blue);background:var(--p44-blue);color:var(--p44-cream)}.z-painel44__intro{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:12px 0}.z-painel44__intro h2,.z-painel44__equipe h2{margin:0;font-size:20px}.z-painel44__intro p,.z-painel44__equipe>p{margin:5px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__contagem{color:var(--p44-muted);font-size:12px;font-weight:700}.z-painel44__temas{display:grid;gap:9px}.z-painel44__tema{overflow:hidden;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__tema-cabeca{display:grid;grid-template-columns:36px 1fr auto 20px;align-items:center;gap:10px;width:100%;padding:14px 15px;border:0;background:transparent;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__tema-icone{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--p44-warm);font-size:17px}.z-painel44__tema-titulo,.z-painel44__tema-passo{display:block}.z-painel44__tema-titulo{font-size:15px;font-weight:800}.z-painel44__tema-passo{margin-top:3px;color:var(--p44-muted);font-size:12px}.z-painel44__pill{padding:4px 8px;border-radius:999px;background:#e9f5f7;color:#226477;font-size:11px;font-weight:800}.z-painel44__seta{color:var(--p44-soft);font-size:18px;transition:transform .16s}.z-painel44__tema.aberto .z-painel44__seta{transform:rotate(90deg)}.z-painel44__tema-corpo{margin:0 12px 12px;padding:14px 15px;border-top:1px solid var(--p44-line);background:var(--p44-warm)}.z-painel44__equipe{padding:18px;border:1px solid var(--p44-line);border-radius:14px;background:#fff;box-shadow:0 4px 18px rgba(35,77,103,.08)}.z-painel44__pessoas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}.z-painel44__pessoa{display:flex;align-items:center;gap:11px;width:100%;padding:13px;border:1px solid var(--p44-line);border-radius:12px;background:#fff;color:var(--p44-blue);text-align:left;cursor:pointer}.z-painel44__avatar{display:grid;place-items:center;width:39px;height:39px;flex:0 0 auto;border-radius:50%;background:var(--p44-blue);color:var(--p44-cream);font-size:12px;font-weight:800}.z-painel44__pessoa-info{min-width:0}.z-painel44__pessoa strong,.z-painel44__pessoa small{display:block}.z-painel44__pessoa strong{font-size:14px}.z-painel44__pessoa small{overflow:hidden;margin-top:3px;color:var(--p44-muted);font-size:12px;text-overflow:ellipsis;white-space:nowrap}.z-painel44__pessoa-seta{margin-left:auto;color:#a57a00;font-size:18px}.z-painel44__pessoa-detalhe{margin-top:15px}.z-painel44__pessoa-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__pessoa-secao h3{margin:0;font-size:14px}.z-painel44__pessoa-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}.z-painel44__vazio{margin:15px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__zelozinha{display:block;width:100%;margin-top:16px;padding:12px;border:1px dashed var(--p44-gold);border-radius:11px;background:var(--p44-warm);color:#805d00;text-align:left;cursor:pointer}.z-painel44__zelozinha-titulo{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800}.z-painel44__canal{padding:3px 7px;border-radius:999px;background:#fff;color:var(--p44-muted);font-size:11px}.z-painel44__zelozinha-aviso{display:block;margin-top:7px;font-size:12px;line-height:1.45}.z-painel44__perfil{margin-top:15px}.z-painel44__voltar{margin-bottom:12px;padding:8px 11px;border:1px solid var(--p44-line);border-radius:9px;background:#fff;color:var(--p44-blue);font-size:13px;font-weight:700;cursor:pointer}.z-painel44__perfil-subtitulo{margin:4px 0 0;color:var(--p44-muted);font-size:13px}.z-painel44__perfil-conteudo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:14px}.z-painel44__perfil-secao h3{margin:0;font-size:14px}.z-painel44__perfil-secao ul{margin:8px 0 0;padding-left:18px;color:var(--p44-soft);font-size:13px;line-height:1.5}@media(max-width:760px){.z-painel44{padding:18px}.z-painel44__topo,.z-painel44__intro{display:block}.z-painel44__selo{display:inline-block;margin-top:13px}.z-painel44__contagem{display:block;margin-top:8px}.z-painel44__tema-cabeca{grid-template-columns:32px 1fr auto 16px;padding:12px}.z-painel44__tema-corpo{margin:0 8px 8px;padding:12px}.z-painel44__pessoas,.z-painel44__perfil-conteudo,.z-painel44__pessoa-conteudo{grid-template-columns:1fr}}
 
 </style>
-<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-25-02">
-<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-25-02">
+<link rel="stylesheet" href="marcia129/painel.css?v=2026-11-27-01">
+<link rel="stylesheet" href="agenda-marcia/painel.css?v=2026-11-27-01">
 </head>
 <body data-role="gestao">
 <!-- ===== AVISO DE VERSÃO NOVA (Adriana, 13/ago/2026) =============================
@@ -3754,6 +3762,10 @@
            escrever MEDICAMENTO 0. Se tem 5, colocar o número na frente.»
            Cada tópico é o mesmo cartão que abre e fecha dos relatórios (.rel-card); o número, o
            pisca e o resumo do cabeçalho vêm de fichaTopicosPintar(). Os ids de dentro não mudaram. -->
+      <!-- EM DESTAQUE (Adriana, 27/nov/2026): «na ficha possa vir destacado o que é o almoço, o que é o café, o
+           que é o jantar daquele peludinho, se ele tem medicamento ou não, em destaque.» Sempre aberto, sem toque.
+           Só leitura: marcar a refeição e dar o remédio continuam nos tópicos abaixo. Ver fichaDestaqueRender(). -->
+      <div id="hfDestaque"></div>
       <div class="card rel-card collapsed tp-card" id="tp-alerta">
         <div class="rel-head" onclick="toggleRel('tp-alerta')"><h2>Alerta <span class="tp-n" id="tpn-alerta">0</span></h2><span class="tp-est" id="tpe-alerta"></span><span class="rel-caret">▾</span></div>
         <div class="tp-sub" id="tps-alerta"></div>
@@ -5858,13 +5870,13 @@
 <script src="autoria-logica.js?v=2026-10-15-02"></script>
 <script src="navegacao-inicio.js?v=2026-10-15-02"></script>
 <script src="hospedes-atividades.js?v=2026-10-16-01"></script>
-<script src="alimentacao-hospede.js?v=2026-11-25-02"></script>
-<script src="cafe-operacional.js?v=2026-11-25-02"></script>
-<script src="plantao-turno.js?v=2026-11-25-02"></script>
-<script src="refeicoes-do-dia.js?v=2026-11-25-02"></script>
-<script src="mudar-saida.js?v=2026-11-25-02"></script>
-<script src="mudar-banho.js?v=2026-11-25-02"></script>
-<script src="calendario-vagas.js?v=2026-11-25-02"></script>
+<script src="alimentacao-hospede.js?v=2026-11-27-01"></script>
+<script src="cafe-operacional.js?v=2026-11-27-01"></script>
+<script src="plantao-turno.js?v=2026-11-27-01"></script>
+<script src="refeicoes-do-dia.js?v=2026-11-27-01"></script>
+<script src="mudar-saida.js?v=2026-11-27-01"></script>
+<script src="mudar-banho.js?v=2026-11-27-01"></script>
+<script src="calendario-vagas.js?v=2026-11-27-01"></script>
 <script src="cafe-aluno-logica.js?v=2026-10-16-06"></script>
 <script src="presenca-logica.js?v=2026-10-16-02"></script>
 <script src="historico-checkins.js?v=2026-10-15-02"></script>
@@ -19165,7 +19177,54 @@ return { criar };
     var e=document.getElementById('tpe-'+k); if(e) e.textContent=o.est||'';
     var s=document.getElementById('tps-'+k); if(s) s.textContent=o.sub||'';
   }
+  // ===== EM DESTAQUE NA FICHA (Adriana, 27/nov/2026) =====================================
+  // «Eu preciso que isso continue na ficha, que na ficha possa vir destacado o que é o almoço, o que é o café, o
+  //  que é o jantar daquele peludinho, se ele tem medicamento ou não, em destaque.» Um quadro sempre aberto no topo
+  // da ficha de hoje: as três refeições com a porção (da MESMA fonte das caixas de cada refeição: o check-in, ou o
+  // almoço do Day Care na pernoite sem check-in) e os remédios do dia com os horários. O que é do plantão da hora
+  // leva «AGORA». Só leitura: marcar e dar o remédio continuam nos tópicos (num lugar só, como ela pediu em 24/nov).
+  function fichaDestaqueRefeicao(h,tipo){
+    var r=(typeof plRefDoHospede==='function')?plRefDoHospede(h,tipo):null;
+    if(!r || r.estado==='carregando') return 'lendo…';
+    if(r.estado==='ok'){ var por=r.porcao||{}, p=r.plano||{}; if(por.semRacao) return 'SEM RAÇÃO — comida úmida da casa'; return plRefLinhaTexto(r)+(p.marca?(' · '+p.marca):''); }
+    if(r.estado==='nao') return 'não tem';
+    if(r.estado==='conferir') return 'a conferir com a recepção';
+    if(tipo!=='cafe' && typeof plRefDoDayCare==='function'){ var c=plRefDoDayCare(h); if(c) return [c.quant,c.alim].filter(Boolean).join(' de ')+' (igual ao almoço do Day Care)'; }
+    return 'sem check-in: confirme com a recepção';
+  }
+  function fichaDestaqueHTML(h){
+    if(!h || h.mascote || !fichaEhHoje()) return '';
+    // Travado no turno (24/nov/2026: «às 8h não aparece a medicação da noite»): de dia, café e almoço e os remédios
+    // de 7h a 18h49; de noite, o jantar e os remédios de 18h50 a 6h59.
+    var turno=(document.body&&document.body.dataset.plantaoTurno)||'', agora=fichaHoraAgora();
+    var doTurno=(typeof ZeluzPlantaoTurno!=='undefined')?ZeluzPlantaoTurno.refeicoes(turno):[];
+    if(!doTurno.length) return '';
+    var rotR={cafe:'Café da manhã', almoco:'Almoço', jantar:'Jantar'};
+    var linha=function(rot, txt, cls){ return '<div class="fd-linha'+(cls?(' '+cls):'')+'"><span class="fd-rot">'+rot+'</span><span class="fd-val">'+escAttr(txt)+'</span></div>'; };
+    var out='<div class="ref-hoje-box fd-box"><div class="ref-hoje-tit">'+escAttr(h.nome||'')+' · '+(turno==='noturno'?'plantão da noite':'plantão do dia')+'</div>'
+      +doTurno.map(function(t){ return linha(rotR[t], fichaDestaqueRefeicao(h,t), ''); }).join('');
+    var m=(typeof MAG_RESUMO!=='undefined'&&MAG_RESUMO)||{};
+    var pe='<div class="fd-pe">Marcar a refeição e dar o remédio: nos tópicos Alimentação e Medicamento, logo abaixo.</div></div>';
+    if(m.carregando) return out+linha('Remédio', 'lendo a agenda…', '')+pe;
+    var doses=[];
+    try{ Object.keys((typeof MED_AGENDA_ITENS!=='undefined'&&MED_AGENDA_ITENS)||{}).forEach(function(id){
+      var it=MED_AGENDA_ITENS[id]||{};
+      if(it.suspenso || !medVigenteEm(it) || medItemAnulado(it)) return;
+      (it.horarios||[]).forEach(function(x){
+        if(typeof ZeluzPlantaoTurno!=='undefined' && !ZeluzPlantaoTurno.doseNoTurno(x,agora)) return;
+        doses.push({h:String(x||''), n:String(it.nome||'remédio')});
+      });
+    }); }catch(e){ doses=[]; } /* silencioso de propósito: sem a agenda legível, o tópico Medicamento abaixo avisa */
+    if(!doses.length) return out+linha('Remédio', 'não tem remédio neste plantão', 'fd-nao')+pe;
+    doses.sort(function(a,b){ return a.h.localeCompare(b.h); });
+    return out+linha('Remédio: SIM', doses.map(function(d){ return d.h+' '+d.n; }).join(' · '), 'fd-sim')+pe;
+  }
+  function fichaDestaqueRender(){
+    var el=document.getElementById('hfDestaque'); if(!el) return;
+    try{ el.innerHTML=currentHosp?fichaDestaqueHTML(currentHosp):''; }catch(e){ el.innerHTML=''; _logFalhaGrav('fichaDestaqueRender', e); }
+  }
   function fichaTopicosPintar(){
+    try{ fichaDestaqueRender(); }catch(e){} /* silencioso de propósito: o destaque é extra — os tópicos seguem */
     var f=document.getElementById('hosp-ficha'); if(!f || f.style.display==='none' || !currentHosp) return;
     var hoje=fichaEhHoje(), hora=fichaHoraAgora(), papel=(document.body.dataset.role||'');
     // ALERTA
@@ -19212,8 +19271,12 @@ return { criar };
     if(j.passou) fichaTopicoPintar('card-inicio', {estado:'ok', est:'✅ salvo', sub:'Feito por '+j.passou+' (relatório antigo)'});
     var nt=R.noite||{};
     var manha=(hoje && hora>='05:00' && hora<'12:00' && papel==='plantonista');
-    if(nt.passou) fichaTopicoPintar('card-noite', {estado:'ok', est:'✅ salvo', sub:'Feito por '+nt.passou});
-    else fichaTopicoPintar('card-noite', {estado:manha?'pisca':'', est:manha?'⚠ FAZER':'', sub:'Fechar de manhã, antes de passar o plantão: do jantar até as 7h'});
+    // 27/nov/2026: a noite do relógio. De noite o cartão é o da noite que começa: dá para ir marcando (fica rascunho).
+    var _nd=''; try{ var _ni=relNoiteDiaISO(), _no=orcMaisDias(_ni,-1); _nd='Noite de '+_no.slice(8,10)+'/'+_no.slice(5,7)+' para '+_ni.slice(8,10)+'/'+_ni.slice(5,7)+': '; }catch(e){ _nd=''; } /* silencioso de propósito: sem a data, só o texto */
+    var noiteAgora=(hoje && hora>='18:50' && papel==='plantonista');
+    if(nt.passou) fichaTopicoPintar('card-noite', {estado:'ok', est:'✅ salvo', sub:_nd+'feito por '+nt.passou});
+    else if(noiteAgora) fichaTopicoPintar('card-noite', {estado:'', est:'', sub:_nd+'vá marcando durante a noite (fica guardado) e assine de manhã, antes de passar o plantão'});
+    else fichaTopicoPintar('card-noite', {estado:manha?'pisca':'', est:manha?'⚠ FAZER':'', sub:_nd+'fechar de manhã, antes de passar o plantão: do jantar até as 7h'});
   }
 
   // ===== ALERTA — Adriana, 27/out/2026 ===============================================
@@ -24525,6 +24588,53 @@ return { criar };
   // Agora a chave passa por relChave (troca os proibidos por _) e a linha de remédio tem uma
   // chave própria (data-k), curta e estável. Ler continua aceitando a chave antiga.
   function relChave(s){ return String(s==null?'':s).trim().replace(/[.#$\/\[\]]/g,'_'); }
+  // ===== A NOITE QUE ESTÁ ABERTA É A DO RELÓGIO (Adriana, 27/nov/2026) =====================
+  // «Ela entrou hoje, colocou que ela deu o remédio à noite, que ela deu o jantar. Amanhã de manhã ela tem que
+  //  passar o relatório como foi a noite, entrando nesse mesmo quadradinho [...] ela dá continuidade.»
+  // O relatório da noite de D para D+1 mora no dia D+1 (é fechado de manhã). A tela, de noite, ainda está no dia D:
+  // a ficha mostrava o relatório da noite ANTERIOR, já fechado, e a plantonista não tinha onde escrever. Agora, no
+  // dia de hoje (ou na tela que ficou em ontem depois da meia-noite), a noite vem do relógio: das 18h50 em diante, a
+  // noite que começa (dia seguinte); antes disso, a noite que terminou hoje cedo. Dia escolhido à mão: o daquele dia.
+  function relNoiteDiaISO(){
+    var dia=dataKeyAtual(), hoje=(typeof zHojeISO==='function')?zHojeISO():dia;
+    var ontem=orcMaisDias(hoje,-1);
+    var auto=(dia===hoje) || (dia===ontem && typeof DIA_TELA_AUTO!=='undefined' && DIA_TELA_AUTO===ontem);
+    if(!auto) return dia;
+    var m=(typeof ZeluzPlantaoTurno!=='undefined')?ZeluzPlantaoTurno.minutos(fichaHoraAgora()):NaN;
+    return (m>=18*60+50) ? orcMaisDias(hoje,1) : hoje;
+  }
+  // A chave do relatório: a do dia da ficha, menos a Noite, que é a do dia da noite.
+  function relFichaKey(tipo){
+    var k=fichaKey();
+    if(tipo!=='noite') return k;
+    return k.replace(/__\d{4}-\d{2}-\d{2}$/, '__'+relNoiteDiaISO());
+  }
+  // O RASCUNHO DA NOITE: o que a plantonista marca de noite fica guardado e volta de manhã, até ela assinar.
+  // Mora à parte (auaulandia/relatorios-rascunho/{chave}): o relatório de verdade só nasce na assinatura.
+  var REL_RASC_T=null, REL_RASC_CHAVE='';
+  function relRascunhoGuardar(){
+    try{
+      if(!DB || !currentHosp || currentHosp.mascote) return;
+      var role=(document.body&&document.body.dataset.role)||'';
+      if(role==='monitor' || role==='tutor') return;
+      var cur=(typeof REL_CUR!=='undefined')?REL_CUR.noite:null;
+      if(cur && (cur.passou || relAnulado(cur))) return;          // já assinado: o que vale é o relatório
+      var k=relFichaKey('noite'); if(!k || k!==REL_RASC_CHAVE) return;   // a ficha mudou no meio: não grava no FILHOt errado
+      var d=coletarCard('card-noite'); delete d.passou; delete d.recebeu;
+      d.quem=(typeof quemSou==='function')?quemSou():'-'; d._ts=Date.now();
+      DB.ref('auaulandia/relatorios-rascunho/'+k).set(d).then(function(){
+        var st=document.getElementById('status-noite');
+        if(st && k===REL_RASC_CHAVE){ st.style.color='var(--muted)'; st.textContent='Rascunho guardado às '+fichaHoraAgora()+'. De manhã, termine o que faltar e assine para passar o plantão.'; }
+      }).catch(function(e){ _logFalhaGrav('rascunho do Relatório da Noite', e); });
+    }catch(e){ _logFalhaGrav('rascunho do Relatório da Noite', e); }
+  }
+  function relRascunhoAgendar(){ if(REL_RASC_T) clearTimeout(REL_RASC_T); REL_RASC_T=setTimeout(relRascunhoGuardar, 700); }
+  function relRascunhoApagar(k){ if(DB && k) DB.ref('auaulandia/relatorios-rascunho/'+k).remove().catch(function(e){ _logFalhaGrav('apagar o rascunho do Relatório da Noite', e); }); }
+  try{ document.addEventListener('DOMContentLoaded', function(){
+    var c=document.getElementById('card-noite'); if(!c) return;
+    c.addEventListener('click', function(ev){ var b=ev.target&&ev.target.closest&&ev.target.closest('.seg button'); if(b) relRascunhoAgendar(); });
+    c.addEventListener('input', function(ev){ if(ev.target && ev.target.tagName==='TEXTAREA') relRascunhoAgendar(); });
+  }); }catch(e){} /* silencioso de propósito: sem o ouvinte, o relatório funciona como antes, só sem rascunho */
   // 24/nov/2026 (Adriana): «A marcação tem que ser apenas em um local.» «Jantou?», «Almoçou?» e «Tomou café da
   // manhã?» saíram da tela dos relatórios (a refeição se marca na ficha). Ao salvar, o relatório copia a marca da
   // refeição para a mesma pergunta escondida — quem lê o relatório (selo NÃO COMEU, resumo, gestão) continua lendo.
@@ -24546,9 +24656,9 @@ return { criar };
   // são os do dia D-1: vêm das marcas da ficha (auaulandia/jantar|almoco e o almoço do Day Care), não de pergunta.
   var REL_NOITE_REF={k:'', estado:'', r:null, ontem:'', dia:''};
   function relNoiteRefCarregar(){
-    var h=currentHosp, k=(typeof fichaKey==='function')?fichaKey():'';
+    var h=currentHosp, k=(typeof fichaKey==='function')?relFichaKey('noite'):'';
     if(!h || !k) return Promise.resolve(null);
-    var dia=dataKeyAtual(), ontem=orcMaisDias(dia,-1), ck=cafeKey(h);
+    var dia=relNoiteDiaISO(), ontem=orcMaisDias(dia,-1), ck=cafeKey(h);   // 27/nov/2026: a noite do relógio
     REL_NOITE_REF={k:k, estado:'lendo', r:null, ontem:ontem, dia:dia}; relNoiteResumoPintar();
     if(!DB){ REL_NOITE_REF.estado='falha'; relNoiteResumoPintar(); return Promise.resolve(null); }
     function ler(c){ return DB.ref(c).once('value').then(function(x){ return {ok:true,v:x.val()}; },function(e){ _logLeituraFalhou(c+' (relNoiteRefCarregar)', e); return {ok:false}; }); }
@@ -24574,7 +24684,7 @@ return { criar };
     el.innerHTML=cab+linha('Jantar', R.r&&R.r.jantar, 'não foi marcado na ficha')+linha('Almoço', R.r&&R.r.almoco, 'não foi marcado');
   }
   function relNoitePreencher(){
-    var R=REL_NOITE_REF; if(!currentHosp || R.estado!=='ok' || !R.r || R.k!==fichaKey()) return;
+    var R=REL_NOITE_REF; if(!currentHosp || R.estado!=='ok' || !R.r || R.k!==relFichaKey('noite')) return;
     var txt={tudo:'Sim',metade:'Metade',nao:'Não',na:'Não se aplica'}, mapa={jantar:R.r.jantar, 'almoco-ontem':R.r.almoco};
     document.querySelectorAll('#card-noite .obsline.rel-ref').forEach(function(l){
       var m=mapa[l.dataset.ref], alvo=m?txt[m.estado]:''; if(!alvo) return;
@@ -24708,7 +24818,7 @@ return { criar };
     if(!DB){ if(st){ st.style.color='var(--crm-atencao-text)'; st.textContent='Banco conectando...'; } return; }
     if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; }
     const _seg=LEITURA_T0[tipo]?Math.round((Date.now()-LEITURA_T0[tipo])/1000):0;
-    relReceberGravar(fichaKey(), tipo, nome, _seg).then(function(){   // 6.67 (AC3.4): assinar de novo guarda a assinatura anterior
+    relReceberGravar(relFichaKey(tipo), tipo, nome, _seg).then(function(){   // 6.67 (AC3.4): assinar de novo guarda a assinatura anterior
       RELSTATE[tipo].recebeu=nome; sincRecebVis(tipo);
       LEITURA_T0[tipo]=0;
       if(typeof audit==='function') audit('recebimento', tipo, {pet:(currentHosp&&currentHosp.nome)||'', assinou:nome, leituraSeg:_seg});
@@ -24749,15 +24859,23 @@ return { criar };
     try{ var _ci0=document.getElementById('card-inicio'); if(_ci0) _ci0.style.display='none'; relNoiteRefCarregar(); }catch(e){ _logFalhaGrav('relNoiteRefCarregar', e); }
     if(!DB){ ['dia','inicio','noite'].forEach(tp=>aplicarCard('card-'+tp,{})); return; }
     const base='auaulandia/relatorios/'+fichaKey();
+    // 27/nov/2026: a Noite é a do relógio (relFichaKey) — de noite, a que está começando; sem assinatura, o rascunho.
+    const kNoite=relFichaKey('noite'); REL_RASC_CHAVE=kNoite;
     Promise.all([
       DB.ref(base+'/dia').once('value').then(s=>s.val()).catch(()=>null),
       DB.ref(base+'/inicio').once('value').then(s=>s.val()).catch(()=>null),
-      DB.ref(base+'/noite').once('value').then(s=>s.val()).catch(()=>null),
-      DB.ref(base).once('value').then(s=>s.val()).catch(()=>null)
-    ]).then(function(r){ const dia=r[0],inicio=r[1],noite=r[2],raiz=r[3]; const ant=migrarAntigo(raiz);
+      DB.ref('auaulandia/relatorios/'+kNoite+'/noite').once('value').then(s=>s.val()).catch(()=>null),
+      DB.ref(base).once('value').then(s=>s.val()).catch(()=>null),
+      DB.ref('auaulandia/relatorios-rascunho/'+kNoite).once('value').then(s=>s.val()).catch(()=>null)
+    ]).then(function(r){ const dia=r[0],inicio=r[1],noite=r[2],raiz=r[3],rasc=r[4]; const ant=migrarAntigo(raiz);
+      if(REL_RASC_CHAVE!==kNoite) return;   // outro FILHOt foi aberto no meio da leitura
       aplicarCard('card-dia', dia || (ant?ant.dia:{}));
       aplicarCard('card-inicio', inicio || (ant?ant.inicio:{}));
-      aplicarCard('card-noite', noite || {});
+      var _noiteVale=!!(noite && (noite.passou || relAnulado(noite)));
+      var _usaRasc=!_noiteVale && !!(rasc && rasc.byQ);
+      aplicarCard('card-noite', _noiteVale ? noite : (_usaRasc ? {byQ:rasc.byQ, areas:rasc.areas||[], byArea:rasc.byArea||{}, meds:rasc.meds||[], sups:rasc.sups||[]} : (noite || {})));
+      try{ var _sn=document.getElementById('status-noite'); if(_sn){ _sn.style.color='var(--muted)';
+        _sn.textContent=_usaRasc?('Rascunho de '+String(rasc.quem||'-')+(rasc._ts?(' às '+ac667Hora(rasc._ts)):'')+'. Termine o que faltar e assine para passar o plantão.'):''; } }catch(e){} /* silencioso de propósito: só o aviso do rascunho */
       // 24/nov/2026: o Relatório do Jantar saiu; só aparece, para leitura, no dia que já tem o antigo salvo.
       try{ var _ci=document.getElementById('card-inicio'), _iv=inicio||(ant?ant.inicio:null); if(_ci) _ci.style.display=(_iv&&_iv.passou)?'':'none'; }catch(e){} /* silencioso de propósito: só esconde ou mostra o cartão antigo */
       try{ relNoitePreencher(); }catch(e){} /* silencioso de propósito: o salvar preenche de novo */
@@ -24852,11 +24970,11 @@ return { criar };
     // Rede de segurança: qualquer erro daqui para baixo TEM de aparecer na tela. Um clique que
     // não faz nada é pior que um erro — a pessoa refaz o trabalho inteiro sem saber por quê.
     try{
-    if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } relPrimeiroGravar(tipo, fichaKey(), dados).then((_r667)=>{ if(_r667 && _r667.ja) return;   // 6.67 (2ª rodada, REL-001): por transação — o já passado em outro aparelho não é regravado
+    if(DB){ if(st){ st.style.color='var(--muted)'; st.textContent='Salvando...'; } relPrimeiroGravar(tipo, relFichaKey(tipo), dados).then((_r667)=>{ if(_r667 && _r667.ja) return; if(tipo==='noite') relRascunhoApagar(relFichaKey('noite'));   // 6.67 (2ª rodada, REL-001): por transação — o já passado em outro aparelho não é regravado
         RELSTATE[tipo]={passou:passou,recebeu:_rSalvo,_tsReceb:dados._tsReceb||0}; sincRecebVis(tipo);
         try{ relCorrPintar(tipo, dados); }catch(e){} /* silencioso de propósito: 6.67 — o cartão guarda o que foi gravado */
         // Tira o "Sem relatório" do card na hora, sem esperar recarregar a lista.
-        try{ var _k=fichaKey(); REL_DO_DIA[_k]=Object.assign({dia:false,inicio:false,noite:false},REL_DO_DIA[_k]||{}); REL_DO_DIA[_k][tipo]=!!passou;
+        try{ var _k=relFichaKey(tipo); REL_DO_DIA[_k]=Object.assign({dia:false,inicio:false,noite:false},REL_DO_DIA[_k]||{}); REL_DO_DIA[_k][tipo]=!!passou;
              relPintarCards(); relFaixaFaltando(); }catch(e){} /* silencioso de propósito: guarda defensiva — falhar aqui não pode interromper quem chamou */
         const _quemRecebe=(tipo==='dia')?'o Plantonista':'quem pega o plantão';
         if(st){ st.style.color='var(--crm-ok)'; st.textContent=(tipo==='inicio')?'✅ Jantar salvo! A Noite será preenchida amanhã de manhã, na passagem do plantão.'
@@ -25342,7 +25460,7 @@ return { criar };
     try{
       if(!DB || !currentHosp || currentHosp.mascote) return;
       if(!PLANT_ROTULO[tipo]) return;
-      var h=currentHosp, dia=(typeof dataKeyAtual==='function')?dataKeyAtual():'';
+      var h=currentHosp, dia=(tipo==='noite')?relNoiteDiaISO():((typeof dataKeyAtual==='function')?dataKeyAtual():'');   // 27/nov/2026: a Noite leva o dia da noite
       var base='daycare/avisos-plantao/'+dia+'/'+tipo;
       var k=plantChaveAviso(h);
       var alertas=plantAlertas(tipo,dados);
@@ -32662,7 +32780,7 @@ return { criar };
   // inteira DEPOIS de a correção estar publicada — o aviso apareceu, ninguém tocou.
   // Agora o aparelho PARADO recarrega sozinho: trancado, com a aba escondida, na porta de
   // entrada ou 3 minutos sem ninguém tocar nele. Mão na tela = nunca recarrega.
-  const APP_VERSAO='2026-11-25-02';
+  const APP_VERSAO='2026-11-27-01';
   var RECARGA_PARADO_MS=3*60*1000, __versaoPublicada=null, __recargaTimer=null;
   function vigiarVersao(){
     if(!DB) return;
@@ -34916,6 +35034,24 @@ return { criar };
     // planilha usa o primeiro nome e o cadastro usa o nome inteiro.
     return tA.indexOf(tB)===0 || tB.indexOf(tA)===0;
   }
+  // A pernoite lançada (daycare/pernoites) vira um hóspede do Plantão com os dados da FICHA do Day Care (nome, tutor,
+  // raça e a chave do cadastro) — os mesmos que o «Adicionar pernoite» usa. Sem a ficha no aparelho, o nome lançado
+  // e o tutor da chave, para ele não sumir da lista. Função pura sobre PELUDINHOS: a prova morde aqui.
+  function hospPernoiteDaFila(f){
+    if(!f) return null;
+    var i=(typeof pernFichaIndiceDe==='function')?pernFichaIndiceDe(f):-1;
+    if(i>=0){
+      var p=PELUDINHOS[i];
+      var nome=(typeof pelNome==='function')?pelNome(p):(p.n||'');
+      if(nome) return {nome:nome, tutor:((typeof pelGet==='function')?pelGet(p,'tutor'):'')||p.tutor||'', raca:((typeof pelGet==='function')?pelGet(p,'raca'):'')||p.raca||'',
+        refKey:(typeof pelKey==='function')?String(pelKey(p)||''):'', hospede:false};
+    }
+    var n=pernNomeLimpo(f.nome||'').split('/')[0].trim();
+    if(!n) return null;
+    var t=String(f.chave||'').split('__')[1]||'';
+    t=t.replace(/-/g,' ').replace(/\b\w/g,function(c){ return c.toUpperCase(); }).trim();
+    return {nome:n, tutor:t, raca:'', refKey:'', hospede:false};
+  }
   function dataKeyAtual(){ const p=x=>String(x).padStart(2,'0'); const d=selectedDate; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function carregarManuais(){
     if(!DB) return;
@@ -34963,7 +35099,15 @@ return { criar };
       // hoje dentro de entrada→saída. Dedupe por nome+tutor (o `add` já protege).
       zMapaUma('auaulandia/estadias').then(v=>v||{}),   // retrato compartilhado — não re-baixa o nó inteiro
       // Removidos de hoje (override da Gestão): tira do Plantão quem foi removido manualmente.
-      DB.ref('auaulandia/removidos/'+hojeK).once('value').then(s=>s.val()||{})
+      DB.ref('auaulandia/removidos/'+hojeK).once('value').then(s=>s.val()||{}),
+      // AS PERNOITES LANÇADAS (Adriana, 27/nov/2026): pernoite é só de quem está no Day Care. «A gente
+      // fixou esses dias lá, mas ele não está aparecendo no final do dia para a monitora [...] nosso sistema já
+      // coloca, eu não tenho que fazer check-in dele, mas ele tem que aparecer.» A pernoite lançada em Pernoites ou
+      // nos Lançamentos do dia (daycare/pernoites/{noite}) entra aqui ainda «aguardando» o check-in, na noite dela e
+      // na manhã seguinte até 11h30 — a mesma janela do pernoite manual. O check-in feito vira a estadia (acima).
+      Promise.all([hojeK, vespK].map(function(d){
+        return DB.ref('daycare/pernoites/'+d).once('value').then(function(s){ return {dia:d, v:s.val()||{}}; });
+      }))
     ]).then(function(r){
       (r[0]||[]).forEach(function(o){
         Object.keys(o.v||{}).forEach(function(k){
@@ -34992,6 +35136,17 @@ return { criar };
         // hóspede Maya que fez check-in — e ela desaparecia de "Hóspedes de hoje".
         if(hospedes.some(function(h){ return hospMesmoFilhot(h, e); })) return;
         add({nome:e.nome, tutor:e.tutor||'', raca:e.raca||'', refKey:e.refKey||'', hospede:true}, (sai&&hojeISOk===sai), '', '');
+      });
+      // As pernoites lançadas que ainda esperam o check-in (27/nov/2026).
+      (r[3]||[]).forEach(function(o){
+        Object.keys(o.v||{}).forEach(function(ch){
+          var f=Object.assign({chave:ch}, o.v[ch]||{});
+          if(String(f.status||'aguardando')!=='aguardando') return;   // check-in feito (é estadia) ou cancelada
+          var j=pernJanela({noites:1}, o.dia); if(!j) return;
+          var pe=hospPernoiteDaFila(f); if(!pe) return;
+          if(hospedes.some(function(h){ return hospMesmoFilhot(h, pe); })) return;
+          add(pe, j.saida, '', '');
+        });
       });
       // Aplica o override "removidos hoje" (Gestão tirou do Plantão): remove da lista final.
       var rem=r[2]||{};
@@ -92089,7 +92244,9 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
   function hospEstadiaFichaHTML(h){
     h=h||{};
     var _jHtml='';
-    if(h.pernoite||h.janta){ var _j=h.jantar||{}; _jHtml='<div style="margin-top:6px;background:rgba(46,125,138,.12);border-left:4px solid var(--z-auaulandia,#2E7D8A);border-radius:8px;padding:8px 11px;font-size:13px;color:var(--z-blue);font-weight:600">🌙 <strong>Jantar (pernoite):</strong> '+esc(_j.comida||'a confirmar com a Encãotadora')+(_j.onde?(' · <span style="font-weight:700">'+esc(_j.onde)+'</span>'):'')+'</div>'; }
+    // 27/nov/2026: a pernoite que veio da fila (sem lançamento à mão nem jantar lançado) não tem esta linha — o jantar dela
+    // está no destaque da ficha e no tópico Alimentação; «a confirmar» aqui contradiria o que está logo abaixo.
+    if((h.pernoite||h.janta) && (h.manualKey || h.jantar)){ var _j=h.jantar||{}; _jHtml='<div style="margin-top:6px;background:rgba(46,125,138,.12);border-left:4px solid var(--z-auaulandia,#2E7D8A);border-radius:8px;padding:8px 11px;font-size:13px;color:var(--z-blue);font-weight:600">🌙 <strong>Jantar (pernoite):</strong> '+esc(_j.comida||'a confirmar com a Encãotadora')+(_j.onde?(' · <span style="font-weight:700">'+esc(_j.onde)+'</span>'):'')+'</div>'; }
     return 'Na AuAulândia · <strong>estadia a confirmar na ficha</strong>'+_jHtml+manualCorrigirBotaoHTML(h);
   }
   // A lista do Plantão com o lançamento corrigido (a ficha, o cartão e o × usam o que está aqui, sem esperar a planilha): o mesmo
@@ -92309,7 +92466,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
       zAlertao('ESTE RELATÓRIO FOI ANULADO', ['O '+REL_TURNO_NOME[tipo]+' de '+nm+' foi anulado (lançado no FILHOt errado). Para ele valer de novo, a Gestão toca em «Reabrir» no cartão.', 'Nada foi gravado.'], {botao:'Entendi'});
       return Promise.resolve({ok:false, anulado:true});
     }
-    var ficha=fichaKey(), diaRel=hospIsoDe(selectedDate.getTime()), hoje=ac667Hoje();
+    var ficha=relFichaKey(tipo), diaRel=(tipo==='noite')?relNoiteDiaISO():hospIsoDe(selectedDate.getTime()), hoje=ac667Hoje();
     // AC2.2 (2ª rodada, REQ-001): quem passou o plantão, no mesmo dia, corrige mesmo sem o papel do Plantão no aparelho (a senha
     // decide: o cartaz aceita o nome de quem passou); fora disso, quem trabalha no Plantão.
     var quemPassou=(diaRel===hoje && cur.passou)?String(cur.passou).trim():'';
@@ -92384,7 +92541,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
     banco=banco||{};
     var mud=relDiff(relSemAssinatura((base&&base.lido)||{}), relSemAssinatura(banco), tipo);
     REL_CUR[tipo]=banco;
-    try{ if(fichaKey()===ficha) aplicarCard('card-'+tipo, banco); }catch(x){} /* silencioso de propósito: redesenho de tela */
+    try{ if(relFichaKey(tipo)===ficha) aplicarCard('card-'+tipo, banco); }catch(x){} /* silencioso de propósito: redesenho de tela */
     relStatus(tipo, 'O relatório mudou em outro aparelho: a tela agora mostra o que está no banco. Confira e corrija de novo, se ainda precisar.', 'var(--crm-atencao-text)');
     var quem=banco.corrigido?('corrigido por '+String(banco.corrigido.por||'-')+(banco.corrigido.ts?(' às '+ac667Hora(banco.corrigido.ts)):''))
       :('passado por '+String(banco.passou||'-')+(banco._ts?(' às '+ac667Hora(banco._ts)):''));
@@ -92424,7 +92581,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
   function relAnularAbrir(tipo){
     var h=currentHosp, cur=REL_CUR[tipo];
     if(!h || !relPassado(cur)){ zAlertao('NÃO HÁ RELATÓRIO PASSADO PARA ANULAR', ['Atualize a tela: ele pode ter sido anulado em outro aparelho.'], {botao:'Entendi'}); return Promise.resolve(null); }
-    var nm=String(h.nome||'este FILHOt'), ficha=fichaKey(), diaRel=hospIsoDe(selectedDate.getTime());
+    var nm=String(h.nome||'este FILHOt'), ficha=relFichaKey(tipo), diaRel=(tipo==='noite')?relNoiteDiaISO():hospIsoDe(selectedDate.getTime());
     var cas=['O cartão volta a "sem relatório": este turno conta como não passado (no cartão, na faixa do que falta e no Resumo de hoje da Gestão).'];
     if(cur.recebeu) cas.push('A assinatura de recebimento de '+cur.recebeu+' fica registrada no relatório anulado.');
     cas.push('O grupo da Gestão recebe uma linha de correção.');
@@ -92461,7 +92618,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
   function relReabrirAbrir(tipo){
     var h=currentHosp, cur=REL_CUR[tipo];
     if(!h || !relAnulado(cur)){ zAlertao('ESTE RELATÓRIO NÃO ESTÁ ANULADO', ['Atualize a tela.'], {botao:'Entendi'}); return Promise.resolve(null); }
-    var nm=String(h.nome||'este FILHOt'), ficha=fichaKey();
+    var nm=String(h.nome||'este FILHOt'), ficha=relFichaKey(tipo);
     return corrAbrir({acao:'reabrir', nivel:'gestao', titulo:'Reabrir o '+REL_TURNO_NOME[tipo]+' de '+nm, oque:'o '+REL_TURNO_NOME[tipo]+' de '+nm,
       original:{caminho:'auaulandia/relatorios/'+ficha+'/'+tipo, id:String(tipo)}, estado:'anulado', paraEstado:'passado (vale de novo)',
       volta:['O relatório volta a contar como passado no cartão, na faixa do que falta e no Resumo de hoje da Gestão.'], tituloOk:'Relatório reaberto',
@@ -92511,7 +92668,7 @@ ${a.semRacao?alimSemRacaoHTML(a):''}
   function relRetirarAssinaturaAbrir(tipo){
     var h=currentHosp, cur=REL_CUR[tipo];
     if(!h || !cur || !cur.recebeu || relAnulado(cur)){ zAlertao('NÃO HÁ ASSINATURA PARA RETIRAR', ['Atualize a tela: ela pode ter sido retirada em outro aparelho (ou o relatório foi anulado).'], {botao:'Entendi'}); return Promise.resolve(null); }
-    var nome=String(cur.recebeu).trim(), nm=String(h.nome||'este FILHOt'), ficha=fichaKey();
+    var nome=String(cur.recebeu).trim(), nm=String(h.nome||'este FILHOt'), ficha=relFichaKey(tipo);
     return corrAbrir({acao:'reabrir', titulo:'Retirar a assinatura de recebimento', oque:'a assinatura de recebimento de '+nome+' no '+REL_TURNO_NOME[tipo]+' de '+nm,
       original:{caminho:'auaulandia/relatorios/'+ficha+'/'+tipo, id:String(tipo)}, estado:'assinado por '+nome, paraEstado:'aguardando recebimento',
       volta:['A assinatura de '+nome+' sai deste turno: o cartão volta a "aguardando recebimento" até alguém ler e assinar.'],
@@ -104451,14 +104608,14 @@ root.CUIDADO57_SOL_INSTANCIA=cuidado57InstalarBase16();
   if(root.document&&root.document.readyState==='loading')root.document.addEventListener('DOMContentLoaded',tentar,{once:true});else tentar();
 }(typeof globalThis!=='undefined'?globalThis:this));
 </script>
-<script src="agenda-marcia/dados.js?v=2026-11-25-02"></script>
-<script src="agenda-marcia/entrevistas.js?v=2026-11-25-02"></script>
-<script src="agenda-marcia/composta.js?v=2026-11-25-02"></script>
-<script src="agenda-marcia/painel.js?v=2026-11-25-02"></script>
-<script src="marcia129/painel.js?v=2026-11-25-02"></script>
-<script src="marcia129/dados.js?v=2026-11-25-02"></script>
-<script src="marcia129/app.js?v=2026-11-25-02"></script>
-<script src="agenda-marcia/app.js?v=2026-11-25-02"></script>
+<script src="agenda-marcia/dados.js?v=2026-11-27-01"></script>
+<script src="agenda-marcia/entrevistas.js?v=2026-11-27-01"></script>
+<script src="agenda-marcia/composta.js?v=2026-11-27-01"></script>
+<script src="agenda-marcia/painel.js?v=2026-11-27-01"></script>
+<script src="marcia129/painel.js?v=2026-11-27-01"></script>
+<script src="marcia129/dados.js?v=2026-11-27-01"></script>
+<script src="marcia129/app.js?v=2026-11-27-01"></script>
+<script src="agenda-marcia/app.js?v=2026-11-27-01"></script>
 <script id="menu-contadores171">'use strict';
 /* 30/out/2026 — contadores vermelhos no menu (maquete aprovada pela Adriana).
    «Márcia Gestão»: cuidados das avaliações de HOJE ainda não revisados + alertas de reação ainda sem «Tutor avisado».
