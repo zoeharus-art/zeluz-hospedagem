@@ -198,7 +198,7 @@ async function rodar(b, quando, corpo, arg) {
   const fs = require('fs');
   const html = fs.readFileSync(APP, 'utf8');
   console.log('Regras da casa');
-  await prova('versão 2026-11-27-01 em todos os arquivos versionados', () => { assert.match(html, /const APP_VERSAO='2026-11-27-01';/); assert.equal(html.split('2026-11-27-01').length - 1, 18); });
+  await prova('versão 2026-11-28-01 em todos os arquivos versionados', () => { assert.match(html, /const APP_VERSAO='2026-11-28-01';/); assert.equal(html.split('2026-11-28-01').length - 1, 18); });
   await prova('sem «cão» nem «cachorro» no texto novo', () => {
     const a = html.indexOf('A NOITE QUE ESTÁ ABERTA'), d = html.indexOf('EM DESTAQUE NA FICHA');
     const novo = html.slice(a, a + 4000) + html.slice(d, d + 4000);
